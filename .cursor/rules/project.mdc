@@ -1,0 +1,68 @@
+---
+description: Règles générales du projet Derviche Diffusion - Application de réservation professionnelle
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Projet Derviche Diffusion
+
+## Contexte métier
+Application de gestion de réservations professionnelles pour spectacles vivants.
+- **Client** : Derviche Diffusion (société de diffusion de spectacles)
+- **Utilisateurs** : 5 profils distincts avec permissions différentes
+  - Super Admin (2-3) : Gestion complète plateforme
+  - Admin (3-7) : Gestion spectacles, représentations, réservations
+  - Externe DD (10-20) : Accueil sur place, check-in
+  - Programmateurs (500-1000) : Réservation de places
+  - Compagnies (15-20) : Consultation statistiques
+
+## Stack technique
+- **Framework** : Next.js 16+ (App Router uniquement)
+- **Language** : TypeScript (mode strict obligatoire)
+- **Styling** : Tailwind CSS + shadcn/ui
+- **State** : React Query (serveur) + Context API (local)
+- **Forms** : React Hook Form + Zod
+- **Backend** : Supabase (PostgreSQL + Auth + RLS + Storage)
+- **Déploiement** : Vercel
+
+## Structure des dossiers
+```
+src/
+├── app/                 # Routes Next.js (App Router)
+│   ├── (auth)/          # Routes authentification
+│   ├── (public)/        # Routes publiques
+│   ├── admin/           # Dashboard admin
+│   ├── professional/    # Dashboard programmateurs
+│   └── company/         # Dashboard compagnies
+├── components/          # Composants React (PascalCase)
+│   ├── ui/              # Composants shadcn/ui
+│   └── features/        # Composants métier
+├── hooks/               # Hooks personnalisés (useXxx)
+├── lib/                 # Utilitaires et configurations
+│   └── supabase/        # Clients Supabase
+├── types/               # Types TypeScript globaux
+└── utils/               # Fonctions utilitaires pures
+```
+
+## Conventions de nommage
+- **Dossiers** : kebab-case (`auth-wizard`, `show-details`)
+- **Composants** : PascalCase (`ShowCard.tsx`, `ReservationForm.tsx`)
+- **Hooks** : camelCase avec préfixe "use" (`useReservations.ts`)
+- **Utils** : camelCase (`formatDate.ts`, `validateEmail.ts`)
+- **Types** : PascalCase (`User.ts`, `Reservation.ts`)
+
+## Imports
+Toujours utiliser l'alias `@/` et respecter cet ordre :
+1. React et hooks React
+2. Bibliothèques externes (next, tanstack, etc.)
+3. Composants internes
+4. Hooks personnalisés
+5. Utils et lib
+6. Types
+
+## Principes fondamentaux
+1. **DRY** : Ne jamais dupliquer de code, modulariser
+2. **KISS** : Solutions simples et lisibles
+3. **Fail Fast** : Gérer les erreurs au plus tôt
+4. **Type Safety** : Typage strict partout
+5. **Security First** : Valider toutes les entrées

@@ -1,0 +1,439 @@
+---
+description: Règles pour les tests - Unitaires, intégration et end-to-end
+globs: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
+alwaysApply: false
+---
+
+# Règles de Tests
+
+## Philosophie de test
+
+### Pyramide des tests
+```
+        /\
+       /E2E\        ← Peu (chemins critiques)
+      /------\
+     /Integration\  ← Modéré (API, DB)
+    /--------------\
+   /   Unit Tests   \ ← Beaucoup (logique métier)
+  /------------------\
+```
+
+### Quoi tester en priorité
+1. **Logique métier** : Calculs de quotas, validations, règles de réservation
+2. **Cas limites** : Valeurs nulles, listes vides, limites atteintes
+3. **Chemins critiques** : Authentification, réservation, paiement
+4. **Régressions** : Chaque bug corrigé = 1 test ajouté
+
+## Stack de tests
+
+### Outils utilisés
+- **Vitest** : Tests unitaires (rapide, compatible ESM)
+- **React Testing Library** : Tests de composants
+- **MSW** : Mock des requêtes API
+- **Playwright** : Tests E2E (optionnel)
+
+### Installation
+```bash
+npm install -D vitest @testing-library/react @testing-library/jest-dom @vitejs/plugin-react jsdom msw
+```
+
+### Configuration Vitest
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+    },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
+```
+
+### Setup file
+```typescript
+// src/test/setup.ts
+import '@testing-library/jest-dom';
+import { beforeAll, afterEach, afterAll } from 'vitest';
+import { server } from './mocks/server';
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+## Tests unitaires
+
+### Structure des fichiers
+```
+src/
+├── lib/
+│   ├── utils/
+│   │   ├── formatDate.ts
+│   │   └── formatDate.test.ts    ← Test à côté du fichier
+│   └── validations/
+│       ├── reservation.ts
+│       └── reservation.test.ts
+└── test/
+    ├── setup.ts
+    ├── mocks/
+    │   ├── handlers.ts
+    │   └── server.ts
+    └── factories/                 ← Données de test
+        ├── user.ts
+        └── show.ts
+```
+
+### Convention de nommage
+```typescript
+// Fichier : formatDate.test.ts
+// Pattern : describe → it/test
+
+describe('formatDate', () => {
+  describe('avec une date valide', () => {
+    it('formate en français par défaut', () => {
+      expect(formatDate('2025-01-15')).toBe('15 janvier 2025');
+    });
+
+    it('accepte un format personnalisé', () => {
+      expect(formatDate('2025-01-15', 'dd/MM/yyyy')).toBe('15/01/2025');
+    });
+  });
+
+  describe('avec une date invalide', () => {
+    it('retourne "Date invalide"', () => {
+      expect(formatDate('invalid')).toBe('Date invalide');
+    });
+
+    it('gère null gracieusement', () => {
+      expect(formatDate(null)).toBe('Date invalide');
+    });
+  });
+});
+```
+
+### Tester la logique métier
+```typescript
+// src/lib/reservations/checkAvailability.test.ts
+import { describe, it, expect } from 'vitest';
+import { checkAvailability } from './checkAvailability';
+
+describe('checkAvailability', () => {
+  const session = {
+    id: '1',
+    totalSeats: 100,
+    reservedSeats: 95,
+    maxPerUser: 5,
+  };
+
+  describe('places disponibles', () => {
+    it('retourne true si assez de places', () => {
+      expect(checkAvailability(session, 3)).toEqual({
+        available: true,
+        remainingSeats: 5,
+      });
+    });
+
+    it('retourne false si pas assez de places', () => {
+      expect(checkAvailability(session, 10)).toEqual({
+        available: false,
+        reason: 'NOT_ENOUGH_SEATS',
+        remainingSeats: 5,
+      });
+    });
+  });
+
+  describe('limite par utilisateur', () => {
+    it('retourne false si dépasse la limite', () => {
+      const largeSession = { ...session, reservedSeats: 0 };
+      expect(checkAvailability(largeSession, 6)).toEqual({
+        available: false,
+        reason: 'EXCEEDS_USER_LIMIT',
+        maxAllowed: 5,
+      });
+    });
+  });
+
+  describe('session complète', () => {
+    it('retourne false si session complète', () => {
+      const fullSession = { ...session, reservedSeats: 100 };
+      expect(checkAvailability(fullSession, 1)).toEqual({
+        available: false,
+        reason: 'SESSION_FULL',
+        remainingSeats: 0,
+      });
+    });
+  });
+});
+```
+
+### Tester les validations Zod
+```typescript
+// src/lib/validations/reservation.test.ts
+import { describe, it, expect } from 'vitest';
+import { createReservationSchema } from './reservation';
+
+describe('createReservationSchema', () => {
+  const validData = {
+    showId: '550e8400-e29b-41d4-a716-446655440000',
+    sessionId: '550e8400-e29b-41d4-a716-446655440001',
+    seats: 2,
+  };
+
+  it('accepte des données valides', () => {
+    const result = createReservationSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+
+  it('rejette un showId invalide', () => {
+    const result = createReservationSchema.safeParse({
+      ...validData,
+      showId: 'not-a-uuid',
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe('ID de spectacle invalide');
+  });
+
+  it('rejette un nombre de places négatif', () => {
+    const result = createReservationSchema.safeParse({
+      ...validData,
+      seats: -1,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejette plus de 10 places', () => {
+    const result = createReservationSchema.safeParse({
+      ...validData,
+      seats: 15,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].message).toBe('Maximum 10 places');
+  });
+});
+```
+
+## Tests de composants
+
+### Tester les interactions
+```typescript
+// src/components/features/reservations/ReservationForm.test.tsx
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ReservationForm } from './ReservationForm';
+
+describe('ReservationForm', () => {
+  const mockOnSubmit = vi.fn();
+  const defaultProps = {
+    showId: '1',
+    sessionId: '2',
+    maxSeats: 5,
+    onSubmit: mockOnSubmit,
+  };
+
+  beforeEach(() => {
+    mockOnSubmit.mockClear();
+  });
+
+  it('affiche le formulaire correctement', () => {
+    render(<ReservationForm {...defaultProps} />);
+    
+    expect(screen.getByLabelText(/nombre de places/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /réserver/i })).toBeInTheDocument();
+  });
+
+  it('soumet le formulaire avec les bonnes données', async () => {
+    const user = userEvent.setup();
+    render(<ReservationForm {...defaultProps} />);
+    
+    const input = screen.getByLabelText(/nombre de places/i);
+    await user.clear(input);
+    await user.type(input, '3');
+    
+    await user.click(screen.getByRole('button', { name: /réserver/i }));
+    
+    expect(mockOnSubmit).toHaveBeenCalledWith({
+      showId: '1',
+      sessionId: '2',
+      seats: 3,
+    });
+  });
+
+  it('affiche une erreur si trop de places', async () => {
+    const user = userEvent.setup();
+    render(<ReservationForm {...defaultProps} maxSeats={5} />);
+    
+    const input = screen.getByLabelText(/nombre de places/i);
+    await user.clear(input);
+    await user.type(input, '10');
+    
+    await user.click(screen.getByRole('button', { name: /réserver/i }));
+    
+    expect(await screen.findByText(/maximum 5 places/i)).toBeInTheDocument();
+    expect(mockOnSubmit).not.toHaveBeenCalled();
+  });
+
+  it('désactive le bouton pendant la soumission', async () => {
+    const user = userEvent.setup();
+    mockOnSubmit.mockImplementation(() => new Promise(() => {})); // Never resolves
+    
+    render(<ReservationForm {...defaultProps} />);
+    
+    await user.click(screen.getByRole('button', { name: /réserver/i }));
+    
+    expect(screen.getByRole('button', { name: /réserver/i })).toBeDisabled();
+  });
+});
+```
+
+### Tester les états (loading, error, empty)
+```typescript
+// src/components/features/shows/ShowList.test.tsx
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ShowList } from './ShowList';
+import { server } from '@/test/mocks/server';
+import { http, HttpResponse } from 'msw';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+const wrapper = ({ children }) => (
+  <QueryClientProvider client={queryClient}>
+    {children}
+  </QueryClientProvider>
+);
+
+describe('ShowList', () => {
+  it('affiche le skeleton pendant le chargement', () => {
+    render(<ShowList />, { wrapper });
+    expect(screen.getByTestId('show-list-skeleton')).toBeInTheDocument();
+  });
+
+  it('affiche les spectacles une fois chargés', async () => {
+    render(<ShowList />, { wrapper });
+    
+    expect(await screen.findByText('Spectacle Test')).toBeInTheDocument();
+  });
+
+  it('affiche un message si aucun spectacle', async () => {
+    server.use(
+      http.get('/api/shows', () => HttpResponse.json([]))
+    );
+    
+    render(<ShowList />, { wrapper });
+    
+    expect(await screen.findByText(/aucun spectacle/i)).toBeInTheDocument();
+  });
+
+  it('affiche une erreur en cas d\'échec', async () => {
+    server.use(
+      http.get('/api/shows', () => HttpResponse.error())
+    );
+    
+    render(<ShowList />, { wrapper });
+    
+    expect(await screen.findByText(/erreur/i)).toBeInTheDocument();
+  });
+});
+```
+
+## Factories de données
+
+### Créer des données de test réutilisables
+```typescript
+// src/test/factories/show.ts
+import type { Show } from '@/types';
+
+let idCounter = 0;
+
+export function createShow(overrides: Partial<Show> = {}): Show {
+  idCounter++;
+  return {
+    id: `show-${idCounter}`,
+    title: `Spectacle Test ${idCounter}`,
+    slug: `spectacle-test-${idCounter}`,
+    description: 'Description du spectacle de test',
+    status: 'published',
+    companyId: 'company-1',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function createShows(count: number, overrides: Partial<Show> = {}): Show[] {
+  return Array.from({ length: count }, () => createShow(overrides));
+}
+```
+```typescript
+// src/test/factories/user.ts
+import type { User, UserRole } from '@/types';
+
+export function createUser(overrides: Partial<User> = {}): User {
+  return {
+    id: crypto.randomUUID(),
+    email: 'test@example.com',
+    firstName: 'Jean',
+    lastName: 'Dupont',
+    role: 'programmer' as UserRole,
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+export function createAdmin(): User {
+  return createUser({ role: 'admin', email: 'admin@derviche.com' });
+}
+
+export function createProgrammer(): User {
+  return createUser({ role: 'programmer' });
+}
+```
+
+## Scripts NPM
+
+### Ajouter au package.json
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+
+## Bonnes pratiques
+
+### À faire
+- ✅ Tester le comportement, pas l'implémentation
+- ✅ Un test = une assertion principale
+- ✅ Noms de tests explicites (en français OK)
+- ✅ Utiliser des factories pour les données
+- ✅ Mocker les dépendances externes (API, DB)
+
+### À éviter
+- ❌ Tester les détails d'implémentation
+- ❌ Tests trop couplés au code
+- ❌ Snapshots excessifs
+- ❌ Tests qui dépendent de l'ordre d'exécution
+- ❌ Données de test en dur dans chaque test

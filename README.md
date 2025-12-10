@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Derviche Diffusion - Plateforme de Réservation Professionnelle
 
-## Getting Started
+Application de gestion de réservations professionnelles pour spectacles vivants.
 
-First, run the development server:
+## 🎭 À propos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**Derviche Diffusion** est une société de diffusion de spectacles vivants qui représente des compagnies artistiques auprès des programmateurs de salles de théâtre.
+
+Cette plateforme permet :
+- Aux **programmateurs** de découvrir et réserver des places pour des spectacles
+- Aux **administrateurs** de gérer la programmation et suivre les réservations
+- Aux **compagnies** de consulter les statistiques de fréquentation
+
+## 🚀 Stack Technique
+
+| Catégorie | Technologie |
+|-----------|-------------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | Tailwind CSS + shadcn/ui |
+| Base de données | Supabase (PostgreSQL) |
+| Authentification | Supabase Auth |
+| State Management | React Query + Context API |
+| Formulaires | React Hook Form + Zod |
+| Déploiement | Vercel |
+
+## 📁 Structure du projet
+```
+src/
+├── app/                 # Routes Next.js (App Router)
+│   ├── (auth)/          # Routes authentification
+│   ├── (public)/        # Routes publiques
+│   ├── admin/           # Dashboard admin
+│   ├── professional/    # Dashboard programmateurs
+│   └── company/         # Dashboard compagnies
+├── components/          # Composants React
+│   ├── ui/              # Composants shadcn/ui
+│   └── features/        # Composants métier
+├── hooks/               # Hooks personnalisés
+├── lib/                 # Utilitaires et configurations
+│   └── supabase/        # Clients Supabase
+├── types/               # Types TypeScript globaux
+└── utils/               # Fonctions utilitaires
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prérequis
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js 18+
+- npm ou yarn
+- Compte Supabase
+- Compte Vercel (pour le déploiement)
 
-## Learn More
+### Étapes
 
-To learn more about Next.js, take a look at the following resources:
+1. **Cloner le repository**
+```bash
+   git clone https://github.com/stevenbergsbcom/derviche-pro.git
+   cd derviche-pro
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. **Installer les dépendances**
+```bash
+   npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. **Configurer les variables d'environnement**
+```bash
+   cp .env.example .env.local
+```
+   
+   Puis remplir les valeurs dans `.env.local` :
+```env
+   NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-## Deploy on Vercel
+4. **Lancer le serveur de développement**
+```bash
+   npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+5. **Ouvrir l'application**
+   
+   [http://localhost:3000](http://localhost:3000)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📜 Scripts disponibles
+
+| Commande | Description |
+|----------|-------------|
+| `npm run dev` | Serveur de développement |
+| `npm run build` | Build de production |
+| `npm run start` | Démarrer le build de production |
+| `npm run lint` | Vérifier le code avec ESLint |
+| `npm run test` | Lancer les tests (à configurer) |
+
+## 🌿 Workflow Git
+
+### Branches
+
+- `main` → Production (déploiement automatique)
+- `dev` → Développement (preview Vercel)
+
+### Convention de commits
+```
+feat(scope): description    # Nouvelle fonctionnalité
+fix(scope): description     # Correction de bug
+docs(scope): description    # Documentation
+refactor(scope): description # Refactorisation
+test(scope): description    # Tests
+chore(scope): description   # Maintenance
+```
+
+### Processus
+
+1. Travailler sur la branche `dev`
+2. Commit avec un message conventionnel
+3. Push sur `dev`
+4. Vérifier le déploiement preview
+5. Merger sur `main` une fois validé
+
+## 👥 Profils utilisateurs
+
+| Rôle | Nombre | Accès |
+|------|--------|-------|
+| Super Admin | 2-3 | Gestion complète |
+| Admin | 3-7 | Gestion spectacles et réservations |
+| Externe DD | 10-20 | Check-in sur place |
+| Programmateurs | 500-1000 | Réservation de places |
+| Compagnies | 15-20 | Consultation statistiques |
+
+## 🔗 Liens
+
+- **Production** : [derviche-pro.vercel.app](https://derviche-pro.vercel.app)
+- **Staging** : [derviche-pro-staging.vercel.app](https://derviche-pro-staging.vercel.app)
+
+## 📄 Licence
+
+Projet privé - Derviche Diffusion © 2025

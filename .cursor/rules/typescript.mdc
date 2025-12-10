@@ -1,0 +1,110 @@
+---
+description: Règles TypeScript strictes pour un code robuste et maintenable
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Règles TypeScript
+
+## Configuration stricte
+Le projet utilise TypeScript en mode strict. Ne jamais désactiver ces options :
+- `strict: true`
+- `noImplicitAny: true`
+- `strictNullChecks: true`
+- `strictFunctionTypes: true`
+
+## Types vs Interfaces
+- Utiliser `interface` pour les objets et les props de composants
+- Utiliser `type` pour les unions, intersections et types utilitaires
+```typescript
+// ✅ Bon : interface pour les props
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary';
+}
+
+// ✅ Bon : type pour les unions
+type Status = 'pending' | 'confirmed' | 'cancelled';
+type ApiResponse<T> = { data: T } | { error: string };
+```
+
+## Règles strictes
+
+### Éviter `any`
+```typescript
+// ❌ Interdit
+function process(data: any) { ... }
+
+// ✅ Utiliser unknown ou un type précis
+function process(data: unknown) { ... }
+function process(data: Reservation) { ... }
+```
+
+### Typer explicitement les retours de fonctions
+```typescript
+// ❌ Type de retour implicite
+function getUser(id: string) {
+  return db.users.find(u => u.id === id);
+}
+
+// ✅ Type de retour explicite
+function getUser(id: string): Promise<User | null> {
+  return db.users.find(u => u.id === id);
+}
+```
+
+### Éviter les enums, préférer les objets const
+```typescript
+// ❌ Éviter les enums
+enum Status {
+  Pending = 'pending',
+  Confirmed = 'confirmed',
+}
+
+// ✅ Préférer les objets const avec as const
+const STATUS = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+} as const;
+
+type Status = typeof STATUS[keyof typeof STATUS];
+```
+
+### Utiliser les génériques quand pertinent
+```typescript
+// ✅ Fonction générique réutilisable
+async function fetchData<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  return response.json() as T;
+}
+```
+
+## Nommage des types
+- **Props** : `{ComponentName}Props` (ex: `ShowCardProps`)
+- **State** : `{Feature}State` (ex: `ReservationState`)
+- **Context** : `{Feature}ContextType` (ex: `AuthContextType`)
+- **API Response** : `{Entity}Response` (ex: `ShowsResponse`)
+
+## Assertions de type
+```typescript
+// ❌ Éviter les assertions non sécurisées
+const user = data as User;
+
+// ✅ Préférer la validation avec Zod
+const user = userSchema.parse(data);
+
+// ✅ Ou utiliser des type guards
+function isUser(data: unknown): data is User {
+  return typeof data === 'object' && data !== null && 'id' in data;
+}
+```
+
+## Null et undefined
+- Toujours gérer les cas `null` et `undefined`
+- Utiliser l'opérateur `??` pour les valeurs par défaut
+- Utiliser l'optional chaining `?.` avec précaution
+```typescript
+// ✅ Gestion explicite
+const displayName = user?.name ?? 'Anonyme';
+```

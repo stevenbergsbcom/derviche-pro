@@ -1,0 +1,190 @@
+---
+description: Règles React et Next.js App Router pour des composants performants
+globs: ["**/*.tsx", "**/*.jsx"]
+alwaysApply: true
+---
+
+# Règles React & Next.js
+
+## Next.js App Router
+
+### Structure des routes
+```
+app/
+├── page.tsx              # Route /
+├── layout.tsx            # Layout racine
+├── loading.tsx           # UI de chargement
+├── error.tsx             # Gestion d'erreurs
+├── not-found.tsx         # Page 404
+├── (auth)/               # Groupe de routes (pas dans l'URL)
+│   ├── login/page.tsx    # /login
+│   └── register/page.tsx # /register
+└── admin/
+    ├── page.tsx          # /admin
+    └── shows/
+        ├── page.tsx      # /admin/shows
+        └── [id]/page.tsx # /admin/shows/:id
+```
+
+### Server Components par défaut
+- Next.js 14+ utilise les Server Components par défaut
+- Ajouter `'use client'` UNIQUEMENT si nécessaire :
+  - Hooks React (useState, useEffect, etc.)
+  - Event handlers (onClick, onChange, etc.)
+  - APIs navigateur (localStorage, window, etc.)
+```typescript
+// ✅ Server Component (par défaut) - Pas de directive
+import { createClient } from '@/lib/supabase/server';
+
+export default async function ShowsPage() {
+  const supabase = await createClient();
+  const { data: shows } = await supabase.from('shows').select('*');
+  
+  return <ShowsList shows={shows} />;
+}
+
+// ✅ Client Component - Avec directive
+'use client';
+
+import { useState } from 'react';
+
+export function Counter() {
+  const [count, setCount] = useState(0);
+  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;
+}
+```
+
+### Minimiser les Client Components
+- Garder les Client Components petits et focalisés
+- Remonter le `'use client'` le plus bas possible dans l'arbre
+- Passer les données en props depuis les Server Components
+
+## Composants React
+
+### Structure d'un fichier composant
+```typescript
+// 1. Directive 'use client' si nécessaire
+'use client';
+
+// 2. Imports (dans l'ordre défini)
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import type { Show } from '@/types';
+
+// 3. Types/Interfaces
+interface ShowCardProps {
+  show: Show;
+  onSelect?: (id: string) => void;
+}
+
+// 4. Composant principal (named export)
+export function ShowCard({ show, onSelect }: ShowCardProps) {
+  // Hooks en premier
+  const [isHovered, setIsHovered] = useState(false);
+  
+  // Handlers
+  const handleClick = () => {
+    onSelect?.(show.id);
+  };
+  
+  // Render
+  return (
+    <div onClick={handleClick}>
+      {show.title}
+    </div>
+  );
+}
+
+// 5. Sous-composants si nécessaire
+function ShowCardSkeleton() {
+  return <div className="animate-pulse" />;
+}
+
+// 6. Export des sous-composants
+ShowCard.Skeleton = ShowCardSkeleton;
+```
+
+### Règles des Hooks
+```typescript
+// ✅ Hooks toujours au top level du composant
+function MyComponent() {
+  const [state, setState] = useState(null);    // ✅ Top level
+  const data = useQuery(...);                   // ✅ Top level
+  
+  // ❌ JAMAIS dans une condition
+  if (condition) {
+    const [bad, setBad] = useState(null);       // ❌ Interdit
+  }
+  
+  // ❌ JAMAIS dans une boucle
+  items.forEach(() => {
+    const [bad, setBad] = useState(null);       // ❌ Interdit
+  });
+}
+```
+
+### Props et Children
+```typescript
+// ✅ Destructurer les props
+function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
+  return <button onClick={onClick}>{label}</button>;
+}
+
+// ✅ Utiliser children pour la composition
+interface CardProps {
+  children: React.ReactNode;
+  title?: string;
+}
+
+function Card({ children, title }: CardProps) {
+  return (
+    <div>
+      {title && <h2>{title}</h2>}
+      {children}
+    </div>
+  );
+}
+```
+
+## Data Fetching
+
+### Server Components (recommandé)
+```typescript
+// app/shows/page.tsx
+import { createClient } from '@/lib/supabase/server';
+
+export default async function ShowsPage() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('shows').select('*');
+  
+  if (error) throw error;
+  
+  return <ShowsList shows={data} />;
+}
+```
+
+### Client Components avec React Query
+```typescript
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
+
+export function useShows() {
+  return useQuery({
+    queryKey: ['shows'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase.from('shows').select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+```
+
+## Performance
+- Utiliser `React.memo()` uniquement si nécessaire (après mesure)
+- Éviter les re-renders inutiles avec `useCallback` et `useMemo`
+- Lazy loading avec `next/dynamic` pour les gros composants
+- Optimiser les images avec `next/image`

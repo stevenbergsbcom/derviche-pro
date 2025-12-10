@@ -1,0 +1,511 @@
+---
+description: Règles pour les API Routes, Server Actions et workflow Git
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# API Routes & Git Workflow
+
+## API Routes (Next.js App Router)
+
+### Structure des fichiers
+```
+app/
+└── api/
+    ├── auth/
+    │   ├── login/route.ts
+    │   ├── logout/route.ts
+    │   └── register/route.ts
+    ├── reservations/
+    │   ├── route.ts              # GET (list), POST (create)
+    │   └── [id]/
+    │       └── route.ts          # GET, PUT, DELETE (single)
+    ├── shows/
+    │   ├── route.ts
+    │   └── [slug]/route.ts
+    └── admin/
+        └── users/route.ts
+```
+
+### Convention RESTful
+| Méthode | Route | Action |
+|---------|-------|--------|
+| GET | `/api/reservations` | Liste toutes les réservations |
+| POST | `/api/reservations` | Crée une réservation |
+| GET | `/api/reservations/[id]` | Récupère une réservation |
+| PUT | `/api/reservations/[id]` | Met à jour une réservation |
+| DELETE | `/api/reservations/[id]` | Supprime une réservation |
+
+### Structure d'une API Route
+```typescript
+// app/api/reservations/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { createReservationSchema } from '@/lib/validations/reservation';
+import { UnauthorizedError, BadRequestError, AppError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+// GET /api/reservations
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new UnauthorizedError();
+    }
+
+    // 2. Récupérer les query params
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const page = parseInt(searchParams.get('page') ?? '1');
+    const limit = parseInt(searchParams.get('limit') ?? '10');
+
+    // 3. Construire la requête
+    let query = supabase
+      .from('reservations')
+      .select('*, show:shows(title, date)', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range((page - 1) * limit, page * limit - 1);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    // 4. Exécuter
+    const { data, error, count } = await query;
+
+    if (error) {
+      throw new AppError(`Database error: ${error.message}`, 500, 'DB_ERROR');
+    }
+
+    // 5. Retourner avec pagination
+    return NextResponse.json({
+      data,
+      pagination: {
+        page,
+        limit,
+        total: count ?? 0,
+        totalPages: Math.ceil((count ?? 0) / limit),
+      },
+    });
+
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// POST /api/reservations
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new UnauthorizedError();
+    }
+
+    // 2. Validation
+    const body = await request.json();
+    const result = createReservationSchema.safeParse(body);
+    
+    if (!result.success) {
+      throw new BadRequestError('Données invalides');
+    }
+
+    // 3. Logique métier (déléguée à un service)
+    const reservation = await createReservation(user.id, result.data);
+
+    // 4. Log
+    logger.info('Reservation created', {
+      userId: user.id,
+      reservationId: reservation.id,
+      action: 'create_reservation',
+    });
+
+    // 5. Réponse
+    return NextResponse.json(reservation, { status: 201 });
+
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+// Handler d'erreurs centralisé
+function handleError(error: unknown): NextResponse {
+  if (error instanceof AppError) {
+    logger.warn('API Error', { 
+      code: error.code, 
+      message: error.message,
+      statusCode: error.statusCode 
+    });
+    
+    return NextResponse.json(
+      { error: error.message, code: error.code },
+      { status: error.statusCode }
+    );
+  }
+
+  logger.error('Unexpected error', { 
+    error: error instanceof Error ? error.message : 'Unknown error' 
+  });
+
+  return NextResponse.json(
+    { error: 'Une erreur inattendue est survenue', code: 'INTERNAL_ERROR' },
+    { status: 500 }
+  );
+}
+```
+
+### Route dynamique
+```typescript
+// app/api/reservations/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+interface RouteParams {
+  params: Promise<{ id: string }>;
+}
+
+// GET /api/reservations/[id]
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  
+  // ... logique
+}
+
+// PUT /api/reservations/[id]
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  
+  // ... logique
+}
+
+// DELETE /api/reservations/[id]
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  
+  // ... logique
+}
+```
+
+## Server Actions (recommandé pour les mutations)
+
+### Quand utiliser Server Actions vs API Routes ?
+| Server Actions | API Routes |
+|----------------|------------|
+| Mutations depuis l'UI (formulaires) | API publique / webhooks |
+| Revalidation de cache intégrée | Besoin de contrôle HTTP fin |
+| Protection CSRF automatique | Appels depuis mobile/externe |
+| Plus simple et typé | Plus flexible |
+
+### Structure des Server Actions
+```typescript
+// app/actions/reservations.ts
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { createReservationSchema } from '@/lib/validations/reservation';
+import { AppError, UnauthorizedError } from '@/lib/errors';
+import { logger } from '@/lib/logger';
+
+// Type de retour standardisé
+export type ActionResult<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: string; code: string };
+
+// Action de création
+export async function createReservationAction(
+  formData: FormData
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const supabase = await createClient();
+    
+    // 1. Auth
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    // 2. Extraire et valider les données
+    const rawData = {
+      showId: formData.get('showId'),
+      sessionId: formData.get('sessionId'),
+      seats: Number(formData.get('seats')),
+    };
+
+    const result = createReservationSchema.safeParse(rawData);
+    if (!result.success) {
+      return { 
+        success: false, 
+        error: 'Données invalides', 
+        code: 'VALIDATION_ERROR' 
+      };
+    }
+
+    // 3. Créer la réservation
+    const { data, error } = await supabase
+      .from('reservations')
+      .insert({
+        user_id: user.id,
+        show_id: result.data.showId,
+        session_id: result.data.sessionId,
+        seats: result.data.seats,
+        status: 'confirmed',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      throw new AppError(error.message, 500, 'DB_ERROR');
+    }
+
+    // 4. Log
+    logger.info('Reservation created via action', {
+      userId: user.id,
+      reservationId: data.id,
+    });
+
+    // 5. Revalidate et retourner
+    revalidatePath('/professional/reservations');
+    
+    return { success: true, data: { id: data.id } };
+
+  } catch (error) {
+    if (error instanceof AppError) {
+      return { success: false, error: error.message, code: error.code };
+    }
+    
+    logger.error('Action error', { error });
+    return { 
+      success: false, 
+      error: 'Une erreur est survenue', 
+      code: 'INTERNAL_ERROR' 
+    };
+  }
+}
+
+// Action de suppression
+export async function cancelReservationAction(
+  reservationId: string
+): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new UnauthorizedError();
+    }
+
+    const { error } = await supabase
+      .from('reservations')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+      .eq('id', reservationId)
+      .eq('user_id', user.id); // RLS supplémentaire
+
+    if (error) {
+      throw new AppError(error.message, 500, 'DB_ERROR');
+    }
+
+    revalidatePath('/professional/reservations');
+    
+    return { success: true, data: undefined };
+
+  } catch (error) {
+    if (error instanceof AppError) {
+      return { success: false, error: error.message, code: error.code };
+    }
+    return { success: false, error: 'Échec de l\'annulation', code: 'CANCEL_ERROR' };
+  }
+}
+```
+
+### Utilisation dans un composant
+```typescript
+'use client';
+
+import { useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { createReservationAction } from '@/app/actions/reservations';
+import { Button } from '@/components/ui/button';
+
+export function ReservationForm({ showId, sessionId }: Props) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleSubmit = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await createReservationAction(formData);
+      
+      if (result.success) {
+        toast.success('Réservation confirmée !');
+        router.push(`/professional/reservations/${result.data.id}`);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  return (
+    <form action={handleSubmit}>
+      <input type="hidden" name="showId" value={showId} />
+      <input type="hidden" name="sessionId" value={sessionId} />
+      {/* ... autres champs */}
+      <Button type="submit" disabled={isPending}>
+        {isPending ? 'Réservation en cours...' : 'Réserver'}
+      </Button>
+    </form>
+  );
+}
+```
+
+---
+
+## Workflow Git
+
+### Branches
+```
+main        ← Production (déploiement auto sur Vercel)
+  └── dev   ← Développement (preview sur Vercel)
+       └── feature/xxx  ← Fonctionnalités (optionnel)
+```
+
+### Convention de commits (Conventional Commits)
+```bash
+# Format
+<type>(<scope>): <description>
+
+# Types
+feat:     Nouvelle fonctionnalité
+fix:      Correction de bug
+docs:     Documentation
+style:    Formatage (pas de changement de code)
+refactor: Refactorisation
+test:     Ajout/modification de tests
+chore:    Maintenance (deps, config, etc.)
+
+# Exemples
+feat(reservations): add cancellation feature
+fix(auth): resolve session expiration issue
+docs(readme): update installation instructions
+refactor(api): extract error handling to utils
+test(reservations): add unit tests for quota logic
+chore(deps): upgrade next to 16.0.9
+```
+
+### Workflow quotidien
+```bash
+# 1. S'assurer d'être sur dev et à jour
+git checkout dev
+git pull origin dev
+
+# 2. Travailler sur dev (ou créer une branche feature)
+# ... faire des modifications ...
+
+# 3. Vérifier les changements
+git status
+git diff
+
+# 4. Ajouter et commiter
+git add .
+git commit -m "feat(shows): add filtering by category"
+
+# 5. Pousser sur dev
+git push origin dev
+
+# 6. Vérifier le déploiement preview sur Vercel
+
+# 7. Une fois validé, merger sur main
+git checkout main
+git pull origin main
+git merge dev
+git push origin main
+
+# 8. Retourner sur dev pour continuer
+git checkout dev
+```
+
+### Commandes utiles
+```bash
+# Voir l'historique
+git log --oneline -10
+
+# Annuler le dernier commit (garder les fichiers)
+git reset --soft HEAD~1
+
+# Annuler les modifications d'un fichier
+git checkout -- path/to/file
+
+# Créer une branche feature
+git checkout -b feature/user-profile
+
+# Supprimer une branche locale
+git branch -d feature/user-profile
+
+# Synchroniser avec remote
+git fetch origin
+git pull origin dev --rebase
+```
+
+### Règles importantes
+1. **Ne JAMAIS commit sur main directement** - Toujours passer par dev
+2. **Ne JAMAIS push --force sur main ou dev** - Risque de perdre du travail
+3. **Toujours pull avant de push** - Évite les conflits
+4. **Commits atomiques** - Un commit = une modification logique
+5. **Messages clairs** - On doit comprendre le changement sans voir le code
+
+### Avant chaque commit
+```bash
+# 1. Vérifier que le build passe
+npm run build
+
+# 2. Vérifier le linting
+npm run lint
+
+# 3. Lancer les tests (quand configurés)
+npm run test
+
+# 4. Vérifier ce qui va être commité
+git status
+git diff --staged
+```
+
+### Fichier .gitignore (déjà configuré par Next.js)
+```gitignore
+# Dépendances
+node_modules/
+
+# Build
+.next/
+out/
+build/
+
+# Environnement (IMPORTANT - ne jamais commit)
+.env
+.env.local
+.env.*.local
+
+# Debug
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+```

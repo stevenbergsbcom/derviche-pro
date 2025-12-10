@@ -1,0 +1,466 @@
+---
+description: Règles de qualité du code - Refactorisation, lisibilité et maintenabilité
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Règles de Qualité du Code
+
+## Principe fondamental
+**Un code de qualité est un code que ton futur toi (ou un collègue) comprendra dans 6 mois sans documentation.**
+
+## Taille des fonctions
+
+### Règle des 20 lignes
+Une fonction ne devrait pas dépasser **20 lignes** (hors types et commentaires).
+Au-delà, c'est un signal de refactorisation.
+```typescript
+// ❌ Fonction trop longue (> 20 lignes)
+async function createReservation(data: ReservationInput) {
+  // Validation
+  if (!data.showId) throw new Error('showId requis');
+  if (!data.sessionId) throw new Error('sessionId requis');
+  if (data.seats < 1) throw new Error('Minimum 1 place');
+  if (data.seats > 10) throw new Error('Maximum 10 places');
+  
+  // Vérification utilisateur
+  const user = await getUser();
+  if (!user) throw new Error('Non authentifié');
+  if (user.role !== 'programmer') throw new Error('Non autorisé');
+  
+  // Vérification session
+  const session = await getSession(data.sessionId);
+  if (!session) throw new Error('Session introuvable');
+  if (session.status !== 'open') throw new Error('Session fermée');
+  
+  // Vérification disponibilité
+  const reserved = await countReservedSeats(data.sessionId);
+  const available = session.totalSeats - reserved;
+  if (data.seats > available) throw new Error('Pas assez de places');
+  
+  // Vérification quota utilisateur
+  const userReservations = await getUserReservations(user.id, data.sessionId);
+  if (userReservations + data.seats > 5) throw new Error('Quota dépassé');
+  
+  // Création
+  const reservation = await db.reservations.create({ ... });
+  
+  // Notification
+  await sendEmail(user.email, 'Confirmation', { ... });
+  await addToCalendar(user.id, session);
+  
+  return reservation;
+}
+
+// ✅ Refactorisé en fonctions courtes et claires
+async function createReservation(data: ReservationInput) {
+  const validatedData = validateReservationInput(data);
+  const user = await requireAuthenticatedProgrammer();
+  const session = await getOpenSession(validatedData.sessionId);
+  
+  await checkSeatAvailability(session, validatedData.seats);
+  await checkUserQuota(user.id, session.id, validatedData.seats);
+  
+  const reservation = await saveReservation(user.id, validatedData);
+  await notifyUser(user, session, reservation);
+  
+  return reservation;
+}
+
+// Fonctions extraites - chacune fait UNE chose
+function validateReservationInput(data: ReservationInput): ValidatedReservation {
+  return createReservationSchema.parse(data);
+}
+
+async function requireAuthenticatedProgrammer(): Promise<User> {
+  const user = await getUser();
+  if (!user) throw new UnauthorizedError('Non authentifié');
+  if (user.role !== 'programmer') throw new ForbiddenError('Non autorisé');
+  return user;
+}
+
+async function getOpenSession(sessionId: string): Promise<Session> {
+  const session = await getSession(sessionId);
+  if (!session) throw new NotFoundError('Session introuvable');
+  if (session.status !== 'open') throw new BusinessError('Session fermée');
+  return session;
+}
+
+async function checkSeatAvailability(session: Session, requestedSeats: number): Promise<void> {
+  const available = await getAvailableSeats(session.id);
+  if (requestedSeats > available) {
+    throw new BusinessError(`Seulement ${available} places disponibles`);
+  }
+}
+```
+
+## Complexité cyclomatique
+
+### Règle : Maximum 10 chemins par fonction
+Chaque `if`, `else`, `for`, `while`, `case`, `&&`, `||`, `?:` ajoute un chemin.
+```typescript
+// ❌ Trop de conditions imbriquées (complexité > 10)
+function getTicketPrice(user, show, session) {
+  let price = show.basePrice;
+  
+  if (user) {
+    if (user.isPremium) {
+      if (session.isWeekend) {
+        price = price * 0.9;
+      } else {
+        price = price * 0.8;
+      }
+    } else if (user.isStudent) {
+      if (session.isMatinee) {
+        price = price * 0.5;
+      } else {
+        price = price * 0.7;
+      }
+    }
+  } else {
+    if (session.isLastMinute) {
+      price = price * 1.2;
+    }
+  }
+  
+  if (show.isPopular && session.remainingSeats < 10) {
+    price = price * 1.1;
+  }
+  
+  return price;
+}
+
+// ✅ Refactorisé avec early returns et fonctions dédiées
+function getTicketPrice(user: User | null, show: Show, session: Session): number {
+  const basePrice = show.basePrice;
+  const discount = calculateUserDiscount(user, session);
+  const surcharge = calculateDemandSurcharge(show, session);
+  
+  return basePrice * (1 - discount) * (1 + surcharge);
+}
+
+function calculateUserDiscount(user: User | null, session: Session): number {
+  if (!user) return 0;
+  
+  if (user.isPremium) {
+    return session.isWeekend ? 0.1 : 0.2;
+  }
+  
+  if (user.isStudent) {
+    return session.isMatinee ? 0.5 : 0.3;
+  }
+  
+  return 0;
+}
+
+function calculateDemandSurcharge(show: Show, session: Session): number {
+  if (!show.isPopular) return 0;
+  if (session.remainingSeats >= 10) return 0;
+  return 0.1;
+}
+```
+
+## Guard Clauses (Early Returns)
+
+### Gérer les cas d'erreur en premier
+```typescript
+// ❌ Pyramide de conditions
+async function updateReservation(id: string, data: UpdateData) {
+  const reservation = await getReservation(id);
+  if (reservation) {
+    const user = await getUser();
+    if (user) {
+      if (reservation.userId === user.id) {
+        if (reservation.status === 'pending') {
+          // Logique métier enfouie ici
+          return await doUpdate(reservation, data);
+        } else {
+          throw new Error('Réservation non modifiable');
+        }
+      } else {
+        throw new Error('Non autorisé');
+      }
+    } else {
+      throw new Error('Non authentifié');
+    }
+  } else {
+    throw new Error('Réservation introuvable');
+  }
+}
+
+// ✅ Guard clauses - erreurs en premier, logique à la fin
+async function updateReservation(id: string, data: UpdateData) {
+  const reservation = await getReservation(id);
+  if (!reservation) {
+    throw new NotFoundError('Réservation introuvable');
+  }
+
+  const user = await getUser();
+  if (!user) {
+    throw new UnauthorizedError('Non authentifié');
+  }
+
+  if (reservation.userId !== user.id) {
+    throw new ForbiddenError('Non autorisé');
+  }
+
+  if (reservation.status !== 'pending') {
+    throw new BusinessError('Réservation non modifiable');
+  }
+
+  // Happy path clairement visible
+  return await doUpdate(reservation, data);
+}
+```
+
+## Nommage explicite
+
+### Variables et fonctions
+```typescript
+// ❌ Noms vagues ou abrégés
+const d = new Date();
+const u = await getU();
+const res = await fetch(url);
+const arr = data.filter(x => x.a > 5);
+
+function proc(d) { ... }
+function handleClick() { ... }  // Que fait-il exactement ?
+
+// ✅ Noms explicites et intentionnels
+const reservationDate = new Date();
+const currentUser = await getCurrentUser();
+const showsResponse = await fetch(showsUrl);
+const activeShows = shows.filter(show => show.status === 'active');
+
+function processReservationPayment(reservation: Reservation) { ... }
+function handleReservationSubmit() { ... }
+```
+
+### Booléens avec préfixes
+```typescript
+// ✅ Utiliser is, has, can, should pour les booléens
+const isLoading = true;
+const hasReservations = reservations.length > 0;
+const canEdit = user.role === 'admin' && reservation.status === 'pending';
+const shouldShowWarning = remainingSeats < 5;
+
+// ✅ Fonctions qui retournent des booléens
+function isSessionFull(session: Session): boolean { ... }
+function hasUserExceededQuota(userId: string): boolean { ... }
+function canUserCancelReservation(user: User, reservation: Reservation): boolean { ... }
+```
+
+## DRY (Don't Repeat Yourself)
+
+### Extraire le code dupliqué
+```typescript
+// ❌ Code dupliqué
+async function getAdminShows() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from('shows').select('*');
+  if (error) {
+    console.error('Error:', error);
+    throw new Error('Failed to fetch shows');
+  }
+  return data;
+}
+
+async function getPublicShows() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('shows')
+    .select('*')
+    .eq('status', 'published');
+  if (error) {
+    console.error('Error:', error);
+    throw new Error('Failed to fetch shows');
+  }
+  return data;
+}
+
+// ✅ Fonction générique réutilisable
+async function queryShows(filters?: ShowFilters): Promise<Show[]> {
+  const supabase = await createClient();
+  
+  let query = supabase.from('shows').select('*');
+  
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters?.companyId) {
+    query = query.eq('company_id', filters.companyId);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching shows:', error);
+    throw new DatabaseError('Failed to fetch shows');
+  }
+  
+  return data;
+}
+
+// Utilisation
+const adminShows = await queryShows();
+const publicShows = await queryShows({ status: 'published' });
+```
+
+## Single Responsibility Principle (SRP)
+
+### Une fonction = Une responsabilité
+```typescript
+// ❌ Fonction qui fait trop de choses
+async function handleReservationForm(formData: FormData) {
+  // Validation
+  const email = formData.get('email');
+  if (!email || !email.includes('@')) throw new Error('Email invalide');
+  
+  // Création utilisateur si nécessaire
+  let user = await findUserByEmail(email);
+  if (!user) {
+    user = await createUser({ email });
+    await sendWelcomeEmail(email);
+  }
+  
+  // Création réservation
+  const reservation = await createReservation({ ... });
+  
+  // Notifications
+  await sendConfirmationEmail(email, reservation);
+  await notifyAdmin(reservation);
+  
+  // Analytics
+  await trackEvent('reservation_created', { ... });
+  
+  return reservation;
+}
+
+// ✅ Responsabilités séparées
+async function handleReservationForm(formData: FormData) {
+  const validatedData = validateFormData(formData);
+  const user = await getOrCreateUser(validatedData.email);
+  const reservation = await createReservation(user.id, validatedData);
+  
+  // Fire and forget pour les tâches secondaires
+  void processPostReservation(user, reservation);
+  
+  return reservation;
+}
+
+async function getOrCreateUser(email: string): Promise<User> {
+  const existingUser = await findUserByEmail(email);
+  if (existingUser) return existingUser;
+  
+  const newUser = await createUser({ email });
+  await sendWelcomeEmail(email);
+  return newUser;
+}
+
+async function processPostReservation(user: User, reservation: Reservation) {
+  await Promise.all([
+    sendConfirmationEmail(user.email, reservation),
+    notifyAdmin(reservation),
+    trackEvent('reservation_created', { userId: user.id }),
+  ]);
+}
+```
+
+## Commentaires
+
+### Commenter le POURQUOI, pas le QUOI
+```typescript
+// ❌ Commentaires inutiles (décrivent le code)
+// Incrémente le compteur
+counter++;
+
+// Vérifie si l'utilisateur est admin
+if (user.role === 'admin') { ... }
+
+// ✅ Commentaires utiles (expliquent le contexte)
+// Limite à 5 places par utilisateur selon la règle métier DD-2024-03
+const MAX_SEATS_PER_USER = 5;
+
+// Délai de 48h imposé par les compagnies pour les annulations
+const CANCELLATION_DEADLINE_HOURS = 48;
+
+// Workaround pour le bug Supabase #1234 - à supprimer après mise à jour
+const data = await fetchWithRetry(query);
+```
+
+### TODO avec contexte
+```typescript
+// ❌ TODO vague
+// TODO: fix this
+
+// ✅ TODO actionnable
+// TODO(steven): Implémenter la pagination - Sprint 3
+// TODO: Remplacer par l'API v2 quand disponible (prévu Q2 2025)
+// FIXME: Race condition possible si 2 users réservent en même temps - voir ticket #42
+```
+
+## Code smells à éviter
+
+### Magic numbers
+```typescript
+// ❌ Nombres magiques
+if (seats > 10) { ... }
+if (daysDiff < 2) { ... }
+await delay(3000);
+
+// ✅ Constantes nommées
+const MAX_SEATS_PER_RESERVATION = 10;
+const MIN_DAYS_BEFORE_CANCELLATION = 2;
+const API_RETRY_DELAY_MS = 3000;
+
+if (seats > MAX_SEATS_PER_RESERVATION) { ... }
+```
+
+### Paramètres booléens
+```typescript
+// ❌ Difficile à comprendre à l'appel
+await createReservation(userId, showId, true, false);
+
+// ✅ Objet de configuration explicite
+await createReservation({
+  userId,
+  showId,
+  sendConfirmation: true,
+  addToCalendar: false,
+});
+```
+
+### Fonctions avec trop de paramètres (> 3)
+```typescript
+// ❌ Trop de paramètres
+function createShow(title, slug, description, companyId, date, venue, price, status) { ... }
+
+// ✅ Objet de configuration
+interface CreateShowInput {
+  title: string;
+  slug: string;
+  description?: string;
+  companyId: string;
+  date: Date;
+  venue: string;
+  price: number;
+  status?: ShowStatus;
+}
+
+function createShow(input: CreateShowInput) { ... }
+```
+
+## Quand refactoriser ?
+
+### Signaux d'alerte
+- Fonction > 20 lignes
+- Plus de 3 niveaux d'indentation
+- Copier-coller de code
+- Commentaire nécessaire pour expliquer le code
+- Difficulté à nommer une fonction (fait trop de choses)
+- Plus de 3 paramètres
+- Tests difficiles à écrire
+
+### Règle du Boy Scout
+**Laisse le code plus propre que tu ne l'as trouvé.**
+Chaque commit devrait améliorer légèrement la qualité du code environnant.

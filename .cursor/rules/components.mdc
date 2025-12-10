@@ -1,0 +1,287 @@
+---
+description: Règles pour les composants UI - shadcn/ui, Tailwind et accessibilité
+globs: ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+alwaysApply: false
+---
+
+# Règles Composants UI
+
+## shadcn/ui
+
+### Utilisation prioritaire
+Toujours utiliser les composants shadcn/ui avant de créer des composants custom.
+```typescript
+// ✅ Utiliser shadcn/ui
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+
+// ❌ Ne pas recréer ce qui existe déjà
+function MyCustomButton() { ... }  // Inutile si Button existe
+```
+
+### Composants disponibles dans ce projet
+- `button` - Boutons avec variantes
+- `card` - Cartes de contenu
+- `input` - Champs de saisie
+- `label` - Labels de formulaire
+- `form` - Formulaires avec React Hook Form
+- `table` - Tableaux de données
+- `dialog` - Modales
+- `dropdown-menu` - Menus déroulants
+- `sonner` - Notifications toast
+- `tabs` - Onglets
+- `badge` - Badges/étiquettes
+- `avatar` - Avatars utilisateur
+
+### Extension des composants shadcn/ui
+```typescript
+// src/components/ui/button.tsx - Ne pas modifier directement
+// Créer plutôt un wrapper si besoin de variantes custom
+
+// src/components/features/SubmitButton.tsx
+import { Button, type ButtonProps } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
+
+interface SubmitButtonProps extends ButtonProps {
+  isLoading?: boolean;
+}
+
+export function SubmitButton({ isLoading, children, ...props }: SubmitButtonProps) {
+  return (
+    <Button disabled={isLoading} {...props}>
+      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {children}
+    </Button>
+  );
+}
+```
+
+## Tailwind CSS
+
+### Classes utilitaires
+```typescript
+// ✅ Mobile-first (défaut → sm → md → lg → xl)
+<div className="px-4 md:px-6 lg:px-8">
+
+// ✅ Ordre logique des classes
+// Layout → Spacing → Sizing → Typography → Colors → Effects
+<div className="flex items-center gap-4 p-4 w-full text-sm text-gray-700 bg-white rounded-lg shadow-sm">
+
+// ❌ Éviter les classes redondantes
+<div className="flex flex-row">  // flex-row est le défaut
+<div className="flex">  // ✅ Suffisant
+```
+
+### Conventions de spacing
+```typescript
+// Utiliser les valeurs Tailwind cohérentes
+// Petits espacements : gap-1, gap-2, p-2, m-2
+// Moyens espacements : gap-4, p-4, m-4
+// Grands espacements : gap-6, gap-8, p-6, p-8
+
+// ✅ Espacements cohérents
+<div className="space-y-4">
+  <Card className="p-4">...</Card>
+  <Card className="p-4">...</Card>
+</div>
+```
+
+### Couleurs du projet
+```typescript
+// Utiliser les couleurs sémantiques
+// Primary : Actions principales
+// Secondary : Actions secondaires
+// Destructive : Suppression, danger
+// Muted : Texte secondaire, backgrounds
+
+<Button variant="default">Action principale</Button>
+<Button variant="secondary">Action secondaire</Button>
+<Button variant="destructive">Supprimer</Button>
+<Button variant="outline">Alternative</Button>
+<Button variant="ghost">Discret</Button>
+```
+
+## Structure des composants métier
+
+### Organisation des fichiers
+```
+src/components/
+├── ui/                    # shadcn/ui (ne pas modifier)
+│   ├── button.tsx
+│   ├── card.tsx
+│   └── ...
+├── features/              # Composants métier
+│   ├── shows/
+│   │   ├── ShowCard.tsx
+│   │   ├── ShowList.tsx
+│   │   └── ShowFilters.tsx
+│   ├── reservations/
+│   │   ├── ReservationForm.tsx
+│   │   └── ReservationList.tsx
+│   └── auth/
+│       ├── LoginForm.tsx
+│       └── RegisterForm.tsx
+└── layout/                # Composants de layout
+    ├── Header.tsx
+    ├── Sidebar.tsx
+    └── Footer.tsx
+```
+
+### Composant métier type
+```typescript
+// src/components/features/shows/ShowCard.tsx
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Calendar, MapPin } from 'lucide-react';
+import type { Show } from '@/types';
+
+interface ShowCardProps {
+  show: Show;
+  onReserve?: (showId: string) => void;
+}
+
+export function ShowCard({ show, onReserve }: ShowCardProps) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <CardTitle className="text-lg">{show.title}</CardTitle>
+          <Badge variant={show.status === 'published' ? 'default' : 'secondary'}>
+            {show.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="flex-1 space-y-2">
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {show.description}
+        </p>
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4" />
+          <span>{formatDate(show.date)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <MapPin className="h-4 w-4" />
+          <span>{show.venue}</span>
+        </div>
+      </CardContent>
+      
+      <CardFooter>
+        <Button 
+          className="w-full" 
+          onClick={() => onReserve?.(show.id)}
+        >
+          Réserver
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+```
+
+## Accessibilité (a11y)
+
+### Règles obligatoires
+```typescript
+// ✅ Labels pour les inputs
+<Label htmlFor="email">Email</Label>
+<Input id="email" type="email" />
+
+// ✅ Texte alternatif pour les images
+<img src={show.image} alt={`Affiche du spectacle ${show.title}`} />
+
+// ✅ Boutons avec texte explicite ou aria-label
+<Button>Réserver</Button>
+<Button aria-label="Fermer la modale" size="icon">
+  <X className="h-4 w-4" />
+</Button>
+
+// ✅ Structure sémantique
+<header>...</header>
+<main>...</main>
+<nav>...</nav>
+<footer>...</footer>
+
+// ✅ Focus visible
+// shadcn/ui gère cela automatiquement, ne pas désactiver
+```
+
+### Navigation clavier
+```typescript
+// ✅ Éléments interactifs focusables dans l'ordre logique
+// ✅ Gestion du focus dans les modales (Dialog le gère automatiquement)
+// ✅ Skip links pour les longs contenus
+
+export function SkipLink() {
+  return (
+    
+      href="#main-content"
+      className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:rounded"
+    >
+      Aller au contenu principal
+    </a>
+  );
+}
+```
+
+## États des composants
+
+### Loading, Error, Empty
+```typescript
+// Toujours gérer les 3 états
+export function ShowList() {
+  const { data: shows, isLoading, error } = useShows();
+  
+  if (isLoading) {
+    return <ShowListSkeleton />;
+  }
+  
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Erreur</AlertTitle>
+        <AlertDescription>Impossible de charger les spectacles.</AlertDescription>
+      </Alert>
+    );
+  }
+  
+  if (!shows?.length) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        Aucun spectacle disponible.
+      </div>
+    );
+  }
+  
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {shows.map(show => (
+        <ShowCard key={show.id} show={show} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Skeletons de chargement
+```typescript
+// Créer des skeletons qui correspondent à la structure du composant
+export function ShowCardSkeleton() {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader>
+        <div className="h-6 w-3/4 bg-muted animate-pulse rounded" />
+      </CardHeader>
+      <CardContent className="flex-1 space-y-2">
+        <div className="h-4 w-full bg-muted animate-pulse rounded" />
+        <div className="h-4 w-2/3 bg-muted animate-pulse rounded" />
+      </CardContent>
+      <CardFooter>
+        <div className="h-10 w-full bg-muted animate-pulse rounded" />
+      </CardFooter>
+    </Card>
+  );
+}
+```

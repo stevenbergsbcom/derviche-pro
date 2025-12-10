@@ -1,0 +1,238 @@
+---
+description: Règles Supabase - Base de données, authentification et Row Level Security
+globs: ["**/*.ts", "**/*.tsx", "**/*.sql"]
+alwaysApply: false
+---
+
+# Règles Supabase
+
+## Clients Supabase
+
+### Utiliser le bon client selon le contexte
+```typescript
+// 🖥️ Server Components, API Routes, Server Actions
+import { createClient } from '@/lib/supabase/server';
+
+export default async function Page() {
+  const supabase = await createClient();
+  // ...
+}
+
+// 🌐 Client Components
+import { createClient } from '@/lib/supabase/client';
+
+export function ClientComponent() {
+  const supabase = createClient();
+  // ...
+}
+```
+
+## Row Level Security (RLS)
+
+### Règles obligatoires
+1. **TOUJOURS activer RLS** sur chaque table
+2. **TOUJOURS spécifier le rôle** avec `TO authenticated` ou `TO anon`
+3. **TOUJOURS utiliser `(select auth.uid())`** avec les parenthèses pour la performance
+
+### Exemples de policies performantes
+```sql
+-- ✅ Bon : Utiliser (select auth.uid()) pour la performance
+CREATE POLICY "Users can view own reservations"
+ON reservations
+FOR SELECT
+TO authenticated
+USING ((select auth.uid()) = user_id);
+
+-- ❌ Mauvais : Sans select, moins performant
+CREATE POLICY "Users can view own reservations"
+ON reservations
+FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+```
+
+### Policies pour les rôles métier (Derviche)
+```sql
+-- Fonction helper pour vérifier le rôle
+CREATE OR REPLACE FUNCTION public.has_role(required_role text)
+RETURNS boolean AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = (select auth.uid())
+    AND role = required_role
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Policy admin : accès total
+CREATE POLICY "Admins can do everything"
+ON shows
+FOR ALL
+TO authenticated
+USING (public.has_role('super_admin') OR public.has_role('admin'));
+
+-- Policy programmateur : lecture seule sur spectacles publiés
+CREATE POLICY "Programmers can view published shows"
+ON shows
+FOR SELECT
+TO authenticated
+USING (status = 'published');
+```
+
+### Performance RLS
+```sql
+-- ✅ Ajouter des index sur les colonnes utilisées dans les policies
+CREATE INDEX idx_reservations_user_id ON reservations(user_id);
+CREATE INDEX idx_shows_status ON shows(status);
+CREATE INDEX idx_users_role ON users(role);
+
+-- ✅ Éviter les JOINs dans les policies, préférer les sous-requêtes
+-- ❌ Mauvais : JOIN dans la policy
+CREATE POLICY "bad_policy" ON bookings
+USING (
+  (select auth.uid()) IN (
+    SELECT user_id FROM team_members
+    WHERE team_members.team_id = team_id  -- JOIN implicite
+  )
+);
+
+-- ✅ Bon : Sous-requête sans JOIN
+CREATE POLICY "good_policy" ON bookings
+USING (
+  team_id IN (
+    SELECT team_id FROM team_members
+    WHERE user_id = (select auth.uid())  -- Pas de JOIN
+  )
+);
+```
+
+## Requêtes Supabase
+
+### Bonnes pratiques
+```typescript
+// ✅ Toujours gérer les erreurs
+const { data, error } = await supabase
+  .from('shows')
+  .select('*');
+
+if (error) {
+  console.error('Error fetching shows:', error);
+  throw new Error('Failed to fetch shows');
+}
+
+// ✅ Sélectionner uniquement les colonnes nécessaires
+const { data } = await supabase
+  .from('shows')
+  .select('id, title, date, venue');  // Pas de SELECT *
+
+// ✅ Utiliser les relations
+const { data } = await supabase
+  .from('reservations')
+  .select(`
+    id,
+    status,
+    show:shows(title, date),
+    user:users(name, email)
+  `);
+
+// ✅ Pagination pour les grandes listes
+const { data } = await supabase
+  .from('shows')
+  .select('*')
+  .range(0, 9)  // 10 premiers résultats
+  .order('date', { ascending: true });
+```
+
+### Types générés
+```typescript
+// Utiliser les types générés par Supabase CLI
+import type { Database } from '@/types/supabase';
+
+type Show = Database['public']['Tables']['shows']['Row'];
+type NewShow = Database['public']['Tables']['shows']['Insert'];
+type UpdateShow = Database['public']['Tables']['shows']['Update'];
+```
+
+## Authentification
+
+### Flux d'authentification
+```typescript
+// Server Action pour la connexion
+'use server';
+
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+
+export async function signIn(formData: FormData) {
+  const supabase = await createClient();
+  
+  const { error } = await supabase.auth.signInWithPassword({
+    email: formData.get('email') as string,
+    password: formData.get('password') as string,
+  });
+  
+  if (error) {
+    return { error: error.message };
+  }
+  
+  redirect('/dashboard');
+}
+```
+
+### Middleware de protection des routes
+```typescript
+// middleware.ts
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse, type NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  // Rafraîchir la session si nécessaire
+  // Rediriger si non authentifié sur routes protégées
+}
+
+export const config = {
+  matcher: ['/admin/:path*', '/professional/:path*', '/company/:path*'],
+};
+```
+
+## Migrations
+
+### Convention de nommage
+```
+supabase/migrations/
+├── 20250101000000_create_users_table.sql
+├── 20250101000001_create_shows_table.sql
+├── 20250101000002_create_reservations_table.sql
+└── 20250101000003_add_rls_policies.sql
+```
+
+### Structure d'une migration
+```sql
+-- Migration: create_shows_table
+-- Description: Création de la table des spectacles
+
+CREATE TABLE public.shows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  description TEXT,
+  company_id UUID REFERENCES public.companies(id),
+  status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index
+CREATE INDEX idx_shows_slug ON public.shows(slug);
+CREATE INDEX idx_shows_status ON public.shows(status);
+
+-- RLS
+ALTER TABLE public.shows ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Public can view published shows"
+ON public.shows FOR SELECT
+TO anon, authenticated
+USING (status = 'published');
+```

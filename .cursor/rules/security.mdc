@@ -1,0 +1,248 @@
+---
+description: Règles de sécurité - Validation, authentification et protection des données
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Règles de Sécurité
+
+## Principe fondamental
+**Ne jamais faire confiance aux données côté client.**
+Toutes les entrées utilisateur doivent être validées côté serveur.
+
+## Validation avec Zod
+
+### Schémas de validation
+```typescript
+// src/lib/validations/reservation.ts
+import { z } from 'zod';
+
+export const createReservationSchema = z.object({
+  showId: z.string().uuid('ID de spectacle invalide'),
+  sessionId: z.string().uuid('ID de session invalide'),
+  seats: z.number()
+    .int('Le nombre de places doit être entier')
+    .min(1, 'Minimum 1 place')
+    .max(10, 'Maximum 10 places'),
+  notes: z.string().max(500, 'Notes trop longues').optional(),
+});
+
+export type CreateReservationInput = z.infer<typeof createReservationSchema>;
+```
+
+### Validation côté serveur (obligatoire)
+```typescript
+// app/api/reservations/route.ts
+import { createReservationSchema } from '@/lib/validations/reservation';
+import { createClient } from '@/lib/supabase/server';
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  
+  // 1. Vérifier l'authentification
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return Response.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+  
+  // 2. Parser et valider les données
+  const body = await request.json();
+  const result = createReservationSchema.safeParse(body);
+  
+  if (!result.success) {
+    return Response.json(
+      { error: 'Données invalides', details: result.error.flatten() },
+      { status: 400 }
+    );
+  }
+  
+  // 3. Utiliser les données validées
+  const validatedData = result.data;
+  // ...
+}
+```
+
+### Validation côté client (UX uniquement)
+```typescript
+'use client';
+
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createReservationSchema, type CreateReservationInput } from '@/lib/validations/reservation';
+
+export function ReservationForm() {
+  const form = useForm<CreateReservationInput>({
+    resolver: zodResolver(createReservationSchema),
+  });
+  
+  // La validation client améliore l'UX mais ne remplace PAS la validation serveur
+}
+```
+
+## Authentification et Autorisation
+
+### Vérifier l'authentification
+```typescript
+// ✅ Toujours vérifier avec getUser() côté serveur
+const { data: { user }, error } = await supabase.auth.getUser();
+
+// ❌ Ne jamais se fier uniquement à getSession() pour la sécurité
+// getSession() lit le JWT sans le valider auprès de Supabase
+```
+
+### Vérifier les rôles
+```typescript
+// src/lib/auth/permissions.ts
+import { createClient } from '@/lib/supabase/server';
+
+export type UserRole = 'super_admin' | 'admin' | 'externe_dd' | 'programmer' | 'company';
+
+export async function getCurrentUserRole(): Promise<UserRole | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return null;
+  
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  
+  return profile?.role ?? null;
+}
+
+export async function requireRole(allowedRoles: UserRole[]): Promise<void> {
+  const role = await getCurrentUserRole();
+  
+  if (!role || !allowedRoles.includes(role)) {
+    throw new Error('Accès non autorisé');
+  }
+}
+```
+
+### Protection des routes
+```typescript
+// app/admin/page.tsx
+import { redirect } from 'next/navigation';
+import { getCurrentUserRole } from '@/lib/auth/permissions';
+
+export default async function AdminPage() {
+  const role = await getCurrentUserRole();
+  
+  if (!role || !['super_admin', 'admin'].includes(role)) {
+    redirect('/login');
+  }
+  
+  return <AdminDashboard />;
+}
+```
+
+## Variables d'environnement
+
+### Règles strictes
+```typescript
+// ✅ Variables publiques (exposées au client)
+// Préfixe NEXT_PUBLIC_ obligatoire
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+
+// ✅ Variables secrètes (serveur uniquement)
+// JAMAIS de préfixe NEXT_PUBLIC_
+SUPABASE_SERVICE_ROLE_KEY=...
+RESEND_API_KEY=...
+
+// ❌ JAMAIS exposer de clés secrètes
+NEXT_PUBLIC_SERVICE_KEY=...  // INTERDIT
+```
+
+### Validation des variables d'environnement
+```typescript
+// src/lib/env.ts
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+});
+
+export const env = envSchema.parse({
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+});
+```
+
+## Protection contre les attaques courantes
+
+### XSS (Cross-Site Scripting)
+```typescript
+// ✅ React échappe automatiquement le contenu
+<p>{userInput}</p>  // Sécurisé
+
+// ❌ JAMAIS utiliser dangerouslySetInnerHTML avec des données utilisateur
+<div dangerouslySetInnerHTML={{ __html: userInput }} />  // DANGER
+
+// ✅ Si HTML nécessaire, utiliser une librairie de sanitization
+import DOMPurify from 'dompurify';
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />
+```
+
+### Injection SQL
+```typescript
+// ✅ Supabase utilise des requêtes paramétrées automatiquement
+const { data } = await supabase
+  .from('shows')
+  .select('*')
+  .eq('id', userInput);  // Sécurisé
+
+// ❌ JAMAIS construire des requêtes SQL manuellement
+const query = `SELECT * FROM shows WHERE id = '${userInput}'`;  // DANGER
+```
+
+### CSRF (Cross-Site Request Forgery)
+```typescript
+// ✅ Utiliser Server Actions (protection CSRF intégrée)
+'use server';
+
+export async function createReservation(formData: FormData) {
+  // Next.js gère automatiquement les tokens CSRF
+}
+```
+
+## Rate Limiting
+
+### Implémenter sur les endpoints sensibles
+```typescript
+// Utiliser Upstash Redis pour le rate limiting
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requêtes par minute
+});
+
+export async function POST(request: Request) {
+  const ip = request.headers.get('x-forwarded-for') ?? 'anonymous';
+  const { success } = await ratelimit.limit(ip);
+  
+  if (!success) {
+    return Response.json({ error: 'Trop de requêtes' }, { status: 429 });
+  }
+  
+  // Continuer le traitement...
+}
+```
+
+## Logs et Audit
+
+### Ne jamais logger de données sensibles
+```typescript
+// ❌ JAMAIS logger de mots de passe ou tokens
+console.log('User login:', { email, password });  // DANGER
+
+// ✅ Logger uniquement les informations nécessaires
+console.log('User login attempt:', { email, timestamp: new Date() });
+```

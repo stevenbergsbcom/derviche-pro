@@ -1,0 +1,486 @@
+---
+description: Règles de gestion des erreurs - Erreurs custom, logging et récupération
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+
+# Gestion des Erreurs
+
+## Philosophie
+**Fail fast, fail loud, fail gracefully.**
+- Détecter les erreurs le plus tôt possible
+- Logger avec contexte pour le debugging
+- Présenter un message clair à l'utilisateur
+
+## Classes d'erreurs personnalisées
+
+### Hiérarchie des erreurs
+```typescript
+// src/lib/errors/index.ts
+
+// Erreur de base avec contexte
+export class AppError extends Error {
+  public readonly statusCode: number;
+  public readonly code: string;
+  public readonly isOperational: boolean;
+
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code: string = 'INTERNAL_ERROR',
+    isOperational: boolean = true
+  ) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.isOperational = isOperational;
+    
+    Object.setPrototypeOf(this, AppError.prototype);
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+// Erreurs HTTP spécifiques
+export class BadRequestError extends AppError {
+  constructor(message: string = 'Requête invalide', code: string = 'BAD_REQUEST') {
+    super(message, 400, code);
+  }
+}
+
+export class UnauthorizedError extends AppError {
+  constructor(message: string = 'Non authentifié', code: string = 'UNAUTHORIZED') {
+    super(message, 401, code);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message: string = 'Accès interdit', code: string = 'FORBIDDEN') {
+    super(message, 403, code);
+  }
+}
+
+export class NotFoundError extends AppError {
+  constructor(message: string = 'Ressource introuvable', code: string = 'NOT_FOUND') {
+    super(message, 404, code);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message: string = 'Conflit de données', code: string = 'CONFLICT') {
+    super(message, 409, code);
+  }
+}
+
+export class ValidationError extends AppError {
+  public readonly errors: Record<string, string[]>;
+
+  constructor(errors: Record<string, string[]>, message: string = 'Données invalides') {
+    super(message, 400, 'VALIDATION_ERROR');
+    this.errors = errors;
+  }
+}
+
+// Erreurs métier spécifiques à Derviche
+export class QuotaExceededError extends AppError {
+  constructor(message: string = 'Quota de réservations dépassé') {
+    super(message, 400, 'QUOTA_EXCEEDED');
+  }
+}
+
+export class SessionFullError extends AppError {
+  constructor(message: string = 'Session complète') {
+    super(message, 400, 'SESSION_FULL');
+  }
+}
+
+export class SessionClosedError extends AppError {
+  constructor(message: string = 'Réservations fermées pour cette session') {
+    super(message, 400, 'SESSION_CLOSED');
+  }
+}
+
+export class CancellationDeadlineError extends AppError {
+  constructor(message: string = 'Délai d\'annulation dépassé') {
+    super(message, 400, 'CANCELLATION_DEADLINE_PASSED');
+  }
+}
+```
+
+## Utilisation dans le code
+
+### API Routes
+```typescript
+// app/api/reservations/route.ts
+import { NextResponse } from 'next/server';
+import { 
+  AppError, 
+  BadRequestError, 
+  UnauthorizedError,
+  SessionFullError 
+} from '@/lib/errors';
+import { createReservationSchema } from '@/lib/validations/reservation';
+import { createClient } from '@/lib/supabase/server';
+
+export async function POST(request: Request) {
+  try {
+    // 1. Auth
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      throw new UnauthorizedError();
+    }
+
+    // 2. Validation
+    const body = await request.json();
+    const result = createReservationSchema.safeParse(body);
+    
+    if (!result.success) {
+      throw new BadRequestError('Données invalides');
+    }
+
+    // 3. Logique métier
+    const availableSeats = await getAvailableSeats(result.data.sessionId);
+    if (availableSeats < result.data.seats) {
+      throw new SessionFullError(`Seulement ${availableSeats} places disponibles`);
+    }
+
+    // 4. Création
+    const reservation = await createReservation(user.id, result.data);
+    
+    return NextResponse.json(reservation, { status: 201 });
+
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+
+// Handler centralisé pour les erreurs API
+function handleApiError(error: unknown): NextResponse {
+  console.error('[API Error]', error);
+
+  if (error instanceof AppError) {
+    return NextResponse.json(
+      { 
+        error: error.message, 
+        code: error.code,
+        ...(error instanceof ValidationError && { details: error.errors })
+      },
+      { status: error.statusCode }
+    );
+  }
+
+  // Erreur inattendue - ne pas exposer les détails
+  return NextResponse.json(
+    { error: 'Une erreur inattendue est survenue', code: 'INTERNAL_ERROR' },
+    { status: 500 }
+  );
+}
+```
+
+### Server Actions
+```typescript
+// app/actions/reservations.ts
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { AppError } from '@/lib/errors';
+
+export type ActionResult<T> = 
+  | { success: true; data: T }
+  | { success: false; error: string; code: string };
+
+export async function createReservationAction(
+  formData: FormData
+): Promise<ActionResult<Reservation>> {
+  try {
+    // Logique...
+    const reservation = await createReservation(data);
+    
+    revalidatePath('/professional/reservations');
+    
+    return { success: true, data: reservation };
+    
+  } catch (error) {
+    if (error instanceof AppError) {
+      return { success: false, error: error.message, code: error.code };
+    }
+    
+    console.error('[Action Error]', error);
+    return { 
+      success: false, 
+      error: 'Une erreur inattendue est survenue', 
+      code: 'INTERNAL_ERROR' 
+    };
+  }
+}
+```
+
+### Composants Client
+```typescript
+'use client';
+
+import { useTransition } from 'react';
+import { toast } from 'sonner';
+import { createReservationAction } from '@/app/actions/reservations';
+
+export function ReservationForm() {
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = (formData: FormData) => {
+    startTransition(async () => {
+      const result = await createReservationAction(formData);
+      
+      if (result.success) {
+        toast.success('Réservation confirmée !');
+      } else {
+        // Message d'erreur adapté au code
+        const errorMessage = getErrorMessage(result.code, result.error);
+        toast.error(errorMessage);
+      }
+    });
+  };
+
+  return <form action={handleSubmit}>...</form>;
+}
+
+// Traduction des codes d'erreur en messages utilisateur
+function getErrorMessage(code: string, fallback: string): string {
+  const messages: Record<string, string> = {
+    'QUOTA_EXCEEDED': 'Vous avez atteint votre limite de réservations',
+    'SESSION_FULL': 'Désolé, cette session est complète',
+    'SESSION_CLOSED': 'Les réservations sont fermées pour cette session',
+    'UNAUTHORIZED': 'Veuillez vous connecter pour continuer',
+    'FORBIDDEN': 'Vous n\'avez pas les droits pour cette action',
+  };
+  
+  return messages[code] ?? fallback;
+}
+```
+
+## Logging
+
+### Règles de logging
+```typescript
+// ✅ En développement : logs détaillés
+// ✅ En production : logs structurés sans données sensibles
+
+// src/lib/logger.ts
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+interface LogContext {
+  userId?: string;
+  action?: string;
+  entityType?: string;
+  entityId?: string;
+  [key: string]: unknown;
+}
+
+function log(level: LogLevel, message: string, context?: LogContext) {
+  const isDev = process.env.NODE_ENV === 'development';
+  
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    level,
+    message,
+    ...context,
+  };
+
+  if (isDev) {
+    // En dev : format lisible
+    console[level](`[${level.toUpperCase()}] ${message}`, context ?? '');
+  } else {
+    // En prod : JSON structuré pour les outils de monitoring
+    console[level](JSON.stringify(logEntry));
+  }
+}
+
+export const logger = {
+  debug: (message: string, context?: LogContext) => log('debug', message, context),
+  info: (message: string, context?: LogContext) => log('info', message, context),
+  warn: (message: string, context?: LogContext) => log('warn', message, context),
+  error: (message: string, context?: LogContext) => log('error', message, context),
+};
+
+// Utilisation
+logger.info('Réservation créée', { 
+  userId: user.id, 
+  action: 'create_reservation',
+  entityType: 'reservation',
+  entityId: reservation.id 
+});
+
+logger.error('Échec création réservation', {
+  userId: user.id,
+  action: 'create_reservation',
+  error: error.message,
+});
+```
+
+### Ce qu'il ne faut JAMAIS logger
+```typescript
+// ❌ JAMAIS de données sensibles
+logger.info('Login', { email, password });           // ❌ Mot de passe
+logger.info('Payment', { cardNumber, cvv });         // ❌ Données bancaires
+logger.info('User', { ...user });                    // ❌ Spread complet (peut contenir des tokens)
+
+// ✅ Logger uniquement les identifiants et métadonnées
+logger.info('Login attempt', { email });             // ✅ OK
+logger.info('Payment processed', { orderId });       // ✅ OK
+logger.info('User action', { userId: user.id });     // ✅ OK
+```
+
+## Error Boundaries (React)
+
+### Composant Error Boundary
+```typescript
+// src/components/ErrorBoundary.tsx
+'use client';
+
+import { Component, ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught:', error, errorInfo);
+    // Envoyer à un service de monitoring (Sentry, etc.)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback ?? (
+        <div className="flex flex-col items-center justify-center p-8 text-center">
+          <h2 className="text-lg font-semibold">Une erreur est survenue</h2>
+          <p className="text-muted-foreground mt-2">
+            Nous nous excusons pour la gêne occasionnée.
+          </p>
+          <Button 
+            className="mt-4" 
+            onClick={() => this.setState({ hasError: false })}
+          >
+            Réessayer
+          </Button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+```
+
+### Error.tsx Next.js
+```typescript
+// app/error.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+
+interface ErrorProps {
+  error: Error & { digest?: string };
+  reset: () => void;
+}
+
+export default function Error({ error, reset }: ErrorProps) {
+  useEffect(() => {
+    // Logger l'erreur
+    console.error('Page error:', error);
+  }, [error]);
+
+  return (
+    <div className="flex min-h-[400px] flex-col items-center justify-center">
+      <h2 className="text-xl font-semibold">Une erreur est survenue</h2>
+      <p className="text-muted-foreground mt-2 max-w-md text-center">
+        Nous avons rencontré un problème. Veuillez réessayer ou contacter le support.
+      </p>
+      <Button className="mt-4" onClick={reset}>
+        Réessayer
+      </Button>
+    </div>
+  );
+}
+```
+
+## Async/Await et Try/Catch
+
+### Pattern recommandé
+```typescript
+// ✅ Try/catch avec gestion spécifique
+async function fetchUserReservations(userId: string): Promise<Reservation[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (error) {
+      throw new AppError(`Erreur base de données: ${error.message}`, 500, 'DB_ERROR');
+    }
+
+    return data ?? [];
+    
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error; // Re-throw les erreurs connues
+    }
+    
+    // Wrapper les erreurs inconnues
+    throw new AppError(
+      'Impossible de récupérer les réservations',
+      500,
+      'FETCH_RESERVATIONS_ERROR'
+    );
+  }
+}
+```
+
+### Utilitaire pour les résultats
+```typescript
+// src/lib/utils/result.ts
+type Result<T, E = Error> = 
+  | { ok: true; value: T }
+  | { ok: false; error: E };
+
+// Wrapper pour les opérations qui peuvent échouer
+async function tryCatch<T>(
+  promise: Promise<T>
+): Promise<Result<T>> {
+  try {
+    const value = await promise;
+    return { ok: true, value };
+  } catch (error) {
+    return { ok: false, error: error as Error };
+  }
+}
+
+// Utilisation
+const result = await tryCatch(fetchUserReservations(userId));
+
+if (!result.ok) {
+  logger.error('Failed to fetch reservations', { error: result.error.message });
+  return [];
+}
+
+return result.value;
+```
