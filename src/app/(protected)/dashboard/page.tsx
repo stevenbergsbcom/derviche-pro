@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { LogoutButton } from '@/components/auth/logout-button';
 
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -63,9 +63,7 @@ export default async function DashboardPage() {
                             <p className="text-sm text-muted-foreground mb-4">
                                 Bonjour <span className="font-semibold text-foreground">{displayName}</span> !
                             </p>
-                            <Link href="/login">
-                                <Button variant="outline">Se déconnecter</Button>
-                            </Link>
+                            <LogoutButton />
                         </div>
                     </CardContent>
                 </Card>
