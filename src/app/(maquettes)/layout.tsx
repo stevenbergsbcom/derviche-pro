@@ -1,0 +1,15 @@
+export default function MaquettesLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    return (
+        <>
+            <div className="bg-yellow-500 text-yellow-950 px-4 py-2 text-center font-semibold">
+                MODE MAQUETTE
+            </div>
+            {children}
+        </>
+    );
+}
+

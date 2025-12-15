@@ -15,7 +15,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'Derviche Diffusion - Réservation Professionnelle',
-  description: 'Plateforme de réservation professionnelle pour spectacles vivants',
+  description: 'Plateforme de réservation professionnelle pour spectacles vivants. Derviche est une agence de production et de diffusion innovante, transparente et mutualiste.',
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
+  },
+  openGraph: {
+    title: 'Derviche Diffusion - Réservation Professionnelle',
+    description: 'Plateforme de réservation professionnelle pour spectacles vivants.',
+    siteName: 'Derviche Diffusion',
+    locale: 'fr_FR',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
