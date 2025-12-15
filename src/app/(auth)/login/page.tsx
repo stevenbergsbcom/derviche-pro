@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -83,7 +84,7 @@ export default function LoginPage() {
             router.push('/dashboard');
             router.refresh();
         } catch (error) {
-            console.error('Login error:', error);
+            logger.error('[Login] Erreur de connexion', error as Error);
             toast.error('Une erreur est survenue lors de la connexion');
         } finally {
             setIsLoadingEmailPassword(false);
@@ -110,7 +111,7 @@ export default function LoginPage() {
             toast.success('Vérifiez votre boîte email !');
             magicLinkForm.reset();
         } catch (error) {
-            console.error('Magic link error:', error);
+            logger.error('[Login] Erreur magic link', error as Error);
             toast.error('Une erreur est survenue lors de l\'envoi du lien');
         } finally {
             setIsLoadingMagicLink(false);

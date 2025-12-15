@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +69,7 @@ export default function ResetPasswordPage() {
 
                 setIsSessionValid(true);
             } catch (error) {
-                console.error('Session check error:', error);
+                logger.error('[Reset Password] Erreur vérification session', error as Error);
                 setIsSessionValid(false);
             }
         };
@@ -97,7 +98,7 @@ export default function ResetPasswordPage() {
                 router.push('/login');
             }, 2000);
         } catch (error) {
-            console.error('Reset password error:', error);
+            logger.error('[Reset Password] Erreur réinitialisation', error as Error);
             toast.error('Une erreur est survenue lors de la mise à jour du mot de passe');
         } finally {
             setIsLoading(false);

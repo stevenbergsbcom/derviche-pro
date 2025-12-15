@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -58,7 +59,7 @@ export default function ForgotPasswordPage() {
             setIsEmailSent(true);
             form.reset();
         } catch (error) {
-            console.error('Forgot password error:', error);
+            logger.error('[Forgot Password] Erreur envoi email', error as Error);
             toast.error('Une erreur est survenue lors de l\'envoi du lien');
         } finally {
             setIsLoading(false);

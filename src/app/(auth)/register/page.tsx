@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
+import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,7 +86,7 @@ export default function RegisterPage() {
             toast.success('Vérifiez votre boîte email pour confirmer votre compte');
             form.reset();
         } catch (error) {
-            console.error('Register error:', error);
+            logger.error('[Register] Erreur lors de l\'inscription', error as Error);
             toast.error('Une erreur est survenue lors de l\'inscription');
         } finally {
             setIsLoading(false);

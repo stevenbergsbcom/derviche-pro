@@ -9,6 +9,7 @@ import type { VariantProps } from 'class-variance-authority';
 import { createClient } from '@/lib/supabase/client';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface LogoutButtonProps {
     variant?: VariantProps<typeof buttonVariants>['variant'];
@@ -44,7 +45,7 @@ export function LogoutButton({
             // Rediriger vers /login
             router.push('/login');
         } catch (error) {
-            console.error('Logout error:', error);
+            logger.error('[Logout] Erreur lors de la déconnexion', error as Error);
             toast.error('Une erreur est survenue lors de la déconnexion');
         } finally {
             setIsLoading(false);
