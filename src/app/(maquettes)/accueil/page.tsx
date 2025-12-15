@@ -221,37 +221,37 @@ export default function MaquetteAccueil() {
 
         {/* Menu Mobile */}
         {mobileMenuOpen && (
-        <div className="md:hidden border-t bg-white">
-        <nav className="container mx-auto px-4 py-4 flex flex-col items-center gap-4">
-        <Link 
-        href="/catalogue" 
-        className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
-        onClick={() => setMobileMenuOpen(false)}
-        >
-        Catalogue
-        </Link>
-        <Link 
-        href="#contact" 
-        className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
-        onClick={() => setMobileMenuOpen(false)}
-        >
-        Contact
-        </Link>
-        <hr className="my-2 w-full" />
-        <Link 
-        href="/login" 
-        className="text-lg font-medium py-2 hover:text-derviche transition"
-        onClick={() => setMobileMenuOpen(false)}
-        >
-        Connexion
-        </Link>
-        <Button className="w-full max-w-xs text-lg bg-derviche hover:bg-derviche-dark" asChild>
-        <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-        Inscription
-        </Link>
-        </Button>
-        </nav>
-        </div>
+          <div className="md:hidden border-t bg-white">
+            <nav className="container mx-auto px-4 py-4 flex flex-col items-center gap-4">
+              <Link
+                href="/catalogue"
+                className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Catalogue
+              </Link>
+              <Link
+                href="#contact"
+                className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Contact
+              </Link>
+              <hr className="my-2 w-full" />
+              <Link
+                href="/login"
+                className="text-lg font-medium py-2 hover:text-derviche transition"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Connexion
+              </Link>
+              <Button className="w-full max-w-xs text-lg bg-derviche hover:bg-derviche-dark" asChild>
+                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                  Inscription
+                </Link>
+              </Button>
+            </nav>
+          </div>
         )}
       </header>
 
@@ -374,24 +374,23 @@ export default function MaquetteAccueil() {
 
           {/* Carousel Spectacles */}
           <div className="relative overflow-hidden">
-          <div 
-          className="flex transition-transform duration-500 ease-in-out"
-          style={{ 
-          transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'})))`,
-            gap: cardsVisible === 1 ? '0' : '1.5rem'
-            }}
-          >
-          {spectacles.map((show) => (
-          <Link 
-          key={show.id} 
-          href={`/spectacle/${show.slug}`} 
-            className={`block flex-shrink-0 ${
-                    cardsVisible === 1 
-                      ? 'w-full' 
-                      : cardsVisible === 2 
-                        ? 'w-[calc(50%-0.75rem)]' 
-                        : 'w-[calc(25%-1.125rem)]'
-                  }`}
+            <div
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{
+                transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'})))`,
+                gap: cardsVisible === 1 ? '0' : '1.5rem'
+              }}
+            >
+              {spectacles.map((show) => (
+                <Link
+                  key={show.id}
+                  href={`/spectacle/${show.slug}`}
+                  className={`block flex-shrink-0 ${cardsVisible === 1
+                    ? 'w-full'
+                    : cardsVisible === 2
+                      ? 'w-[calc(50%-0.75rem)]'
+                      : 'w-[calc(25%-1.125rem)]'
+                    }`}
                   style={{ width: `calc(${100 / cardsVisible}% - ${cardsVisible > 1 ? '1.125rem' : '0rem'})` }}
                 >
                   <Card className="overflow-hidden group hover:shadow-lg transition-shadow bg-white rounded-xl p-0 gap-0 cursor-pointer h-full">
