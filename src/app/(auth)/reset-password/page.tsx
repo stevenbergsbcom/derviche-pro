@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Form,
     FormControl,
@@ -42,6 +44,7 @@ type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 export default function ResetPasswordPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+    const [isSessionValid, setIsSessionValid] = useState<boolean | null>(null);
 
     const form = useForm<ResetPasswordForm>({
         resolver: zodResolver(resetPasswordSchema),
@@ -50,6 +53,28 @@ export default function ResetPasswordPage() {
             confirmPassword: '',
         },
     });
+
+    // Vérifier la session au montage du composant
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const supabase = createClient();
+                const { data: { session }, error } = await supabase.auth.getSession();
+
+                if (error || !session) {
+                    setIsSessionValid(false);
+                    return;
+                }
+
+                setIsSessionValid(true);
+            } catch (error) {
+                console.error('Session check error:', error);
+                setIsSessionValid(false);
+            }
+        };
+
+        checkSession();
+    }, []);
 
     const handleSubmit = async (data: ResetPasswordForm) => {
         setIsLoading(true);
@@ -79,6 +104,56 @@ export default function ResetPasswordPage() {
         }
     };
 
+    // En cours de vérification
+    if (isSessionValid === null) {
+        return (
+            <div className="space-y-6">
+                <div className="space-y-2 text-center">
+                    <h2 className="text-2xl font-semibold tracking-tight">
+                        Réinitialiser le mot de passe
+                    </h2>
+                </div>
+                <div className="flex items-center justify-center py-8">
+                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
+                </div>
+            </div>
+        );
+    }
+
+    // Pas de session valide
+    if (isSessionValid === false) {
+        return (
+            <div className="space-y-6">
+                <div className="space-y-2 text-center">
+                    <h2 className="text-2xl font-semibold tracking-tight">
+                        Lien invalide ou expiré
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        Ce lien de réinitialisation n'est plus valide
+                    </p>
+                </div>
+
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Session expirée</CardTitle>
+                        <CardDescription>
+                            Le lien de réinitialisation a expiré ou n'est plus valide.
+                            Veuillez demander un nouveau lien.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Link href="/forgot-password">
+                            <Button className="w-full">
+                                Demander un nouveau lien
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
+
+    // Session valide, afficher le formulaire
     return (
         <div className="space-y-6">
             <div className="space-y-2 text-center">
