@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -251,6 +251,30 @@ export default function SpectacleDetailPage() {
         function: '',
         comment: '',
     });
+
+    // Reset des états quand le slug change (navigation entre spectacles)
+    useEffect(() => {
+        setCurrentStep('calendar');
+        setSelectedDate(null);
+        setSelectedSlot(null);
+        setParticipantCount(1);
+        setShowAuthModal(false);
+        setShowFullDescription(false);
+        setFormData({
+            lastName: '',
+            firstName: '',
+            email: '',
+            emailSecondary: '',
+            phone: '',
+            phoneSecondary: '',
+            address: '',
+            postalCode: '',
+            city: '',
+            organization: '',
+            function: '',
+            comment: '',
+        });
+    }, [slug]);
 
     // Vérifier si le spectacle est "bientôt réservable"
     const isComingSoon = spectacleData.status === 'coming_soon';
