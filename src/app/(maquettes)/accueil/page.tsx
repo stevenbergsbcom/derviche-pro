@@ -20,7 +20,7 @@ import {
   ArrowUp,
 } from 'lucide-react';
 
-// Données des spectacles (maquette) avec les vrais lieux
+// Données des spectacles (maquette) avec images locales
 const spectacles: Spectacle[] = [
   {
     id: 1,
