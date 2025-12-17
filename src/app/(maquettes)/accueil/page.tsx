@@ -6,24 +6,22 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Header, Footer } from '@/components/layout';
+import { SpectacleCard, Spectacle } from '@/components/spectacles';
 import {
   Search,
   Calendar,
   MessageCircle,
   ChevronLeft,
   ChevronRight,
-  Facebook,
-  Instagram,
   Mail,
   Phone,
   MapPin,
-  Menu,
-  X,
   ArrowUp,
 } from 'lucide-react';
 
 // Données des spectacles (maquette) avec les vrais lieux
-const spectacles = [
+const spectacles: Spectacle[] = [
   {
     id: 1,
     title: 'À MOI !',
@@ -84,7 +82,6 @@ const CARDS_VISIBLE = {
 };
 
 export default function MaquetteAccueil() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [cardsVisible, setCardsVisible] = useState(CARDS_VISIBLE.desktop);
@@ -161,99 +158,8 @@ export default function MaquetteAccueil() {
 
   return (
     <div className="min-h-screen bg-background scroll-smooth">
-      {/* Header - Mobile First */}
-      <header className="border-b bg-white sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Logo + Navigation Desktop */}
-          <div className="flex items-center gap-8">
-            {/* Logo */}
-            <Link href="/accueil" className="flex items-center">
-              <Image
-                src="/images/logos/logo-derviche-bleu.png"
-                alt="Derviche Diffusion"
-                width={180}
-                height={70}
-                className="h-12 md:h-16 w-auto"
-                priority
-              />
-            </Link>
-
-            {/* Navigation Desktop - À gauche, en bleu clair */}
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/catalogue"
-                className="text-lg font-medium text-muted-foreground hover:text-derviche transition"
-              >
-                Catalogue
-              </Link>
-              <Link
-                href="#contact"
-                className="text-lg font-medium text-muted-foreground hover:text-derviche transition"
-              >
-                Contact
-              </Link>
-            </nav>
-          </div>
-
-          {/* Auth buttons Desktop */}
-          <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" className="text-lg" asChild>
-              <Link href="/login">Connexion</Link>
-            </Button>
-            <Button className="text-lg bg-derviche hover:bg-derviche-dark" asChild>
-              <Link href="/register">Inscription</Link>
-            </Button>
-          </div>
-
-          {/* Menu Burger Mobile */}
-          <button
-            className="md:hidden p-2 -mr-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
-        </div>
-
-        {/* Menu Mobile */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-white">
-            <nav className="container mx-auto px-4 py-4 flex flex-col items-center gap-4">
-              <Link
-                href="/catalogue"
-                className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Catalogue
-              </Link>
-              <Link
-                href="#contact"
-                className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Contact
-              </Link>
-              <hr className="my-2 w-full" />
-              <Link
-                href="/login"
-                className="text-lg font-medium py-2 hover:text-derviche transition"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Connexion
-              </Link>
-              <Button className="w-full max-w-xs text-lg bg-derviche hover:bg-derviche-dark" asChild>
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                  Inscription
-                </Link>
-              </Button>
-            </nav>
-          </div>
-        )}
-      </header>
+      {/* Header réutilisable */}
+      <Header />
 
       {/* Hero Section - Mobile First avec Slider auto */}
       <section className="py-12 md:py-24 bg-gradient-to-b from-white to-muted/30">
@@ -356,7 +262,7 @@ export default function MaquetteAccueil() {
         </div>
       </section>
 
-      {/* Spectacles Section - Mobile First */}
+      {/* Spectacles Section - Mobile First avec Carousel */}
       <section className="py-12 md:py-20 bg-muted">
         <div className="container mx-auto px-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
@@ -382,66 +288,13 @@ export default function MaquetteAccueil() {
               }}
             >
               {spectacles.map((show) => (
-                <Link
+                <div
                   key={show.id}
-                  href={`/spectacle/${show.slug}`}
-                  className={`block flex-shrink-0 ${cardsVisible === 1
-                    ? 'w-full'
-                    : cardsVisible === 2
-                      ? 'w-[calc(50%-0.75rem)]'
-                      : 'w-[calc(25%-1.125rem)]'
-                    }`}
+                  className="flex-shrink-0"
                   style={{ width: `calc(${100 / cardsVisible}% - ${cardsVisible > 1 ? '1.125rem' : '0rem'})` }}
                 >
-                  <Card className="overflow-hidden group hover:shadow-lg transition-shadow bg-white rounded-xl p-0 gap-0 cursor-pointer h-full">
-                    {/* Image avec badge genre */}
-                    <div className="aspect-[4/3] overflow-hidden relative">
-                      <Image
-                        src={show.image}
-                        alt={show.title}
-                        width={400}
-                        height={300}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {/* Badge genre */}
-                      <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
-                        {show.genre}
-                      </span>
-                    </div>
-
-                    {/* Contenu de la card */}
-                    <CardContent className="px-4 pb-4 pt-3 md:px-5 md:pb-5 md:pt-4">
-                      {/* Date prochaine représentation */}
-                      <p className="text-xs font-medium text-gold mb-2 flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        Prochaine date : {show.nextDate}
-                      </p>
-
-                      {/* Titre - 2 lignes max */}
-                      <h3 className="font-bold text-lg md:text-xl mb-2 line-clamp-2 min-h-[3rem] md:min-h-[3.5rem] text-derviche-dark leading-tight">
-                        {show.title}
-                      </h3>
-
-                      {/* Compagnie - En gras */}
-                      <p className="text-sm font-semibold text-foreground mb-1 line-clamp-1">
-                        {show.company}
-                      </p>
-
-                      {/* Lieu - En italique avec icône */}
-                      <p className="text-sm text-muted-foreground italic mb-4 line-clamp-1 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 flex-shrink-0" />
-                        {show.venue}
-                      </p>
-
-                      {/* Bouton */}
-                      <Button
-                        className="w-full bg-derviche-dark hover:bg-derviche text-white font-medium"
-                      >
-                        Réserver ma place
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </Link>
+                  <SpectacleCard spectacle={show} variant="carousel" />
+                </div>
               ))}
             </div>
           </div>
@@ -595,74 +448,8 @@ export default function MaquetteAccueil() {
         </div>
       </section>
 
-      {/* Footer - Mobile First */}
-      <footer className="py-10 md:py-12 bg-derviche-dark text-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            {/* Logo & Info */}
-            <div className="sm:col-span-2 text-center md:text-left">
-              <Image
-                src="/images/logos/logo-derviche-blanc-transparent.png"
-                alt="Derviche Diffusion"
-                width={280}
-                height={110}
-                className="h-28 md:h-20 w-auto mb-4 mx-auto md:mx-0"
-              />
-              <p className="text-white/70 text-sm mb-4 max-w-sm mx-auto md:mx-0">
-                Agence de production et de diffusion de spectacles vivants depuis 2016.
-                Nous accompagnons les compagnies artistiques et les programmateurs.
-              </p>
-              <div className="flex gap-6 justify-center md:justify-start">
-                <a
-                  href="https://www.facebook.com/Derviche-Diffusion-104081770023884"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/70 hover:text-gold transition"
-                >
-                  <Facebook className="w-9 h-9 md:w-6 md:h-6" />
-                </a>
-                <a
-                  href="https://www.instagram.com/dervichediffusion/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/70 hover:text-gold transition"
-                >
-                  <Instagram className="w-9 h-9 md:w-6 md:h-6" />
-                </a>
-              </div>
-            </div>
-
-            {/* Links */}
-            <div className="text-center md:text-left">
-              <h4 className="font-semibold mb-4 text-gold">Navigation</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/catalogue" className="text-white/70 hover:text-white transition">Catalogue</Link></li>
-                <li><Link href="#contact" className="text-white/70 hover:text-white transition">Contact</Link></li>
-                <li><Link href="/login" className="text-white/70 hover:text-white transition">Connexion</Link></li>
-              </ul>
-            </div>
-
-            <div className="text-center md:text-left">
-              <h4 className="font-semibold mb-4 text-gold">Légal</h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="#" className="text-white/70 hover:text-white transition">Mentions légales</Link></li>
-                <li><Link href="#" className="text-white/70 hover:text-white transition">Politique de confidentialité</Link></li>
-                <li><Link href="#" className="text-white/70 hover:text-white transition">CGU</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/10 pt-6 md:pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/50 text-center md:text-left">
-            <p>© 2025 Derviche Diffusion. Tous droits réservés.</p>
-            <p>
-              13, rue de Cotte - 75012 Paris |
-              <a href="mailto:derviche@dervichediffusion.com" className="hover:text-white transition ml-1">
-                derviche@dervichediffusion.com
-              </a>
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer réutilisable */}
+      <Footer />
 
       {/* Bouton retour en haut */}
       {showScrollTop && (
