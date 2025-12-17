@@ -159,9 +159,10 @@ function isSameDay(date1: Date, date2: Date): boolean {
 }
 
 export default function SpectacleDetailPage() {
-    const params = useParams();
     const router = useRouter();
-    const slug = params?.slug as string;
+    // Note: slug extrait mais non utilisé pour l'instant (données mockées)
+    // const params = useParams();
+    // const slug = params?.slug as string;
 
     // États
     const [currentStep, setCurrentStep] = useState<Step>('calendar');
@@ -718,7 +719,7 @@ export default function SpectacleDetailPage() {
                                 {/* Colonne gauche - Infos (1/2) - INCHANGÉE */}
                                 <div className="lg:border-r border-border">
                                     {/* Bandeau image du spectacle */}
-                                    <div className="relative w-full aspect-[16/9]">
+                                    <div className="relative w-full aspect-video">
                                         <Image
                                             src={spectacleData.image}
                                             alt={spectacleData.title}
