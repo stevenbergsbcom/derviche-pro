@@ -256,7 +256,9 @@ export function generateReservationCode(reservationId: string): ReservationCode 
  * @returns Date formatée (ex: "Samedi 5 juillet 2025")
  */
 export function formatDateFR(isoDate: string): string {
-  const date = new Date(isoDate);
+  // Ajouter T12:00:00 pour éviter les problèmes de timezone
+  // (minuit UTC peut devenir la veille en heure locale)
+  const date = new Date(`${isoDate}T12:00:00`);
   return date.toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',

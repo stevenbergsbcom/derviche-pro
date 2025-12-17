@@ -44,7 +44,7 @@ const mockSuggestions: Spectacle[] = [
     company: 'Cie Le Monde au Balcon',
     venue: 'Théâtre des Corps Saints',
     image: '/images/spectacles/madame-bovary.jpg',
-    slug: 'madame-bovary-en-plus-drole-et-moins-long',
+    slug: 'madame-bovary',
     genre: 'Théâtre',
     nextDate: '22 jan. 2025',
     remainingSlots: 5,
@@ -333,13 +333,13 @@ function getShowDataBySlug(slug: string): ShowBasicData {
       venueAddress: '38, rue Guillaume Puy, 84000 Avignon',
     },
     'madame-bovary': {
-      title: 'MADAME BOVARY',
+      title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
       slug: 'madame-bovary',
-      companyName: 'Cie Théâtre du Phare',
+      companyName: 'Cie Le Monde au Balcon',
       imageUrl: '/images/spectacles/madame-bovary.jpg',
-      duration: '1h30',
-      venueName: 'Théâtre du Balcon',
-      venueAddress: '38, rue Guillaume Puy, 84000 Avignon',
+      duration: '1h15',
+      venueName: 'Théâtre des Corps Saints',
+      venueAddress: '15, place des Corps Saints, 84000 Avignon',
     },
   };
 
