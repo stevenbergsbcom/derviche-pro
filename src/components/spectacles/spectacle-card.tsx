@@ -4,6 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin } from 'lucide-react';
 
+export type SpectacleStatus = 'available' | 'coming_soon' | 'closed';
+
 export interface Spectacle {
   id: number;
   title: string;
@@ -13,7 +15,8 @@ export interface Spectacle {
   slug: string;
   genre: string;
   nextDate: string;
-  remainingPlaces?: number;
+  remainingSlots?: number; // Nombre de créneaux avec places disponibles
+  status?: SpectacleStatus; // Statut du spectacle
 }
 
 interface SpectacleCardProps {
@@ -24,7 +27,9 @@ interface SpectacleCardProps {
 
 export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProps) {
   // Note: variant est accepté pour compatibilité mais n'affecte pas le rendu actuellement
-  const isComplet = spectacle.remainingPlaces === 0;
+  const isComingSoon = spectacle.status === 'coming_soon';
+  const isLastRepresentations = !isComingSoon && spectacle.remainingSlots !== undefined && spectacle.remainingSlots > 0 && spectacle.remainingSlots < 2;
+  const isNotBookable = isComingSoon;
 
   return (
     <Link
@@ -45,24 +50,24 @@ export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProp
           <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
             {spectacle.genre}
           </span>
-          {/* Badge complet si nécessaire */}
-          {isComplet && (
+          {/* Badge Dernières représentations */}
+          {isLastRepresentations && (
             <span className="absolute top-2 right-2 bg-error text-white text-xs font-semibold px-2 py-1 rounded">
-              Complet
+              Dernières représentations
             </span>
           )}
         </div>
 
         {/* Contenu de la card */}
-        <CardContent className="px-4 pb-4 pt-3 md:px-5 md:pb-5 md:pt-4 flex flex-col flex-grow">
+        <CardContent className="px-4 pb-4 pt-3 md:px-5 md:pb-5 md:pt-4 flex flex-col grow">
           {/* Date prochaine représentation */}
           <p className="text-xs font-medium text-gold mb-2 flex items-center gap-1">
             <Calendar className="w-3 h-3" />
-            Prochaine date : {spectacle.nextDate}
+            {isComingSoon ? 'Dates à venir' : `Prochaine date : ${spectacle.nextDate}`}
           </p>
 
           {/* Titre - 2 lignes max */}
-          <h3 className="font-bold text-lg md:text-xl mb-2 line-clamp-2 min-h-[3rem] md:min-h-[3.5rem] text-derviche-dark leading-tight">
+          <h3 className="font-bold text-lg md:text-xl mb-2 line-clamp-2 min-h-12 md:min-h-14 text-derviche-dark leading-tight">
             {spectacle.title}
           </h3>
 
@@ -73,27 +78,20 @@ export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProp
 
           {/* Lieu - En italique avec icône */}
           <p className="text-sm text-muted-foreground italic mb-4 line-clamp-1 flex items-center gap-1">
-            <MapPin className="w-3 h-3 flex-shrink-0" />
+            <MapPin className="w-3 h-3 shrink-0" />
             {spectacle.venue}
           </p>
-
-          {/* Places restantes si défini */}
-          {spectacle.remainingPlaces !== undefined && !isComplet && (
-            <p className="text-xs text-muted-foreground mb-2">
-              {spectacle.remainingPlaces} place{spectacle.remainingPlaces > 1 ? 's' : ''} restante{spectacle.remainingPlaces > 1 ? 's' : ''}
-            </p>
-          )}
 
           {/* Bouton - pousse vers le bas avec mt-auto */}
           <div className="mt-auto">
             <Button
-              className={`w-full font-medium ${isComplet
+              className={`w-full font-medium ${isNotBookable
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-derviche-dark hover:bg-derviche text-white'
                 }`}
-              disabled={isComplet}
+              disabled={isNotBookable}
             >
-              {isComplet ? 'Complet' : 'Réserver ma place'}
+              {isComingSoon ? 'Bientôt disponible' : 'Réserver ma place'}
             </Button>
           </div>
         </CardContent>
