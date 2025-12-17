@@ -62,59 +62,120 @@ interface SpectacleData {
     venue: Venue;
     period: string;
     slots: TimeSlot[];
+    status: 'available' | 'coming_soon' | 'closed';
 }
 
 type Step = 'calendar' | 'time' | 'participants' | 'form';
 
-// Données mock - À MOI !
-const spectacleData: SpectacleData = {
-    id: 1,
-    title: 'À MOI !',
-    slug: 'a-moi',
-    company: 'Cie A Kan la dériv\'',
-    description: `À MOI ! est un spectacle de théâtre contemporain qui explore les relations humaines à travers le prisme de l'identité et de l'appartenance. 
+// Données mock pour tous les spectacles du catalogue
+const spectaclesDataMap: Record<string, SpectacleData> = {
+    'a-moi': {
+        id: 1,
+        title: 'À MOI !',
+        slug: 'a-moi',
+        company: 'Cie A Kan la dériv\'',
+        description: `À MOI ! est un spectacle de théâtre contemporain qui explore les relations humaines à travers le prisme de l'identité et de l'appartenance. 
 
 Une création originale qui mêle texte, mouvement et musique pour raconter une histoire universelle de quête de soi et de reconnaissance. Les comédiens nous emmènent dans un voyage émotionnel intense où chaque personnage cherche sa place dans le monde.
 
 Le spectacle aborde avec sensibilité et humour des thèmes profonds comme la famille, l'amitié, la solitude et le besoin d'être reconnu. Une performance captivante qui résonne longtemps après le rideau final.`,
-    duration: '35 min',
+        duration: '35 min',
+        genre: 'Théâtre',
+        pricing: 'Gratuit',
+        image: '/images/spectacles/a-moi.jpg',
+        venue: {
+            name: 'Théâtre des Béliers',
+            address: '53, rue du Portail Magnanen, 84000 Avignon',
+        },
+        period: 'Du 5 au 26 juillet - relâche les mercredis 9, 16 et 23',
+        status: 'available',
+        slots: [
+            { id: '1', date: new Date(2025, 6, 5), time: '11h00', remainingCapacity: 8, totalCapacity: 20 },
+            { id: '2', date: new Date(2025, 6, 5), time: '15h00', remainingCapacity: 12, totalCapacity: 20 },
+            { id: '3', date: new Date(2025, 6, 6), time: '11h00', remainingCapacity: 5, totalCapacity: 20 },
+            { id: '4', date: new Date(2025, 6, 6), time: '15h00', remainingCapacity: 15, totalCapacity: 20 },
+            { id: '5', date: new Date(2025, 6, 12), time: '11h00', remainingCapacity: 10, totalCapacity: 20 },
+            { id: '6', date: new Date(2025, 6, 12), time: '15h00', remainingCapacity: 18, totalCapacity: 20 },
+            { id: '7', date: new Date(2025, 6, 13), time: '11h00', remainingCapacity: 3, totalCapacity: 20 },
+            { id: '8', date: new Date(2025, 6, 13), time: '15h00', remainingCapacity: 7, totalCapacity: 20 },
+        ],
+    },
+    'rossignol-a-la-langue-pourrie': {
+        id: 2,
+        title: 'ROSSIGNOL À LA LANGUE POURRIE',
+        slug: 'rossignol-a-la-langue-pourrie',
+        company: 'Cie Des Lumières et des Ombres',
+        description: `Un spectacle jeune public qui revisite les contes traditionnels avec poésie et humour.`,
+        duration: '45 min',
+        genre: 'Jeune public',
+        pricing: 'Gratuit',
+        image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
+        venue: {
+            name: 'Théâtre du Balcon',
+            address: '38, rue Guillaume Puy, 84000 Avignon',
+        },
+        period: 'Dates à venir',
+        status: 'coming_soon',
+        slots: [], // Pas encore de créneaux
+    },
+    'la-honte': {
+        id: 7,
+        title: 'LA HONTE',
+        slug: 'la-honte',
+        company: 'Cie Mouvement',
+        description: `Une pièce de danse contemporaine qui explore les émotions profondes.`,
+        duration: '50 min',
+        genre: 'Danse',
+        pricing: 'Gratuit',
+        image: '/images/spectacles/la-honte.jpg',
+        venue: {
+            name: 'Théâtre du Balcon',
+            address: '38, rue Guillaume Puy, 84000 Avignon',
+        },
+        period: 'Dates à venir',
+        status: 'coming_soon',
+        slots: [], // Pas encore de créneaux
+    },
+    'toutes-les-choses-geniales': {
+        id: 12,
+        title: 'TOUTES LES CHOSES GÉNIALES',
+        slug: 'toutes-les-choses-geniales',
+        company: 'Cie Street',
+        description: `Un spectacle sur la beauté des petites choses du quotidien.`,
+        duration: '1h10',
+        genre: 'Théâtre',
+        pricing: 'Gratuit',
+        image: '/images/spectacles/toutes-les-choses-geniales-cat.jpg',
+        venue: {
+            name: 'Théâtre du Balcon',
+            address: '38, rue Guillaume Puy, 84000 Avignon',
+        },
+        period: 'Dates à venir',
+        status: 'coming_soon',
+        slots: [], // Pas encore de créneaux
+    },
+};
+
+// Données par défaut pour les spectacles non définis
+const defaultSpectacleData: SpectacleData = {
+    id: 0,
+    title: 'Spectacle',
+    slug: 'spectacle',
+    company: 'Compagnie',
+    description: 'Description du spectacle.',
+    duration: '1h',
     genre: 'Théâtre',
     pricing: 'Gratuit',
     image: '/images/spectacles/a-moi.jpg',
     venue: {
-        name: 'Théâtre des Béliers',
-        address: '53, rue du Portail Magnanen, 84000 Avignon',
+        name: 'Théâtre',
+        address: 'Avignon',
     },
-    period: 'Du 5 au 26 juillet - relâche les mercredis 9, 16 et 23',
+    period: 'Juillet 2025',
+    status: 'available',
     slots: [
-        // Samedis et dimanches en juillet 2025
-        { id: '1', date: new Date(2025, 6, 5), time: '11h00', remainingCapacity: 8, totalCapacity: 20 },
-        { id: '2', date: new Date(2025, 6, 5), time: '15h00', remainingCapacity: 12, totalCapacity: 20 },
-        { id: '3', date: new Date(2025, 6, 6), time: '11h00', remainingCapacity: 5, totalCapacity: 20 },
-        { id: '4', date: new Date(2025, 6, 6), time: '15h00', remainingCapacity: 15, totalCapacity: 20 },
-        { id: '5', date: new Date(2025, 6, 12), time: '11h00', remainingCapacity: 10, totalCapacity: 20 },
-        { id: '6', date: new Date(2025, 6, 12), time: '15h00', remainingCapacity: 18, totalCapacity: 20 },
-        { id: '7', date: new Date(2025, 6, 13), time: '11h00', remainingCapacity: 3, totalCapacity: 20 },
-        { id: '8', date: new Date(2025, 6, 13), time: '15h00', remainingCapacity: 7, totalCapacity: 20 },
-        { id: '9', date: new Date(2025, 6, 19), time: '11h00', remainingCapacity: 14, totalCapacity: 20 },
-        { id: '10', date: new Date(2025, 6, 19), time: '15h00', remainingCapacity: 20, totalCapacity: 20 },
-        { id: '11', date: new Date(2025, 6, 20), time: '11h00', remainingCapacity: 6, totalCapacity: 20 },
-        { id: '12', date: new Date(2025, 6, 20), time: '15h00', remainingCapacity: 9, totalCapacity: 20 },
-        { id: '13', date: new Date(2025, 6, 26), time: '11h00', remainingCapacity: 11, totalCapacity: 20 },
-        { id: '14', date: new Date(2025, 6, 26), time: '15h00', remainingCapacity: 16, totalCapacity: 20 },
-        // Quelques jours de semaine (pas mercredis)
-        { id: '15', date: new Date(2025, 6, 7), time: '14h00', remainingCapacity: 4, totalCapacity: 20 },
-        { id: '16', date: new Date(2025, 6, 8), time: '14h00', remainingCapacity: 8, totalCapacity: 20 },
-        { id: '17', date: new Date(2025, 6, 10), time: '14h00', remainingCapacity: 12, totalCapacity: 20 },
-        { id: '18', date: new Date(2025, 6, 11), time: '14h00', remainingCapacity: 2, totalCapacity: 20 },
-        { id: '19', date: new Date(2025, 6, 14), time: '14h00', remainingCapacity: 13, totalCapacity: 20 },
-        { id: '20', date: new Date(2025, 6, 15), time: '14h00', remainingCapacity: 17, totalCapacity: 20 },
-        { id: '21', date: new Date(2025, 6, 17), time: '14h00', remainingCapacity: 1, totalCapacity: 20 },
-        { id: '22', date: new Date(2025, 6, 18), time: '14h00', remainingCapacity: 5, totalCapacity: 20 },
-        { id: '23', date: new Date(2025, 6, 21), time: '14h00', remainingCapacity: 19, totalCapacity: 20 },
-        { id: '24', date: new Date(2025, 6, 22), time: '14h00', remainingCapacity: 10, totalCapacity: 20 },
-        { id: '25', date: new Date(2025, 6, 24), time: '14h00', remainingCapacity: 6, totalCapacity: 20 },
-        { id: '26', date: new Date(2025, 6, 25), time: '14h00', remainingCapacity: 14, totalCapacity: 20 },
+        { id: '1', date: new Date(2025, 6, 10), time: '14h00', remainingCapacity: 10, totalCapacity: 20 },
+        { id: '2', date: new Date(2025, 6, 12), time: '14h00', remainingCapacity: 15, totalCapacity: 20 },
     ],
 };
 
@@ -159,10 +220,12 @@ function isSameDay(date1: Date, date2: Date): boolean {
 }
 
 export default function SpectacleDetailPage() {
+    const params = useParams();
     const router = useRouter();
-    // Note: slug extrait mais non utilisé pour l'instant (données mockées)
-    // const params = useParams();
-    // const slug = params?.slug as string;
+    const slug = params?.slug as string;
+
+    // Récupérer les données du spectacle selon le slug
+    const spectacleData = spectaclesDataMap[slug] || defaultSpectacleData;
 
     // États
     const [currentStep, setCurrentStep] = useState<Step>('calendar');
@@ -189,12 +252,17 @@ export default function SpectacleDetailPage() {
         comment: '',
     });
 
-    // Trouver les dates avec créneaux pour le mois courant
+    // Vérifier si le spectacle est "bientôt réservable"
+    const isComingSoon = spectacleData.status === 'coming_soon';
+
+    // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
     const datesWithSlots = useMemo(() => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const slotsInMonth = spectacleData.slots.filter((slot) => {
-            return slot.date.getFullYear() === year && slot.date.getMonth() === month;
+            return slot.date.getFullYear() === year && 
+                   slot.date.getMonth() === month &&
+                   slot.remainingCapacity > 0; // Seulement les créneaux disponibles
         });
 
         const dates = new Set<string>();
@@ -204,13 +272,13 @@ export default function SpectacleDetailPage() {
         });
 
         return dates;
-    }, [currentMonth]);
+    }, [currentMonth, spectacleData.slots]);
 
     // Créneaux pour la date sélectionnée
     const slotsForSelectedDate = useMemo(() => {
         if (!selectedDate) return [];
         return spectacleData.slots.filter((slot) => isSameDay(slot.date, selectedDate));
-    }, [selectedDate]);
+    }, [selectedDate, spectacleData.slots]);
 
     // Générer la grille du calendrier
     const calendarDays = useMemo(() => {
@@ -338,83 +406,103 @@ export default function SpectacleDetailPage() {
     const renderCalendarStep = () => (
         <>
             <h2 className="text-xl font-bold text-derviche-dark mb-6">
-                Sélectionnez la date et l'heure
+                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l\'heure'}
             </h2>
 
-            {/* Navigation mois */}
-            <div className="flex items-center justify-between mb-6">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={goToPreviousMonth}
-                    className="rounded-full h-8 w-8"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <h3 className="text-lg font-semibold text-derviche-dark capitalize">
-                    {formatMonthYear(currentMonth)}
-                </h3>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={goToNextMonth}
-                    className="rounded-full h-8 w-8"
-                >
-                    <ChevronRight className="w-4 h-4" />
-                </Button>
-            </div>
-
-            {/* Grille calendrier */}
-            <div className="mb-6">
-                {/* En-têtes jours */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['LUN.', 'MAR.', 'MER.', 'JEU.', 'VEN.', 'SAM.', 'DIM.'].map((day) => (
-                        <div
-                            key={day}
-                            className="text-center text-xs font-medium text-muted-foreground py-2"
-                        >
-                            {day}
+            {/* Message si spectacle bientôt réservable */}
+            {isComingSoon && (
+                <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                        <div className="text-sm text-foreground">
+                            <p className="font-medium mb-1">Bientôt réservable</p>
+                            <p className="text-muted-foreground">
+                                Les réservations pour ce spectacle ne sont pas encore ouvertes. Revenez bientôt !
+                            </p>
                         </div>
-                    ))}
+                    </div>
                 </div>
+            )}
 
-                {/* Jours du mois */}
-                <div className="grid grid-cols-7 gap-1">
-                    {calendarDays.map((date, index) => {
-                        if (!date) {
-                            return <div key={`empty-${index}`} className="aspect-square" />;
-                        }
+            {/* Calendrier uniquement si pas coming_soon */}
+            {!isComingSoon && (
+                <>
+                    {/* Navigation mois */}
+                    <div className="flex items-center justify-between mb-6">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={goToPreviousMonth}
+                            className="rounded-full h-8 w-8"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <h3 className="text-lg font-semibold text-derviche-dark capitalize">
+                            {formatMonthYear(currentMonth)}
+                        </h3>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={goToNextMonth}
+                            className="rounded-full h-8 w-8"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
 
-                        const hasSlotsForDate = hasSlots(date);
-                        const isDateSelected = isSelected(date);
+                    {/* Grille calendrier */}
+                    <div className="mb-6">
+                        {/* En-têtes jours */}
+                        <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['LUN.', 'MAR.', 'MER.', 'JEU.', 'VEN.', 'SAM.', 'DIM.'].map((day) => (
+                                <div
+                                    key={day}
+                                    className="text-center text-xs font-medium text-muted-foreground py-2"
+                                >
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
 
-                        return (
-                            <button
-                                key={date.toISOString()}
-                                onClick={() => handleDayClick(date)}
-                                disabled={!hasSlotsForDate}
-                                className={`
-                                    aspect-square rounded-lg text-sm font-medium transition-colors
-                                    ${isDateSelected
-                                        ? 'bg-derviche text-white'
-                                        : hasSlotsForDate
-                                            ? 'bg-derviche/10 text-derviche hover:bg-derviche/20 cursor-pointer'
-                                            : 'text-muted-foreground/30 cursor-not-allowed'
-                                    }
-                                `}
-                            >
-                                {date.getDate()}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+                        {/* Jours du mois */}
+                        <div className="grid grid-cols-7 gap-1">
+                            {calendarDays.map((date, index) => {
+                                if (!date) {
+                                    return <div key={`empty-${index}`} className="aspect-square" />;
+                                }
 
-            {/* Fuseau horaire */}
-            <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
-                <Globe className="w-4 h-4" />
-                <span>Fuseau horaire : Heure d'Europe centrale</span>
-            </div>
+                                const hasSlotsForDate = hasSlots(date);
+                                const isDateSelected = isSelected(date);
+
+                                return (
+                                    <button
+                                        key={date.toISOString()}
+                                        onClick={() => handleDayClick(date)}
+                                        disabled={!hasSlotsForDate}
+                                        className={`
+                                            aspect-square rounded-lg text-sm font-medium transition-colors
+                                            ${isDateSelected
+                                                ? 'bg-derviche text-white'
+                                                : hasSlotsForDate
+                                                    ? 'bg-derviche/10 text-derviche hover:bg-derviche/20 cursor-pointer'
+                                                    : 'text-muted-foreground/30 cursor-not-allowed'
+                                            }
+                                        `}
+                                    >
+                                        {date.getDate()}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Fuseau horaire */}
+                    <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
+                        <Globe className="w-4 h-4" />
+                        <span>Fuseau horaire : Heure d'Europe centrale</span>
+                    </div>
+                </>
+            )}
         </>
     );
 
@@ -432,22 +520,36 @@ export default function SpectacleDetailPage() {
                         })}
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {slotsForSelectedDate.map((slot) => (
-                            <Button
-                                key={slot.id}
-                                variant="outline"
-                                onClick={() => handleSlotSelect(slot)}
-                                className="flex items-center justify-between hover:bg-derviche hover:text-white hover:border-derviche"
-                            >
-                                <span className="font-medium">{slot.time}</span>
-                                <div className="flex items-center gap-1 text-xs">
-                                    <Users className="w-3 h-3" />
-                                    <span>
-                                        {slot.remainingCapacity}/{slot.totalCapacity}
-                                    </span>
-                                </div>
-                            </Button>
-                        ))}
+                        {slotsForSelectedDate.map((slot) => {
+                            const isSlotComplet = slot.remainingCapacity === 0;
+                            return (
+                                <Button
+                                    key={slot.id}
+                                    variant="outline"
+                                    onClick={() => !isSlotComplet && handleSlotSelect(slot)}
+                                    disabled={isSlotComplet}
+                                    className={`flex items-center justify-between ${
+                                        isSlotComplet
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'hover:bg-derviche hover:text-white hover:border-derviche'
+                                    }`}
+                                >
+                                    <span className="font-medium">{slot.time}</span>
+                                    <div className="flex items-center gap-1 text-xs">
+                                        {isSlotComplet ? (
+                                            <span className="text-error font-medium">Complet</span>
+                                        ) : (
+                                            <>
+                                                <Users className="w-3 h-3" />
+                                                <span>
+                                                    {slot.remainingCapacity}/{slot.totalCapacity}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </Button>
+                            );
+                        })}
                     </div>
                 </>
             )}

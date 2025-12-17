@@ -28,7 +28,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'a-moi',
     genre: 'Théâtre',
     nextDate: '15 jan. 2025',
-    remainingPlaces: 12,
+    remainingSlots: 8,
+    status: 'available',
   },
   {
     id: 2,
@@ -38,8 +39,8 @@ const spectaclesMock: Spectacle[] = [
     image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
     slug: 'rossignol-a-la-langue-pourrie',
     genre: 'Jeune public',
-    nextDate: '18 jan. 2025',
-    remainingPlaces: 0,
+    nextDate: '',
+    status: 'coming_soon',
   },
   {
     id: 3,
@@ -50,7 +51,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'madame-bovary-en-plus-drole-et-moins-long',
     genre: 'Théâtre',
     nextDate: '22 jan. 2025',
-    remainingPlaces: 8,
+    remainingSlots: 5,
+    status: 'available',
   },
   {
     id: 4,
@@ -61,7 +63,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'jeu',
     genre: 'Danse',
     nextDate: '25 jan. 2025',
-    remainingPlaces: 15,
+    remainingSlots: 10,
+    status: 'available',
   },
   {
     id: 5,
@@ -72,7 +75,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'la-mer',
     genre: 'Marionnettes',
     nextDate: '28 jan. 2025',
-    remainingPlaces: 5,
+    remainingSlots: 1, // Dernières représentations
+    status: 'available',
   },
   {
     id: 6,
@@ -83,7 +87,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'les-carnets-d-albert-camus',
     genre: 'Théâtre',
     nextDate: '5 fév. 2025',
-    remainingPlaces: 20,
+    remainingSlots: 12,
+    status: 'available',
   },
   {
     id: 7,
@@ -93,8 +98,8 @@ const spectaclesMock: Spectacle[] = [
     image: '/images/spectacles/la-honte.jpg',
     slug: 'la-honte',
     genre: 'Danse',
-    nextDate: '10 fév. 2025',
-    remainingPlaces: 0,
+    nextDate: '',
+    status: 'coming_soon',
   },
   {
     id: 8,
@@ -105,7 +110,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'le-jardin-de-dahi',
     genre: 'Marionnettes',
     nextDate: '15 fév. 2025',
-    remainingPlaces: 18,
+    remainingSlots: 8,
+    status: 'available',
   },
   {
     id: 9,
@@ -116,7 +122,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'un-sac-de-billes',
     genre: 'Théâtre',
     nextDate: '20 fév. 2025',
-    remainingPlaces: 10,
+    remainingSlots: 6,
+    status: 'available',
   },
   {
     id: 10,
@@ -127,7 +134,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'le-pouvoir-des-filles',
     genre: 'Jeune public',
     nextDate: '25 fév. 2025',
-    remainingPlaces: 25,
+    remainingSlots: 15,
+    status: 'available',
   },
   {
     id: 11,
@@ -138,7 +146,8 @@ const spectaclesMock: Spectacle[] = [
     slug: 'juste-irena',
     genre: 'Théâtre',
     nextDate: '2 mars 2025',
-    remainingPlaces: 7,
+    remainingSlots: 1, // Dernières représentations
+    status: 'available',
   },
   {
     id: 12,
@@ -148,8 +157,8 @@ const spectaclesMock: Spectacle[] = [
     image: '/images/spectacles/toutes-les-choses-geniales-cat.jpg',
     slug: 'toutes-les-choses-geniales',
     genre: 'Théâtre',
-    nextDate: '8 mars 2025',
-    remainingPlaces: 0,
+    nextDate: '',
+    status: 'coming_soon',
   },
 ];
 
@@ -260,8 +269,8 @@ export default function CataloguePage() {
         return false;
       }
 
-      // Filtre "Seulement disponibles"
-      if (onlyAvailable && (spectacle.remainingPlaces === undefined || spectacle.remainingPlaces === 0)) {
+      // Filtre "Seulement disponibles" (exclut les 'coming_soon')
+      if (onlyAvailable && spectacle.status === 'coming_soon') {
         return false;
       }
 
