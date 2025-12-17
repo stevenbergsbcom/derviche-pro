@@ -20,14 +20,14 @@ import {
   ArrowUp,
 } from 'lucide-react';
 
-// Données des spectacles (maquette) avec les vrais lieux
+// Données des spectacles (maquette) avec images locales
 const spectacles: Spectacle[] = [
   {
     id: 1,
     title: 'À MOI !',
     company: 'Cie A Kan la dériv\'',
     venue: 'Théâtre des Béliers',
-    image: 'https://sbcom.fr/derviche2025/a-moi.jpg',
+    image: '/images/spectacles/a-moi.jpg',
     slug: 'a-moi',
     genre: 'Théâtre',
     nextDate: '15 jan. 2025',
@@ -37,7 +37,7 @@ const spectacles: Spectacle[] = [
     title: 'ROSSIGNOL À LA LANGUE POURRIE',
     company: 'Cie Des Lumières et des Ombres',
     venue: 'Théâtre du Balcon',
-    image: 'https://sbcom.fr/derviche2025/rossignol-a-la-langue-pourrie.jpg',
+    image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
     slug: 'rossignol-a-la-langue-pourrie',
     genre: 'Jeune public',
     nextDate: '18 jan. 2025',
@@ -47,7 +47,7 @@ const spectacles: Spectacle[] = [
     title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
     company: 'Cie Le Monde au Balcon',
     venue: 'Théâtre des Corps Saints',
-    image: 'https://sbcom.fr/derviche2025/madame-bovary.jpg',
+    image: '/images/spectacles/madame-bovary.jpg',
     slug: 'madame-bovary-en-plus-drole-et-moins-long',
     genre: 'Théâtre',
     nextDate: '22 jan. 2025',
@@ -57,7 +57,7 @@ const spectacles: Spectacle[] = [
     title: 'JEU',
     company: 'Cie A Kan la dériv\'',
     venue: 'Théâtre Artéphile',
-    image: 'https://sbcom.fr/derviche2025/jeu.jpg',
+    image: '/images/spectacles/jeu.jpg',
     slug: 'jeu',
     genre: 'Danse',
     nextDate: '25 jan. 2025',
@@ -67,7 +67,7 @@ const spectacles: Spectacle[] = [
     title: 'LA MER',
     company: 'Cie Le Ver à Soie',
     venue: 'Théâtre Espace Alya',
-    image: 'https://sbcom.fr/derviche2025/la-mer.jpg',
+    image: '/images/spectacles/la-mer.jpg',
     slug: 'la-mer',
     genre: 'Marionnettes',
     nextDate: '28 jan. 2025',
