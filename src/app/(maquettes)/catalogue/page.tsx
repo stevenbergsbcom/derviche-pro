@@ -297,7 +297,7 @@ export default function CataloguePage() {
       <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 text-derviche-dark">
-            PROGRAMMATION 2025
+            Nos spectacles disponibles
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
             {filteredSpectacles.length} spectacle{filteredSpectacles.length > 1 ? 's' : ''} à découvrir

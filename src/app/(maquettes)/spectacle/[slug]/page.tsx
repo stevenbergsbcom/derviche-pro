@@ -392,7 +392,33 @@ export default function SpectacleDetailPage() {
     // Gérer la soumission du formulaire
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        alert('Réservation confirmée !');
+        
+        // En production : POST /api/reservations puis redirection
+        // Pour la maquette : redirection directe avec les données en query params
+        
+        if (!selectedSlot || !selectedDate) return;
+        
+        // Générer un ID mock pour la réservation
+        const mockReservationId = crypto.randomUUID();
+        
+        // Formater la date pour l'URL (YYYY-MM-DD)
+        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        
+        // Formater l'heure pour l'URL (HH:MM) - convertir "11h00" en "11:00"
+        const timeStr = selectedSlot.time.replace('h', ':');
+        
+        // Construire l'URL de confirmation avec les données
+        const confirmationUrl = `/spectacle/${slug}/confirmation?` + new URLSearchParams({
+            id: mockReservationId,
+            places: String(participantCount),
+            date: dateStr,
+            time: timeStr,
+            name: `${formData.firstName} ${formData.lastName}`,
+            email: formData.email,
+        }).toString();
+        
+        // Rediriger vers la page de confirmation
+        router.push(confirmationUrl);
     };
 
     // Déterminer l'étape active pour le fil d'Ariane
