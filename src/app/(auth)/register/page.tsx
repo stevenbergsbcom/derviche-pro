@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
@@ -48,6 +48,8 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const form = useForm<RegisterForm>({
         resolver: zodResolver(registerSchema),
@@ -175,13 +177,27 @@ export default function RegisterPage() {
                             <FormItem>
                                 <FormLabel>Mot de passe</FormLabel>
                                 <FormControl>
-                                    <Input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        autoComplete="new-password"
-                                        disabled={isLoading}
-                                        {...field}
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="••••••••"
+                                            autoComplete="new-password"
+                                            disabled={isLoading}
+                                            {...field}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? (
+                                                <EyeOff className="w-4 h-4" />
+                                            ) : (
+                                                <Eye className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </FormControl>
                                 <FormMessage />
                                 <p className="text-xs text-muted-foreground">
@@ -198,13 +214,27 @@ export default function RegisterPage() {
                             <FormItem>
                                 <FormLabel>Confirmation du mot de passe</FormLabel>
                                 <FormControl>
-                                    <Input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        autoComplete="new-password"
-                                        disabled={isLoading}
-                                        {...field}
-                                    />
+                                    <div className="relative">
+                                        <Input
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            placeholder="••••••••"
+                                            autoComplete="new-password"
+                                            disabled={isLoading}
+                                            {...field}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                                            tabIndex={-1}
+                                        >
+                                            {showConfirmPassword ? (
+                                                <EyeOff className="w-4 h-4" />
+                                            ) : (
+                                                <Eye className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
