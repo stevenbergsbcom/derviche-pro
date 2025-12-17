@@ -197,7 +197,14 @@ function getMonthFromDate(dateStr: string): string {
   };
 
   const monthKey = dateStr.split(' ')[1]?.toLowerCase();
-  return monthMap[monthKey || ''] || '';
+  const month = monthMap[monthKey || ''] || '';
+
+  // Log en développement si le format de date n'est pas reconnu
+  if (!month && process.env.NODE_ENV === 'development') {
+    console.warn(`Format de date non reconnu: "${dateStr}"`);
+  }
+
+  return month;
 }
 
 export default function CataloguePage() {
@@ -277,7 +284,7 @@ export default function CataloguePage() {
       <Header />
 
       {/* Section Hero */}
-      <section className="py-12 md:py-16 bg-linear-to-b from-white to-muted/30">
+      <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 text-derviche-dark">
             PROGRAMMATION 2025
