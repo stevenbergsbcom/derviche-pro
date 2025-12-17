@@ -23,6 +23,7 @@ interface SpectacleCardProps {
 }
 
 export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProps) {
+  // Note: variant est accepté pour compatibilité mais n'affecte pas le rendu actuellement
   const isComplet = spectacle.remainingPlaces === 0;
 
   return (
@@ -86,11 +87,10 @@ export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProp
           {/* Bouton - pousse vers le bas avec mt-auto */}
           <div className="mt-auto">
             <Button
-              className={`w-full font-medium ${
-                isComplet
+              className={`w-full font-medium ${isComplet
                   ? 'bg-muted text-muted-foreground cursor-not-allowed'
                   : 'bg-derviche-dark hover:bg-derviche text-white'
-              }`}
+                }`}
               disabled={isComplet}
             >
               {isComplet ? 'Complet' : 'Réserver ma place'}
