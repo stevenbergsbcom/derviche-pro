@@ -269,9 +269,10 @@ export default function CataloguePage() {
         return false;
       }
 
-      // Filtre "Seulement disponibles" (exclut les 'coming_soon')
-      if (onlyAvailable && spectacle.status === 'coming_soon') {
-        return false;
+      // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
+      if (onlyAvailable) {
+        if (spectacle.status === 'coming_soon') return false;
+        if (spectacle.remainingSlots !== undefined && spectacle.remainingSlots === 0) return false;
       }
 
       // Filtre par recherche (title et company, insensible à la casse)
