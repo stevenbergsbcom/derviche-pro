@@ -255,6 +255,7 @@ export default function SpectacleDetailPage() {
     // Reset des états quand le slug change (navigation entre spectacles)
     useEffect(() => {
         setCurrentStep('calendar');
+        setCurrentMonth(new Date(2025, 6, 1));
         setSelectedDate(null);
         setSelectedSlot(null);
         setParticipantCount(1);
