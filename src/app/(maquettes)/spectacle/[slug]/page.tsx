@@ -118,6 +118,29 @@ Le spectacle aborde avec sensibilité et humour des thèmes profonds comme la fa
         status: 'coming_soon',
         slots: [], // Pas encore de créneaux
     },
+    'madame-bovary': {
+        id: 3,
+        title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
+        slug: 'madame-bovary',
+        company: 'Cie Le Monde au Balcon',
+        description: `Une adaptation théâtrale hilarante du chef-d'œuvre de Flaubert. Emma Bovary rêve d'une vie romanesque, mais la réalité de la province normande est bien différente...\n\nCette version condensée et décalée revisite le classique avec un humour mordant, tout en préservant l'essence du roman. Un spectacle qui fait rire et réfléchir.`,
+        duration: '1h15',
+        genre: 'Théâtre',
+        pricing: 'Gratuit',
+        image: '/images/spectacles/madame-bovary.jpg',
+        venue: {
+            name: 'Théâtre des Corps Saints',
+            address: '15, place des Corps Saints, 84000 Avignon',
+        },
+        period: 'Du 5 au 26 juillet',
+        status: 'available',
+        slots: [
+            { id: '1', date: new Date(2025, 6, 7), time: '14h00', remainingCapacity: 12, totalCapacity: 25 },
+            { id: '2', date: new Date(2025, 6, 8), time: '14h00', remainingCapacity: 18, totalCapacity: 25 },
+            { id: '3', date: new Date(2025, 6, 14), time: '14h00', remainingCapacity: 8, totalCapacity: 25 },
+            { id: '4', date: new Date(2025, 6, 15), time: '14h00', remainingCapacity: 20, totalCapacity: 25 },
+        ],
+    },
     'la-honte': {
         id: 7,
         title: 'LA HONTE',
