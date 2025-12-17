@@ -44,7 +44,7 @@ const mockSuggestions: Spectacle[] = [
     company: 'Cie Le Monde au Balcon',
     venue: 'Théâtre des Corps Saints',
     image: '/images/spectacles/madame-bovary.jpg',
-    slug: 'madame-bovary-en-plus-drole-et-moins-long',
+    slug: 'madame-bovary',
     genre: 'Théâtre',
     nextDate: '22 jan. 2025',
     remainingSlots: 5,
