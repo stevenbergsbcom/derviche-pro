@@ -44,6 +44,7 @@ import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Mini
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import { SafeHtml } from '@/components/ui/safe-html';
 
 interface Show {
     id: number;
@@ -241,6 +242,7 @@ export default function AdminSpectaclesPage() {
         captationUrl: '',
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [categories, setCategories] = useState<string[]>(categoriesMock);
     const [audiences, setAudiences] = useState<string[]>(audiencesMock);
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
@@ -253,8 +255,13 @@ export default function AdminSpectaclesPage() {
 
     // Auto-générer le slug depuis le titre (seulement en mode création)
     useEffect(() => {
-        if (!editingShow && formData.title) {
-            setFormData((prev) => ({ ...prev, slug: slugify(formData.title) }));
+        if (!editingShow) {
+            setFormData((prev) => {
+                if (prev.title) {
+                    return { ...prev, slug: slugify(prev.title) };
+                }
+                return prev;
+            });
         }
     }, [formData.title, editingShow]);
 
@@ -453,12 +460,30 @@ export default function AdminSpectaclesPage() {
         try {
             await navigator.clipboard.writeText(url);
             setCopiedShowId(show.id);
+            
+            // Nettoyer le timeout précédent s'il existe
+            if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+            }
+            
             // Réinitialiser après 2 secondes
-            setTimeout(() => setCopiedShowId(null), 2000);
+            copyTimeoutRef.current = setTimeout(() => {
+                setCopiedShowId(null);
+                copyTimeoutRef.current = null;
+            }, 2000);
         } catch (err) {
             console.error('Erreur lors de la copie:', err);
         }
     };
+
+    // Nettoyer le timeout au démontage du composant
+    useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+            }
+        };
+    }, []);
 
     return (
         <div className="space-y-6">
@@ -605,7 +630,7 @@ export default function AdminSpectaclesPage() {
                     {filteredShows.map((show) => (
                         <Card key={show.id} className="overflow-hidden group hover:shadow-lg transition-shadow bg-white rounded-xl p-0 gap-0 h-full flex flex-col">
                             {/* Image avec badges */}
-                            <div className="aspect-[4/3] overflow-hidden relative">
+                            <div className="aspect-4/3 overflow-hidden relative">
                                 {show.imageUrl ? (
                                     <img
                                         src={show.imageUrl}
@@ -717,7 +742,7 @@ export default function AdminSpectaclesPage() {
                 {filteredShows.map((show) => (
                     <Card key={show.id} className="overflow-hidden p-0 gap-0">
                         {/* Image avec badges */}
-                        <div className="aspect-[16/9] overflow-hidden relative">
+                        <div className="aspect-video overflow-hidden relative">
                             {show.imageUrl ? (
                                 <img
                                     src={show.imageUrl}
@@ -1424,9 +1449,9 @@ export default function AdminSpectaclesPage() {
                         {/* Description */}
                         {viewingShow?.description && (
                             <div className="mb-6">
-                                <div 
-                                    className="text-sm text-muted-foreground prose prose-sm max-w-none [&_a]:text-derviche [&_a]:underline"
-                                    dangerouslySetInnerHTML={{ __html: viewingShow.description }}
+                                <SafeHtml 
+                                    html={viewingShow.description}
+                                    className="text-sm text-muted-foreground"
                                 />
                             </div>
                         )}
@@ -1508,9 +1533,9 @@ export default function AdminSpectaclesPage() {
                                 {viewingShow?.invitationPolicy && (
                                     <div>
                                         <p className="text-xs text-muted-foreground">Politique invitation/détaxe</p>
-                                        <div 
-                                            className="text-sm text-foreground prose prose-sm max-w-none [&_a]:text-derviche [&_a]:underline"
-                                            dangerouslySetInnerHTML={{ __html: viewingShow.invitationPolicy }}
+                                        <SafeHtml 
+                                            html={viewingShow.invitationPolicy}
+                                            className="text-sm text-foreground"
                                         />
                                     </div>
                                 )}
@@ -1606,9 +1631,9 @@ export default function AdminSpectaclesPage() {
                                 <div>
                                     <p className="text-xs text-muted-foreground">Responsable</p>
                                     {viewingShow?.dervisheManager ? (
-                                        <div 
-                                            className="text-sm text-foreground prose prose-sm max-w-none [&_a]:text-derviche [&_a]:underline"
-                                            dangerouslySetInnerHTML={{ __html: viewingShow.dervisheManager }}
+                                        <SafeHtml 
+                                            html={viewingShow.dervisheManager}
+                                            className="text-sm text-foreground"
                                         />
                                     ) : (
                                         <p className="text-sm italic text-muted-foreground">Non assigné</p>

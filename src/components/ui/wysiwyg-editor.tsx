@@ -4,6 +4,7 @@ import { useRef, useCallback, useEffect, useState } from 'react';
 import { Bold, Italic, Link, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 interface WysiwygEditorProps {
     value: string;
@@ -23,28 +24,50 @@ export function WysiwygEditor({
     const editorRef = useRef<HTMLDivElement>(null);
     const [isFocused, setIsFocused] = useState(false);
     const [isEmpty, setIsEmpty] = useState(!value);
+    
+    // Ref pour éviter les boucles infinies de mise à jour
+    const isInternalUpdate = useRef(false);
+    const lastValueRef = useRef(value);
 
-    // Synchroniser la valeur initiale
+    // Synchroniser la valeur externe uniquement si elle a changé depuis l'extérieur
     useEffect(() => {
-        if (editorRef.current && editorRef.current.innerHTML !== value) {
-            editorRef.current.innerHTML = value;
-            setIsEmpty(!value || value === '<br>');
+        // Ne pas mettre à jour si c'est une mise à jour interne
+        if (isInternalUpdate.current) {
+            isInternalUpdate.current = false;
+            return;
+        }
+
+        // Sanitizer la valeur entrante pour comparaison cohérente
+        const sanitizedValue = sanitizeHtml(value);
+
+        // Ne mettre à jour que si la valeur sanitizée a réellement changé
+        if (editorRef.current && sanitizedValue !== lastValueRef.current) {
+            editorRef.current.innerHTML = sanitizedValue;
+            lastValueRef.current = sanitizedValue;
+            setIsEmpty(!sanitizedValue || sanitizedValue === '<br>');
         }
     }, [value]);
 
-    // Gérer le changement de contenu
+    // Gérer le changement de contenu avec sanitization
     const handleInput = useCallback(() => {
         if (editorRef.current) {
             const html = editorRef.current.innerHTML;
             const cleanHtml = html === '<br>' ? '' : html;
-            onChange(cleanHtml);
-            setIsEmpty(!cleanHtml);
+            // Sanitizer le HTML avant de le passer au parent
+            const sanitizedHtml = sanitizeHtml(cleanHtml);
+            
+            // Marquer comme mise à jour interne pour éviter la boucle
+            isInternalUpdate.current = true;
+            lastValueRef.current = sanitizedHtml;
+            
+            onChange(sanitizedHtml);
+            setIsEmpty(!sanitizedHtml);
         }
     }, [onChange]);
 
     // Appliquer une commande de formatage
-    const execCommand = useCallback((command: string, value?: string) => {
-        document.execCommand(command, false, value);
+    const execCommand = useCallback((command: string, commandValue?: string) => {
+        document.execCommand(command, false, commandValue);
         editorRef.current?.focus();
         handleInput();
     }, [handleInput]);
@@ -71,7 +94,12 @@ export function WysiwygEditor({
 
         const url = prompt('Entrez l\'URL du lien :', 'https://');
         if (url && url !== 'https://') {
-            execCommand('createLink', url);
+            // Valider que l'URL commence par http:// ou https://
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                execCommand('createLink', url);
+            } else {
+                alert('L\'URL doit commencer par http:// ou https://');
+            }
         }
     }, [execCommand]);
 
@@ -99,6 +127,15 @@ export function WysiwygEditor({
             }
         }
     }, [handleBold, handleItalic, handleLink]);
+
+    // Gérer le collage pour sanitizer le contenu
+    const handlePaste = useCallback((e: React.ClipboardEvent) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        // Insérer uniquement le texte brut pour éviter le HTML malveillant
+        document.execCommand('insertText', false, text);
+        handleInput();
+    }, [handleInput]);
 
     // Calculer la hauteur minimum basée sur rows
     const minHeight = rows * 24; // ~24px par ligne
@@ -163,6 +200,7 @@ export function WysiwygEditor({
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     onKeyDown={handleKeyDown}
+                    onPaste={handlePaste}
                     className={cn(
                         'px-3 py-2 text-sm outline-none',
                         'prose prose-sm max-w-none',
