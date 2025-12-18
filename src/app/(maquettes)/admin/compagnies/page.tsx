@@ -346,7 +346,7 @@ export default function AdminCompagniesPage() {
             </div>
 
             {/* Modale création/édition */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
                 <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
                     <DialogHeader>
                         <DialogTitle>
