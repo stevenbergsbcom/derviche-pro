@@ -1,0 +1,546 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface Company {
+    id: number;
+    name: string;
+    description?: string;
+    city?: string;
+    contactName?: string;
+    contactEmail?: string;
+    contactPhone?: string;
+}
+
+// Données mock
+const companiesMock: Company[] = [
+    {
+        id: 1,
+        name: 'Compagnie du Soleil',
+        city: 'Paris',
+        contactName: 'Marie Dupont',
+        contactEmail: 'marie@dusoleil.fr',
+        contactPhone: '01 42 34 56 78',
+        description: 'Compagnie de théâtre contemporain basée à Paris',
+    },
+    {
+        id: 2,
+        name: 'Les Artistes Associés',
+        city: 'Lyon',
+        contactName: 'Pierre Martin',
+        contactEmail: 'pierre@artistes-associes.fr',
+        contactPhone: '04 72 12 34 56',
+        description: 'Collectif d\'artistes pluridisciplinaires',
+    },
+    {
+        id: 3,
+        name: 'Théâtre Nomade',
+        city: 'Marseille',
+        contactName: 'Sophie Bernard',
+        contactEmail: 'sophie@theatre-nomade.fr',
+        contactPhone: '04 91 23 45 67',
+    },
+    {
+        id: 4,
+        name: 'Collectif Éphémère',
+        city: 'Bordeaux',
+        contactName: 'Jean Lefebvre',
+        contactEmail: 'jean@collectif-ephemere.fr',
+        contactPhone: '05 56 78 90 12',
+        description: 'Compagnie de création théâtrale éphémère',
+    },
+    {
+        id: 5,
+        name: 'La Troupe Vagabonde',
+        city: 'Toulouse',
+        contactName: 'Claire Moreau',
+        contactEmail: 'claire@troupe-vagabonde.fr',
+        contactPhone: '05 61 23 45 67',
+    },
+];
+
+export default function AdminCompagniesPage() {
+    const [searchQuery, setSearchQuery] = useState<string>('');
+    const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
+    const [formData, setFormData] = useState<Omit<Company, 'id'>>({
+        name: '',
+        description: '',
+        city: '',
+        contactName: '',
+        contactEmail: '',
+        contactPhone: '',
+    });
+
+    // Filtrer les compagnies selon la recherche
+    const filteredCompanies = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return companiesMock;
+        }
+
+        const query = searchQuery.toLowerCase();
+        return companiesMock.filter(
+            (company) =>
+                company.name.toLowerCase().includes(query) ||
+                (company.city?.toLowerCase().includes(query) ?? false) ||
+                (company.contactName?.toLowerCase().includes(query) ?? false)
+        );
+    }, [searchQuery]);
+
+    // Ouvrir la modale en mode création
+    const handleCreate = () => {
+        setEditingCompany(null);
+        setFormData({
+            name: '',
+            description: '',
+            city: '',
+            contactName: '',
+            contactEmail: '',
+            contactPhone: '',
+        });
+        setIsDialogOpen(true);
+    };
+
+    // Ouvrir la modale en mode édition
+    const handleEdit = (company: Company) => {
+        setEditingCompany(company);
+        setFormData({
+            name: company.name,
+            description: company.description || '',
+            city: company.city || '',
+            contactName: company.contactName || '',
+            contactEmail: company.contactEmail || '',
+            contactPhone: company.contactPhone || '',
+        });
+        setIsDialogOpen(true);
+    };
+
+    // Gérer la suppression
+    const handleDeleteClick = (company: Company) => {
+        setCompanyToDelete(company);
+    };
+
+    // Confirmer la suppression
+    const handleConfirmDelete = () => {
+        // En production : DELETE /api/companies/:id
+        // Pour la maquette : juste fermer la modale
+        setCompanyToDelete(null);
+    };
+
+    // Ouvrir la modale de visualisation
+    const handleView = (company: Company) => {
+        setViewingCompany(company);
+    };
+
+    // Fermer la modale de visualisation et ouvrir l'édition
+    const handleViewToEdit = () => {
+        if (viewingCompany) {
+            const companyToEdit = viewingCompany;
+            setViewingCompany(null);
+            handleEdit(companyToEdit);
+        }
+    };
+
+    // Fermer la modale de visualisation et ouvrir la suppression
+    const handleViewToDelete = () => {
+        if (viewingCompany) {
+            const companyToRemove = viewingCompany;
+            setViewingCompany(null);
+            handleDeleteClick(companyToRemove);
+        }
+    };
+
+    // Fermer la modale
+    const handleCloseDialog = () => {
+        setIsDialogOpen(false);
+        setEditingCompany(null);
+    };
+
+    // Soumettre le formulaire
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // En production : POST /api/companies ou PUT /api/companies/:id
+        // Pour la maquette : juste fermer la modale
+        handleCloseDialog();
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header avec titre et bouton */}
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-derviche-dark">
+                    Gestion des Compagnies
+                </h1>
+                <Button
+                    className="bg-derviche hover:bg-derviche-light text-white w-full lg:w-auto"
+                    onClick={handleCreate}
+                >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter une compagnie
+                </Button>
+            </div>
+
+            {/* Barre de recherche */}
+            <div className="relative w-full lg:max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                    type="text"
+                    placeholder="Rechercher une compagnie..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
+
+            {/* Tableau des compagnies - Desktop uniquement */}
+            <div className="hidden lg:block rounded-md border bg-white">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nom</TableHead>
+                            <TableHead>Ville</TableHead>
+                            <TableHead>Contact</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredCompanies.map((company) => (
+                            <TableRow key={company.id}>
+                                <TableCell className="font-medium">
+                                    <button
+                                        onClick={() => handleView(company)}
+                                        className="cursor-pointer hover:text-derviche hover:underline text-left"
+                                    >
+                                        {company.name}
+                                    </button>
+                                </TableCell>
+                                <TableCell>{company.city || '-'}</TableCell>
+                                <TableCell className="text-muted-foreground">
+                                    {company.contactName || '-'}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => handleView(company)}
+                                        >
+                                            <Eye className="w-4 h-4" />
+                                            <span className="sr-only">Voir</span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => handleEdit(company)}
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                            <span className="sr-only">Modifier</span>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleDeleteClick(company)}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span className="sr-only">Supprimer</span>
+                                        </Button>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            {/* Cartes des compagnies - Mobile uniquement */}
+            <div className="lg:hidden space-y-4">
+                {filteredCompanies.map((company) => (
+                    <Card key={company.id}>
+                        <CardHeader>
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                    <CardTitle
+                                        className="text-lg mb-1 cursor-pointer hover:text-derviche hover:underline"
+                                        onClick={() => handleView(company)}
+                                    >
+                                        {company.name}
+                                    </CardTitle>
+                                    <p className="text-sm text-muted-foreground">{company.city || '-'}</p>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div>
+                                <p className="text-sm font-medium text-foreground mb-1">Contact</p>
+                                <p className="text-sm text-muted-foreground">{company.contactName || '-'}</p>
+                            </div>
+                            <div className="flex items-center gap-2 pt-2 border-t">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleView(company)}
+                                >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Voir
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => handleEdit(company)}
+                                >
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Modifier
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteClick(company)}
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Supprimer
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {/* Modale création/édition */}
+            <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
+                <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {editingCompany ? 'Modifier la compagnie' : 'Ajouter une compagnie'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingCompany
+                                ? 'Modifiez les informations de la compagnie ci-dessous.'
+                                : 'Remplissez les informations pour créer une nouvelle compagnie.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto px-1">
+                            <div className="space-y-4">
+                                {/* Nom */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Nom *</Label>
+                                    <Input
+                                        id="name"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea
+                                        id="description"
+                                        rows={3}
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Ville */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="city">Ville</Label>
+                                    <Input
+                                        id="city"
+                                        value={formData.city}
+                                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Nom du contact */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="contactName">Nom du contact</Label>
+                                    <Input
+                                        id="contactName"
+                                        value={formData.contactName}
+                                        onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Email et Téléphone */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="contactEmail">Email contact</Label>
+                                        <Input
+                                            id="contactEmail"
+                                            type="email"
+                                            value={formData.contactEmail}
+                                            onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="contactPhone">Téléphone contact</Label>
+                                        <Input
+                                            id="contactPhone"
+                                            type="tel"
+                                            value={formData.contactPhone}
+                                            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleCloseDialog}
+                                className="w-full sm:w-auto"
+                            >
+                                Annuler
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="bg-derviche hover:bg-derviche-light text-white w-full sm:w-auto"
+                            >
+                                Enregistrer
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modale de visualisation des détails */}
+            <Dialog open={viewingCompany !== null} onOpenChange={(open) => !open && setViewingCompany(null)}>
+                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col">
+                    <DialogHeader className="px-4 sm:px-6 pt-6 pb-4">
+                        <DialogTitle>{viewingCompany?.name}</DialogTitle>
+                        <DialogDescription>Détails de la compagnie</DialogDescription>
+                    </DialogHeader>
+
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4">
+                        <div className="space-y-4">
+                            {/* Description */}
+                            {viewingCompany?.description && (
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">Description</p>
+                                    <p className="text-sm text-muted-foreground mt-1">{viewingCompany.description}</p>
+                                </div>
+                            )}
+
+                            {/* Ville */}
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Ville</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {viewingCompany?.city || 'Non renseigné'}
+                                </p>
+                            </div>
+
+                            {/* Contact */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">Nom du contact</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {viewingCompany?.contactName || 'Non renseigné'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">Email</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {viewingCompany?.contactEmail || 'Non renseigné'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Téléphone */}
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Téléphone</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    {viewingCompany?.contactPhone || 'Non renseigné'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleViewToEdit}
+                            className="w-full sm:w-auto"
+                        >
+                            Modifier
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={handleViewToDelete}
+                            className="w-full sm:w-auto"
+                        >
+                            Supprimer
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modale de confirmation de suppression */}
+            <AlertDialog open={companyToDelete !== null} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+                <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Supprimer cette compagnie ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Êtes-vous sûr de vouloir supprimer la compagnie « {companyToDelete?.name} » ? Cette action est irréversible.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                        <AlertDialogCancel className="w-full sm:w-auto">Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmDelete}
+                            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90"
+                        >
+                            Confirmer
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+    );
+}
