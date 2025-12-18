@@ -222,16 +222,18 @@ export default function AdminLieuxPage() {
     // Fermer la modale de visualisation et ouvrir l'édition
     const handleViewToEdit = () => {
         if (viewingVenue) {
+            const venueToEdit = viewingVenue;
             setViewingVenue(null);
-            handleEdit(viewingVenue);
+            handleEdit(venueToEdit);
         }
     };
 
     // Fermer la modale de visualisation et ouvrir la suppression
     const handleViewToDelete = () => {
         if (viewingVenue) {
+            const venueToRemove = viewingVenue;
             setViewingVenue(null);
-            handleDeleteClick(viewingVenue);
+            handleDeleteClick(venueToRemove);
         }
     };
 
