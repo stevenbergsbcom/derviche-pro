@@ -108,6 +108,16 @@ export default function AdminSpectaclesPage() {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Cleanup du timeout lors du démontage du composant
+    useEffect(() => {
+        return () => {
+            if (copyTimeoutRef.current) {
+                clearTimeout(copyTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const [categories, setCategories] = useState<string[]>(mockCategories);
     const [audiences, setAudiences] = useState<string[]>(mockAudiences);
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
@@ -1379,9 +1389,6 @@ export default function AdminSpectaclesPage() {
                                 const newCompany: MockCompany = {
                                     id: newId,
                                     name: newCompanyData.name.trim(),
-                                    description: undefined,
-                                    city: undefined,
-                                    contactName: undefined,
                                     contactEmail: newCompanyData.email.trim(),
                                     contactPhone: null,
                                 };
