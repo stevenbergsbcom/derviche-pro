@@ -229,6 +229,12 @@ export default function AdminSpectaclesPage() {
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [newCategory, setNewCategory] = useState<string>('');
     const [newAudience, setNewAudience] = useState<string>('');
+    const [companies, setCompanies] = useState<typeof companiesMock>(companiesMock);
+    const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
+    const [newCompanyData, setNewCompanyData] = useState<{ name: string; email: string }>({
+        name: '',
+        email: '',
+    });
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
     const [copiedShowId, setCopiedShowId] = useState<number | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -893,18 +899,28 @@ export default function AdminSpectaclesPage() {
                                     <Label htmlFor="companyId">Compagnie *</Label>
                                     <Select
                                         value={formData.companyId ? String(formData.companyId) : ''}
-                                        onValueChange={(value) => setFormData({ ...formData, companyId: parseInt(value) })}
+                                        onValueChange={(value) => {
+                                            if (value === 'new') {
+                                                setIsNewCompanyDialogOpen(true);
+                                            } else {
+                                                setFormData({ ...formData, companyId: parseInt(value) });
+                                            }
+                                        }}
                                         required
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Sélectionner une compagnie" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {companiesMock.map((company) => (
+                                            {companies.map((company) => (
                                                 <SelectItem key={company.id} value={String(company.id)}>
                                                     {company.name}
                                                 </SelectItem>
                                             ))}
+                                            <div className="border-t my-1" />
+                                            <SelectItem value="new" className="text-derviche font-medium">
+                                                ➕ Créer une nouvelle compagnie...
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -1332,6 +1348,95 @@ export default function AdminSpectaclesPage() {
                             className="w-full sm:w-auto"
                         >
                             Fermer
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modale création de compagnie */}
+            <Dialog open={isNewCompanyDialogOpen} onOpenChange={setIsNewCompanyDialogOpen}>
+                <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Créer une nouvelle compagnie</DialogTitle>
+                        <DialogDescription>
+                            Ajoutez une nouvelle compagnie pour vos spectacles.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
+                        <div className="space-y-2">
+                            <Label htmlFor="newCompanyName">
+                                Nom de la compagnie <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                                id="newCompanyName"
+                                type="text"
+                                value={newCompanyData.name}
+                                onChange={(e) =>
+                                    setNewCompanyData({ ...newCompanyData, name: e.target.value })
+                                }
+                                placeholder="Ex: Compagnie du Soleil"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="newCompanyEmail">
+                                Email contact <span className="text-destructive">*</span>
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                                Cet email sera utilisé par la compagnie pour se connecter à la plateforme.
+                            </p>
+                            <Input
+                                id="newCompanyEmail"
+                                type="email"
+                                value={newCompanyData.email}
+                                onChange={(e) =>
+                                    setNewCompanyData({ ...newCompanyData, email: e.target.value })
+                                }
+                                placeholder="email@compagnie.fr"
+                                required
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setIsNewCompanyDialogOpen(false);
+                                setNewCompanyData({ name: '', email: '' });
+                            }}
+                            className="w-full sm:w-auto"
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (!newCompanyData.name.trim() || !newCompanyData.email.trim()) {
+                                    return;
+                                }
+
+                                // Générer un nouvel ID
+                                const newId = Math.max(...companies.map((c) => c.id), 0) + 1;
+
+                                // Créer la nouvelle compagnie
+                                const newCompany = {
+                                    id: newId,
+                                    name: newCompanyData.name.trim(),
+                                };
+
+                                // Ajouter au state
+                                setCompanies((prev) => [...prev, newCompany]);
+
+                                // Sélectionner automatiquement cette nouvelle compagnie
+                                setFormData((prev) => ({ ...prev, companyId: newId }));
+
+                                // Fermer la modale et réinitialiser
+                                setIsNewCompanyDialogOpen(false);
+                                setNewCompanyData({ name: '', email: '' });
+                            }}
+                            disabled={!newCompanyData.name.trim() || !newCompanyData.email.trim()}
+                            className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
+                        >
+                            Créer et sélectionner
                         </Button>
                     </DialogFooter>
                 </DialogContent>
