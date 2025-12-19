@@ -361,6 +361,127 @@ export default function AdminRepresentationsPage() {
         });
     }, [representations, monthFilter, venueFilter, dateSearch]);
 
+    // Labels des jours de la semaine
+    const weekDayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+    // Calculer les représentations générées
+    const generatedRepresentations = useMemo(() => {
+        const { startDate, endDate, weekDays, times, excludedDates, venueId } = generateSeriesData;
+
+        if (!startDate || !endDate || times.length === 0 || venueId === 0) {
+            return [];
+        }
+
+        const start = new Date(startDate + 'T12:00:00');
+        const end = new Date(endDate + 'T12:00:00');
+        const results: Array<{
+            date: string;
+            time: string;
+            venueId: number;
+            venueName: string;
+            status: 'ok' | 'exact_duplicate' | 'conflict';
+        }> = [];
+        const excludedDatesSet = new Set(excludedDates.filter((d) => d.trim() !== ''));
+
+        // Parcourir chaque jour entre début et fin
+        const currentDate = new Date(start);
+        while (currentDate <= end) {
+            const dateString = currentDate.toISOString().split('T')[0];
+            const dayOfWeek = currentDate.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
+
+            // Vérifier si ce jour est coché (weekDays index 0=Dim, 1=Lun, etc.)
+            if (!weekDays[dayOfWeek]) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                continue;
+            }
+
+            // Vérifier si cette date est exclue
+            if (excludedDatesSet.has(dateString)) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                continue;
+            }
+
+            const venue = venues.find((v) => v.id === venueId);
+            if (venue) {
+                // Pour chaque horaire
+                times.forEach((time) => {
+                    // Doublon exact : même date + même heure + même lieu
+                    const isExactDuplicate = representations.some(
+                        (r) => r.date === dateString && r.time === time && r.venueId === venueId
+                    );
+
+                    // Conflit horaire : même date + même heure + lieu DIFFÉRENT
+                    const isConflict = !isExactDuplicate && representations.some(
+                        (r) => r.date === dateString && r.time === time && r.venueId !== venueId
+                    );
+
+                    let status: 'ok' | 'exact_duplicate' | 'conflict' = 'ok';
+                    if (isExactDuplicate) {
+                        status = 'exact_duplicate';
+                    } else if (isConflict) {
+                        status = 'conflict';
+                    }
+
+                    results.push({
+                        date: dateString,
+                        time,
+                        venueId,
+                        venueName: venue.name,
+                        status,
+                    });
+                });
+            }
+
+            // Passer au jour suivant
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        // Trier chronologiquement
+        return results.sort((a, b) => {
+            const dateA = new Date(`${a.date}T${a.time}`);
+            const dateB = new Date(`${b.date}T${b.time}`);
+            return dateA.getTime() - dateB.getTime();
+        });
+    }, [generateSeriesData, representations, venues]);
+
+    // Calculer les représentations qui seront effectivement créées (selon les checkboxes)
+    const representationsToCreate = useMemo(() => {
+        return generatedRepresentations.filter((rep) => {
+            if (rep.status === 'exact_duplicate' && !generateSeriesData.includeExactDuplicates) {
+                return false;
+            }
+            if (rep.status === 'conflict' && !generateSeriesData.includeConflicts) {
+                return false;
+            }
+            return true;
+        });
+    }, [generatedRepresentations, generateSeriesData.includeExactDuplicates, generateSeriesData.includeConflicts]);
+
+    // Compteurs pour l'affichage
+    const exactDuplicatesCount = useMemo(() =>
+        generatedRepresentations.filter((r) => r.status === 'exact_duplicate').length
+        , [generatedRepresentations]);
+
+    const conflictsCount = useMemo(() =>
+        generatedRepresentations.filter((r) => r.status === 'conflict').length
+        , [generatedRepresentations]);
+
+    // Validation pour la génération de série
+    const isGenerateSeriesValid = useMemo(() => {
+        const { startDate, endDate, weekDays, times, venueId, welcomeBy, welcomeById } = generateSeriesData;
+
+        if (!startDate || !endDate) return false;
+        if (new Date(endDate) < new Date(startDate)) return false;
+        if (weekDays.every((d) => !d)) return false;
+        if (times.length === 0 || times.some((t) => !t.trim())) return false;
+        if (!venueId) return false;
+        if (!generateSeriesData.isUnlimited && (!generateSeriesData.capacity || generateSeriesData.capacity < 1)) return false;
+        if (welcomeBy === 'derviche' && !welcomeById) return false;
+        // Vérifier qu'il y a au moins une représentation à créer
+        if (representationsToCreate.length === 0) return false;
+        return true;
+    }, [generateSeriesData, representationsToCreate.length]);
+
     // Si le spectacle n'existe pas, rediriger (après tous les hooks)
     if (!show) {
         router.push('/admin/spectacles');
@@ -574,127 +695,6 @@ export default function AdminRepresentationsPage() {
         return 'bg-red-500';
     };
 
-    // Labels des jours de la semaine
-    const weekDayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-
-    // Calculer les représentations générées
-    const generatedRepresentations = useMemo(() => {
-        const { startDate, endDate, weekDays, times, excludedDates, venueId } = generateSeriesData;
-
-        if (!startDate || !endDate || times.length === 0 || venueId === 0) {
-            return [];
-        }
-
-        const start = new Date(startDate + 'T12:00:00');
-        const end = new Date(endDate + 'T12:00:00');
-        const results: Array<{
-            date: string;
-            time: string;
-            venueId: number;
-            venueName: string;
-            status: 'ok' | 'exact_duplicate' | 'conflict';
-        }> = [];
-        const excludedDatesSet = new Set(excludedDates.filter((d) => d.trim() !== ''));
-
-        // Parcourir chaque jour entre début et fin
-        const currentDate = new Date(start);
-        while (currentDate <= end) {
-            const dateString = currentDate.toISOString().split('T')[0];
-            const dayOfWeek = currentDate.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
-
-            // Vérifier si ce jour est coché (weekDays index 0=Dim, 1=Lun, etc.)
-            if (!weekDays[dayOfWeek]) {
-                currentDate.setDate(currentDate.getDate() + 1);
-                continue;
-            }
-
-            // Vérifier si cette date est exclue
-            if (excludedDatesSet.has(dateString)) {
-                currentDate.setDate(currentDate.getDate() + 1);
-                continue;
-            }
-
-            const venue = venues.find((v) => v.id === venueId);
-            if (venue) {
-                // Pour chaque horaire
-                times.forEach((time) => {
-                    // Doublon exact : même date + même heure + même lieu
-                    const isExactDuplicate = representations.some(
-                        (r) => r.date === dateString && r.time === time && r.venueId === venueId
-                    );
-                    
-                    // Conflit horaire : même date + même heure + lieu DIFFÉRENT
-                    const isConflict = !isExactDuplicate && representations.some(
-                        (r) => r.date === dateString && r.time === time && r.venueId !== venueId
-                    );
-
-                    let status: 'ok' | 'exact_duplicate' | 'conflict' = 'ok';
-                    if (isExactDuplicate) {
-                        status = 'exact_duplicate';
-                    } else if (isConflict) {
-                        status = 'conflict';
-                    }
-
-                    results.push({
-                        date: dateString,
-                        time,
-                        venueId,
-                        venueName: venue.name,
-                        status,
-                    });
-                });
-            }
-
-            // Passer au jour suivant
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        // Trier chronologiquement
-        return results.sort((a, b) => {
-            const dateA = new Date(`${a.date}T${a.time}`);
-            const dateB = new Date(`${b.date}T${b.time}`);
-            return dateA.getTime() - dateB.getTime();
-        });
-    }, [generateSeriesData, representations, venues]);
-
-    // Calculer les représentations qui seront effectivement créées (selon les checkboxes)
-    const representationsToCreate = useMemo(() => {
-        return generatedRepresentations.filter((rep) => {
-            if (rep.status === 'exact_duplicate' && !generateSeriesData.includeExactDuplicates) {
-                return false;
-            }
-            if (rep.status === 'conflict' && !generateSeriesData.includeConflicts) {
-                return false;
-            }
-            return true;
-        });
-    }, [generatedRepresentations, generateSeriesData.includeExactDuplicates, generateSeriesData.includeConflicts]);
-
-    // Compteurs pour l'affichage
-    const exactDuplicatesCount = useMemo(() => 
-        generatedRepresentations.filter((r) => r.status === 'exact_duplicate').length
-    , [generatedRepresentations]);
-
-    const conflictsCount = useMemo(() => 
-        generatedRepresentations.filter((r) => r.status === 'conflict').length
-    , [generatedRepresentations]);
-
-    // Validation pour la génération de série
-    const isGenerateSeriesValid = useMemo(() => {
-        const { startDate, endDate, weekDays, times, venueId, welcomeBy, welcomeById } = generateSeriesData;
-
-        if (!startDate || !endDate) return false;
-        if (new Date(endDate) < new Date(startDate)) return false;
-        if (weekDays.every((d) => !d)) return false;
-        if (times.length === 0 || times.some((t) => !t.trim())) return false;
-        if (!venueId) return false;
-        if (!generateSeriesData.isUnlimited && (!generateSeriesData.capacity || generateSeriesData.capacity < 1)) return false;
-        if (welcomeBy === 'derviche' && !welcomeById) return false;
-        // Vérifier qu'il y a au moins une représentation à créer
-        if (representationsToCreate.length === 0) return false;
-        return true;
-    }, [generateSeriesData, representationsToCreate.length]);
-
     return (
         <div className="space-y-6">
             {/* Header contextuel */}
@@ -708,7 +708,7 @@ export default function AdminRepresentationsPage() {
                         Retour aux spectacles
                     </Link>
                     <h1 className="text-xl sm:text-2xl font-bold text-derviche-dark truncate">
-                        Représentations de « {show.title} »
+                        Représentations de &laquo; {show.title} &raquo;
                     </h1>
                     <p className="text-sm text-muted-foreground">{show.companyName}</p>
                 </div>
@@ -1693,21 +1693,20 @@ export default function AdminRepresentationsPage() {
                                 <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-3 bg-muted/50">
                                     {generatedRepresentations.map((rep, index) => {
                                         // Déterminer si cette représentation sera créée
-                                        const willBeCreated = 
+                                        const willBeCreated =
                                             rep.status === 'ok' ||
                                             (rep.status === 'exact_duplicate' && generateSeriesData.includeExactDuplicates) ||
                                             (rep.status === 'conflict' && generateSeriesData.includeConflicts);
-                                        
+
                                         return (
                                             <div
                                                 key={index}
-                                                className={`text-sm flex items-center gap-2 ${
-                                                    rep.status === 'exact_duplicate' 
-                                                        ? 'text-red-700' 
-                                                        : rep.status === 'conflict' 
-                                                            ? 'text-orange-700' 
-                                                            : 'text-foreground'
-                                                } ${!willBeCreated ? 'opacity-50 line-through' : ''}`}
+                                                className={`text-sm flex items-center gap-2 ${rep.status === 'exact_duplicate'
+                                                    ? 'text-red-700'
+                                                    : rep.status === 'conflict'
+                                                        ? 'text-orange-700'
+                                                        : 'text-foreground'
+                                                    } ${!willBeCreated ? 'opacity-50 line-through' : ''}`}
                                             >
                                                 <Clock className="w-3 h-3 shrink-0" />
                                                 <span>
@@ -1729,7 +1728,7 @@ export default function AdminRepresentationsPage() {
                                 </div>
                             ) : (
                                 <div className="text-sm text-muted-foreground italic p-3 border rounded-md bg-muted/50">
-                                    Aucune représentation générée. Remplissez les champs requis pour voir l'aperçu.
+                                    Aucune représentation générée. Remplissez les champs requis pour voir l&apos;aperçu.
                                 </div>
                             )}
                         </div>
