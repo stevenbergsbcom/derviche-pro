@@ -86,7 +86,7 @@ const MAX_RESERVATIONS_PER_BOOKING = 3;
 function transformToSpectacleData(show: MockShow, representations: MockRepresentation[]): SpectacleData {
     // Filtrer les représentations de ce spectacle
     const showReps = representations.filter((rep) => rep.showId === show.id);
-    
+
     // Trier par date croissante
     const sortedReps = [...showReps].sort((a, b) => {
         const dateA = new Date(`${a.date}T${a.time}`);
@@ -109,7 +109,7 @@ function transformToSpectacleData(show: MockShow, representations: MockRepresent
     });
 
     // Trouver le premier lieu (pour l'affichage par défaut)
-    const firstVenue = sortedReps[0] 
+    const firstVenue = sortedReps[0]
         ? mockVenues.find((v) => v.id === sortedReps[0].venueId)
         : null;
 
@@ -124,8 +124,11 @@ function transformToSpectacleData(show: MockShow, representations: MockRepresent
     // Construire la période à partir des dates
     let period = show.period || 'Dates à venir';
     if (sortedReps.length > 0 && status !== 'coming_soon') {
-        const firstDate = new Date(sortedReps[0].date);
-        const lastDate = new Date(sortedReps[sortedReps.length - 1].date);
+        // Parser manuellement pour éviter les problèmes de timezone
+        const [firstYear, firstMonth, firstDay] = sortedReps[0].date.split('-').map(Number);
+        const [lastYear, lastMonth, lastDay] = sortedReps[sortedReps.length - 1].date.split('-').map(Number);
+        const firstDate = new Date(firstYear, firstMonth - 1, firstDay);
+        const lastDate = new Date(lastYear, lastMonth - 1, lastDay);
         const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
         period = `Du ${formatDate(firstDate)} au ${formatDate(lastDate)}`;
     }
@@ -148,7 +151,7 @@ function transformToSpectacleData(show: MockShow, representations: MockRepresent
         image: show.imageUrl || '/images/spectacles/placeholder.jpg',
         venue: {
             name: firstVenue?.name || 'Lieu à définir',
-            address: firstVenue 
+            address: firstVenue
                 ? `${firstVenue.address || ''}, ${firstVenue.postalCode || ''} ${firstVenue.city}`
                 : 'Adresse à confirmer',
         },
@@ -287,6 +290,59 @@ export default function SpectacleDetailPage() {
         });
     }, [slug, initialMonth]);
 
+    // Vérifier si le spectacle est "bientôt réservable"
+    const isComingSoon = spectacleData?.status === 'coming_soon';
+
+    // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
+    const datesWithSlots = useMemo(() => {
+        if (!spectacleData) return new Set<string>();
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const slotsInMonth = spectacleData.slots.filter((slot) => {
+            return slot.date.getFullYear() === year &&
+                slot.date.getMonth() === month &&
+                slot.remainingCapacity > 0; // Seulement les créneaux disponibles
+        });
+
+        const dates = new Set<string>();
+        slotsInMonth.forEach((slot) => {
+            const dateKey = `${slot.date.getFullYear()}-${slot.date.getMonth()}-${slot.date.getDate()}`;
+            dates.add(dateKey);
+        });
+
+        return dates;
+    }, [currentMonth, spectacleData]);
+
+    // Créneaux pour la date sélectionnée
+    const slotsForSelectedDate = useMemo(() => {
+        if (!selectedDate || !spectacleData) return [];
+        return spectacleData.slots.filter((slot) => isSameDay(slot.date, selectedDate));
+    }, [selectedDate, spectacleData]);
+
+    // Générer la grille du calendrier
+    const calendarDays = useMemo(() => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const firstDay = getFirstDayOfMonth(year, month);
+        const lastDay = getLastDayOfMonth(year, month);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
+
+        const days: (Date | null)[] = [];
+
+        // Jours vides au début
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(null);
+        }
+
+        // Jours du mois
+        for (let day = 1; day <= daysInMonth; day++) {
+            days.push(new Date(year, month, day));
+        }
+
+        return days;
+    }, [currentMonth]);
+
     // Si spectacle non trouvé
     if (!spectacleData) {
         return (
@@ -294,7 +350,7 @@ export default function SpectacleDetailPage() {
                 <Header />
                 <div className="container mx-auto px-4 py-12 text-center">
                     <h1 className="text-2xl font-bold text-derviche-dark mb-4">Spectacle non trouvé</h1>
-                    <p className="text-muted-foreground mb-6">Ce spectacle n'existe pas ou n'est plus disponible.</p>
+                    <p className="text-muted-foreground mb-6">Ce spectacle n&apos;existe pas ou n&apos;est plus disponible.</p>
                     <Button asChild>
                         <Link href="/catalogue">Retour au catalogue</Link>
                     </Button>
@@ -316,58 +372,6 @@ export default function SpectacleDetailPage() {
             </div>
         );
     }
-
-    // Vérifier si le spectacle est "bientôt réservable"
-    const isComingSoon = spectacleData.status === 'coming_soon';
-
-    // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
-    const datesWithSlots = (() => {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
-        const slotsInMonth = spectacleData.slots.filter((slot) => {
-            return slot.date.getFullYear() === year && 
-                   slot.date.getMonth() === month &&
-                   slot.remainingCapacity > 0; // Seulement les créneaux disponibles
-        });
-
-        const dates = new Set<string>();
-        slotsInMonth.forEach((slot) => {
-            const dateKey = `${slot.date.getFullYear()}-${slot.date.getMonth()}-${slot.date.getDate()}`;
-            dates.add(dateKey);
-        });
-
-        return dates;
-    })();
-
-    // Créneaux pour la date sélectionnée
-    const slotsForSelectedDate = (() => {
-        if (!selectedDate) return [];
-        return spectacleData.slots.filter((slot) => isSameDay(slot.date, selectedDate));
-    })();
-
-    // Générer la grille du calendrier
-    const calendarDays = (() => {
-        const year = currentMonth.getFullYear();
-        const month = currentMonth.getMonth();
-        const firstDay = getFirstDayOfMonth(year, month);
-        const lastDay = getLastDayOfMonth(year, month);
-        const daysInMonth = lastDay.getDate();
-        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
-
-        const days: (Date | null)[] = [];
-
-        // Jours vides au début
-        for (let i = 0; i < startingDayOfWeek; i++) {
-            days.push(null);
-        }
-
-        // Jours du mois
-        for (let day = 1; day <= daysInMonth; day++) {
-            days.push(new Date(year, month, day));
-        }
-
-        return days;
-    })();
 
     // Navigation mois
     const goToPreviousMonth = () => {
@@ -432,18 +436,18 @@ export default function SpectacleDetailPage() {
     // Gérer la soumission du formulaire
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!selectedSlot || !selectedDate) return;
-        
+
         // Générer un ID mock pour la réservation
         const mockReservationId = crypto.randomUUID();
-        
+
         // Formater la date pour l'URL (YYYY-MM-DD)
         const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
-        
+
         // Formater l'heure pour l'URL (HH:MM) - convertir "11h00" en "11:00"
         const timeStr = selectedSlot.time.replace('h', ':');
-        
+
         // Construire l'URL de confirmation avec les données
         const confirmationUrl = `/spectacle/${slug}/confirmation?` + new URLSearchParams({
             id: mockReservationId,
@@ -453,7 +457,7 @@ export default function SpectacleDetailPage() {
             name: `${formData.firstName} ${formData.lastName}`,
             email: formData.email,
         }).toString();
-        
+
         // Rediriger vers la page de confirmation
         router.push(confirmationUrl);
     };
@@ -494,7 +498,7 @@ export default function SpectacleDetailPage() {
     const renderCalendarStep = () => (
         <>
             <h2 className="text-xl font-bold text-derviche-dark mb-6">
-                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l\'heure'}
+                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l&apos;heure'}
             </h2>
 
             {/* Message si spectacle bientôt réservable */}
@@ -587,7 +591,7 @@ export default function SpectacleDetailPage() {
                     {/* Fuseau horaire */}
                     <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
                         <Globe className="w-4 h-4" />
-                        <span>Fuseau horaire : Heure d'Europe centrale</span>
+                        <span>Fuseau horaire : Heure d&apos;Europe centrale</span>
                     </div>
                 </>
             )}

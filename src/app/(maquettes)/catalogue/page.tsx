@@ -20,7 +20,6 @@ import {
   mockShows,
   mockRepresentations,
   mockVenues,
-  mockCategories,
   type MockShow,
   type MockRepresentation,
 } from '@/lib/mock-data';
@@ -84,7 +83,7 @@ function getMonthFromDateFr(dateStr: string): string {
 function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
   // Filtrer les représentations de ce spectacle
   const showReps = representations.filter((rep) => rep.showId === show.id);
-  
+
   // Trier par date croissante
   const sortedReps = [...showReps].sort((a, b) => {
     const dateA = new Date(`${a.date}T${a.time}`);
@@ -93,16 +92,15 @@ function transformShowToSpectacle(show: MockShow, representations: MockRepresent
   });
 
   // Trouver la prochaine représentation (date >= aujourd'hui)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
+  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
+  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+
   const futureReps = sortedReps.filter((rep) => {
-    const repDate = new Date(rep.date + 'T12:00:00');
-    return repDate >= today;
+    return rep.date >= todayISO; // Comparaison de chaînes ISO
   });
 
   const nextRep = futureReps[0];
-  
+
   // Calculer le nombre de créneaux avec places disponibles
   const availableSlots = futureReps.filter((rep) => {
     if (rep.capacity === null) return true; // Illimité = toujours disponible
@@ -158,7 +156,7 @@ function transformShowToSpectacle(show: MockShow, representations: MockRepresent
 export default function CataloguePage() {
   // État pour éviter les erreurs d'hydratation SSR/Client
   const [isMounted, setIsMounted] = useState(false);
-  
+
   const [genreFilter, setGenreFilter] = useState<string>('Tous');
   const [moisFilter, setMoisFilter] = useState<string>('Tous');
   const [lieuFilter, setLieuFilter] = useState<string>('Tous');

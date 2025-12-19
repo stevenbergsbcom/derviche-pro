@@ -120,7 +120,7 @@ export default function AdminRepresentationsPage() {
 
     // État pour éviter les erreurs d'hydratation SSR/Client
     const [isMounted, setIsMounted] = useState(false);
-    
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -1601,7 +1601,7 @@ export default function AdminRepresentationsPage() {
                                 </div>
                             ) : (
                                 <div className="text-sm text-muted-foreground italic p-3 border rounded-md bg-muted/50">
-                                    Aucune représentation générée. Remplissez les champs requis pour voir l'aperçu.
+                                    Aucune représentation générée. Remplissez les champs requis pour voir l&apos;aperçu.
                                 </div>
                             )}
                         </div>

@@ -78,7 +78,7 @@ export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProp
           {isComingSoon 
             ? 'Dates à venir' 
             : isClosed 
-              ? 'Plus de dates disponibles'
+              ? 'Aucune date disponible'
               : `Prochaine date : ${spectacle.nextDate}`}
         </p>
 
@@ -110,7 +110,7 @@ export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProp
             {isComingSoon 
               ? 'Bientôt disponible' 
               : isClosed 
-                ? 'Complet' 
+                ? 'Indisponible' 
                 : 'Réserver ma place'}
           </Button>
         </div>

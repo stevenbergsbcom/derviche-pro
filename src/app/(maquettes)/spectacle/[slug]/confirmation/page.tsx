@@ -69,12 +69,11 @@ function transformShowToSpectacle(show: MockShow, representations: MockRepresent
     return dateA.getTime() - dateB.getTime();
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
+  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
   
   const futureReps = sortedReps.filter((rep) => {
-    const repDate = new Date(rep.date + 'T12:00:00');
-    return repDate >= today;
+    return rep.date >= todayISO; // Comparaison de chaînes ISO
   });
 
   const nextRep = futureReps[0];
