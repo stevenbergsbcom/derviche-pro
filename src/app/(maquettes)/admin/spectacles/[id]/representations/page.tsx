@@ -52,7 +52,6 @@ import {
     Minimize2,
     Clock,
     MapPin,
-    Users,
     Copy,
     AlertTriangle,
 } from 'lucide-react';
@@ -277,6 +276,7 @@ export default function AdminRepresentationsPage() {
     const [editingRepresentation, setEditingRepresentation] = useState<Representation | null>(null);
     const [representationToDelete, setRepresentationToDelete] = useState<Representation | null>(null);
     const [isNewVenueDialogOpen, setIsNewVenueDialogOpen] = useState<boolean>(false);
+    const [newVenueSource, setNewVenueSource] = useState<'simple' | 'series'>('simple');
     const [newVenueData, setNewVenueData] = useState<{ name: string; city: string }>({
         name: '',
         city: '',
@@ -304,6 +304,8 @@ export default function AdminRepresentationsPage() {
         isUnlimited: true,
         welcomeBy: 'derviche' as 'derviche' | 'company',
         welcomeById: null as number | null,
+        includeExactDuplicates: false,
+        includeConflicts: false,
     });
 
     // Filtres
@@ -500,6 +502,8 @@ export default function AdminRepresentationsPage() {
             isUnlimited: true,
             welcomeBy: 'derviche',
             welcomeById: null,
+            includeExactDuplicates: false,
+            includeConflicts: false,
         });
     };
 
@@ -537,11 +541,10 @@ export default function AdminRepresentationsPage() {
         const venue = venues.find((v) => v.id === generateSeriesData.venueId);
         if (!venue) return;
 
-        // Filtrer les doublons et créer les nouvelles représentations
-        const validReps = generatedRepresentations.filter((rep) => !rep.isDuplicate);
+        // Utiliser representationsToCreate (déjà filtré selon les checkboxes)
         const maxId = Math.max(...representations.map((r) => r.id), 0);
 
-        const newRepresentations: Representation[] = validReps.map((rep, index) => ({
+        const newRepresentations: Representation[] = representationsToCreate.map((rep, index) => ({
             id: maxId + index + 1,
             date: rep.date,
             time: rep.time,
@@ -589,7 +592,7 @@ export default function AdminRepresentationsPage() {
             time: string;
             venueId: number;
             venueName: string;
-            isDuplicate: boolean;
+            status: 'ok' | 'exact_duplicate' | 'conflict';
         }> = [];
         const excludedDatesSet = new Set(excludedDates.filter((d) => d.trim() !== ''));
 
@@ -615,15 +618,29 @@ export default function AdminRepresentationsPage() {
             if (venue) {
                 // Pour chaque horaire
                 times.forEach((time) => {
-                    const isDuplicate = representations.some(
+                    // Doublon exact : même date + même heure + même lieu
+                    const isExactDuplicate = representations.some(
                         (r) => r.date === dateString && r.time === time && r.venueId === venueId
                     );
+                    
+                    // Conflit horaire : même date + même heure + lieu DIFFÉRENT
+                    const isConflict = !isExactDuplicate && representations.some(
+                        (r) => r.date === dateString && r.time === time && r.venueId !== venueId
+                    );
+
+                    let status: 'ok' | 'exact_duplicate' | 'conflict' = 'ok';
+                    if (isExactDuplicate) {
+                        status = 'exact_duplicate';
+                    } else if (isConflict) {
+                        status = 'conflict';
+                    }
+
                     results.push({
                         date: dateString,
                         time,
                         venueId,
                         venueName: venue.name,
-                        isDuplicate,
+                        status,
                     });
                 });
             }
@@ -640,6 +657,28 @@ export default function AdminRepresentationsPage() {
         });
     }, [generateSeriesData, representations, venues]);
 
+    // Calculer les représentations qui seront effectivement créées (selon les checkboxes)
+    const representationsToCreate = useMemo(() => {
+        return generatedRepresentations.filter((rep) => {
+            if (rep.status === 'exact_duplicate' && !generateSeriesData.includeExactDuplicates) {
+                return false;
+            }
+            if (rep.status === 'conflict' && !generateSeriesData.includeConflicts) {
+                return false;
+            }
+            return true;
+        });
+    }, [generatedRepresentations, generateSeriesData.includeExactDuplicates, generateSeriesData.includeConflicts]);
+
+    // Compteurs pour l'affichage
+    const exactDuplicatesCount = useMemo(() => 
+        generatedRepresentations.filter((r) => r.status === 'exact_duplicate').length
+    , [generatedRepresentations]);
+
+    const conflictsCount = useMemo(() => 
+        generatedRepresentations.filter((r) => r.status === 'conflict').length
+    , [generatedRepresentations]);
+
     // Validation pour la génération de série
     const isGenerateSeriesValid = useMemo(() => {
         const { startDate, endDate, weekDays, times, venueId, welcomeBy, welcomeById } = generateSeriesData;
@@ -647,12 +686,14 @@ export default function AdminRepresentationsPage() {
         if (!startDate || !endDate) return false;
         if (new Date(endDate) < new Date(startDate)) return false;
         if (weekDays.every((d) => !d)) return false;
-        if (times.length === 0) return false;
+        if (times.length === 0 || times.some((t) => !t.trim())) return false;
         if (!venueId) return false;
+        if (!generateSeriesData.isUnlimited && (!generateSeriesData.capacity || generateSeriesData.capacity < 1)) return false;
         if (welcomeBy === 'derviche' && !welcomeById) return false;
-        if (generatedRepresentations.length === 0) return false;
+        // Vérifier qu'il y a au moins une représentation à créer
+        if (representationsToCreate.length === 0) return false;
         return true;
-    }, [generateSeriesData, generatedRepresentations.length]);
+    }, [generateSeriesData, representationsToCreate.length]);
 
     return (
         <div className="space-y-6">
@@ -986,6 +1027,7 @@ export default function AdminRepresentationsPage() {
                                 value={formData.venueId ? String(formData.venueId) : ''}
                                 onValueChange={(value) => {
                                     if (value === 'new') {
+                                        setNewVenueSource('simple');
                                         setIsNewVenueDialogOpen(true);
                                         // Ne pas modifier formData.venueId pour garder la sélection précédente
                                     } else {
@@ -1194,10 +1236,12 @@ export default function AdminRepresentationsPage() {
                                 // Ajouter au state
                                 setVenues((prev) => [...prev, newVenue]);
 
-                                // Sélectionner automatiquement ce nouveau lieu
-                                // Pour le formulaire simple ET pour la génération de série
-                                setFormData((prev) => ({ ...prev, venueId: newId }));
-                                setGenerateSeriesData((prev) => ({ ...prev, venueId: newId }));
+                                // Sélectionner automatiquement ce nouveau lieu UNIQUEMENT dans le formulaire source
+                                if (newVenueSource === 'simple') {
+                                    setFormData((prev) => ({ ...prev, venueId: newId }));
+                                } else {
+                                    setGenerateSeriesData((prev) => ({ ...prev, venueId: newId }));
+                                }
 
                                 // Fermer la modale et réinitialiser
                                 setIsNewVenueDialogOpen(false);
@@ -1454,6 +1498,7 @@ export default function AdminRepresentationsPage() {
                                 value={generateSeriesData.venueId ? String(generateSeriesData.venueId) : ''}
                                 onValueChange={(value) => {
                                     if (value === 'new') {
+                                        setNewVenueSource('series');
                                         setIsNewVenueDialogOpen(true);
                                     } else {
                                         setGenerateSeriesData({ ...generateSeriesData, venueId: parseInt(value) });
@@ -1590,36 +1635,97 @@ export default function AdminRepresentationsPage() {
                                 </h3>
                             </div>
 
-                            {generatedRepresentations.some((r) => r.isDuplicate) && (
+                            {/* Warning doublons exacts */}
+                            {exactDuplicatesCount > 0 && (
+                                <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                                    <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-red-900">
+                                            {exactDuplicatesCount} représentation{exactDuplicatesCount > 1 ? 's' : ''} existe{exactDuplicatesCount > 1 ? 'nt' : ''} déjà (même lieu)
+                                        </p>
+                                        <div className="flex items-center space-x-2 mt-2">
+                                            <Checkbox
+                                                id="includeExactDuplicates"
+                                                checked={generateSeriesData.includeExactDuplicates}
+                                                onCheckedChange={(checked) => {
+                                                    setGenerateSeriesData({
+                                                        ...generateSeriesData,
+                                                        includeExactDuplicates: checked === true,
+                                                    });
+                                                }}
+                                            />
+                                            <Label htmlFor="includeExactDuplicates" className="font-normal cursor-pointer text-sm text-red-800">
+                                                Inclure les doublons existants
+                                            </Label>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Warning conflits horaires */}
+                            {conflictsCount > 0 && (
                                 <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
                                     <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                                    <div className="text-sm">
-                                        <p className="font-medium text-orange-900">
-                                            ⚠️ {generatedRepresentations.filter((r) => r.isDuplicate).length} représentation{generatedRepresentations.filter((r) => r.isDuplicate).length > 1 ? 's' : ''} existe{generatedRepresentations.filter((r) => r.isDuplicate).length > 1 ? 'nt' : ''} déjà à ces créneaux
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-orange-900">
+                                            {conflictsCount} créneau{conflictsCount > 1 ? 'x' : ''} en conflit (autre lieu, même horaire)
                                         </p>
+                                        <div className="flex items-center space-x-2 mt-2">
+                                            <Checkbox
+                                                id="includeConflicts"
+                                                checked={generateSeriesData.includeConflicts}
+                                                onCheckedChange={(checked) => {
+                                                    setGenerateSeriesData({
+                                                        ...generateSeriesData,
+                                                        includeConflicts: checked === true,
+                                                    });
+                                                }}
+                                            />
+                                            <Label htmlFor="includeConflicts" className="font-normal cursor-pointer text-sm text-orange-800">
+                                                Inclure les créneaux en conflit
+                                            </Label>
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
                             {generatedRepresentations.length > 0 ? (
                                 <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-3 bg-muted/50">
-                                    {generatedRepresentations.map((rep, index) => (
-                                        <div
-                                            key={index}
-                                            className={`text-sm flex items-center gap-2 ${rep.isDuplicate ? 'text-orange-700' : 'text-foreground'
-                                                }`}
-                                        >
-                                            <Clock className="w-3 h-3 shrink-0" />
-                                            <span>
-                                                {formatDate(rep.date)} à {rep.time}
-                                            </span>
-                                            {rep.isDuplicate && (
-                                                <Badge variant="outline" className="ml-auto text-xs bg-orange-100 text-orange-700 border-orange-300">
-                                                    Doublon
-                                                </Badge>
-                                            )}
-                                        </div>
-                                    ))}
+                                    {generatedRepresentations.map((rep, index) => {
+                                        // Déterminer si cette représentation sera créée
+                                        const willBeCreated = 
+                                            rep.status === 'ok' ||
+                                            (rep.status === 'exact_duplicate' && generateSeriesData.includeExactDuplicates) ||
+                                            (rep.status === 'conflict' && generateSeriesData.includeConflicts);
+                                        
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={`text-sm flex items-center gap-2 ${
+                                                    rep.status === 'exact_duplicate' 
+                                                        ? 'text-red-700' 
+                                                        : rep.status === 'conflict' 
+                                                            ? 'text-orange-700' 
+                                                            : 'text-foreground'
+                                                } ${!willBeCreated ? 'opacity-50 line-through' : ''}`}
+                                            >
+                                                <Clock className="w-3 h-3 shrink-0" />
+                                                <span>
+                                                    {formatDate(rep.date)} à {rep.time}
+                                                </span>
+                                                {rep.status === 'exact_duplicate' && (
+                                                    <Badge variant="outline" className="ml-auto text-xs bg-red-100 text-red-700 border-red-300">
+                                                        Existant
+                                                    </Badge>
+                                                )}
+                                                {rep.status === 'conflict' && (
+                                                    <Badge variant="outline" className="ml-auto text-xs bg-orange-100 text-orange-700 border-orange-300">
+                                                        Conflit
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-sm text-muted-foreground italic p-3 border rounded-md bg-muted/50">
@@ -1643,8 +1749,8 @@ export default function AdminRepresentationsPage() {
                             className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                         >
                             Générer{' '}
-                            {generatedRepresentations.length > 0 &&
-                                `(${generatedRepresentations.filter((r) => !r.isDuplicate).length})`}
+                            {representationsToCreate.length > 0 &&
+                                `(${representationsToCreate.length})`}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
