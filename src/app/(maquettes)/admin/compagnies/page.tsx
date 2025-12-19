@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,93 +33,60 @@ import {
 } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface Company {
-    id: number;
-    name: string;
-    description?: string;
-    city?: string;
-    contactName?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-}
-
-// Données mock
-const companiesMock: Company[] = [
-    {
-        id: 1,
-        name: 'Compagnie du Soleil',
-        city: 'Paris',
-        contactName: 'Marie Dupont',
-        contactEmail: 'marie@dusoleil.fr',
-        contactPhone: '01 42 34 56 78',
-        description: 'Compagnie de théâtre contemporain basée à Paris',
-    },
-    {
-        id: 2,
-        name: 'Les Artistes Associés',
-        city: 'Lyon',
-        contactName: 'Pierre Martin',
-        contactEmail: 'pierre@artistes-associes.fr',
-        contactPhone: '04 72 12 34 56',
-        description: 'Collectif d\'artistes pluridisciplinaires',
-    },
-    {
-        id: 3,
-        name: 'Théâtre Nomade',
-        city: 'Marseille',
-        contactName: 'Sophie Bernard',
-        contactEmail: 'sophie@theatre-nomade.fr',
-        contactPhone: '04 91 23 45 67',
-    },
-    {
-        id: 4,
-        name: 'Collectif Éphémère',
-        city: 'Bordeaux',
-        contactName: 'Jean Lefebvre',
-        contactEmail: 'jean@collectif-ephemere.fr',
-        contactPhone: '05 56 78 90 12',
-        description: 'Compagnie de création théâtrale éphémère',
-    },
-    {
-        id: 5,
-        name: 'La Troupe Vagabonde',
-        city: 'Toulouse',
-        contactName: 'Claire Moreau',
-        contactEmail: 'claire@troupe-vagabonde.fr',
-        contactPhone: '05 61 23 45 67',
-    },
-];
+import {
+    mockCompanies,
+    generateMockId,
+    type MockCompany,
+} from '@/lib/mock-data';
 
 export default function AdminCompagniesPage() {
+    // État pour éviter les erreurs d'hydratation SSR/Client
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Fix d'hydratation : nécessaire pour éviter les différences SSR/Client avec Radix UI
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    const [companies, setCompanies] = useState<MockCompany[]>(mockCompanies);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
-    const [viewingCompany, setViewingCompany] = useState<Company | null>(null);
-    const [formData, setFormData] = useState<Omit<Company, 'id'>>({
+    const [editingCompany, setEditingCompany] = useState<MockCompany | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<MockCompany | null>(null);
+    const [viewingCompany, setViewingCompany] = useState<MockCompany | null>(null);
+    const [formData, setFormData] = useState<Omit<MockCompany, 'id'>>({
         name: '',
         description: '',
         city: '',
         contactName: '',
         contactEmail: '',
-        contactPhone: '',
+        contactPhone: null,
     });
 
     // Filtrer les compagnies selon la recherche
     const filteredCompanies = useMemo(() => {
         if (!searchQuery.trim()) {
-            return companiesMock;
+            return companies;
         }
 
         const query = searchQuery.toLowerCase();
-        return companiesMock.filter(
+        return companies.filter(
             (company) =>
                 company.name.toLowerCase().includes(query) ||
                 (company.city?.toLowerCase().includes(query) ?? false) ||
                 (company.contactName?.toLowerCase().includes(query) ?? false)
         );
-    }, [searchQuery]);
+    }, [searchQuery, companies]);
+
+    // Attendre que le composant soit monté côté client pour éviter les erreurs d'hydratation
+    // (les composants Radix UI génèrent des IDs différents côté serveur et client)
+    if (!isMounted) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+            </div>
+        );
+    }
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
@@ -130,39 +97,40 @@ export default function AdminCompagniesPage() {
             city: '',
             contactName: '',
             contactEmail: '',
-            contactPhone: '',
+            contactPhone: null,
         });
         setIsDialogOpen(true);
     };
 
     // Ouvrir la modale en mode édition
-    const handleEdit = (company: Company) => {
+    const handleEdit = (company: MockCompany) => {
         setEditingCompany(company);
         setFormData({
             name: company.name,
             description: company.description || '',
             city: company.city || '',
             contactName: company.contactName || '',
-            contactEmail: company.contactEmail || '',
-            contactPhone: company.contactPhone || '',
+            contactEmail: company.contactEmail,
+            contactPhone: company.contactPhone,
         });
         setIsDialogOpen(true);
     };
 
     // Gérer la suppression
-    const handleDeleteClick = (company: Company) => {
+    const handleDeleteClick = (company: MockCompany) => {
         setCompanyToDelete(company);
     };
 
     // Confirmer la suppression
     const handleConfirmDelete = () => {
-        // En production : DELETE /api/companies/:id
-        // Pour la maquette : juste fermer la modale
-        setCompanyToDelete(null);
+        if (companyToDelete) {
+            setCompanies((prev) => prev.filter((c) => c.id !== companyToDelete.id));
+            setCompanyToDelete(null);
+        }
     };
 
     // Ouvrir la modale de visualisation
-    const handleView = (company: Company) => {
+    const handleView = (company: MockCompany) => {
         setViewingCompany(company);
     };
 
@@ -193,8 +161,41 @@ export default function AdminCompagniesPage() {
     // Soumettre le formulaire
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // En production : POST /api/companies ou PUT /api/companies/:id
-        // Pour la maquette : juste fermer la modale
+
+        if (editingCompany) {
+            // Édition
+            setCompanies((prev) =>
+                prev.map((c) =>
+                    c.id === editingCompany.id
+                        ? {
+                            ...c,
+                            name: formData.name,
+                            description: formData.description,
+                            city: formData.city,
+                            contactName: formData.contactName,
+                            contactEmail: formData.contactEmail,
+                            contactPhone: formData.contactPhone,
+                        }
+                        : c
+                )
+            );
+        } else {
+            // Création
+            const newId = generateMockId('company');
+            setCompanies((prev) => [
+                ...prev,
+                {
+                    id: newId,
+                    name: formData.name,
+                    description: formData.description,
+                    city: formData.city,
+                    contactName: formData.contactName,
+                    contactEmail: formData.contactEmail,
+                    contactPhone: formData.contactPhone,
+                },
+            ]);
+        }
+
         handleCloseDialog();
     };
 
@@ -426,8 +427,8 @@ export default function AdminCompagniesPage() {
                                     <Input
                                         id="contactPhone"
                                         type="tel"
-                                        value={formData.contactPhone}
-                                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                        value={formData.contactPhone ?? ''}
+                                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value || null })}
                                     />
                                 </div>
                             </div>
@@ -499,7 +500,7 @@ export default function AdminCompagniesPage() {
                             <div>
                                 <p className="text-sm font-semibold text-foreground">Téléphone</p>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    {viewingCompany?.contactPhone || 'Non renseigné'}
+                                    {viewingCompany?.contactPhone ?? 'Non renseigné'}
                                 </p>
                             </div>
                         </div>

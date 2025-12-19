@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,102 +34,28 @@ import {
 } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface Venue {
-    id: number;
-    name: string;
-    city: string;
-    address?: string;
-    postalCode?: string;
-    capacity?: number;
-    description?: string;
-    contactEmail?: string;
-    contactPhone?: string;
-    latitude?: number;
-    longitude?: number;
-    pmrAccessible?: boolean;
-    parking?: boolean;
-    transports?: string;
-}
-
-// Données mock
-const venuesMock: Venue[] = [
-    {
-        id: 1,
-        name: 'Théâtre de la Ville',
-        address: '2, place du Châtelet',
-        postalCode: '75001',
-        city: 'Paris',
-        capacity: 1000,
-        description: 'Grand théâtre parisien au cœur de la capitale',
-        contactEmail: 'contact@theatredelaville.fr',
-        contactPhone: '01 42 74 22 77',
-        latitude: 48.8584,
-        longitude: 2.3470,
-        pmrAccessible: true,
-        parking: false,
-        transports: 'Métro Châtelet (lignes 1, 4, 7, 11, 14)',
-    },
-    {
-        id: 2,
-        name: 'Théâtre du Rond-Point',
-        address: '2 bis, avenue Franklin D. Roosevelt',
-        postalCode: '75008',
-        city: 'Paris',
-        capacity: 450,
-        contactEmail: 'accueil@rondpoint.fr',
-        contactPhone: '01 44 95 98 21',
-        pmrAccessible: true,
-        parking: true,
-        transports: 'Métro Franklin D. Roosevelt (lignes 1, 9)',
-    },
-    {
-        id: 3,
-        name: 'La Colline',
-        address: '15, rue Malte-Brun',
-        postalCode: '75020',
-        city: 'Paris',
-        capacity: 200,
-        contactEmail: 'billetterie@colline.fr',
-        contactPhone: '01 44 62 52 00',
-        pmrAccessible: false,
-        parking: false,
-        transports: 'Métro Gambetta (ligne 3)',
-    },
-    {
-        id: 4,
-        name: 'Théâtre de Belleville',
-        address: '94, rue du Faubourg du Temple',
-        postalCode: '75011',
-        city: 'Paris',
-        capacity: 120,
-        contactEmail: 'contact@theatre-belleville.fr',
-        contactPhone: '01 48 06 72 34',
-        pmrAccessible: true,
-        parking: false,
-    },
-    {
-        id: 5,
-        name: 'Le Monfort',
-        address: '106, rue Brancion',
-        postalCode: '75015',
-        city: 'Paris',
-        capacity: 350,
-        contactEmail: 'info@lemonfort.fr',
-        contactPhone: '01 56 08 33 88',
-        pmrAccessible: true,
-        parking: true,
-        transports: 'Métro Porte de Vanves (ligne 13)',
-    },
-];
+import {
+    mockVenues,
+    generateMockId,
+    type MockVenue,
+} from '@/lib/mock-data';
 
 export default function AdminLieuxPage() {
+    // État pour éviter les erreurs d'hydratation SSR/Client
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Fix d'hydratation : nécessaire pour éviter les différences SSR/Client avec Radix UI
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    const [venues, setVenues] = useState<MockVenue[]>(mockVenues);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-    const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
-    const [venueToDelete, setVenueToDelete] = useState<Venue | null>(null);
-    const [viewingVenue, setViewingVenue] = useState<Venue | null>(null);
-    const [formData, setFormData] = useState<Omit<Venue, 'id'>>({
+    const [editingVenue, setEditingVenue] = useState<MockVenue | null>(null);
+    const [venueToDelete, setVenueToDelete] = useState<MockVenue | null>(null);
+    const [viewingVenue, setViewingVenue] = useState<MockVenue | null>(null);
+    const [formData, setFormData] = useState<Omit<MockVenue, 'id'>>({
         name: '',
         city: '',
         address: '',
@@ -148,17 +74,27 @@ export default function AdminLieuxPage() {
     // Filtrer les lieux selon la recherche
     const filteredVenues = useMemo(() => {
         if (!searchQuery.trim()) {
-            return venuesMock;
+            return venues;
         }
 
         const query = searchQuery.toLowerCase();
-        return venuesMock.filter(
+        return venues.filter(
             (venue) =>
                 venue.name.toLowerCase().includes(query) ||
                 venue.city.toLowerCase().includes(query) ||
                 (venue.postalCode?.toLowerCase().includes(query) ?? false)
         );
-    }, [searchQuery]);
+    }, [searchQuery, venues]);
+
+    // Attendre que le composant soit monté côté client pour éviter les erreurs d'hydratation
+    // (les composants Radix UI génèrent des IDs différents côté serveur et client)
+    if (!isMounted) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+            </div>
+        );
+    }
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
@@ -182,7 +118,7 @@ export default function AdminLieuxPage() {
     };
 
     // Ouvrir la modale en mode édition
-    const handleEdit = (venue: Venue) => {
+    const handleEdit = (venue: MockVenue) => {
         setEditingVenue(venue);
         setFormData({
             name: venue.name,
@@ -203,19 +139,20 @@ export default function AdminLieuxPage() {
     };
 
     // Gérer la suppression
-    const handleDeleteClick = (venue: Venue) => {
+    const handleDeleteClick = (venue: MockVenue) => {
         setVenueToDelete(venue);
     };
 
     // Confirmer la suppression
     const handleConfirmDelete = () => {
-        // En production : DELETE /api/venues/:id
-        // Pour la maquette : juste fermer la modale
-        setVenueToDelete(null);
+        if (venueToDelete) {
+            setVenues((prev) => prev.filter((v) => v.id !== venueToDelete.id));
+            setVenueToDelete(null);
+        }
     };
 
     // Ouvrir la modale de visualisation
-    const handleView = (venue: Venue) => {
+    const handleView = (venue: MockVenue) => {
         setViewingVenue(venue);
     };
 
@@ -246,8 +183,55 @@ export default function AdminLieuxPage() {
     // Soumettre le formulaire
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // En production : POST /api/venues ou PUT /api/venues/:id
-        // Pour la maquette : juste fermer la modale
+
+        if (editingVenue) {
+            // Édition
+            setVenues((prev) =>
+                prev.map((v) =>
+                    v.id === editingVenue.id
+                        ? {
+                            ...v,
+                            name: formData.name,
+                            city: formData.city,
+                            address: formData.address,
+                            postalCode: formData.postalCode,
+                            capacity: formData.capacity,
+                            description: formData.description,
+                            contactEmail: formData.contactEmail,
+                            contactPhone: formData.contactPhone,
+                            latitude: formData.latitude,
+                            longitude: formData.longitude,
+                            pmrAccessible: formData.pmrAccessible,
+                            parking: formData.parking,
+                            transports: formData.transports,
+                        }
+                        : v
+                )
+            );
+        } else {
+            // Création
+            const newId = generateMockId('venue');
+            setVenues((prev) => [
+                ...prev,
+                {
+                    id: newId,
+                    name: formData.name,
+                    city: formData.city,
+                    address: formData.address,
+                    postalCode: formData.postalCode,
+                    capacity: formData.capacity,
+                    description: formData.description,
+                    contactEmail: formData.contactEmail,
+                    contactPhone: formData.contactPhone,
+                    latitude: formData.latitude,
+                    longitude: formData.longitude,
+                    pmrAccessible: formData.pmrAccessible,
+                    parking: formData.parking,
+                    transports: formData.transports,
+                },
+            ]);
+        }
+
         handleCloseDialog();
     };
 

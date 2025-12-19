@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -42,146 +41,20 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { SafeHtml } from '@/components/ui/safe-html';
-
-interface Show {
-    id: number;
-    title: string;
-    slug: string;
-    companyId: number;
-    companyName: string;
-    categories: string[];
-    description?: string;
-    duration?: number;
-    audience?: string;
-    imageUrl?: string;
-    status: 'available' | 'coming_soon' | 'closed';
-    period?: string;
-    dervisheManager?: string;
-    invitationPolicy?: string;
-    maxParticipantsPerBooking?: number;
-    closureDates?: string;
-    representationsCount: number;
-    folderUrl?: string;
-    teaserUrl?: string;
-    captationAvailable: boolean;
-    captationUrl?: string;
-}
-
-// Données mock catégories et public (état gérable)
-const categoriesMock = ['Danse', 'Théâtre', 'Jeune public'];
-const audiencesMock = ['Tout public', 'Adultes', 'Jeune public'];
-
-// Données mock compagnies (pour le select)
-const companiesMock = [
-    { id: 1, name: 'Compagnie du Soleil' },
-    { id: 2, name: 'Les Artistes Associés' },
-    { id: 3, name: 'Théâtre Nomade' },
-    { id: 4, name: 'Collectif Éphémère' },
-    { id: 5, name: 'La Troupe Vagabonde' },
-];
-
-// Données mock spectacles
-const showsMock: Show[] = [
-    {
-        id: 1,
-        title: 'À moi',
-        slug: 'a-moi',
-        companyId: 1,
-        companyName: 'Compagnie du Soleil',
-        categories: ['Théâtre'],
-        status: 'available',
-        duration: 90,
-        audience: 'Tout public',
-        period: 'Automne 2025',
-        dervisheManager: 'Alexandra Martin',
-        invitationPolicy: '1 invitation + détaxe par réservation',
-        maxParticipantsPerBooking: 3,
-        closureDates: 'Relâche le lundi',
-        representationsCount: 9,
-        imageUrl: '/images/spectacles/a-moi.jpg',
-        folderUrl: 'https://drive.google.com/drive/folders/abc123',
-        teaserUrl: 'https://vimeo.com/123456789',
-        captationAvailable: true,
-        captationUrl: 'https://vimeo.com/987654321',
-    },
-    {
-        id: 2,
-        title: 'Le Rossignol',
-        slug: 'le-rossignol',
-        companyId: 2,
-        companyName: 'Les Artistes Associés',
-        categories: ['Jeune public'],
-        status: 'available',
-        duration: 60,
-        audience: 'Jeune public',
-        period: 'Hiver 2025',
-        dervisheManager: 'Sophie Bernard',
-        maxParticipantsPerBooking: 2,
-        representationsCount: 0,
-        imageUrl: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-        teaserUrl: 'https://youtube.com/watch?v=abc123',
-        captationAvailable: false,
-    },
-    {
-        id: 3,
-        title: 'Madame Bovary',
-        slug: 'madame-bovary',
-        companyId: 3,
-        companyName: 'Théâtre Nomade',
-        categories: ['Théâtre', 'Danse'],
-        status: 'coming_soon',
-        duration: 120,
-        audience: 'Adultes',
-        period: 'Printemps 2026',
-        dervisheManager: 'Pierre Dupont',
-        invitationPolicy: 'Invitation gratuite pour les professionnels',
-        maxParticipantsPerBooking: 5,
-        closureDates: 'Relâche les mercredis',
-        representationsCount: 12,
-        imageUrl: '/images/spectacles/madame-bovary.jpg',
-        folderUrl: 'https://dropbox.com/sh/xyz789',
-        captationAvailable: true,
-        captationUrl: 'https://vimeo.com/captation123',
-    },
-    {
-        id: 4,
-        title: 'Le Jeu',
-        slug: 'le-jeu',
-        companyId: 4,
-        companyName: 'Collectif Éphémère',
-        categories: ['Théâtre'],
-        status: 'available',
-        duration: 75,
-        audience: 'Tout public',
-        period: 'Été 2025',
-        dervisheManager: 'Marie Lefebvre',
-        maxParticipantsPerBooking: 3,
-        representationsCount: 8,
-        imageUrl: '/images/spectacles/jeu.jpg',
-        captationAvailable: false,
-    },
-    {
-        id: 5,
-        title: 'La Mer',
-        slug: 'la-mer',
-        companyId: 5,
-        companyName: 'La Troupe Vagabonde',
-        categories: ['Danse'],
-        status: 'closed',
-        duration: 80,
-        audience: 'Tout public',
-        period: 'Hiver 2024',
-        dervisheManager: 'Jean Moreau',
-        maxParticipantsPerBooking: 4,
-        representationsCount: 0,
-        imageUrl: '/images/spectacles/la-mer.jpg',
-        captationAvailable: false,
-    },
-];
+import {
+    mockShows,
+    mockCompanies,
+    mockCategories,
+    mockAudiences,
+    generateMockId,
+    type MockShow,
+    type MockCompany,
+} from '@/lib/mock-data';
+import type { ShowStatus } from '@/types/database';
 
 // Fonction slugify
 function slugify(text: string): string {
@@ -195,21 +68,33 @@ function slugify(text: string): string {
 
 export default function AdminSpectaclesPage() {
     const router = useRouter();
+
+    // État pour éviter les erreurs d'hydratation SSR/Client
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Fix d'hydratation : nécessaire pour éviter les différences SSR/Client avec Radix UI
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    const [shows, setShows] = useState<MockShow[]>(mockShows);
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-    const [editingShow, setEditingShow] = useState<Show | null>(null);
-    const [showToDelete, setShowToDelete] = useState<Show | null>(null);
-    const [viewingShow, setViewingShow] = useState<Show | null>(null);
-    const [formData, setFormData] = useState<Omit<Show, 'id' | 'companyName'>>({
-        title: '',
+    const [editingShow, setEditingShow] = useState<MockShow | null>(null);
+    const [showToDelete, setShowToDelete] = useState<MockShow | null>(null);
+    const [viewingShow, setViewingShow] = useState<MockShow | null>(null);
+    const [formData, setFormData] = useState<Omit<MockShow, 'id' | 'companyName'>>({
         slug: '',
-        companyId: 0,
+        title: '',
+        companyId: '',
         categories: [],
         description: '',
-        duration: undefined,
+        shortDescription: null,
+        imageUrl: null,
+        duration: null,
         audience: '',
-        imageUrl: '',
-        status: 'available',
+        status: 'published',
+        priceType: 'free',
         period: '',
         dervisheManager: '',
         invitationPolicy: '',
@@ -223,20 +108,20 @@ export default function AdminSpectaclesPage() {
     });
     const fileInputRef = useRef<HTMLInputElement>(null);
     const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const [categories, setCategories] = useState<string[]>(categoriesMock);
-    const [audiences, setAudiences] = useState<string[]>(audiencesMock);
+    const [categories, setCategories] = useState<string[]>(mockCategories);
+    const [audiences, setAudiences] = useState<string[]>(mockAudiences);
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [newCategory, setNewCategory] = useState<string>('');
     const [newAudience, setNewAudience] = useState<string>('');
-    const [companies, setCompanies] = useState<typeof companiesMock>(companiesMock);
+    const [companies, setCompanies] = useState<MockCompany[]>(mockCompanies);
     const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
     const [newCompanyData, setNewCompanyData] = useState<{ name: string; email: string }>({
         name: '',
         email: '',
     });
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
-    const [copiedShowId, setCopiedShowId] = useState<number | null>(null);
+    const [copiedShowId, setCopiedShowId] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
     // Auto-générer le slug depuis le titre (seulement en mode création)
@@ -251,34 +136,47 @@ export default function AdminSpectaclesPage() {
         }
     }, [formData.title, editingShow]);
 
+
     // Filtrer les spectacles selon la recherche
     const filteredShows = useMemo(() => {
         if (!searchQuery.trim()) {
-            return showsMock;
+            return shows;
         }
 
         const query = searchQuery.toLowerCase();
-        return showsMock.filter(
+        return shows.filter(
             (show) =>
                 show.title.toLowerCase().includes(query) ||
                 show.companyName.toLowerCase().includes(query) ||
                 show.categories.some((cat) => cat.toLowerCase().includes(query))
         );
-    }, [searchQuery]);
+    }, [searchQuery, shows]);
+
+    // Attendre que le composant soit monté côté client pour éviter les erreurs d'hydratation
+    // (les composants Radix UI génèrent des IDs différents côté serveur et client)
+    if (!isMounted) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+            </div>
+        );
+    }
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
         setEditingShow(null);
         setFormData({
-            title: '',
             slug: '',
-            companyId: 0,
+            title: '',
+            companyId: '',
             categories: [],
             description: '',
-            duration: undefined,
+            shortDescription: null,
+            imageUrl: null,
+            duration: null,
             audience: '',
-            imageUrl: '',
-            status: 'available',
+            status: 'published',
+            priceType: 'free',
             period: '',
             dervisheManager: '',
             invitationPolicy: '',
@@ -294,18 +192,20 @@ export default function AdminSpectaclesPage() {
     };
 
     // Ouvrir la modale en mode édition
-    const handleEdit = (show: Show) => {
+    const handleEdit = (show: MockShow) => {
         setEditingShow(show);
         setFormData({
-            title: show.title,
             slug: show.slug,
+            title: show.title,
             companyId: show.companyId,
             categories: show.categories,
             description: show.description || '',
+            shortDescription: show.shortDescription,
+            imageUrl: show.imageUrl,
             duration: show.duration,
             audience: show.audience || '',
-            imageUrl: show.imageUrl || '',
             status: show.status,
+            priceType: show.priceType,
             period: show.period || '',
             dervisheManager: show.dervisheManager || '',
             invitationPolicy: show.invitationPolicy || '',
@@ -321,19 +221,20 @@ export default function AdminSpectaclesPage() {
     };
 
     // Gérer la suppression
-    const handleDeleteClick = (show: Show) => {
+    const handleDeleteClick = (show: MockShow) => {
         setShowToDelete(show);
     };
 
     // Confirmer la suppression
     const handleConfirmDelete = () => {
-        // En production : DELETE /api/shows/:id
-        // Pour la maquette : juste fermer la modale
-        setShowToDelete(null);
+        if (showToDelete) {
+            setShows((prev) => prev.filter((s) => s.id !== showToDelete.id));
+            setShowToDelete(null);
+        }
     };
 
     // Ouvrir la modale de visualisation
-    const handleView = (show: Show) => {
+    const handleView = (show: MockShow) => {
         setViewingShow(show);
     };
 
@@ -364,8 +265,73 @@ export default function AdminSpectaclesPage() {
     // Soumettre le formulaire
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // En production : POST /api/shows ou PUT /api/shows/:id
-        // Pour la maquette : juste fermer la modale
+
+        if (editingShow) {
+            // Édition
+            setShows((prev) =>
+                prev.map((s) =>
+                    s.id === editingShow.id
+                        ? {
+                            ...s,
+                            slug: formData.slug,
+                            title: formData.title,
+                            companyId: formData.companyId,
+                            companyName: companies.find((c) => c.id === formData.companyId)?.name || s.companyName,
+                            categories: formData.categories,
+                            description: formData.description,
+                            shortDescription: formData.shortDescription,
+                            imageUrl: formData.imageUrl,
+                            duration: formData.duration,
+                            audience: formData.audience,
+                            status: formData.status,
+                            priceType: formData.priceType,
+                            period: formData.period,
+                            dervisheManager: formData.dervisheManager,
+                            invitationPolicy: formData.invitationPolicy,
+                            maxParticipantsPerBooking: formData.maxParticipantsPerBooking,
+                            closureDates: formData.closureDates,
+                            folderUrl: formData.folderUrl,
+                            teaserUrl: formData.teaserUrl,
+                            captationAvailable: formData.captationAvailable,
+                            captationUrl: formData.captationUrl,
+                        }
+                        : s
+                )
+            );
+        } else {
+            // Création
+            const newId = generateMockId('show');
+            const companyName = companies.find((c) => c.id === formData.companyId)?.name || '';
+            setShows((prev) => [
+                ...prev,
+                {
+                    id: newId,
+                    slug: formData.slug,
+                    title: formData.title,
+                    companyId: formData.companyId,
+                    companyName,
+                    categories: formData.categories,
+                    description: formData.description,
+                    shortDescription: formData.shortDescription,
+                    imageUrl: formData.imageUrl,
+                    duration: formData.duration,
+                    audience: formData.audience,
+                    status: formData.status,
+                    priceType: formData.priceType,
+                    period: formData.period,
+                    dervisheManager: formData.dervisheManager,
+                    invitationPolicy: formData.invitationPolicy,
+                    maxParticipantsPerBooking: formData.maxParticipantsPerBooking,
+                    closureDates: formData.closureDates,
+                    representationsCount: 0,
+                    folderUrl: formData.folderUrl,
+                    teaserUrl: formData.teaserUrl,
+                    captationAvailable: formData.captationAvailable,
+                    captationUrl: formData.captationUrl,
+                },
+            ]);
+        }
+
         handleCloseDialog();
     };
 
@@ -411,20 +377,20 @@ export default function AdminSpectaclesPage() {
     };
 
     const handleRemoveImage = () => {
-        setFormData({ ...formData, imageUrl: '' });
+        setFormData({ ...formData, imageUrl: null });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
 
     // Obtenir le badge de statut
-    const getStatusBadge = (status: Show['status']) => {
+    const getStatusBadge = (status: ShowStatus) => {
         switch (status) {
-            case 'available':
+            case 'published':
                 return <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Disponible</Badge>;
-            case 'coming_soon':
+            case 'draft':
                 return <Badge className="bg-orange-500/10 text-orange-700 border-orange-500/20">Bientôt</Badge>;
-            case 'closed':
+            case 'archived':
                 return <Badge className="bg-red-500/10 text-red-700 border-red-500/20">Terminé</Badge>;
             default:
                 return null;
@@ -439,7 +405,7 @@ export default function AdminSpectaclesPage() {
     };
 
     // Copier le lien du spectacle
-    const handleCopyLink = async (show: Show) => {
+    const handleCopyLink = async (show: MockShow) => {
         const url = getShowUrl(show.slug);
         try {
             await navigator.clipboard.writeText(url);
@@ -460,14 +426,6 @@ export default function AdminSpectaclesPage() {
         }
     };
 
-    // Nettoyer le timeout au démontage du composant
-    useEffect(() => {
-        return () => {
-            if (copyTimeoutRef.current) {
-                clearTimeout(copyTimeoutRef.current);
-            }
-        };
-    }, []);
 
     return (
         <div className="space-y-6">
@@ -633,7 +591,7 @@ export default function AdminSpectaclesPage() {
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-muted flex items-center justify-center">
-                                        <span className="text-muted-foreground text-sm">Pas d'image</span>
+                                        <span className="text-muted-foreground text-sm">Pas d&apos;image</span>
                                     </div>
                                 )}
                                 {/* Badge catégorie */}
@@ -643,12 +601,12 @@ export default function AdminSpectaclesPage() {
                                     </span>
                                 )}
                                 {/* Badge statut */}
-                                <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'available' ? 'bg-green-500 text-white' :
-                                    show.status === 'coming_soon' ? 'bg-orange-500 text-white' :
+                                <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'published' ? 'bg-green-500 text-white' :
+                                    show.status === 'draft' ? 'bg-orange-500 text-white' :
                                         'bg-red-500 text-white'
                                     }`}>
-                                    {show.status === 'available' ? 'Disponible' :
-                                        show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
+                                    {show.status === 'published' ? 'Disponible' :
+                                        show.status === 'draft' ? 'Bientôt' : 'Terminé'}
                                 </span>
                             </div>
 
@@ -747,7 +705,7 @@ export default function AdminSpectaclesPage() {
                                 />
                             ) : (
                                 <div className="w-full h-full bg-muted flex items-center justify-center">
-                                    <span className="text-muted-foreground text-sm">Pas d'image</span>
+                                    <span className="text-muted-foreground text-sm">Pas d&apos;image</span>
                                 </div>
                             )}
                             {/* Badge catégorie */}
@@ -757,12 +715,12 @@ export default function AdminSpectaclesPage() {
                                 </span>
                             )}
                             {/* Badge statut */}
-                            <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'available' ? 'bg-green-500 text-white' :
-                                show.status === 'coming_soon' ? 'bg-orange-500 text-white' :
+                            <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'published' ? 'bg-green-500 text-white' :
+                                show.status === 'draft' ? 'bg-orange-500 text-white' :
                                     'bg-red-500 text-white'
                                 }`}>
-                                {show.status === 'available' ? 'Disponible' :
-                                    show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
+                                {show.status === 'published' ? 'Disponible' :
+                                    show.status === 'draft' ? 'Bientôt' : 'Terminé'}
                             </span>
                         </div>
 
@@ -903,7 +861,7 @@ export default function AdminSpectaclesPage() {
                                             if (value === 'new') {
                                                 setIsNewCompanyDialogOpen(true);
                                             } else {
-                                                setFormData({ ...formData, companyId: parseInt(value) });
+                                                setFormData({ ...formData, companyId: value });
                                             }
                                         }}
                                         required
@@ -1008,16 +966,16 @@ export default function AdminSpectaclesPage() {
                                         <Label htmlFor="status">Statut *</Label>
                                         <Select
                                             value={formData.status}
-                                            onValueChange={(value: Show['status']) => setFormData({ ...formData, status: value })}
+                                            onValueChange={(value: ShowStatus) => setFormData({ ...formData, status: value })}
                                             required
                                         >
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="available">Disponible</SelectItem>
-                                                <SelectItem value="coming_soon">Bientôt</SelectItem>
-                                                <SelectItem value="closed">Terminé</SelectItem>
+                                                <SelectItem value="published">Disponible</SelectItem>
+                                                <SelectItem value="draft">Bientôt</SelectItem>
+                                                <SelectItem value="archived">Terminé</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -1028,7 +986,7 @@ export default function AdminSpectaclesPage() {
                                             type="number"
                                             min="1"
                                             value={formData.duration || ''}
-                                            onChange={(e) => setFormData({ ...formData, duration: e.target.value ? parseInt(e.target.value) : undefined })}
+                                            onChange={(e) => setFormData({ ...formData, duration: e.target.value ? parseInt(e.target.value) : null })}
                                         />
                                     </div>
                                 </div>
@@ -1182,7 +1140,7 @@ export default function AdminSpectaclesPage() {
                                                     onClick={handleRemoveImage}
                                                 >
                                                     <X className="w-4 h-4" />
-                                                    <span className="sr-only">Supprimer l'image</span>
+                                                    <span className="sr-only">Supprimer l&apos;image</span>
                                                 </Button>
                                             </div>
                                         </div>
@@ -1415,12 +1373,17 @@ export default function AdminSpectaclesPage() {
                                 }
 
                                 // Générer un nouvel ID
-                                const newId = Math.max(...companies.map((c) => c.id), 0) + 1;
+                                const newId = generateMockId('company');
 
                                 // Créer la nouvelle compagnie
-                                const newCompany = {
+                                const newCompany: MockCompany = {
                                     id: newId,
                                     name: newCompanyData.name.trim(),
+                                    description: undefined,
+                                    city: undefined,
+                                    contactName: undefined,
+                                    contactEmail: newCompanyData.email.trim(),
+                                    contactPhone: null,
                                 };
 
                                 // Ajouter au state
@@ -1475,7 +1438,7 @@ export default function AdminSpectaclesPage() {
                                     {cat}
                                 </Badge>
                             ))}
-                            {getStatusBadge(viewingShow?.status || 'available')}
+                            {getStatusBadge(viewingShow?.status || 'published')}
                         </div>
 
                         {/* Slug avec bouton copier */}
