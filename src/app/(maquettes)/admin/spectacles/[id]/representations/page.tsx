@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -55,164 +55,15 @@ import {
     Copy,
     AlertTriangle,
 } from 'lucide-react';
-
-// Interface Représentation
-interface Representation {
-    id: number;
-    date: string; // Format ISO: "2025-07-05"
-    time: string; // Format: "11:00"
-    venueId: number;
-    venueName: string;
-    capacity: number | null; // null = illimité
-    booked: number;
-    welcomeBy: 'derviche' | 'company';
-    welcomeById?: number | null;
-}
-
-// Données mock spectacles (même que la page spectacles)
-const showsMock = [
-    {
-        id: 1,
-        title: 'À moi',
-        companyName: 'Compagnie du Soleil',
-    },
-    {
-        id: 2,
-        title: 'Le Rossignol',
-        companyName: 'Les Artistes Associés',
-    },
-    {
-        id: 3,
-        title: 'Madame Bovary',
-        companyName: 'Théâtre Nomade',
-    },
-    {
-        id: 4,
-        title: 'Le Jeu',
-        companyName: 'Collectif Éphémère',
-    },
-    {
-        id: 5,
-        title: 'La Mer',
-        companyName: 'La Troupe Vagabonde',
-    },
-];
-
-// Données mock lieux
-const venuesMock = [
-    { id: 1, name: 'Théâtre des Béliers', city: 'Avignon' },
-    { id: 2, name: 'Théâtre du Balcon', city: 'Avignon' },
-    { id: 3, name: 'La Condition des Soies', city: 'Avignon' },
-];
-
-// Données mock utilisateurs Derviche
-const dervisheUsersMock = [
-    { id: 1, firstName: 'Alexandra', lastName: 'Martin', role: 'super_admin' },
-    { id: 2, firstName: 'Sophie', lastName: 'Bernard', role: 'admin' },
-    { id: 3, firstName: 'Pierre', lastName: 'Dupont', role: 'admin' },
-    { id: 4, firstName: 'Marie', lastName: 'Lefebvre', role: 'externe' },
-    { id: 5, firstName: 'Jean', lastName: 'Moreau', role: 'externe' },
-    { id: 6, firstName: 'Claire', lastName: 'Dubois', role: 'externe' },
-];
-
-// Données mock représentations pour le spectacle 1 (À moi)
-const representationsMock: Representation[] = [
-    {
-        id: 1,
-        date: '2025-07-05',
-        time: '11:00',
-        venueId: 1,
-        venueName: 'Théâtre des Béliers',
-        capacity: 20,
-        booked: 15,
-        welcomeBy: 'derviche',
-        welcomeById: 1, // Alexandra Martin
-    },
-    {
-        id: 2,
-        date: '2025-07-05',
-        time: '15:00',
-        venueId: 2,
-        venueName: 'Théâtre du Balcon',
-        capacity: 20,
-        booked: 8,
-        welcomeBy: 'company',
-    },
-    {
-        id: 3,
-        date: '2025-07-12',
-        time: '11:00',
-        venueId: 1,
-        venueName: 'Théâtre des Béliers',
-        capacity: 20,
-        booked: 20,
-        welcomeBy: 'derviche',
-        welcomeById: 2, // Sophie Bernard
-    },
-    {
-        id: 4,
-        date: '2025-07-12',
-        time: '15:00',
-        venueId: 3,
-        venueName: 'La Condition des Soies',
-        capacity: 20,
-        booked: 3,
-        welcomeBy: 'company',
-    },
-    {
-        id: 5,
-        date: '2025-07-19',
-        time: '11:00',
-        venueId: 2,
-        venueName: 'Théâtre du Balcon',
-        capacity: 20,
-        booked: 12,
-        welcomeBy: 'derviche',
-        welcomeById: 4, // Marie Lefebvre
-    },
-    {
-        id: 6,
-        date: '2025-07-19',
-        time: '15:00',
-        venueId: 1,
-        venueName: 'Théâtre des Béliers',
-        capacity: 20,
-        booked: 5,
-        welcomeBy: 'company',
-    },
-    {
-        id: 7,
-        date: '2025-07-26',
-        time: '11:00',
-        venueId: 3,
-        venueName: 'La Condition des Soies',
-        capacity: 20,
-        booked: 18,
-        welcomeBy: 'derviche',
-        welcomeById: 3, // Pierre Dupont
-    },
-    {
-        id: 8,
-        date: '2025-07-26',
-        time: '15:00',
-        venueId: 2,
-        venueName: 'Théâtre du Balcon',
-        capacity: 20,
-        booked: 10,
-        welcomeBy: 'company',
-    },
-    {
-        id: 9,
-        date: '2025-08-02',
-        time: '11:00',
-        venueId: 1,
-        venueName: 'Théâtre des Béliers',
-        capacity: null, // Illimité
-        booked: 5,
-        welcomeBy: 'derviche',
-        welcomeById: 6, // Claire Dubois
-    },
-];
+import {
+    mockVenues,
+    mockDervisheUsers,
+    getRepresentationsByShowId,
+    getShowById,
+    generateMockId,
+    type MockRepresentation,
+    type MockVenue,
+} from '@/lib/mock-data';
 
 // Fonction pour formater la date (utilise UTC pour éviter les décalages de timezone)
 function formatDate(dateString: string): string {
@@ -264,31 +115,39 @@ function formatMonth(monthString: string): string {
 export default function AdminRepresentationsPage() {
     const params = useParams();
     const router = useRouter();
-    const showId = parseInt(params.id as string);
+    // L'ID est déjà au format string "show-1", "show-2", etc.
+    const showId = params.id as string;
+
+    // État pour éviter les erreurs d'hydratation SSR/Client
+    const [isMounted, setIsMounted] = useState(false);
+    
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Trouver le spectacle correspondant
-    const show = showsMock.find((s) => s.id === showId);
+    const show = getShowById(showId);
 
     // États - DOIVENT être déclarés AVANT tout return conditionnel (Rules of Hooks)
-    const [representations, setRepresentations] = useState<Representation[]>(representationsMock);
-    const [venues, setVenues] = useState<typeof venuesMock>(venuesMock);
+    const [representations, setRepresentations] = useState<MockRepresentation[]>(getRepresentationsByShowId(showId));
+    const [venues, setVenues] = useState<MockVenue[]>(mockVenues);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-    const [editingRepresentation, setEditingRepresentation] = useState<Representation | null>(null);
-    const [representationToDelete, setRepresentationToDelete] = useState<Representation | null>(null);
+    const [editingRepresentation, setEditingRepresentation] = useState<MockRepresentation | null>(null);
+    const [representationToDelete, setRepresentationToDelete] = useState<MockRepresentation | null>(null);
     const [isNewVenueDialogOpen, setIsNewVenueDialogOpen] = useState<boolean>(false);
     const [newVenueSource, setNewVenueSource] = useState<'simple' | 'series'>('simple');
     const [newVenueData, setNewVenueData] = useState<{ name: string; city: string }>({
         name: '',
         city: '',
     });
-    const [formData, setFormData] = useState<Omit<Representation, 'id' | 'venueName'>>({
+    const [formData, setFormData] = useState<Omit<MockRepresentation, 'id' | 'venueName' | 'showId' | 'showTitle' | 'companyName'>>({
         date: '',
         time: '',
-        venueId: 0,
+        venueId: '',
         capacity: null,
         booked: 0,
-        welcomeBy: 'derviche',
-        welcomeById: null,
+        hostedBy: 'derviche',
+        hostedById: null,
     });
     const [isUnlimited, setIsUnlimited] = useState<boolean>(true);
     const [isGenerateSeriesOpen, setIsGenerateSeriesOpen] = useState(false);
@@ -299,11 +158,11 @@ export default function AdminRepresentationsPage() {
         weekDays: [true, true, true, true, true, true, true], // Dim, Lun, Mar, Mer, Jeu, Ven, Sam
         times: ['11:00'],
         excludedDates: [] as string[],
-        venueId: 0,
+        venueId: '',
         capacity: null as number | null,
         isUnlimited: true,
-        welcomeBy: 'derviche' as 'derviche' | 'company',
-        welcomeById: null as number | null,
+        hostedBy: 'derviche' as 'derviche' | 'company',
+        hostedById: null as string | null,
         includeExactDuplicates: false,
         includeConflicts: false,
     });
@@ -324,11 +183,11 @@ export default function AdminRepresentationsPage() {
 
     // Extraire les lieux utilisés
     const usedVenues = useMemo(() => {
-        const venueIds = new Set<number>();
+        const venueIds = new Set<string>();
         representations.forEach((rep) => {
             venueIds.add(rep.venueId);
         });
-        return Array.from(venueIds).map((id) => venues.find((v) => v.id === id)).filter(Boolean) as typeof venues;
+        return Array.from(venueIds).map((id) => venues.find((v) => v.id === id)).filter(Boolean) as MockVenue[];
     }, [representations, venues]);
 
     // Filtrer les représentations
@@ -342,7 +201,7 @@ export default function AdminRepresentationsPage() {
 
         // Filtre par lieu
         if (venueFilter !== 'all') {
-            filtered = filtered.filter((rep) => rep.venueId === parseInt(venueFilter));
+            filtered = filtered.filter((rep) => rep.venueId === venueFilter);
         }
 
         // Recherche par date
@@ -361,219 +220,6 @@ export default function AdminRepresentationsPage() {
         });
     }, [representations, monthFilter, venueFilter, dateSearch]);
 
-    // Si le spectacle n'existe pas, rediriger (après tous les hooks)
-    if (!show) {
-        router.push('/admin/spectacles');
-        return null;
-    }
-
-    // Ouvrir la modale en mode création
-    const handleCreate = () => {
-        setEditingRepresentation(null);
-        setFormData({
-            date: '',
-            time: '',
-            venueId: 0,
-            capacity: null,
-            booked: 0,
-            welcomeBy: 'derviche',
-            welcomeById: null,
-        });
-        setIsUnlimited(true);
-        setIsDialogOpen(true);
-    };
-
-    // Ouvrir la modale en mode édition
-    const handleEdit = (representation: Representation) => {
-        setEditingRepresentation(representation);
-        const isUnlimitedValue = representation.capacity === null;
-        setFormData({
-            date: representation.date,
-            time: representation.time,
-            venueId: representation.venueId,
-            capacity: representation.capacity ?? 20,
-            booked: representation.booked,
-            welcomeBy: representation.welcomeBy,
-            welcomeById: representation.welcomeById ?? null,
-        });
-        setIsUnlimited(isUnlimitedValue);
-        setIsDialogOpen(true);
-    };
-
-    // Gérer la soumission du formulaire
-    const handleSubmit = () => {
-        if (!formData.date || !formData.time || !formData.venueId) {
-            return;
-        }
-        if (!isUnlimited && (formData.capacity === null || formData.capacity < 1)) {
-            return;
-        }
-
-        const venue = venues.find((v) => v.id === formData.venueId);
-        if (!venue) return;
-
-        const capacityValue = isUnlimited ? null : formData.capacity;
-
-        if (editingRepresentation) {
-            // Édition
-            setRepresentations((prev) =>
-                prev.map((rep) =>
-                    rep.id === editingRepresentation.id
-                        ? {
-                            ...rep,
-                            date: formData.date,
-                            time: formData.time,
-                            venueId: formData.venueId,
-                            venueName: venue.name,
-                            capacity: capacityValue,
-                            booked: rep.booked, // Garder la valeur existante (lecture seule)
-                            welcomeBy: formData.welcomeBy,
-                            welcomeById: formData.welcomeById ?? null,
-                        }
-                        : rep
-                )
-            );
-        } else {
-            // Création
-            const newId = Math.max(...representations.map((r) => r.id), 0) + 1;
-            setRepresentations((prev) => [
-                ...prev,
-                {
-                    id: newId,
-                    date: formData.date,
-                    time: formData.time,
-                    venueId: formData.venueId,
-                    venueName: venue.name,
-                    capacity: capacityValue,
-                    booked: 0, // Par défaut à 0 lors de la création
-                    welcomeBy: formData.welcomeBy,
-                    welcomeById: formData.welcomeById ?? null,
-                },
-            ]);
-        }
-
-        handleCloseDialog();
-    };
-
-    // Fermer la modale
-    const handleCloseDialog = () => {
-        setIsDialogOpen(false);
-        setEditingRepresentation(null);
-        setFormData({
-            date: '',
-            time: '',
-            venueId: 0,
-            capacity: null,
-            booked: 0,
-            welcomeBy: 'derviche',
-            welcomeById: null,
-        });
-        setIsUnlimited(true);
-    };
-
-    // Gérer la suppression
-    const handleDeleteClick = (representation: Representation) => {
-        setRepresentationToDelete(representation);
-    };
-
-    const handleConfirmDelete = () => {
-        if (representationToDelete) {
-            setRepresentations((prev) => prev.filter((rep) => rep.id !== representationToDelete.id));
-            setRepresentationToDelete(null);
-        }
-    };
-
-    // Handlers pour la génération de série
-    const handleOpenGenerateSeries = () => {
-        setIsGenerateSeriesOpen(true);
-    };
-
-    const handleCloseGenerateSeries = () => {
-        setIsGenerateSeriesOpen(false);
-        setIsGenerateSeriesExpanded(false);
-        setGenerateSeriesData({
-            startDate: '',
-            endDate: '',
-            weekDays: [true, true, true, true, true, true, true],
-            times: ['11:00'],
-            excludedDates: [],
-            venueId: 0,
-            capacity: null,
-            isUnlimited: true,
-            welcomeBy: 'derviche',
-            welcomeById: null,
-            includeExactDuplicates: false,
-            includeConflicts: false,
-        });
-    };
-
-    const handleAddTime = () => {
-        setGenerateSeriesData((prev) => ({
-            ...prev,
-            times: [...prev.times, '11:00'],
-        }));
-    };
-
-    const handleRemoveTime = (index: number) => {
-        setGenerateSeriesData((prev) => ({
-            ...prev,
-            times: prev.times.filter((_, i) => i !== index),
-        }));
-    };
-
-    const handleAddExcludedDate = () => {
-        setGenerateSeriesData((prev) => ({
-            ...prev,
-            excludedDates: [...prev.excludedDates, ''],
-        }));
-    };
-
-    const handleRemoveExcludedDate = (index: number) => {
-        setGenerateSeriesData((prev) => ({
-            ...prev,
-            excludedDates: prev.excludedDates.filter((_, i) => i !== index),
-        }));
-    };
-
-    const handleGenerateSeries = () => {
-        if (!isGenerateSeriesValid) return;
-
-        const venue = venues.find((v) => v.id === generateSeriesData.venueId);
-        if (!venue) return;
-
-        // Utiliser representationsToCreate (déjà filtré selon les checkboxes)
-        const maxId = Math.max(...representations.map((r) => r.id), 0);
-
-        const newRepresentations: Representation[] = representationsToCreate.map((rep, index) => ({
-            id: maxId + index + 1,
-            date: rep.date,
-            time: rep.time,
-            venueId: rep.venueId,
-            venueName: venue.name,
-            capacity: generateSeriesData.isUnlimited ? null : generateSeriesData.capacity,
-            booked: 0,
-            welcomeBy: generateSeriesData.welcomeBy,
-            welcomeById: generateSeriesData.welcomeById,
-        }));
-
-        setRepresentations((prev) => [...prev, ...newRepresentations]);
-        handleCloseGenerateSeries();
-    };
-
-    // Calculer le pourcentage de capacité
-    const getCapacityPercentage = (booked: number, capacity: number | null): number | null => {
-        if (capacity === null) return null;
-        return Math.round((booked / capacity) * 100);
-    };
-
-    // Obtenir la couleur de la barre de capacité
-    const getCapacityColor = (percentage: number | null): string => {
-        if (percentage === null) return 'bg-muted';
-        if (percentage >= 50) return 'bg-green-500';
-        if (percentage >= 20) return 'bg-orange-500';
-        return 'bg-red-500';
-    };
-
     // Labels des jours de la semaine
     const weekDayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
@@ -581,7 +227,7 @@ export default function AdminRepresentationsPage() {
     const generatedRepresentations = useMemo(() => {
         const { startDate, endDate, weekDays, times, excludedDates, venueId } = generateSeriesData;
 
-        if (!startDate || !endDate || times.length === 0 || venueId === 0) {
+        if (!startDate || !endDate || times.length === 0 || !venueId) {
             return [];
         }
 
@@ -590,7 +236,7 @@ export default function AdminRepresentationsPage() {
         const results: Array<{
             date: string;
             time: string;
-            venueId: number;
+            venueId: string;
             venueName: string;
             status: 'ok' | 'exact_duplicate' | 'conflict';
         }> = [];
@@ -622,7 +268,7 @@ export default function AdminRepresentationsPage() {
                     const isExactDuplicate = representations.some(
                         (r) => r.date === dateString && r.time === time && r.venueId === venueId
                     );
-                    
+
                     // Conflit horaire : même date + même heure + lieu DIFFÉRENT
                     const isConflict = !isExactDuplicate && representations.some(
                         (r) => r.date === dateString && r.time === time && r.venueId !== venueId
@@ -671,17 +317,17 @@ export default function AdminRepresentationsPage() {
     }, [generatedRepresentations, generateSeriesData.includeExactDuplicates, generateSeriesData.includeConflicts]);
 
     // Compteurs pour l'affichage
-    const exactDuplicatesCount = useMemo(() => 
+    const exactDuplicatesCount = useMemo(() =>
         generatedRepresentations.filter((r) => r.status === 'exact_duplicate').length
-    , [generatedRepresentations]);
+        , [generatedRepresentations]);
 
-    const conflictsCount = useMemo(() => 
+    const conflictsCount = useMemo(() =>
         generatedRepresentations.filter((r) => r.status === 'conflict').length
-    , [generatedRepresentations]);
+        , [generatedRepresentations]);
 
     // Validation pour la génération de série
     const isGenerateSeriesValid = useMemo(() => {
-        const { startDate, endDate, weekDays, times, venueId, welcomeBy, welcomeById } = generateSeriesData;
+        const { startDate, endDate, weekDays, times, venueId, hostedBy, hostedById } = generateSeriesData;
 
         if (!startDate || !endDate) return false;
         if (new Date(endDate) < new Date(startDate)) return false;
@@ -689,11 +335,238 @@ export default function AdminRepresentationsPage() {
         if (times.length === 0 || times.some((t) => !t.trim())) return false;
         if (!venueId) return false;
         if (!generateSeriesData.isUnlimited && (!generateSeriesData.capacity || generateSeriesData.capacity < 1)) return false;
-        if (welcomeBy === 'derviche' && !welcomeById) return false;
+        if (hostedBy === 'derviche' && !hostedById) return false;
         // Vérifier qu'il y a au moins une représentation à créer
         if (representationsToCreate.length === 0) return false;
         return true;
     }, [generateSeriesData, representationsToCreate.length]);
+
+    // Attendre que le composant soit monté côté client pour éviter les erreurs d'hydratation
+    // (les composants Radix UI génèrent des IDs différents côté serveur et client)
+    if (!isMounted) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+            </div>
+        );
+    }
+
+    // Si le spectacle n'existe pas, rediriger (après tous les hooks)
+    if (!show) {
+        router.push('/admin/spectacles');
+        return null;
+    }
+
+    // Ouvrir la modale en mode création
+    const handleCreate = () => {
+        setEditingRepresentation(null);
+        setFormData({
+            date: '',
+            time: '',
+            venueId: '',
+            capacity: null,
+            booked: 0,
+            hostedBy: 'derviche',
+            hostedById: null,
+        });
+        setIsUnlimited(true);
+        setIsDialogOpen(true);
+    };
+
+    // Ouvrir la modale en mode édition
+    const handleEdit = (representation: MockRepresentation) => {
+        setEditingRepresentation(representation);
+        const isUnlimitedValue = representation.capacity === null;
+        setFormData({
+            date: representation.date,
+            time: representation.time,
+            venueId: representation.venueId,
+            capacity: representation.capacity ?? 20,
+            booked: representation.booked,
+            hostedBy: representation.hostedBy,
+            hostedById: representation.hostedById ?? null,
+        });
+        setIsUnlimited(isUnlimitedValue);
+        setIsDialogOpen(true);
+    };
+
+    // Gérer la soumission du formulaire
+    const handleSubmit = () => {
+        if (!formData.date || !formData.time || !formData.venueId) {
+            return;
+        }
+        if (!isUnlimited && (formData.capacity === null || formData.capacity < 1)) {
+            return;
+        }
+
+        const venue = venues.find((v) => v.id === formData.venueId);
+        if (!venue) return;
+
+        const capacityValue = isUnlimited ? null : formData.capacity;
+
+        if (editingRepresentation) {
+            // Édition
+            setRepresentations((prev) =>
+                prev.map((rep) =>
+                    rep.id === editingRepresentation.id
+                        ? {
+                            ...rep,
+                            date: formData.date,
+                            time: formData.time,
+                            venueId: formData.venueId,
+                            venueName: venue.name,
+                            capacity: capacityValue,
+                            booked: rep.booked, // Garder la valeur existante (lecture seule)
+                            hostedBy: formData.hostedBy,
+                            hostedById: formData.hostedById ?? null,
+                        }
+                        : rep
+                )
+            );
+        } else {
+            // Création
+            const newId = generateMockId('rep');
+            setRepresentations((prev) => [
+                ...prev,
+                {
+                    id: newId,
+                    showId: showId,
+                    showTitle: show.title,
+                    companyName: show.companyName,
+                    date: formData.date,
+                    time: formData.time,
+                    venueId: formData.venueId,
+                    venueName: venue.name,
+                    capacity: capacityValue,
+                    booked: 0, // Par défaut à 0 lors de la création
+                    hostedBy: formData.hostedBy,
+                    hostedById: formData.hostedById ?? null,
+                },
+            ]);
+        }
+
+        handleCloseDialog();
+    };
+
+    // Fermer la modale
+    const handleCloseDialog = () => {
+        setIsDialogOpen(false);
+        setEditingRepresentation(null);
+        setFormData({
+            date: '',
+            time: '',
+            venueId: '',
+            capacity: null,
+            booked: 0,
+            hostedBy: 'derviche',
+            hostedById: null,
+        });
+        setIsUnlimited(true);
+    };
+
+    // Gérer la suppression
+    const handleDeleteClick = (representation: MockRepresentation) => {
+        setRepresentationToDelete(representation);
+    };
+
+    const handleConfirmDelete = () => {
+        if (representationToDelete) {
+            setRepresentations((prev) => prev.filter((rep) => rep.id !== representationToDelete.id));
+            setRepresentationToDelete(null);
+        }
+    };
+
+    // Handlers pour la génération de série
+    const handleOpenGenerateSeries = () => {
+        setIsGenerateSeriesOpen(true);
+    };
+
+    const handleCloseGenerateSeries = () => {
+        setIsGenerateSeriesOpen(false);
+        setIsGenerateSeriesExpanded(false);
+        setGenerateSeriesData({
+            startDate: '',
+            endDate: '',
+            weekDays: [true, true, true, true, true, true, true],
+            times: ['11:00'],
+            excludedDates: [],
+            venueId: '',
+            capacity: null,
+            isUnlimited: true,
+            hostedBy: 'derviche',
+            hostedById: null,
+            includeExactDuplicates: false,
+            includeConflicts: false,
+        });
+    };
+
+    const handleAddTime = () => {
+        setGenerateSeriesData((prev) => ({
+            ...prev,
+            times: [...prev.times, '11:00'],
+        }));
+    };
+
+    const handleRemoveTime = (index: number) => {
+        setGenerateSeriesData((prev) => ({
+            ...prev,
+            times: prev.times.filter((_, i) => i !== index),
+        }));
+    };
+
+    const handleAddExcludedDate = () => {
+        setGenerateSeriesData((prev) => ({
+            ...prev,
+            excludedDates: [...prev.excludedDates, ''],
+        }));
+    };
+
+    const handleRemoveExcludedDate = (index: number) => {
+        setGenerateSeriesData((prev) => ({
+            ...prev,
+            excludedDates: prev.excludedDates.filter((_, i) => i !== index),
+        }));
+    };
+
+    const handleGenerateSeries = () => {
+        if (!isGenerateSeriesValid) return;
+
+        const venue = venues.find((v) => v.id === generateSeriesData.venueId);
+        if (!venue) return;
+
+        // Utiliser representationsToCreate (déjà filtré selon les checkboxes)
+        const newRepresentations: MockRepresentation[] = representationsToCreate.map((rep) => ({
+            id: generateMockId('rep'),
+            showId: showId,
+            showTitle: show.title,
+            companyName: show.companyName,
+            date: rep.date,
+            time: rep.time,
+            venueId: rep.venueId,
+            venueName: venue.name,
+            capacity: generateSeriesData.isUnlimited ? null : generateSeriesData.capacity,
+            booked: 0,
+            hostedBy: generateSeriesData.hostedBy,
+            hostedById: generateSeriesData.hostedById,
+        }));
+
+        setRepresentations((prev) => [...prev, ...newRepresentations]);
+        handleCloseGenerateSeries();
+    };
+
+    // Calculer le pourcentage de capacité
+    const getCapacityPercentage = (booked: number, capacity: number | null): number | null => {
+        if (capacity === null) return null;
+        return Math.round((booked / capacity) * 100);
+    };
+
+    // Obtenir la couleur de la barre de capacité
+    const getCapacityColor = (percentage: number | null): string => {
+        if (percentage === null) return 'bg-muted';
+        if (percentage >= 50) return 'bg-green-500';
+        if (percentage >= 20) return 'bg-orange-500';
+        return 'bg-red-500';
+    };
 
     return (
         <div className="space-y-6">
@@ -833,11 +706,11 @@ export default function AdminRepresentationsPage() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            {rep.welcomeBy === 'derviche' ? (
+                                            {rep.hostedBy === 'derviche' ? (
                                                 <Badge className="bg-derviche/10 text-derviche border-derviche/20">
-                                                    {rep.welcomeById
+                                                    {rep.hostedById
                                                         ? (() => {
-                                                            const user = dervisheUsersMock.find((u) => u.id === rep.welcomeById);
+                                                            const user = mockDervisheUsers.find((u) => u.id === rep.hostedById);
                                                             return user
                                                                 ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.`
                                                                 : 'Derviche';
@@ -911,11 +784,11 @@ export default function AdminRepresentationsPage() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                                         <span className="flex-1 min-w-0">{rep.venueName}</span>
-                                        {rep.welcomeBy === 'derviche' ? (
+                                        {rep.hostedBy === 'derviche' ? (
                                             <Badge className="bg-derviche/10 text-derviche border-derviche/20 shrink-0">
-                                                {rep.welcomeById
+                                                {rep.hostedById
                                                     ? (() => {
-                                                        const user = dervisheUsersMock.find((u) => u.id === rep.welcomeById);
+                                                        const user = mockDervisheUsers.find((u) => u.id === rep.hostedById);
                                                         return user
                                                             ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.`
                                                             : 'Derviche';
@@ -1031,7 +904,7 @@ export default function AdminRepresentationsPage() {
                                         setIsNewVenueDialogOpen(true);
                                         // Ne pas modifier formData.venueId pour garder la sélection précédente
                                     } else {
-                                        setFormData({ ...formData, venueId: parseInt(value) });
+                                        setFormData({ ...formData, venueId: value });
                                     }
                                 }}
                             >
@@ -1091,16 +964,16 @@ export default function AdminRepresentationsPage() {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="welcomeBy">
+                            <Label htmlFor="hostedBy">
                                 Accueil par <span className="text-destructive">*</span>
                             </Label>
                             <Select
-                                value={formData.welcomeBy}
+                                value={formData.hostedBy}
                                 onValueChange={(value: 'derviche' | 'company') =>
                                     setFormData({
                                         ...formData,
-                                        welcomeBy: value,
-                                        welcomeById: value === 'company' ? null : formData.welcomeById,
+                                        hostedBy: value,
+                                        hostedById: value === 'company' ? null : formData.hostedById,
                                     })
                                 }
                             >
@@ -1113,25 +986,25 @@ export default function AdminRepresentationsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        {formData.welcomeBy === 'derviche' && (
+                        {formData.hostedBy === 'derviche' && (
                             <div className="space-y-2">
-                                <Label htmlFor="welcomeById">
+                                <Label htmlFor="hostedById">
                                     Accueilli par <span className="text-destructive">*</span>
                                 </Label>
                                 <Select
-                                    value={formData.welcomeById ? String(formData.welcomeById) : ''}
+                                    value={formData.hostedById ?? ''}
                                     onValueChange={(value) =>
-                                        setFormData({ ...formData, welcomeById: parseInt(value) })
+                                        setFormData({ ...formData, hostedById: value })
                                     }
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un membre Derviche" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {dervisheUsersMock.map((user) => (
+                                        {mockDervisheUsers.map((user) => (
                                             <SelectItem key={user.id} value={String(user.id)}>
                                                 {user.firstName} {user.lastName} - [
-                                                {user.role === 'super_admin'
+                                                {user.role === 'super-admin'
                                                     ? 'Super Admin'
                                                     : user.role === 'admin'
                                                         ? 'Admin'
@@ -1155,7 +1028,7 @@ export default function AdminRepresentationsPage() {
                                 !formData.time ||
                                 !formData.venueId ||
                                 (!isUnlimited && (formData.capacity === null || formData.capacity < 1)) ||
-                                (formData.welcomeBy === 'derviche' && !formData.welcomeById)
+                                (formData.hostedBy === 'derviche' && !formData.hostedById)
                             }
                             className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                         >
@@ -1224,10 +1097,10 @@ export default function AdminRepresentationsPage() {
                                 }
 
                                 // Générer un nouvel ID
-                                const newId = Math.max(...venues.map((v) => v.id), 0) + 1;
+                                const newId = generateMockId('venue');
 
                                 // Créer le nouveau lieu
-                                const newVenue = {
+                                const newVenue: MockVenue = {
                                     id: newId,
                                     name: newVenueData.name.trim(),
                                     city: newVenueData.city.trim(),
@@ -1501,7 +1374,7 @@ export default function AdminRepresentationsPage() {
                                         setNewVenueSource('series');
                                         setIsNewVenueDialogOpen(true);
                                     } else {
-                                        setGenerateSeriesData({ ...generateSeriesData, venueId: parseInt(value) });
+                                        setGenerateSeriesData({ ...generateSeriesData, venueId: value });
                                     }
                                 }}
                             >
@@ -1575,12 +1448,12 @@ export default function AdminRepresentationsPage() {
                                 Accueil par <span className="text-destructive">*</span>
                             </Label>
                             <Select
-                                value={generateSeriesData.welcomeBy}
+                                value={generateSeriesData.hostedBy}
                                 onValueChange={(value: 'derviche' | 'company') => {
                                     setGenerateSeriesData({
                                         ...generateSeriesData,
-                                        welcomeBy: value,
-                                        welcomeById: value === 'company' ? null : generateSeriesData.welcomeById,
+                                        hostedBy: value,
+                                        hostedById: value === 'company' ? null : generateSeriesData.hostedById,
                                     });
                                 }}
                             >
@@ -1595,25 +1468,25 @@ export default function AdminRepresentationsPage() {
                         </div>
 
                         {/* Membre Derviche (conditionnel) */}
-                        {generateSeriesData.welcomeBy === 'derviche' && (
+                        {generateSeriesData.hostedBy === 'derviche' && (
                             <div className="space-y-2">
                                 <Label htmlFor="seriesWelcomeById">
                                     Accueilli par <span className="text-destructive">*</span>
                                 </Label>
                                 <Select
-                                    value={generateSeriesData.welcomeById ? String(generateSeriesData.welcomeById) : ''}
+                                    value={generateSeriesData.hostedById ?? ''}
                                     onValueChange={(value) =>
-                                        setGenerateSeriesData({ ...generateSeriesData, welcomeById: parseInt(value) })
+                                        setGenerateSeriesData({ ...generateSeriesData, hostedById: value })
                                     }
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Sélectionner un membre Derviche" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {dervisheUsersMock.map((user) => (
+                                        {mockDervisheUsers.map((user) => (
                                             <SelectItem key={user.id} value={String(user.id)}>
                                                 {user.firstName} {user.lastName} - [
-                                                {user.role === 'super_admin'
+                                                {user.role === 'super-admin'
                                                     ? 'Super Admin'
                                                     : user.role === 'admin'
                                                         ? 'Admin'
@@ -1693,21 +1566,20 @@ export default function AdminRepresentationsPage() {
                                 <div className="max-h-40 overflow-y-auto space-y-1 border rounded-md p-3 bg-muted/50">
                                     {generatedRepresentations.map((rep, index) => {
                                         // Déterminer si cette représentation sera créée
-                                        const willBeCreated = 
+                                        const willBeCreated =
                                             rep.status === 'ok' ||
                                             (rep.status === 'exact_duplicate' && generateSeriesData.includeExactDuplicates) ||
                                             (rep.status === 'conflict' && generateSeriesData.includeConflicts);
-                                        
+
                                         return (
                                             <div
                                                 key={index}
-                                                className={`text-sm flex items-center gap-2 ${
-                                                    rep.status === 'exact_duplicate' 
-                                                        ? 'text-red-700' 
-                                                        : rep.status === 'conflict' 
-                                                            ? 'text-orange-700' 
-                                                            : 'text-foreground'
-                                                } ${!willBeCreated ? 'opacity-50 line-through' : ''}`}
+                                                className={`text-sm flex items-center gap-2 ${rep.status === 'exact_duplicate'
+                                                    ? 'text-red-700'
+                                                    : rep.status === 'conflict'
+                                                        ? 'text-orange-700'
+                                                        : 'text-foreground'
+                                                    } ${!willBeCreated ? 'opacity-50 line-through' : ''}`}
                                             >
                                                 <Clock className="w-3 h-3 shrink-0" />
                                                 <span>
