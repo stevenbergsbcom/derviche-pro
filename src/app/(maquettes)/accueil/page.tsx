@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, Spectacle } from '@/components/spectacles';
+import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
 import {
   Search,
   Calendar,
@@ -19,60 +19,117 @@ import {
   MapPin,
   ArrowUp,
 } from 'lucide-react';
+import {
+  mockShows,
+  mockRepresentations,
+  mockVenues,
+  type MockShow,
+  type MockRepresentation,
+} from '@/lib/mock-data';
 
-// Données des spectacles (maquette) avec images locales
-const spectacles: Spectacle[] = [
-  {
-    id: 1,
-    title: 'À MOI !',
-    company: 'Cie A Kan la dériv\'',
-    venue: 'Théâtre des Béliers',
-    image: '/images/spectacles/a-moi.jpg',
-    slug: 'a-moi',
-    genre: 'Théâtre',
-    nextDate: '15 jan. 2025',
-  },
-  {
-    id: 2,
-    title: 'ROSSIGNOL À LA LANGUE POURRIE',
-    company: 'Cie Des Lumières et des Ombres',
-    venue: 'Théâtre du Balcon',
-    image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-    slug: 'rossignol-a-la-langue-pourrie',
-    genre: 'Jeune public',
-    nextDate: '18 jan. 2025',
-  },
-  {
-    id: 3,
-    title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
-    company: 'Cie Le Monde au Balcon',
-    venue: 'Théâtre des Corps Saints',
-    image: '/images/spectacles/madame-bovary.jpg',
-    slug: 'madame-bovary',
-    genre: 'Théâtre',
-    nextDate: '22 jan. 2025',
-  },
-  {
-    id: 4,
-    title: 'JEU',
-    company: 'Cie A Kan la dériv\'',
-    venue: 'Théâtre Artéphile',
-    image: '/images/spectacles/jeu.jpg',
-    slug: 'jeu',
-    genre: 'Danse',
-    nextDate: '25 jan. 2025',
-  },
-  {
-    id: 5,
-    title: 'LA MER',
-    company: 'Cie Le Ver à Soie',
-    venue: 'Théâtre Espace Alya',
-    image: '/images/spectacles/la-mer.jpg',
-    slug: 'la-mer',
-    genre: 'Marionnettes',
-    nextDate: '28 jan. 2025',
-  },
-];
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Formater une date ISO en format français lisible
+ */
+function formatDateFr(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  const day = date.getDate();
+  const months = [
+    'jan.',
+    'fév.',
+    'mars',
+    'avr.',
+    'mai',
+    'juin',
+    'juil.',
+    'août',
+    'sept.',
+    'oct.',
+    'nov.',
+    'déc.',
+  ];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
+/**
+ * Transformer un MockShow en Spectacle pour le composant SpectacleCard
+ */
+function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
+  // Filtrer les représentations de ce spectacle
+  const showReps = representations.filter((rep) => rep.showId === show.id);
+  
+  // Trier par date croissante
+  const sortedReps = [...showReps].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.time}`);
+    const dateB = new Date(`${b.date}T${b.time}`);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  // Trouver la prochaine représentation (date >= aujourd'hui)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const futureReps = sortedReps.filter((rep) => {
+    const repDate = new Date(rep.date + 'T12:00:00');
+    return repDate >= today;
+  });
+
+  const nextRep = futureReps[0];
+  
+  // Calculer le nombre de créneaux avec places disponibles
+  const availableSlots = futureReps.filter((rep) => {
+    if (rep.capacity === null) return true;
+    return rep.booked < rep.capacity;
+  }).length;
+
+  // Déterminer le statut
+  let status: SpectacleStatus = 'available';
+  if (show.status === 'draft') {
+    status = 'coming_soon';
+  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+    status = 'closed';
+  } else if (availableSlots === 0 && futureReps.length > 0) {
+    status = 'closed';
+  }
+
+  // Trouver le lieu de la prochaine représentation
+  let venue = 'Lieu à définir';
+  if (status !== 'coming_soon') {
+    venue = nextRep
+      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
+      : sortedReps[0]
+        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
+        : 'Lieu à définir';
+  }
+
+  // Pour coming_soon ou closed : pas de nextDate
+  let nextDate = '';
+  if (status === 'available' && nextRep) {
+    nextDate = formatDateFr(nextRep.date);
+  }
+
+  return {
+    id: parseInt(show.id.replace('show-', '')) || 0,
+    title: show.title,
+    company: show.companyName,
+    venue: venue,
+    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
+    slug: show.slug,
+    genre: show.categories[0] || 'Spectacle',
+    nextDate: nextDate,
+    remainingSlots: availableSlots,
+    status: status,
+  };
+}
+
+// ============================================
+// CONSTANTES
+// ============================================
 
 // Nombre de cards visibles selon la taille d'écran
 const CARDS_VISIBLE = {
@@ -81,11 +138,29 @@ const CARDS_VISIBLE = {
   desktop: 4,
 };
 
+// ============================================
+// COMPOSANT PRINCIPAL
+// ============================================
+
 export default function MaquetteAccueil() {
+  // État pour éviter les erreurs d'hydratation
+  const [isMounted, setIsMounted] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [cardsVisible, setCardsVisible] = useState(CARDS_VISIBLE.desktop);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Transformer les MockShow en Spectacle
+  const spectacles = useMemo(() => {
+    return mockShows
+      .map((show) => transformShowToSpectacle(show, mockRepresentations))
+      .filter((s) => s.status !== 'closed'); // Ne garder que les spectacles disponibles ou coming_soon
+  }, []);
+
+  // Fix d'hydratation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Détecter le scroll pour afficher le bouton retour en haut
   useEffect(() => {
@@ -121,22 +196,24 @@ export default function MaquetteAccueil() {
 
   // Slider automatique pour le Hero
   useEffect(() => {
+    if (spectacles.length === 0) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % spectacles.length);
-    }, 5000); // Change toutes les 5 secondes
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [spectacles.length]);
 
   // Carousel automatique pour les spectacles
   useEffect(() => {
+    if (spectacles.length === 0) return;
     const maxIndex = Math.max(0, spectacles.length - cardsVisible);
     const interval = setInterval(() => {
       setCarouselIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
-    }, 6000); // Change toutes les 6 secondes
+    }, 6000);
 
     return () => clearInterval(interval);
-  }, [cardsVisible]);
+  }, [cardsVisible, spectacles.length]);
 
   // Reset carousel index si nécessaire lors du changement de taille
   useEffect(() => {
@@ -144,7 +221,7 @@ export default function MaquetteAccueil() {
     if (carouselIndex > maxIndex) {
       setCarouselIndex(maxIndex);
     }
-  }, [cardsVisible, carouselIndex]);
+  }, [cardsVisible, carouselIndex, spectacles.length]);
 
   // Navigation du carousel des spectacles
   const handlePrevCarousel = () => {
@@ -155,6 +232,19 @@ export default function MaquetteAccueil() {
     const maxIndex = Math.max(0, spectacles.length - cardsVisible);
     setCarouselIndex((prev) => Math.min(maxIndex, prev + 1));
   };
+
+  // Attendre que le composant soit monté
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="animate-pulse text-muted-foreground">Chargement...</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background scroll-smooth">

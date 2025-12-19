@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, type Spectacle } from '@/components/spectacles';
+import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,49 +20,142 @@ import {
 } from 'lucide-react';
 import type { ReservationConfirmation } from '@/types';
 import { formatDateFR, formatTimeFR } from '@/types';
+import {
+  mockShows,
+  mockRepresentations,
+  mockVenues,
+  type MockShow,
+  type MockRepresentation,
+} from '@/lib/mock-data';
 
 // ============================================
-// DONNÉES MOCK
+// HELPERS
 // ============================================
 
-// Spectacles suggestions mock (utilisant le même type que le catalogue)
-const mockSuggestions: Spectacle[] = [
-  {
-    id: 2,
-    title: 'ROSSIGNOL À LA LANGUE POURRIE',
-    company: 'Cie Des Lumières et des Ombres',
-    venue: 'Théâtre du Balcon',
-    image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-    slug: 'rossignol-a-la-langue-pourrie',
-    genre: 'Jeune public',
-    nextDate: '',
-    status: 'coming_soon',
-  },
-  {
-    id: 3,
-    title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
-    company: 'Cie Le Monde au Balcon',
-    venue: 'Théâtre des Corps Saints',
-    image: '/images/spectacles/madame-bovary.jpg',
-    slug: 'madame-bovary',
-    genre: 'Théâtre',
-    nextDate: '22 jan. 2025',
-    remainingSlots: 5,
-    status: 'available',
-  },
-  {
-    id: 4,
-    title: 'JEU',
-    company: "Cie A Kan la dériv'",
-    venue: 'Théâtre Artéphile',
-    image: '/images/spectacles/jeu.jpg',
-    slug: 'jeu',
-    genre: 'Danse',
-    nextDate: '25 jan. 2025',
-    remainingSlots: 10,
-    status: 'available',
-  },
-];
+/**
+ * Formater une date ISO en format français lisible
+ */
+function formatDateFr(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  const day = date.getDate();
+  const months = [
+    'jan.',
+    'fév.',
+    'mars',
+    'avr.',
+    'mai',
+    'juin',
+    'juil.',
+    'août',
+    'sept.',
+    'oct.',
+    'nov.',
+    'déc.',
+  ];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
+/**
+ * Transformer un MockShow en Spectacle pour le composant SpectacleCard
+ */
+function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
+  const showReps = representations.filter((rep) => rep.showId === show.id);
+  
+  const sortedReps = [...showReps].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.time}`);
+    const dateB = new Date(`${b.date}T${b.time}`);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const futureReps = sortedReps.filter((rep) => {
+    const repDate = new Date(rep.date + 'T12:00:00');
+    return repDate >= today;
+  });
+
+  const nextRep = futureReps[0];
+  
+  const availableSlots = futureReps.filter((rep) => {
+    if (rep.capacity === null) return true;
+    return rep.booked < rep.capacity;
+  }).length;
+
+  let status: SpectacleStatus = 'available';
+  if (show.status === 'draft') {
+    status = 'coming_soon';
+  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+    status = 'closed';
+  } else if (availableSlots === 0 && futureReps.length > 0) {
+    status = 'closed';
+  }
+
+  let venue = 'Lieu à définir';
+  if (status !== 'coming_soon') {
+    venue = nextRep
+      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
+      : sortedReps[0]
+        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
+        : 'Lieu à définir';
+  }
+
+  let nextDate = '';
+  if (status === 'available' && nextRep) {
+    nextDate = formatDateFr(nextRep.date);
+  }
+
+  return {
+    id: parseInt(show.id.replace('show-', '')) || 0,
+    title: show.title,
+    company: show.companyName,
+    venue: venue,
+    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
+    slug: show.slug,
+    genre: show.categories[0] || 'Spectacle',
+    nextDate: nextDate,
+    remainingSlots: availableSlots,
+    status: status,
+  };
+}
+
+/**
+ * Récupérer les données d'un spectacle par son slug
+ */
+function getShowDataBySlug(slug: string) {
+  const show = mockShows.find((s) => s.slug === slug);
+  if (!show) {
+    return {
+      title: 'Spectacle',
+      slug: 'spectacle',
+      companyName: 'Compagnie',
+      imageUrl: '/images/spectacles/placeholder.jpg',
+      duration: '1h',
+      venueName: 'Théâtre',
+      venueAddress: 'Avignon',
+    };
+  }
+
+  // Trouver la première représentation pour le lieu
+  const firstRep = mockRepresentations.find((rep) => rep.showId === show.id);
+  const venue = firstRep
+    ? mockVenues.find((v) => v.id === firstRep.venueId)
+    : null;
+
+  return {
+    title: show.title,
+    slug: show.slug,
+    companyName: show.companyName,
+    imageUrl: show.imageUrl || '/images/spectacles/placeholder.jpg',
+    duration: show.duration ? `${show.duration} min` : '1h',
+    venueName: venue?.name || firstRep?.venueName || 'Théâtre',
+    venueAddress: venue
+      ? `${venue.address || ''}, ${venue.postalCode || ''} ${venue.city}`
+      : 'Avignon',
+  };
+}
 
 // ============================================
 // COMPOSANT PRINCIPAL
@@ -73,18 +166,30 @@ export default function ConfirmationPage() {
   const searchParams = useSearchParams();
   const slug = params?.slug as string;
 
-  // Récupérer les données de la réservation depuis les query params
-  // En production, on récupèrerait depuis la BDD via l'ID
+  // État pour éviter les erreurs d'hydratation
+  const [isMounted, setIsMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<ReservationConfirmation | null>(null);
 
-  useEffect(() => {
-    // Simuler la récupération des données
-    // En production : fetch(`/api/reservations/${reservationId}`)
+  // Générer les suggestions (autres spectacles disponibles, excluant le spectacle actuel)
+  const suggestions = useMemo(() => {
+    return mockShows
+      .filter((show) => show.slug !== slug && show.status === 'published')
+      .slice(0, 3)
+      .map((show) => transformShowToSpectacle(show, mockRepresentations));
+  }, [slug]);
 
-    // Données mock basées sur les params
+  // Fix d'hydratation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    // Récupérer les données de la réservation depuis les query params
     const reservationId = searchParams.get('id') || 'a7f3k9b2-1234-5678-9abc-def012345678';
     const numPlaces = parseInt(searchParams.get('places') || '2', 10);
-    const slotDate = searchParams.get('date') || '2025-07-05';
+    const slotDate = searchParams.get('date') || '2026-01-15';
     const slotTime = searchParams.get('time') || '11:00';
     const guestName = searchParams.get('name') || 'Jean Dupont';
     const guestEmail = searchParams.get('email') || 'jean.dupont@theatre.fr';
@@ -120,7 +225,20 @@ export default function ConfirmationPage() {
     };
 
     setConfirmation(mockConfirmation);
-  }, [slug, searchParams]);
+  }, [slug, searchParams, isMounted]);
+
+  // Attendre que le composant soit monté
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="animate-pulse text-muted-foreground">Chargement...</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   // Chargement
   if (!confirmation) {
@@ -261,26 +379,28 @@ export default function ConfirmationPage() {
           </div>
         </div>
 
-        {/* Suggestions de spectacles - même composant que le catalogue */}
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl md:text-2xl font-bold text-derviche-dark">
-              Découvrez aussi...
-            </h2>
-            <Button variant="ghost" asChild className="text-derviche hover:text-derviche-dark">
-              <Link href="/catalogue">
-                Voir tout le catalogue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Link>
-            </Button>
-          </div>
+        {/* Suggestions de spectacles */}
+        {suggestions.length > 0 && (
+          <div className="max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl md:text-2xl font-bold text-derviche-dark">
+                Découvrez aussi...
+              </h2>
+              <Button variant="ghost" asChild className="text-derviche hover:text-derviche-dark">
+                <Link href="/catalogue">
+                  Voir tout le catalogue
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockSuggestions.map((spectacle) => (
-              <SpectacleCard key={spectacle.id} spectacle={spectacle} variant="grid" />
-            ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {suggestions.map((spectacle) => (
+                <SpectacleCard key={spectacle.id} spectacle={spectacle} variant="grid" />
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Bouton retour accueil */}
         <div className="max-w-3xl mx-auto mt-12 text-center">
@@ -295,63 +415,5 @@ export default function ConfirmationPage() {
 
       <Footer />
     </div>
-  );
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-interface ShowBasicData {
-  title: string;
-  slug: string;
-  companyName: string;
-  imageUrl: string;
-  duration: string;
-  venueName: string;
-  venueAddress: string;
-}
-
-function getShowDataBySlug(slug: string): ShowBasicData {
-  const showsData: Record<string, ShowBasicData> = {
-    'a-moi': {
-      title: 'À MOI !',
-      slug: 'a-moi',
-      companyName: "Cie A Kan la dériv'",
-      imageUrl: '/images/spectacles/a-moi.jpg',
-      duration: '35 min',
-      venueName: 'Théâtre des Béliers',
-      venueAddress: '53, rue du Portail Magnanen, 84000 Avignon',
-    },
-    'rossignol-a-la-langue-pourrie': {
-      title: 'ROSSIGNOL À LA LANGUE POURRIE',
-      slug: 'rossignol-a-la-langue-pourrie',
-      companyName: 'Cie Des Lumières et des Ombres',
-      imageUrl: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-      duration: '45 min',
-      venueName: 'Théâtre du Balcon',
-      venueAddress: '38, rue Guillaume Puy, 84000 Avignon',
-    },
-    'madame-bovary': {
-      title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
-      slug: 'madame-bovary',
-      companyName: 'Cie Le Monde au Balcon',
-      imageUrl: '/images/spectacles/madame-bovary.jpg',
-      duration: '1h15',
-      venueName: 'Théâtre des Corps Saints',
-      venueAddress: '15, place des Corps Saints, 84000 Avignon',
-    },
-  };
-
-  return (
-    showsData[slug] || {
-      title: 'Spectacle',
-      slug: 'spectacle',
-      companyName: 'Compagnie',
-      imageUrl: '/images/spectacles/a-moi.jpg',
-      duration: '1h',
-      venueName: 'Théâtre',
-      venueAddress: 'Avignon',
-    }
   );
 }
