@@ -34,6 +34,13 @@ import {
     Minus,
     Plus,
 } from 'lucide-react';
+import {
+    mockShows,
+    mockRepresentations,
+    mockVenues,
+    type MockShow,
+    type MockRepresentation,
+} from '@/lib/mock-data';
 
 // Types
 interface TimeSlot {
@@ -42,15 +49,12 @@ interface TimeSlot {
     time: string;
     remainingCapacity: number;
     totalCapacity: number;
-}
-
-interface Venue {
-    name: string;
-    address: string;
+    venueId: string;
+    venueName: string;
 }
 
 interface SpectacleData {
-    id: number;
+    id: string;
     title: string;
     slug: string;
     company: string;
@@ -59,7 +63,10 @@ interface SpectacleData {
     genre: string;
     pricing: string;
     image: string;
-    venue: Venue;
+    venue: {
+        name: string;
+        address: string;
+    };
     period: string;
     slots: TimeSlot[];
     status: 'available' | 'coming_soon' | 'closed';
@@ -67,142 +74,98 @@ interface SpectacleData {
 
 type Step = 'calendar' | 'time' | 'participants' | 'form';
 
-// Données mock pour tous les spectacles du catalogue
-const spectaclesDataMap: Record<string, SpectacleData> = {
-    'a-moi': {
-        id: 1,
-        title: 'À MOI !',
-        slug: 'a-moi',
-        company: 'Cie A Kan la dériv\'',
-        description: `À MOI ! est un spectacle de théâtre contemporain qui explore les relations humaines à travers le prisme de l'identité et de l'appartenance. 
-
-Une création originale qui mêle texte, mouvement et musique pour raconter une histoire universelle de quête de soi et de reconnaissance. Les comédiens nous emmènent dans un voyage émotionnel intense où chaque personnage cherche sa place dans le monde.
-
-Le spectacle aborde avec sensibilité et humour des thèmes profonds comme la famille, l'amitié, la solitude et le besoin d'être reconnu. Une performance captivante qui résonne longtemps après le rideau final.`,
-        duration: '35 min',
-        genre: 'Théâtre',
-        pricing: 'Gratuit',
-        image: '/images/spectacles/a-moi.jpg',
-        venue: {
-            name: 'Théâtre des Béliers',
-            address: '53, rue du Portail Magnanen, 84000 Avignon',
-        },
-        period: 'Du 5 au 26 juillet - relâche les mercredis 9, 16 et 23',
-        status: 'available',
-        slots: [
-            { id: '1', date: new Date(2025, 6, 5), time: '11h00', remainingCapacity: 8, totalCapacity: 20 },
-            { id: '2', date: new Date(2025, 6, 5), time: '15h00', remainingCapacity: 12, totalCapacity: 20 },
-            { id: '3', date: new Date(2025, 6, 6), time: '11h00', remainingCapacity: 5, totalCapacity: 20 },
-            { id: '4', date: new Date(2025, 6, 6), time: '15h00', remainingCapacity: 15, totalCapacity: 20 },
-            { id: '5', date: new Date(2025, 6, 12), time: '11h00', remainingCapacity: 10, totalCapacity: 20 },
-            { id: '6', date: new Date(2025, 6, 12), time: '15h00', remainingCapacity: 18, totalCapacity: 20 },
-            { id: '7', date: new Date(2025, 6, 13), time: '11h00', remainingCapacity: 3, totalCapacity: 20 },
-            { id: '8', date: new Date(2025, 6, 13), time: '15h00', remainingCapacity: 7, totalCapacity: 20 },
-        ],
-    },
-    'rossignol-a-la-langue-pourrie': {
-        id: 2,
-        title: 'ROSSIGNOL À LA LANGUE POURRIE',
-        slug: 'rossignol-a-la-langue-pourrie',
-        company: 'Cie Des Lumières et des Ombres',
-        description: `Un spectacle jeune public qui revisite les contes traditionnels avec poésie et humour.`,
-        duration: '45 min',
-        genre: 'Jeune public',
-        pricing: 'Gratuit',
-        image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-        venue: {
-            name: 'Théâtre du Balcon',
-            address: '38, rue Guillaume Puy, 84000 Avignon',
-        },
-        period: 'Dates à venir',
-        status: 'coming_soon',
-        slots: [], // Pas encore de créneaux
-    },
-    'madame-bovary': {
-        id: 3,
-        title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
-        slug: 'madame-bovary',
-        company: 'Cie Le Monde au Balcon',
-        description: `Une adaptation théâtrale hilarante du chef-d'œuvre de Flaubert. Emma Bovary rêve d'une vie romanesque, mais la réalité de la province normande est bien différente...\n\nCette version condensée et décalée revisite le classique avec un humour mordant, tout en préservant l'essence du roman. Un spectacle qui fait rire et réfléchir.`,
-        duration: '1h15',
-        genre: 'Théâtre',
-        pricing: 'Gratuit',
-        image: '/images/spectacles/madame-bovary.jpg',
-        venue: {
-            name: 'Théâtre des Corps Saints',
-            address: '15, place des Corps Saints, 84000 Avignon',
-        },
-        period: 'Du 5 au 26 juillet',
-        status: 'available',
-        slots: [
-            { id: '1', date: new Date(2025, 6, 7), time: '14h00', remainingCapacity: 12, totalCapacity: 25 },
-            { id: '2', date: new Date(2025, 6, 8), time: '14h00', remainingCapacity: 18, totalCapacity: 25 },
-            { id: '3', date: new Date(2025, 6, 14), time: '14h00', remainingCapacity: 8, totalCapacity: 25 },
-            { id: '4', date: new Date(2025, 6, 15), time: '14h00', remainingCapacity: 20, totalCapacity: 25 },
-        ],
-    },
-    'la-honte': {
-        id: 7,
-        title: 'LA HONTE',
-        slug: 'la-honte',
-        company: 'Cie Mouvement',
-        description: `Une pièce de danse contemporaine qui explore les émotions profondes.`,
-        duration: '50 min',
-        genre: 'Danse',
-        pricing: 'Gratuit',
-        image: '/images/spectacles/la-honte.jpg',
-        venue: {
-            name: 'Théâtre du Balcon',
-            address: '38, rue Guillaume Puy, 84000 Avignon',
-        },
-        period: 'Dates à venir',
-        status: 'coming_soon',
-        slots: [], // Pas encore de créneaux
-    },
-    'toutes-les-choses-geniales': {
-        id: 12,
-        title: 'TOUTES LES CHOSES GÉNIALES',
-        slug: 'toutes-les-choses-geniales',
-        company: 'Cie Street',
-        description: `Un spectacle sur la beauté des petites choses du quotidien.`,
-        duration: '1h10',
-        genre: 'Théâtre',
-        pricing: 'Gratuit',
-        image: '/images/spectacles/toutes-les-choses-geniales-cat.jpg',
-        venue: {
-            name: 'Théâtre du Balcon',
-            address: '38, rue Guillaume Puy, 84000 Avignon',
-        },
-        period: 'Dates à venir',
-        status: 'coming_soon',
-        slots: [], // Pas encore de créneaux
-    },
-};
-
-// Données par défaut pour les spectacles non définis
-const defaultSpectacleData: SpectacleData = {
-    id: 0,
-    title: 'Spectacle',
-    slug: 'spectacle',
-    company: 'Compagnie',
-    description: 'Description du spectacle.',
-    duration: '1h',
-    genre: 'Théâtre',
-    pricing: 'Gratuit',
-    image: '/images/spectacles/a-moi.jpg',
-    venue: {
-        name: 'Théâtre',
-        address: 'Avignon',
-    },
-    period: 'Juillet 2025',
-    status: 'available',
-    slots: [
-        { id: '1', date: new Date(2025, 6, 10), time: '14h00', remainingCapacity: 10, totalCapacity: 20 },
-        { id: '2', date: new Date(2025, 6, 12), time: '14h00', remainingCapacity: 15, totalCapacity: 20 },
-    ],
-};
-
 const MAX_RESERVATIONS_PER_BOOKING = 3;
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Transformer un MockShow + ses représentations en SpectacleData pour cette page
+ */
+function transformToSpectacleData(show: MockShow, representations: MockRepresentation[]): SpectacleData {
+    // Filtrer les représentations de ce spectacle
+    const showReps = representations.filter((rep) => rep.showId === show.id);
+    
+    // Trier par date croissante
+    const sortedReps = [...showReps].sort((a, b) => {
+        const dateA = new Date(`${a.date}T${a.time}`);
+        const dateB = new Date(`${b.date}T${b.time}`);
+        return dateA.getTime() - dateB.getTime();
+    });
+
+    // Convertir en TimeSlots
+    const slots: TimeSlot[] = sortedReps.map((rep) => {
+        const [year, month, day] = rep.date.split('-').map(Number);
+        return {
+            id: rep.id,
+            date: new Date(year, month - 1, day), // month est 0-indexed en JS
+            time: rep.time.replace(':', 'h'), // "11:00" → "11h00"
+            remainingCapacity: rep.capacity !== null ? rep.capacity - rep.booked : 999,
+            totalCapacity: rep.capacity !== null ? rep.capacity : 999,
+            venueId: rep.venueId,
+            venueName: rep.venueName,
+        };
+    });
+
+    // Trouver le premier lieu (pour l'affichage par défaut)
+    const firstVenue = sortedReps[0] 
+        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)
+        : null;
+
+    // Déterminer le statut
+    let status: 'available' | 'coming_soon' | 'closed' = 'available';
+    if (show.status === 'draft') {
+        status = 'coming_soon';
+    } else if (show.status === 'archived') {
+        status = 'closed';
+    }
+
+    // Construire la période à partir des dates
+    let period = show.period || 'Dates à venir';
+    if (sortedReps.length > 0 && status !== 'coming_soon') {
+        const firstDate = new Date(sortedReps[0].date);
+        const lastDate = new Date(sortedReps[sortedReps.length - 1].date);
+        const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+        period = `Du ${formatDate(firstDate)} au ${formatDate(lastDate)}`;
+    }
+
+    // Déterminer le pricing
+    let pricing = 'Gratuit';
+    if (show.priceType === 'paid_on_site') {
+        pricing = 'Payant sur place';
+    }
+
+    return {
+        id: show.id,
+        title: show.title,
+        slug: show.slug,
+        company: show.companyName,
+        description: show.description || show.shortDescription || 'Description du spectacle.',
+        duration: show.duration ? `${show.duration} min` : '1h',
+        genre: show.categories[0] || 'Spectacle',
+        pricing,
+        image: show.imageUrl || '/images/spectacles/placeholder.jpg',
+        venue: {
+            name: firstVenue?.name || 'Lieu à définir',
+            address: firstVenue 
+                ? `${firstVenue.address || ''}, ${firstVenue.postalCode || ''} ${firstVenue.city}`
+                : 'Adresse à confirmer',
+        },
+        period,
+        slots,
+        status,
+    };
+}
+
+/**
+ * Récupérer les données d'un spectacle par son slug
+ */
+function getSpectacleBySlug(slug: string): SpectacleData | null {
+    const show = mockShows.find((s) => s.slug === slug);
+    if (!show) return null;
+    return transformToSpectacleData(show, mockRepresentations);
+}
 
 // Fonction pour obtenir le premier jour du mois
 function getFirstDayOfMonth(year: number, month: number): Date {
@@ -242,17 +205,36 @@ function isSameDay(date1: Date, date2: Date): boolean {
     );
 }
 
+// ============================================
+// COMPOSANT PAGE
+// ============================================
+
 export default function SpectacleDetailPage() {
     const params = useParams();
     const router = useRouter();
     const slug = params?.slug as string;
 
+    // État pour éviter les erreurs d'hydratation
+    const [isMounted, setIsMounted] = useState(false);
+
     // Récupérer les données du spectacle selon le slug
-    const spectacleData = spectaclesDataMap[slug] || defaultSpectacleData;
+    const spectacleData = useMemo(() => {
+        return getSpectacleBySlug(slug);
+    }, [slug]);
+
+    // Calculer le mois initial basé sur le premier slot disponible
+    const initialMonth = useMemo(() => {
+        if (!spectacleData || spectacleData.slots.length === 0) {
+            return new Date(); // Mois actuel par défaut
+        }
+        // Prendre le mois du premier slot
+        const firstSlot = spectacleData.slots[0];
+        return new Date(firstSlot.date.getFullYear(), firstSlot.date.getMonth(), 1);
+    }, [spectacleData]);
 
     // États
     const [currentStep, setCurrentStep] = useState<Step>('calendar');
-    const [currentMonth, setCurrentMonth] = useState<Date>(new Date(2025, 6, 1));
+    const [currentMonth, setCurrentMonth] = useState<Date>(initialMonth);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
     const [participantCount, setParticipantCount] = useState<number>(1);
@@ -275,10 +257,15 @@ export default function SpectacleDetailPage() {
         comment: '',
     });
 
+    // Fix d'hydratation
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Reset des états quand le slug change (navigation entre spectacles)
     useEffect(() => {
         setCurrentStep('calendar');
-        setCurrentMonth(new Date(2025, 6, 1));
+        setCurrentMonth(initialMonth);
         setSelectedDate(null);
         setSelectedSlot(null);
         setParticipantCount(1);
@@ -298,13 +285,43 @@ export default function SpectacleDetailPage() {
             function: '',
             comment: '',
         });
-    }, [slug]);
+    }, [slug, initialMonth]);
+
+    // Si spectacle non trouvé
+    if (!spectacleData) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-12 text-center">
+                    <h1 className="text-2xl font-bold text-derviche-dark mb-4">Spectacle non trouvé</h1>
+                    <p className="text-muted-foreground mb-6">Ce spectacle n'existe pas ou n'est plus disponible.</p>
+                    <Button asChild>
+                        <Link href="/catalogue">Retour au catalogue</Link>
+                    </Button>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Attendre que le composant soit monté
+    if (!isMounted) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-12 text-center">
+                    <div className="animate-pulse text-muted-foreground">Chargement...</div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
 
     // Vérifier si le spectacle est "bientôt réservable"
     const isComingSoon = spectacleData.status === 'coming_soon';
 
     // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
-    const datesWithSlots = useMemo(() => {
+    const datesWithSlots = (() => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const slotsInMonth = spectacleData.slots.filter((slot) => {
@@ -320,16 +337,16 @@ export default function SpectacleDetailPage() {
         });
 
         return dates;
-    }, [currentMonth, spectacleData.slots]);
+    })();
 
     // Créneaux pour la date sélectionnée
-    const slotsForSelectedDate = useMemo(() => {
+    const slotsForSelectedDate = (() => {
         if (!selectedDate) return [];
         return spectacleData.slots.filter((slot) => isSameDay(slot.date, selectedDate));
-    }, [selectedDate, spectacleData.slots]);
+    })();
 
     // Générer la grille du calendrier
-    const calendarDays = useMemo(() => {
+    const calendarDays = (() => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const firstDay = getFirstDayOfMonth(year, month);
@@ -350,7 +367,7 @@ export default function SpectacleDetailPage() {
         }
 
         return days;
-    }, [currentMonth]);
+    })();
 
     // Navigation mois
     const goToPreviousMonth = () => {
@@ -415,9 +432,6 @@ export default function SpectacleDetailPage() {
     // Gérer la soumission du formulaire
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
-        // En production : POST /api/reservations puis redirection
-        // Pour la maquette : redirection directe avec les données en query params
         
         if (!selectedSlot || !selectedDate) return;
         
@@ -581,54 +595,45 @@ export default function SpectacleDetailPage() {
     );
 
     // Rendu de l'étape time
-    const renderTimeStep = () => (
-        <>
-            {selectedDate && (
-                <>
-                    <h2 className="text-xl font-bold text-derviche-dark mb-4">
-                        Créneaux disponibles le{' '}
-                        {selectedDate.toLocaleDateString('fr-FR', {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                        })}
-                    </h2>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {slotsForSelectedDate.map((slot) => {
-                            const isSlotComplet = slot.remainingCapacity === 0;
-                            return (
-                                <Button
-                                    key={slot.id}
-                                    variant="outline"
-                                    onClick={() => !isSlotComplet && handleSlotSelect(slot)}
-                                    disabled={isSlotComplet}
-                                    className={`flex items-center justify-between ${
-                                        isSlotComplet
-                                            ? 'opacity-50 cursor-not-allowed'
-                                            : 'hover:bg-derviche hover:text-white hover:border-derviche'
-                                    }`}
-                                >
-                                    <span className="font-medium">{slot.time}</span>
-                                    <div className="flex items-center gap-1 text-xs">
-                                        {isSlotComplet ? (
-                                            <span className="text-error font-medium">Complet</span>
-                                        ) : (
-                                            <>
-                                                <Users className="w-3 h-3" />
-                                                <span>
-                                                    {slot.remainingCapacity}/{slot.totalCapacity}
-                                                </span>
-                                            </>
-                                        )}
-                                    </div>
-                                </Button>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
-        </>
-    );
+    const renderTimeStep = () => {
+        // Filtrer uniquement les créneaux avec places disponibles
+        const availableSlots = slotsForSelectedDate.filter((slot) => slot.remainingCapacity > 0);
+
+        return (
+            <>
+                {selectedDate && (
+                    <>
+                        <h2 className="text-xl font-bold text-derviche-dark mb-4">
+                            Créneaux disponibles le{' '}
+                            {selectedDate.toLocaleDateString('fr-FR', {
+                                weekday: 'long',
+                                day: 'numeric',
+                                month: 'long',
+                            })}
+                        </h2>
+                        {availableSlots.length === 0 ? (
+                            <p className="text-muted-foreground text-center py-4">
+                                Aucun créneau disponible pour cette date.
+                            </p>
+                        ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {availableSlots.map((slot) => (
+                                    <Button
+                                        key={slot.id}
+                                        variant="outline"
+                                        onClick={() => handleSlotSelect(slot)}
+                                        className="hover:bg-derviche hover:text-white hover:border-derviche"
+                                    >
+                                        <span className="font-medium">{slot.time}</span>
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+            </>
+        );
+    };
 
     // Rendu de l'étape participants
     const renderParticipantsStep = () => (
@@ -727,7 +732,7 @@ export default function SpectacleDetailPage() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <MapPin className="w-4 h-4 text-derviche" />
-                                <span>{spectacleData.venue.name}</span>
+                                <span>{selectedSlot.venueName}</span>
                             </div>
                         </div>
                     </CardContent>
@@ -892,7 +897,7 @@ export default function SpectacleDetailPage() {
                     <Card className="bg-white rounded-xl shadow-lg overflow-hidden p-0">
                         <CardContent className="p-0">
                             <div className="grid grid-cols-1 lg:grid-cols-2">
-                                {/* Colonne gauche - Infos (1/2) - INCHANGÉE */}
+                                {/* Colonne gauche - Infos (1/2) */}
                                 <div className="lg:border-r border-border">
                                     {/* Bandeau image du spectacle */}
                                     <div className="relative w-full aspect-video">
