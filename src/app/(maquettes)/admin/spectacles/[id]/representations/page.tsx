@@ -65,6 +65,7 @@ interface Representation {
     capacity: number | null; // null = illimité
     booked: number;
     welcomeBy: 'derviche' | 'company';
+    welcomeById?: number | null;
 }
 
 // Données mock spectacles (même que la page spectacles)
@@ -103,6 +104,16 @@ const venuesMock = [
     { id: 3, name: 'La Condition des Soies', city: 'Avignon' },
 ];
 
+// Données mock utilisateurs Derviche
+const dervisheUsersMock = [
+    { id: 1, firstName: 'Alexandra', lastName: 'Martin', role: 'super_admin' },
+    { id: 2, firstName: 'Sophie', lastName: 'Bernard', role: 'admin' },
+    { id: 3, firstName: 'Pierre', lastName: 'Dupont', role: 'admin' },
+    { id: 4, firstName: 'Marie', lastName: 'Lefebvre', role: 'externe' },
+    { id: 5, firstName: 'Jean', lastName: 'Moreau', role: 'externe' },
+    { id: 6, firstName: 'Claire', lastName: 'Dubois', role: 'externe' },
+];
+
 // Données mock représentations pour le spectacle 1 (À moi)
 const representationsMock: Representation[] = [
     {
@@ -114,6 +125,7 @@ const representationsMock: Representation[] = [
         capacity: 20,
         booked: 15,
         welcomeBy: 'derviche',
+        welcomeById: 1, // Alexandra Martin
     },
     {
         id: 2,
@@ -134,6 +146,7 @@ const representationsMock: Representation[] = [
         capacity: 20,
         booked: 20,
         welcomeBy: 'derviche',
+        welcomeById: 2, // Sophie Bernard
     },
     {
         id: 4,
@@ -154,6 +167,7 @@ const representationsMock: Representation[] = [
         capacity: 20,
         booked: 12,
         welcomeBy: 'derviche',
+        welcomeById: 4, // Marie Lefebvre
     },
     {
         id: 6,
@@ -174,6 +188,7 @@ const representationsMock: Representation[] = [
         capacity: 20,
         booked: 18,
         welcomeBy: 'derviche',
+        welcomeById: 3, // Pierre Dupont
     },
     {
         id: 8,
@@ -194,6 +209,7 @@ const representationsMock: Representation[] = [
         capacity: null, // Illimité
         booked: 5,
         welcomeBy: 'derviche',
+        welcomeById: 6, // Claire Dubois
     },
 ];
 
@@ -270,6 +286,7 @@ export default function AdminRepresentationsPage() {
         capacity: null,
         booked: 0,
         welcomeBy: 'derviche',
+        welcomeById: null,
     });
     const [isUnlimited, setIsUnlimited] = useState<boolean>(true);
 
@@ -342,6 +359,7 @@ export default function AdminRepresentationsPage() {
             capacity: null,
             booked: 0,
             welcomeBy: 'derviche',
+            welcomeById: null,
         });
         setIsUnlimited(true);
         setIsDialogOpen(true);
@@ -358,6 +376,7 @@ export default function AdminRepresentationsPage() {
             capacity: representation.capacity ?? 20,
             booked: representation.booked,
             welcomeBy: representation.welcomeBy,
+            welcomeById: representation.welcomeById ?? null,
         });
         setIsUnlimited(isUnlimitedValue);
         setIsDialogOpen(true);
@@ -391,6 +410,7 @@ export default function AdminRepresentationsPage() {
                             capacity: capacityValue,
                             booked: rep.booked, // Garder la valeur existante (lecture seule)
                             welcomeBy: formData.welcomeBy,
+                            welcomeById: formData.welcomeById ?? null,
                         }
                         : rep
                 )
@@ -409,6 +429,7 @@ export default function AdminRepresentationsPage() {
                     capacity: capacityValue,
                     booked: 0, // Par défaut à 0 lors de la création
                     welcomeBy: formData.welcomeBy,
+                    welcomeById: formData.welcomeById ?? null,
                 },
             ]);
         }
@@ -427,6 +448,7 @@ export default function AdminRepresentationsPage() {
             capacity: null,
             booked: 0,
             welcomeBy: 'derviche',
+            welcomeById: null,
         });
         setIsUnlimited(true);
     };
@@ -598,7 +620,14 @@ export default function AdminRepresentationsPage() {
                                         <TableCell>
                                             {rep.welcomeBy === 'derviche' ? (
                                                 <Badge className="bg-derviche/10 text-derviche border-derviche/20">
-                                                    Derviche
+                                                    {rep.welcomeById
+                                                        ? (() => {
+                                                            const user = dervisheUsersMock.find((u) => u.id === rep.welcomeById);
+                                                            return user
+                                                                ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.`
+                                                                : 'Derviche';
+                                                        })()
+                                                        : 'Derviche'}
                                                 </Badge>
                                             ) : (
                                                 <Badge className="bg-orange-500/10 text-orange-700 border-orange-500/20">
@@ -669,7 +698,14 @@ export default function AdminRepresentationsPage() {
                                         <span className="flex-1 min-w-0">{rep.venueName}</span>
                                         {rep.welcomeBy === 'derviche' ? (
                                             <Badge className="bg-derviche/10 text-derviche border-derviche/20 shrink-0">
-                                                Derviche
+                                                {rep.welcomeById
+                                                    ? (() => {
+                                                        const user = dervisheUsersMock.find((u) => u.id === rep.welcomeById);
+                                                        return user
+                                                            ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.`
+                                                            : 'Derviche';
+                                                    })()
+                                                    : 'Derviche'}
                                             </Badge>
                                         ) : (
                                             <Badge className="bg-orange-500/10 text-orange-700 border-orange-500/20 shrink-0">
@@ -845,7 +881,11 @@ export default function AdminRepresentationsPage() {
                             <Select
                                 value={formData.welcomeBy}
                                 onValueChange={(value: 'derviche' | 'company') =>
-                                    setFormData({ ...formData, welcomeBy: value })
+                                    setFormData({
+                                        ...formData,
+                                        welcomeBy: value,
+                                        welcomeById: value === 'company' ? null : formData.welcomeById,
+                                    })
                                 }
                             >
                                 <SelectTrigger>
@@ -857,6 +897,36 @@ export default function AdminRepresentationsPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        {formData.welcomeBy === 'derviche' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="welcomeById">
+                                    Accueilli par <span className="text-destructive">*</span>
+                                </Label>
+                                <Select
+                                    value={formData.welcomeById ? String(formData.welcomeById) : ''}
+                                    onValueChange={(value) =>
+                                        setFormData({ ...formData, welcomeById: parseInt(value) })
+                                    }
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Sélectionner un membre Derviche" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {dervisheUsersMock.map((user) => (
+                                            <SelectItem key={user.id} value={String(user.id)}>
+                                                {user.firstName} {user.lastName} - [
+                                                {user.role === 'super_admin'
+                                                    ? 'Super Admin'
+                                                    : user.role === 'admin'
+                                                        ? 'Admin'
+                                                        : 'Externe'}
+                                                ]
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
                         <Button variant="outline" onClick={handleCloseDialog} className="w-full sm:w-auto">
@@ -868,7 +938,8 @@ export default function AdminRepresentationsPage() {
                                 !formData.date ||
                                 !formData.time ||
                                 !formData.venueId ||
-                                (!isUnlimited && (formData.capacity === null || formData.capacity < 1))
+                                (!isUnlimited && (formData.capacity === null || formData.capacity < 1)) ||
+                                (formData.welcomeBy === 'derviche' && !formData.welcomeById)
                             }
                             className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                         >
