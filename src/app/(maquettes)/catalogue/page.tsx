@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, type Spectacle } from '@/components/spectacles';
+import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,213 +16,158 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, ArrowUp } from 'lucide-react';
+import {
+  mockShows,
+  mockRepresentations,
+  mockVenues,
+  type MockShow,
+  type MockRepresentation,
+} from '@/lib/mock-data';
 
-// Données mock de 12 spectacles variés avec images locales
-const spectaclesMock: Spectacle[] = [
-  {
-    id: 1,
-    title: 'À MOI !',
-    company: 'Cie A Kan la dériv\'',
-    venue: 'Théâtre des Béliers',
-    image: '/images/spectacles/a-moi.jpg',
-    slug: 'a-moi',
-    genre: 'Théâtre',
-    nextDate: '15 jan. 2025',
-    remainingSlots: 8,
-    status: 'available',
-  },
-  {
-    id: 2,
-    title: 'ROSSIGNOL À LA LANGUE POURRIE',
-    company: 'Cie Des Lumières et des Ombres',
-    venue: 'Théâtre du Balcon',
-    image: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
-    slug: 'rossignol-a-la-langue-pourrie',
-    genre: 'Jeune public',
-    nextDate: '',
-    status: 'coming_soon',
-  },
-  {
-    id: 3,
-    title: 'MADAME BOVARY EN PLUS DRÔLE ET MOINS LONG',
-    company: 'Cie Le Monde au Balcon',
-    venue: 'Théâtre des Corps Saints',
-    image: '/images/spectacles/madame-bovary.jpg',
-    slug: 'madame-bovary',
-    genre: 'Théâtre',
-    nextDate: '22 jan. 2025',
-    remainingSlots: 5,
-    status: 'available',
-  },
-  {
-    id: 4,
-    title: 'JEU',
-    company: 'Cie A Kan la dériv\'',
-    venue: 'Théâtre Artéphile',
-    image: '/images/spectacles/jeu.jpg',
-    slug: 'jeu',
-    genre: 'Danse',
-    nextDate: '25 jan. 2025',
-    remainingSlots: 10,
-    status: 'available',
-  },
-  {
-    id: 5,
-    title: 'LA MER',
-    company: 'Cie Le Ver à Soie',
-    venue: 'Théâtre Espace Alya',
-    image: '/images/spectacles/la-mer.jpg',
-    slug: 'la-mer',
-    genre: 'Marionnettes',
-    nextDate: '28 jan. 2025',
-    remainingSlots: 1, // Dernières représentations
-    status: 'available',
-  },
-  {
-    id: 6,
-    title: 'LES CARNETS D\'ALBERT CAMUS',
-    company: 'Cie Les Nomades',
-    venue: 'Théâtre des Béliers',
-    image: '/images/spectacles/LES-CARNETS-DALBERT-CAMUS.jpg',
-    slug: 'les-carnets-d-albert-camus',
-    genre: 'Théâtre',
-    nextDate: '5 fév. 2025',
-    remainingSlots: 12,
-    status: 'available',
-  },
-  {
-    id: 7,
-    title: 'LA HONTE',
-    company: 'Cie Mouvement',
-    venue: 'Théâtre du Balcon',
-    image: '/images/spectacles/la-honte.jpg',
-    slug: 'la-honte',
-    genre: 'Danse',
-    nextDate: '',
-    status: 'coming_soon',
-  },
-  {
-    id: 8,
-    title: 'LE JARDIN DE DAHI',
-    company: 'Cie Les Poupées',
-    venue: 'Théâtre Artéphile',
-    image: '/images/spectacles/le-jardin-de-dahi.jpg',
-    slug: 'le-jardin-de-dahi',
-    genre: 'Marionnettes',
-    nextDate: '15 fév. 2025',
-    remainingSlots: 8,
-    status: 'available',
-  },
-  {
-    id: 9,
-    title: 'UN SAC DE BILLES',
-    company: 'Cie Aérienne',
-    venue: 'Théâtre Espace Alya',
-    image: '/images/spectacles/un-sac-de-billes.jpg',
-    slug: 'un-sac-de-billes',
-    genre: 'Théâtre',
-    nextDate: '20 fév. 2025',
-    remainingSlots: 6,
-    status: 'available',
-  },
-  {
-    id: 10,
-    title: 'LE POUVOIR DES FILLES',
-    company: 'Cie Enfantine',
-    venue: 'Théâtre des Corps Saints',
-    image: '/images/spectacles/le-pouvoir-des-filles.jpg',
-    slug: 'le-pouvoir-des-filles',
-    genre: 'Jeune public',
-    nextDate: '25 fév. 2025',
-    remainingSlots: 15,
-    status: 'available',
-  },
-  {
-    id: 11,
-    title: 'JUSTE IRENA',
-    company: 'Cie Tradition',
-    venue: 'Théâtre des Béliers',
-    image: '/images/spectacles/juste-irena.jpg',
-    slug: 'juste-irena',
-    genre: 'Théâtre',
-    nextDate: '2 mars 2025',
-    remainingSlots: 1, // Dernières représentations
-    status: 'available',
-  },
-  {
-    id: 12,
-    title: 'TOUTES LES CHOSES GÉNIALES',
-    company: 'Cie Street',
-    venue: 'Théâtre du Balcon',
-    image: '/images/spectacles/toutes-les-choses-geniales-cat.jpg',
-    slug: 'toutes-les-choses-geniales',
-    genre: 'Théâtre',
-    nextDate: '',
-    status: 'coming_soon',
-  },
-];
+// ============================================
+// HELPERS
+// ============================================
 
-// Options pour les filtres
-const genres = ['Tous', 'Théâtre', 'Danse', 'Marionnettes', 'Jeune public', 'Cirque'];
-const mois = [
-  'Tous',
-  'Janvier',
-  'Février',
-  'Mars',
-  'Avril',
-  'Mai',
-  'Juin',
-  'Juillet',
-  'Août',
-  'Septembre',
-  'Octobre',
-  'Novembre',
-  'Décembre',
-];
-const lieux = [
-  'Tous',
-  'Théâtre des Béliers',
-  'Théâtre du Balcon',
-  'Théâtre des Corps Saints',
-  'Théâtre Artéphile',
-  'Théâtre Espace Alya',
-];
-
-// Fonction pour extraire le mois d'une date
-function getMonthFromDate(dateStr: string): string {
-  const monthMap: Record<string, string> = {
-    jan: 'Janvier',
-    fév: 'Février',
-    mars: 'Mars',
-    avr: 'Avril',
-    mai: 'Mai',
-    juin: 'Juin',
-    juil: 'Juillet',
-    août: 'Août',
-    sept: 'Septembre',
-    oct: 'Octobre',
-    nov: 'Novembre',
-    déc: 'Décembre',
-  };
-
-  const monthKey = dateStr.split(' ')[1]?.toLowerCase();
-  const month = monthMap[monthKey || ''] || '';
-
-  // Log en développement si le format de date n'est pas reconnu
-  if (!month && process.env.NODE_ENV === 'development') {
-    console.warn(`Format de date non reconnu: "${dateStr}"`);
-  }
-
-  return month;
+/**
+ * Formater une date ISO en format français lisible
+ */
+function formatDateFr(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  const day = date.getDate();
+  const months = [
+    'jan.',
+    'fév.',
+    'mars',
+    'avr.',
+    'mai',
+    'juin',
+    'juil.',
+    'août',
+    'sept.',
+    'oct.',
+    'nov.',
+    'déc.',
+  ];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
 }
 
+/**
+ * Extraire le mois d'une date au format "15 jan. 2025"
+ */
+function getMonthFromDateFr(dateStr: string): string {
+  const monthMap: Record<string, string> = {
+    'jan.': 'Janvier',
+    'fév.': 'Février',
+    'mars': 'Mars',
+    'avr.': 'Avril',
+    'mai': 'Mai',
+    'juin': 'Juin',
+    'juil.': 'Juillet',
+    'août': 'Août',
+    'sept.': 'Septembre',
+    'oct.': 'Octobre',
+    'nov.': 'Novembre',
+    'déc.': 'Décembre',
+  };
+
+  const parts = dateStr.split(' ');
+  const monthKey = parts[1];
+  return monthMap[monthKey] || '';
+}
+
+/**
+ * Transformer les données MockShow en Spectacle pour le composant SpectacleCard
+ */
+function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
+  // Filtrer les représentations de ce spectacle
+  const showReps = representations.filter((rep) => rep.showId === show.id);
+
+  // Trier par date croissante
+  const sortedReps = [...showReps].sort((a, b) => {
+    const dateA = new Date(`${a.date}T${a.time}`);
+    const dateB = new Date(`${b.date}T${b.time}`);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  // Trouver la prochaine représentation (date >= aujourd'hui)
+  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
+  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+
+  const futureReps = sortedReps.filter((rep) => {
+    return rep.date >= todayISO; // Comparaison de chaînes ISO
+  });
+
+  const nextRep = futureReps[0];
+
+  // Calculer le nombre de créneaux avec places disponibles
+  const availableSlots = futureReps.filter((rep) => {
+    if (rep.capacity === null) return true; // Illimité = toujours disponible
+    return rep.booked < rep.capacity;
+  }).length;
+
+  // Déterminer le statut
+  let status: SpectacleStatus = 'available';
+  if (show.status === 'draft') {
+    status = 'coming_soon';
+  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+    status = 'closed';
+  } else if (availableSlots === 0 && futureReps.length > 0) {
+    status = 'closed';
+  }
+
+  // Trouver le lieu de la prochaine représentation
+  // Pour coming_soon : on n'affiche pas de lieu spécifique
+  let venue = 'Lieu à définir';
+  if (status !== 'coming_soon') {
+    venue = nextRep
+      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
+      : sortedReps[0]
+        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
+        : 'Lieu à définir';
+  }
+
+  // Pour coming_soon : pas de nextDate (le composant affichera "Dates à venir")
+  // Pour closed : pas de nextDate non plus
+  let nextDate = '';
+  if (status === 'available' && nextRep) {
+    nextDate = formatDateFr(nextRep.date);
+  }
+
+  return {
+    id: parseInt(show.id.replace('show-', '')) || 0,
+    title: show.title,
+    company: show.companyName,
+    venue: venue,
+    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
+    slug: show.slug,
+    genre: show.categories[0] || 'Spectacle',
+    nextDate: nextDate,
+    remainingSlots: availableSlots,
+    status: status,
+  };
+}
+
+// ============================================
+// COMPOSANT PAGE
+// ============================================
+
 export default function CataloguePage() {
+  // État pour éviter les erreurs d'hydratation SSR/Client
+  const [isMounted, setIsMounted] = useState(false);
+
   const [genreFilter, setGenreFilter] = useState<string>('Tous');
   const [moisFilter, setMoisFilter] = useState<string>('Tous');
   const [lieuFilter, setLieuFilter] = useState<string>('Tous');
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
+
+  // Fix d'hydratation
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Détecter le scroll pour afficher le bouton retour en haut
   useEffect(() => {
@@ -233,6 +178,44 @@ export default function CataloguePage() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Transformer les MockShow en Spectacle
+  const spectacles = useMemo(() => {
+    return mockShows.map((show) => transformShowToSpectacle(show, mockRepresentations));
+  }, []);
+
+  // Options pour les filtres - basées sur les données réelles
+  const genres = useMemo(() => {
+    const uniqueGenres = new Set<string>();
+    mockShows.forEach((show) => {
+      show.categories.forEach((cat) => uniqueGenres.add(cat));
+    });
+    return ['Tous', ...Array.from(uniqueGenres).sort()];
+  }, []);
+
+  const lieux = useMemo(() => {
+    const uniqueVenues = new Set<string>();
+    mockRepresentations.forEach((rep) => {
+      uniqueVenues.add(rep.venueName);
+    });
+    return ['Tous', ...Array.from(uniqueVenues).sort()];
+  }, []);
+
+  const mois = [
+    'Tous',
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre',
+  ];
 
   // Fonction pour remonter en haut
   const scrollToTop = () => {
@@ -250,7 +233,7 @@ export default function CataloguePage() {
 
   // Filtrer les spectacles selon les critères actifs
   const filteredSpectacles = useMemo(() => {
-    return spectaclesMock.filter((spectacle) => {
+    return spectacles.filter((spectacle) => {
       // Filtre par genre
       if (genreFilter !== 'Tous' && spectacle.genre !== genreFilter) {
         return false;
@@ -258,7 +241,7 @@ export default function CataloguePage() {
 
       // Filtre par mois
       if (moisFilter !== 'Tous') {
-        const spectacleMonth = getMonthFromDate(spectacle.nextDate);
+        const spectacleMonth = getMonthFromDateFr(spectacle.nextDate);
         if (spectacleMonth !== moisFilter) {
           return false;
         }
@@ -272,6 +255,7 @@ export default function CataloguePage() {
       // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
       if (onlyAvailable) {
         if (spectacle.status === 'coming_soon') return false;
+        if (spectacle.status === 'closed') return false;
         if (spectacle.remainingSlots !== undefined && spectacle.remainingSlots === 0) return false;
       }
 
@@ -287,7 +271,22 @@ export default function CataloguePage() {
 
       return true;
     });
-  }, [genreFilter, moisFilter, lieuFilter, onlyAvailable, searchQuery]);
+  }, [spectacles, genreFilter, moisFilter, lieuFilter, onlyAvailable, searchQuery]);
+
+  // Attendre que le composant soit monté pour éviter les erreurs d'hydratation
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
+          <div className="container mx-auto px-4 text-center">
+            <div className="animate-pulse text-muted-foreground">Chargement...</div>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background scroll-smooth">
@@ -336,9 +335,9 @@ export default function CataloguePage() {
                       <SelectValue placeholder="Mois" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mois.map((mois) => (
-                        <SelectItem key={mois} value={mois}>
-                          {mois}
+                      {mois.map((m) => (
+                        <SelectItem key={m} value={m}>
+                          {m}
                         </SelectItem>
                       ))}
                     </SelectContent>
