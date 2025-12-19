@@ -364,12 +364,28 @@ export default function AdminCompagniesPage() {
                             <div className="space-y-4">
                                 {/* Nom */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="name">Nom *</Label>
+                                    <Label htmlFor="name">Nom <span className="text-destructive">*</span></Label>
                                     <Input
                                         id="name"
                                         required
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Email contact - Obligatoire */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="contactEmail">Email contact <span className="text-destructive">*</span></Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Cet email sera utilisé par la compagnie pour se connecter à la plateforme.
+                                    </p>
+                                    <Input
+                                        id="contactEmail"
+                                        type="email"
+                                        required
+                                        value={formData.contactEmail}
+                                        onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                                        placeholder="email@compagnie.fr"
                                     />
                                 </div>
 
@@ -404,26 +420,15 @@ export default function AdminCompagniesPage() {
                                     />
                                 </div>
 
-                                {/* Email et Téléphone */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="contactEmail">Email contact</Label>
-                                        <Input
-                                            id="contactEmail"
-                                            type="email"
-                                            value={formData.contactEmail}
-                                            onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="contactPhone">Téléphone contact</Label>
-                                        <Input
-                                            id="contactPhone"
-                                            type="tel"
-                                            value={formData.contactPhone}
-                                            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                                        />
-                                    </div>
+                                {/* Téléphone */}
+                                <div className="space-y-2">
+                                    <Label htmlFor="contactPhone">Téléphone contact</Label>
+                                    <Input
+                                        id="contactPhone"
+                                        type="tel"
+                                        value={formData.contactPhone}
+                                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                    />
                                 </div>
                             </div>
                         </div>
