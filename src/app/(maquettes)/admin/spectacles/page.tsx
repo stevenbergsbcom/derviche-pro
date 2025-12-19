@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,7 +41,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, CheckCircle2, XCircle, FolderOpen, Video, Film, MapPin, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -63,9 +64,7 @@ interface Show {
     invitationPolicy?: string;
     maxParticipantsPerBooking?: number;
     closureDates?: string;
-    venueId?: number;
-    venueName?: string;
-    dervisheWelcome: boolean;
+    representationsCount: number;
     folderUrl?: string;
     teaserUrl?: string;
     captationAvailable: boolean;
@@ -85,15 +84,6 @@ const companiesMock = [
     { id: 5, name: 'La Troupe Vagabonde' },
 ];
 
-// Données mock lieux (pour le select)
-const venuesMock = [
-    { id: 1, name: 'Théâtre de la Ville' },
-    { id: 2, name: 'Théâtre du Rond-Point' },
-    { id: 3, name: 'La Colline' },
-    { id: 4, name: 'Théâtre de Belleville' },
-    { id: 5, name: 'Le Monfort' },
-];
-
 // Données mock spectacles
 const showsMock: Show[] = [
     {
@@ -111,9 +101,7 @@ const showsMock: Show[] = [
         invitationPolicy: '1 invitation + détaxe par réservation',
         maxParticipantsPerBooking: 3,
         closureDates: 'Relâche le lundi',
-        venueId: 1,
-        venueName: 'Théâtre de la Ville',
-        dervisheWelcome: true,
+        representationsCount: 24,
         imageUrl: '/images/spectacles/a-moi.jpg',
         folderUrl: 'https://drive.google.com/drive/folders/abc123',
         teaserUrl: 'https://vimeo.com/123456789',
@@ -133,9 +121,7 @@ const showsMock: Show[] = [
         period: 'Hiver 2025',
         dervisheManager: 'Sophie Bernard',
         maxParticipantsPerBooking: 2,
-        venueId: 2,
-        venueName: 'Théâtre du Rond-Point',
-        dervisheWelcome: false,
+        representationsCount: 0,
         imageUrl: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
         teaserUrl: 'https://youtube.com/watch?v=abc123',
         captationAvailable: false,
@@ -155,9 +141,7 @@ const showsMock: Show[] = [
         invitationPolicy: 'Invitation gratuite pour les professionnels',
         maxParticipantsPerBooking: 5,
         closureDates: 'Relâche les mercredis',
-        venueId: 3,
-        venueName: 'La Colline',
-        dervisheWelcome: true,
+        representationsCount: 12,
         imageUrl: '/images/spectacles/madame-bovary.jpg',
         folderUrl: 'https://dropbox.com/sh/xyz789',
         captationAvailable: true,
@@ -176,9 +160,7 @@ const showsMock: Show[] = [
         period: 'Été 2025',
         dervisheManager: 'Marie Lefebvre',
         maxParticipantsPerBooking: 3,
-        venueId: 4,
-        venueName: 'Théâtre de Belleville',
-        dervisheWelcome: true,
+        representationsCount: 8,
         imageUrl: '/images/spectacles/jeu.jpg',
         captationAvailable: false,
     },
@@ -195,9 +177,7 @@ const showsMock: Show[] = [
         period: 'Hiver 2024',
         dervisheManager: 'Jean Moreau',
         maxParticipantsPerBooking: 4,
-        venueId: 5,
-        venueName: 'Le Monfort',
-        dervisheWelcome: false,
+        representationsCount: 0,
         imageUrl: '/images/spectacles/la-mer.jpg',
         captationAvailable: false,
     },
@@ -214,12 +194,13 @@ function slugify(text: string): string {
 }
 
 export default function AdminSpectaclesPage() {
+    const router = useRouter();
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [editingShow, setEditingShow] = useState<Show | null>(null);
     const [showToDelete, setShowToDelete] = useState<Show | null>(null);
     const [viewingShow, setViewingShow] = useState<Show | null>(null);
-    const [formData, setFormData] = useState<Omit<Show, 'id' | 'companyName' | 'venueName'>>({
+    const [formData, setFormData] = useState<Omit<Show, 'id' | 'companyName'>>({
         title: '',
         slug: '',
         companyId: 0,
@@ -234,8 +215,7 @@ export default function AdminSpectaclesPage() {
         invitationPolicy: '',
         maxParticipantsPerBooking: undefined,
         closureDates: '',
-        venueId: 0,
-        dervisheWelcome: false,
+        representationsCount: 0,
         folderUrl: '',
         teaserUrl: '',
         captationAvailable: false,
@@ -298,8 +278,7 @@ export default function AdminSpectaclesPage() {
             invitationPolicy: '',
             maxParticipantsPerBooking: undefined,
             closureDates: '',
-            venueId: 0,
-            dervisheWelcome: false,
+            representationsCount: 0,
             folderUrl: '',
             teaserUrl: '',
             captationAvailable: false,
@@ -326,8 +305,7 @@ export default function AdminSpectaclesPage() {
             invitationPolicy: show.invitationPolicy || '',
             maxParticipantsPerBooking: show.maxParticipantsPerBooking,
             closureDates: show.closureDates || '',
-            venueId: show.venueId || 0,
-            dervisheWelcome: show.dervisheWelcome,
+            representationsCount: show.representationsCount,
             folderUrl: show.folderUrl || '',
             teaserUrl: show.teaserUrl || '',
             captationAvailable: show.captationAvailable,
@@ -460,12 +438,12 @@ export default function AdminSpectaclesPage() {
         try {
             await navigator.clipboard.writeText(url);
             setCopiedShowId(show.id);
-            
+
             // Nettoyer le timeout précédent s'il existe
             if (copyTimeoutRef.current) {
                 clearTimeout(copyTimeoutRef.current);
             }
-            
+
             // Réinitialiser après 2 secondes
             copyTimeoutRef.current = setTimeout(() => {
                 setCopiedShowId(null);
@@ -541,87 +519,97 @@ export default function AdminSpectaclesPage() {
             {viewMode === 'list' && (
                 <div className="hidden lg:block rounded-md border bg-white">
                     <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Titre</TableHead>
-                            <TableHead>Compagnie</TableHead>
-                            <TableHead>Catégories</TableHead>
-                            <TableHead>Statut</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredShows.map((show) => (
-                            <TableRow key={show.id}>
-                                <TableCell className="font-medium">
-                                    <button
-                                        onClick={() => handleView(show)}
-                                        className="cursor-pointer hover:text-derviche hover:underline text-left"
-                                    >
-                                        {show.title}
-                                    </button>
-                                </TableCell>
-                                <TableCell>{show.companyName}</TableCell>
-                                <TableCell>
-                                    <div className="flex flex-wrap gap-1">
-                                        {show.categories.map((cat) => (
-                                            <Badge key={cat} className="bg-gold/10 text-gold border-gold/20">
-                                                {cat}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </TableCell>
-                                <TableCell>{getStatusBadge(show.status)}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => handleCopyLink(show)}
-                                            title="Copier le lien de réservation"
-                                        >
-                                            {copiedShowId === show.id ? (
-                                                <Check className="w-4 h-4 text-green-600" />
-                                            ) : (
-                                                <Copy className="w-4 h-4" />
-                                            )}
-                                            <span className="sr-only">Copier le lien</span>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => handleView(show)}
-                                        >
-                                            <Eye className="w-4 h-4" />
-                                            <span className="sr-only">Voir</span>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => handleEdit(show)}
-                                        >
-                                            <Pencil className="w-4 h-4" />
-                                            <span className="sr-only">Modifier</span>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => handleDeleteClick(show)}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                            <span className="sr-only">Supprimer</span>
-                                        </Button>
-                                    </div>
-                                </TableCell>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Titre</TableHead>
+                                <TableHead>Compagnie</TableHead>
+                                <TableHead>Catégories</TableHead>
+                                <TableHead>Représentations</TableHead>
+                                <TableHead>Statut</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredShows.map((show) => (
+                                <TableRow key={show.id}>
+                                    <TableCell className="font-medium">
+                                        <button
+                                            onClick={() => handleView(show)}
+                                            className="cursor-pointer hover:text-derviche hover:underline text-left"
+                                        >
+                                            {show.title}
+                                        </button>
+                                    </TableCell>
+                                    <TableCell>{show.companyName}</TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-wrap gap-1">
+                                            {show.categories.map((cat) => (
+                                                <Badge key={cat} className="bg-gold/10 text-gold border-gold/20">
+                                                    {cat}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
+                                            onClick={() => router.push(`/admin/spectacles/${show.id}/representations`)}
+                                        >
+                                            <Calendar className="w-3 h-3 mr-1" />
+                                            {show.representationsCount} repr.
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>{getStatusBadge(show.status)}</TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleCopyLink(show)}
+                                                title="Copier le lien de réservation"
+                                            >
+                                                {copiedShowId === show.id ? (
+                                                    <Check className="w-4 h-4 text-green-600" />
+                                                ) : (
+                                                    <Copy className="w-4 h-4" />
+                                                )}
+                                                <span className="sr-only">Copier le lien</span>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleView(show)}
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                <span className="sr-only">Voir</span>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() => handleEdit(show)}
+                                            >
+                                                <Pencil className="w-4 h-4" />
+                                                <span className="sr-only">Modifier</span>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                onClick={() => handleDeleteClick(show)}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                                <span className="sr-only">Supprimer</span>
+                                            </Button>
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
             )}
 
             {/* Grille des spectacles - Desktop mode Grille */}
@@ -649,13 +637,12 @@ export default function AdminSpectaclesPage() {
                                     </span>
                                 )}
                                 {/* Badge statut */}
-                                <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                                    show.status === 'available' ? 'bg-green-500 text-white' :
+                                <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'available' ? 'bg-green-500 text-white' :
                                     show.status === 'coming_soon' ? 'bg-orange-500 text-white' :
-                                    'bg-red-500 text-white'
-                                }`}>
+                                        'bg-red-500 text-white'
+                                    }`}>
                                     {show.status === 'available' ? 'Disponible' :
-                                     show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
+                                        show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
                                 </span>
                             </div>
 
@@ -668,7 +655,7 @@ export default function AdminSpectaclesPage() {
                                 </p>
 
                                 {/* Titre - cliquable */}
-                                <h3 
+                                <h3
                                     className="font-bold text-lg mb-2 line-clamp-2 min-h-12 text-derviche-dark leading-tight cursor-pointer hover:text-derviche hover:underline"
                                     onClick={() => handleView(show)}
                                 >
@@ -680,13 +667,16 @@ export default function AdminSpectaclesPage() {
                                     {show.companyName}
                                 </p>
 
-                                {/* Lieu */}
-                                {show.venueName && (
-                                    <p className="text-sm text-muted-foreground italic mb-4 line-clamp-1 flex items-center gap-1">
-                                        <MapPin className="w-3 h-3 shrink-0" />
-                                        {show.venueName}
-                                    </p>
-                                )}
+                                {/* Représentations */}
+                                <div className="mb-4">
+                                    <Badge
+                                        className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
+                                        onClick={() => router.push(`/admin/spectacles/${show.id}/representations`)}
+                                    >
+                                        <Calendar className="w-3 h-3 mr-1" />
+                                        {show.representationsCount} représentations
+                                    </Badge>
+                                </div>
 
                                 {/* Actions - pousse vers le bas avec mt-auto */}
                                 <div className="mt-auto flex items-center gap-1 pt-3 border-t">
@@ -761,13 +751,12 @@ export default function AdminSpectaclesPage() {
                                 </span>
                             )}
                             {/* Badge statut */}
-                            <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${
-                                show.status === 'available' ? 'bg-green-500 text-white' :
+                            <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'available' ? 'bg-green-500 text-white' :
                                 show.status === 'coming_soon' ? 'bg-orange-500 text-white' :
-                                'bg-red-500 text-white'
-                            }`}>
+                                    'bg-red-500 text-white'
+                                }`}>
                                 {show.status === 'available' ? 'Disponible' :
-                                 show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
+                                    show.status === 'coming_soon' ? 'Bientôt' : 'Terminé'}
                             </span>
                         </div>
 
@@ -792,13 +781,16 @@ export default function AdminSpectaclesPage() {
                                 {show.companyName}
                             </p>
 
-                            {/* Lieu */}
-                            {show.venueName && (
-                                <p className="text-sm text-muted-foreground italic flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 shrink-0" />
-                                    {show.venueName}
-                                </p>
-                            )}
+                            {/* Représentations */}
+                            <div className="mb-2">
+                                <Badge
+                                    className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
+                                    onClick={() => router.push(`/admin/spectacles/${show.id}/representations`)}
+                                >
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    {show.representationsCount} représentations
+                                </Badge>
+                            </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-1 pt-3 mt-3 border-t">
@@ -911,26 +903,6 @@ export default function AdminSpectaclesPage() {
                                             {companiesMock.map((company) => (
                                                 <SelectItem key={company.id} value={String(company.id)}>
                                                     {company.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Lieu principal */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="venueId">Lieu principal</Label>
-                                    <Select
-                                        value={formData.venueId ? String(formData.venueId) : ''}
-                                        onValueChange={(value) => setFormData({ ...formData, venueId: parseInt(value) })}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Sélectionner un lieu" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {venuesMock.map((venue) => (
-                                                <SelectItem key={venue.id} value={String(venue.id)}>
-                                                    {venue.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -1143,8 +1115,8 @@ export default function AdminSpectaclesPage() {
                                             id="captationAvailable"
                                             checked={formData.captationAvailable}
                                             onCheckedChange={(checked) => {
-                                                setFormData({ 
-                                                    ...formData, 
+                                                setFormData({
+                                                    ...formData,
                                                     captationAvailable: checked,
                                                     captationUrl: checked ? formData.captationUrl : '',
                                                 });
@@ -1173,25 +1145,6 @@ export default function AdminSpectaclesPage() {
                                             />
                                         </div>
                                     )}
-                                </div>
-
-                                {/* Accueil Pro par Derviche Diffusion - Encadré */}
-                                <div className="border rounded-lg p-4 bg-muted/30">
-                                    <div className="flex items-center space-x-3">
-                                        <Switch
-                                            id="dervisheWelcome"
-                                            checked={formData.dervisheWelcome}
-                                            onCheckedChange={(checked) => setFormData({ ...formData, dervisheWelcome: checked })}
-                                        />
-                                        <div className="flex-1">
-                                            <Label htmlFor="dervisheWelcome" className="font-medium cursor-pointer">
-                                                Accueil Pro par Derviche Diffusion
-                                            </Label>
-                                            <p className="text-xs text-muted-foreground mt-1">
-                                                Derviche Diffusion s'occupera de l'accueil des professionnels
-                                            </p>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* Image */}
@@ -1449,7 +1402,7 @@ export default function AdminSpectaclesPage() {
                         {/* Description */}
                         {viewingShow?.description && (
                             <div className="mb-6">
-                                <SafeHtml 
+                                <SafeHtml
                                     html={viewingShow.description}
                                     className="text-sm text-muted-foreground"
                                 />
@@ -1485,17 +1438,6 @@ export default function AdminSpectaclesPage() {
                                     </div>
                                 )}
 
-                                {/* Lieu principal */}
-                                {viewingShow?.venueName && (
-                                    <div className="flex items-start gap-2">
-                                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                                        <div>
-                                            <p className="text-xs text-muted-foreground">Lieu</p>
-                                            <p className="text-sm text-foreground">{viewingShow.venueName}</p>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Période */}
                                 {viewingShow?.period && (
                                     <div>
@@ -1514,7 +1456,46 @@ export default function AdminSpectaclesPage() {
                             </div>
                         </div>
 
-                        {/* === SECTION 2 : Réservations & Politique === */}
+                        {/* === SECTION 2 : Représentations === */}
+                        <div className="border rounded-lg p-4 mb-4 bg-muted/10">
+                            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Représentations
+                            </h3>
+                            <div className="space-y-3">
+                                {viewingShow && viewingShow.representationsCount > 0 ? (
+                                    <>
+                                        <p className="text-sm text-foreground">
+                                            {viewingShow.representationsCount} représentation{viewingShow.representationsCount > 1 ? 's' : ''} programmée{viewingShow.representationsCount > 1 ? 's' : ''}
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => router.push(`/admin/spectacles/${viewingShow.id}/representations`)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Voir les représentations
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-sm text-muted-foreground italic">
+                                            Aucune représentation programmée
+                                        </p>
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => viewingShow && router.push(`/admin/spectacles/${viewingShow.id}/representations`)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Ajouter des représentations
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </Button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* === SECTION 3 : Réservations & Politique === */}
                         <div className="border rounded-lg p-4 mb-4 bg-muted/10">
                             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                                 <Users className="w-4 h-4" />
@@ -1533,7 +1514,7 @@ export default function AdminSpectaclesPage() {
                                 {viewingShow?.invitationPolicy && (
                                     <div>
                                         <p className="text-xs text-muted-foreground">Politique invitation/détaxe</p>
-                                        <SafeHtml 
+                                        <SafeHtml
                                             html={viewingShow.invitationPolicy}
                                             className="text-sm text-foreground"
                                         />
@@ -1547,7 +1528,7 @@ export default function AdminSpectaclesPage() {
                             </div>
                         </div>
 
-                        {/* === SECTION 3 : Ressources & Médias === */}
+                        {/* === SECTION 4 : Ressources & Médias === */}
                         <div className="border rounded-lg p-4 mb-4 bg-muted/10">
                             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                                 <Video className="w-4 h-4" />
@@ -1620,7 +1601,7 @@ export default function AdminSpectaclesPage() {
                             </div>
                         </div>
 
-                        {/* === SECTION 4 : Gestion Derviche === */}
+                        {/* === SECTION 5 : Gestion Derviche === */}
                         <div className="border rounded-lg p-4 bg-muted/10">
                             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                                 <User className="w-4 h-4" />
@@ -1631,31 +1612,13 @@ export default function AdminSpectaclesPage() {
                                 <div>
                                     <p className="text-xs text-muted-foreground">Responsable</p>
                                     {viewingShow?.dervisheManager ? (
-                                        <SafeHtml 
+                                        <SafeHtml
                                             html={viewingShow.dervisheManager}
                                             className="text-sm text-foreground"
                                         />
                                     ) : (
                                         <p className="text-sm italic text-muted-foreground">Non assigné</p>
                                     )}
-                                </div>
-
-                                {/* Accueil Pro - avec icône */}
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Accueil Pro par Derviche</p>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                        {viewingShow?.dervisheWelcome ? (
-                                            <>
-                                                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                                <span className="text-sm text-green-700">Pris en charge</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <XCircle className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-sm text-muted-foreground">Non pris en charge</span>
-                                            </>
-                                        )}
-                                    </div>
                                 </div>
                             </div>
                         </div>
