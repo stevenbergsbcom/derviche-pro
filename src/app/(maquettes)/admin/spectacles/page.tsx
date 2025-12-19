@@ -101,7 +101,7 @@ const showsMock: Show[] = [
         invitationPolicy: '1 invitation + détaxe par réservation',
         maxParticipantsPerBooking: 3,
         closureDates: 'Relâche le lundi',
-        representationsCount: 24,
+        representationsCount: 9,
         imageUrl: '/images/spectacles/a-moi.jpg',
         folderUrl: 'https://drive.google.com/drive/folders/abc123',
         teaserUrl: 'https://vimeo.com/123456789',

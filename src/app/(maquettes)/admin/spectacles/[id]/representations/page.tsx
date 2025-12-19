@@ -197,9 +197,9 @@ const representationsMock: Representation[] = [
     },
 ];
 
-// Fonction pour formater la date
+// Fonction pour formater la date (utilise UTC pour éviter les décalages de timezone)
 function formatDate(dateString: string): string {
-    const date = new Date(dateString);
+    const date = new Date(dateString + 'T12:00:00'); // Ajouter midi pour éviter les problèmes de timezone
     const days = ['Dim.', 'Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.'];
     const months = [
         'janvier',
@@ -218,9 +218,9 @@ function formatDate(dateString: string): string {
     return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
-// Fonction pour extraire le mois d'une date
+// Fonction pour extraire le mois d'une date (utilise la même logique que formatDate)
 function getMonthFromDate(dateString: string): string {
-    const date = new Date(dateString);
+    const date = new Date(dateString + 'T12:00:00'); // Ajouter midi pour éviter les problèmes de timezone
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
@@ -252,13 +252,7 @@ export default function AdminRepresentationsPage() {
     // Trouver le spectacle correspondant
     const show = showsMock.find((s) => s.id === showId);
 
-    // Si le spectacle n'existe pas, rediriger
-    if (!show) {
-        router.push('/admin/spectacles');
-        return null;
-    }
-
-    // États
+    // États - DOIVENT être déclarés AVANT tout return conditionnel (Rules of Hooks)
     const [representations, setRepresentations] = useState<Representation[]>(representationsMock);
     const [venues, setVenues] = useState<typeof venuesMock>(venuesMock);
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
@@ -331,6 +325,12 @@ export default function AdminRepresentationsPage() {
             return dateA.getTime() - dateB.getTime();
         });
     }, [representations, monthFilter, venueFilter, dateSearch]);
+
+    // Si le spectacle n'existe pas, rediriger (après tous les hooks)
+    if (!show) {
+        router.push('/admin/spectacles');
+        return null;
+    }
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
@@ -949,8 +949,8 @@ export default function AdminRepresentationsPage() {
                                 // Ajouter au state
                                 setVenues((prev) => [...prev, newVenue]);
 
-                                // Sélectionner automatiquement ce nouveau lieu
-                                setFormData({ ...formData, venueId: newId });
+                                // Sélectionner automatiquement ce nouveau lieu (pattern fonctionnel)
+                                setFormData((prev) => ({ ...prev, venueId: newId }));
 
                                 // Fermer la modale et réinitialiser
                                 setIsNewVenueDialogOpen(false);
