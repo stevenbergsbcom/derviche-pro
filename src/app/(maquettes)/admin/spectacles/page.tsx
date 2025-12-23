@@ -51,13 +51,11 @@ import {
     mockShows,
     mockCompanies,
     mockCategories,
-    mockAudiences,
     mockTargetAudiences,
     mockDervisheUsers,
     generateMockId,
     type MockShow,
     type MockCompany,
-    type MockUser,
 } from '@/lib/mock-data';
 import type { ShowStatus } from '@/types/database';
 
@@ -157,12 +155,10 @@ function AdminSpectaclesContent() {
     }, []);
 
     const [categories, setCategories] = useState<string[]>(mockCategories);
-    const [audiences, setAudiences] = useState<string[]>(mockAudiences);
     const [targetAudiences, setTargetAudiences] = useState<{ id: string; name: string }[]>(mockTargetAudiences.map(ta => ({ id: ta.id, name: ta.name })));
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [newCategory, setNewCategory] = useState<string>('');
-    const [newAudience, setNewAudience] = useState<string>('');
     const [newTargetAudience, setNewTargetAudience] = useState<string>('');
     const [companies, setCompanies] = useState<MockCompany[]>(mockCompanies);
     const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
@@ -409,18 +405,6 @@ function AdminSpectaclesContent() {
             return;
         }
         setCategories(categories.filter((c) => c !== category));
-    };
-
-    // Gérer les publics
-    const handleAddAudience = () => {
-        if (newAudience.trim() && !audiences.includes(newAudience.trim())) {
-            setAudiences([...audiences, newAudience.trim()]);
-            setNewAudience('');
-        }
-    };
-
-    const handleRemoveAudience = (audience: string) => {
-        setAudiences(audiences.filter((a) => a !== audience));
     };
 
     // Gérer les publics cibles (target audiences)
@@ -1832,13 +1816,14 @@ function AdminSpectaclesContent() {
                                 {/* Responsable Derviche */}
                                 <div>
                                     <p className="text-xs text-muted-foreground">Responsable</p>
-                                    {viewingShow?.dervisheManagerId ? (
-                                        <p className="text-sm text-foreground">
-                                            {mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)
-                                                ? `${mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)?.firstName} ${mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)?.lastName}`
-                                                : viewingShow.dervisheManager || 'Non assigné'}
-                                        </p>
-                                    ) : (
+                                    {viewingShow?.dervisheManagerId ? (() => {
+                                        const manager = mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId);
+                                        return (
+                                            <p className="text-sm text-foreground">
+                                                {manager ? `${manager.firstName} ${manager.lastName}` : viewingShow.dervisheManager || 'Non assigné'}
+                                            </p>
+                                        );
+                                    })() : (
                                         <p className="text-sm italic text-muted-foreground">Non assigné</p>
                                     )}
                                 </div>
