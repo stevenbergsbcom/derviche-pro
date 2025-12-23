@@ -4,6 +4,9 @@
  * 
  * Ces types correspondent exactement au schéma défini dans les migrations SQL.
  * Ils sont utilisés pour typer les requêtes Supabase et garantir la cohérence des données.
+ * 
+ * Mis à jour : CDC V4 - 23 décembre 2025
+ * Migrations : 001-015
  */
 
 // ============================================
@@ -41,6 +44,10 @@ export interface CompanyRow {
   website: string | null;
   description: string | null;
   logo_url: string | null;
+  // CDC V4 - Nouveaux champs
+  city: string | null;
+  contact_name: string | null;
+  // Champs système
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -54,6 +61,9 @@ export interface CompanyInsert {
   website?: string | null;
   description?: string | null;
   logo_url?: string | null;
+  // CDC V4 - Nouveaux champs
+  city?: string | null;
+  contact_name?: string | null;
 }
 
 /** Données pour mettre à jour une compagnie */
@@ -64,6 +74,10 @@ export interface CompanyUpdate {
   website?: string | null;
   description?: string | null;
   logo_url?: string | null;
+  // CDC V4 - Nouveaux champs
+  city?: string | null;
+  contact_name?: string | null;
+  // Champs système
   deleted_at?: string | null;
 }
 
@@ -172,6 +186,12 @@ export interface VenueRow {
   contact_email: string | null;
   contact_phone: string | null;
   photo_url: string | null;
+  // CDC V4 - Nouveaux champs
+  capacity: number | null;
+  pmr_accessible: boolean;
+  parking: boolean;
+  transports: string | null;
+  // Champs système
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -190,6 +210,11 @@ export interface VenueInsert {
   contact_email?: string | null;
   contact_phone?: string | null;
   photo_url?: string | null;
+  // CDC V4 - Nouveaux champs
+  capacity?: number | null;
+  pmr_accessible?: boolean;
+  parking?: boolean;
+  transports?: string | null;
 }
 
 /** Données pour mettre à jour une salle */
@@ -205,6 +230,12 @@ export interface VenueUpdate {
   contact_email?: string | null;
   contact_phone?: string | null;
   photo_url?: string | null;
+  // CDC V4 - Nouveaux champs
+  capacity?: number | null;
+  pmr_accessible?: boolean;
+  parking?: boolean;
+  transports?: string | null;
+  // Champs système
   deleted_at?: string | null;
 }
 
@@ -243,6 +274,37 @@ export interface ShowCategoryUpdate {
 }
 
 // ============================================
+// TABLE : target_audiences (CDC V4 - NOUVELLE TABLE)
+// ============================================
+
+/** Public cible d'un spectacle (données complètes depuis la BDD) */
+export interface TargetAudienceRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Données pour créer un nouveau public cible */
+export interface TargetAudienceInsert {
+  name: string;
+  slug: string;
+  description?: string | null;
+  display_order?: number;
+}
+
+/** Données pour mettre à jour un public cible */
+export interface TargetAudienceUpdate {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  display_order?: number;
+}
+
+// ============================================
 // TABLE : shows
 // ============================================
 
@@ -262,6 +324,16 @@ export interface ShowRow {
   price_type: ShowPriceType;
   price_amount: number | null;
   max_reservations_per_booking: number;
+  // CDC V4 - Nouveaux champs
+  period: string | null;
+  derviche_manager_id: string | null;
+  invitation_policy: string | null;
+  closure_dates: string | null;
+  folder_url: string | null;
+  teaser_url: string | null;
+  captation_available: boolean;
+  captation_url: string | null;
+  // Champs système
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -282,6 +354,15 @@ export interface ShowInsert {
   price_type?: ShowPriceType;
   price_amount?: number | null;
   max_reservations_per_booking?: number;
+  // CDC V4 - Nouveaux champs
+  period?: string | null;
+  derviche_manager_id?: string | null;
+  invitation_policy?: string | null;
+  closure_dates?: string | null;
+  folder_url?: string | null;
+  teaser_url?: string | null;
+  captation_available?: boolean;
+  captation_url?: string | null;
 }
 
 /** Données pour mettre à jour un spectacle */
@@ -299,6 +380,16 @@ export interface ShowUpdate {
   price_type?: ShowPriceType;
   price_amount?: number | null;
   max_reservations_per_booking?: number;
+  // CDC V4 - Nouveaux champs
+  period?: string | null;
+  derviche_manager_id?: string | null;
+  invitation_policy?: string | null;
+  closure_dates?: string | null;
+  folder_url?: string | null;
+  teaser_url?: string | null;
+  captation_available?: boolean;
+  captation_url?: string | null;
+  // Champs système
   deleted_at?: string | null;
 }
 
@@ -316,6 +407,9 @@ export interface SlotRow {
   capacity: number;
   remaining_capacity: number;
   hosted_by: SlotHostedBy;
+  // CDC V4 - Nouveau champ
+  hosted_by_id: string | null;
+  // Champs système
   created_at: string;
   updated_at: string;
 }
@@ -329,6 +423,8 @@ export interface SlotInsert {
   capacity: number;
   remaining_capacity: number;
   hosted_by: SlotHostedBy;
+  // CDC V4 - Nouveau champ
+  hosted_by_id?: string | null;
 }
 
 /** Données pour mettre à jour un créneau */
@@ -339,6 +435,8 @@ export interface SlotUpdate {
   capacity?: number;
   remaining_capacity?: number;
   hosted_by?: SlotHostedBy;
+  // CDC V4 - Nouveau champ
+  hosted_by_id?: string | null;
 }
 
 // ============================================
@@ -357,18 +455,29 @@ export interface ReservationRow {
   guest_function: string | null;
   guest_structure: string | null;
   guest_afc_number: string | null;
+  // CDC V4 - Nouveaux champs guests
+  guest_email_secondary: string | null;
+  guest_phone_secondary: string | null;
+  guest_address: string | null;
+  guest_postal_code: string | null;
+  guest_city: string | null;
+  // Champs réservation
   num_places: number;
   status: ReservationStatus;
   special_requests: string | null;
+  // Champs check-in
   checkin_status: CheckinStatus | null;
   checkin_comment: string | null;
   checkin_venue_notes: string | null;
   checkin_internal_notes: string | null;
   checkin_at: string | null;
   checkin_by: string | null;
+  // Champs externes
   google_calendar_event_id: string | null;
+  // Champs annulation
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  // Champs système
   created_at: string;
   updated_at: string;
 }
@@ -384,6 +493,13 @@ export interface ReservationInsert {
   guest_function?: string | null;
   guest_structure?: string | null;
   guest_afc_number?: string | null;
+  // CDC V4 - Nouveaux champs guests (optionnels)
+  guest_email_secondary?: string | null;
+  guest_phone_secondary?: string | null;
+  guest_address?: string | null;
+  guest_postal_code?: string | null;
+  guest_city?: string | null;
+  // Champs réservation
   num_places: number;
   status?: ReservationStatus;
   special_requests?: string | null;
@@ -395,13 +511,30 @@ export interface ReservationUpdate {
   num_places?: number;
   status?: ReservationStatus;
   special_requests?: string | null;
+  // Champs guest primaires
+  guest_first_name?: string | null;
+  guest_last_name?: string | null;
+  guest_email?: string | null;
+  guest_phone?: string | null;
+  guest_function?: string | null;
+  guest_structure?: string | null;
+  guest_afc_number?: string | null;
+  // CDC V4 - Nouveaux champs guests secondaires
+  guest_email_secondary?: string | null;
+  guest_phone_secondary?: string | null;
+  guest_address?: string | null;
+  guest_postal_code?: string | null;
+  guest_city?: string | null;
+  // Champs check-in
   checkin_status?: CheckinStatus | null;
   checkin_comment?: string | null;
   checkin_venue_notes?: string | null;
   checkin_internal_notes?: string | null;
   checkin_at?: string | null;
   checkin_by?: string | null;
+  // Champs externes
   google_calendar_event_id?: string | null;
+  // Champs annulation
   cancelled_at?: string | null;
   cancellation_reason?: string | null;
 }
@@ -434,6 +567,16 @@ export interface UserShowAssignmentInsert {
 export interface ShowCategoryMappingRow {
   show_id: string;
   category_id: string;
+}
+
+// ============================================
+// TABLE : show_target_audience_mapping (CDC V4 - NOUVELLE TABLE)
+// ============================================
+
+/** Association spectacle-public cible (relation N-N) */
+export interface ShowTargetAudienceMappingRow {
+  show_id: string;
+  target_audience_id: string;
 }
 
 // ============================================
@@ -472,6 +615,12 @@ export interface Database {
         Insert: ShowCategoryInsert;
         Update: ShowCategoryUpdate;
       };
+      // CDC V4 - Nouvelle table
+      target_audiences: {
+        Row: TargetAudienceRow;
+        Insert: TargetAudienceInsert;
+        Update: TargetAudienceUpdate;
+      };
       shows: {
         Row: ShowRow;
         Insert: ShowInsert;
@@ -495,6 +644,12 @@ export interface Database {
       show_category_mapping: {
         Row: ShowCategoryMappingRow;
         Insert: ShowCategoryMappingRow;
+        Update: never;
+      };
+      // CDC V4 - Nouvelle table de liaison
+      show_target_audience_mapping: {
+        Row: ShowTargetAudienceMappingRow;
+        Insert: ShowTargetAudienceMappingRow;
         Update: never;
       };
     };
