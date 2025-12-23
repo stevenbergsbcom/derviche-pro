@@ -14,41 +14,16 @@ export function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Vérifier l'état de connexion au montage
   useEffect(() => {
-    let isMounted = true;
     const supabase = createClient();
 
-    // Récupérer l'utilisateur actuel
-    const getUser = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (isMounted) {
-          setUser(user);
-        }
-      } catch {
-        // En cas d'erreur, on considère l'utilisateur comme non connecté
-        if (isMounted) {
-          setUser(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    getUser();
-
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (isMounted) {
-        setUser(session?.user ?? null);
-      }
+    // Écouter les changements d'authentification (inclut l'état initial)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
     });
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

@@ -913,7 +913,7 @@ export default function SpectacleDetailPage() {
                                             className="object-cover"
                                             priority
                                         />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                        <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
                                         <div className="absolute bottom-4 left-4 right-4">
                                             <p className="text-white/80 text-sm mb-1">Derviche Diffusion</p>
                                             <h1 className="text-2xl md:text-3xl font-bold text-white">
@@ -959,7 +959,8 @@ export default function SpectacleDetailPage() {
                                         <div className="pt-4 border-t border-border">
                                             <SafeHtml 
                                                 html={spectacleData.description} 
-                                                className={`text-sm text-muted-foreground leading-relaxed [&>*]:m-0 ${!showFullDescription ? 'line-clamp-3' : ''}`}
+                                                className={`text-sm text-muted-foreground leading-relaxed ${!showFullDescription ? 'line-clamp-3 [&_p]:m-0' : ''}`}
+                                                disableProse={!showFullDescription}
                                             />
                                             <button
                                                 onClick={() => setShowFullDescription(!showFullDescription)}

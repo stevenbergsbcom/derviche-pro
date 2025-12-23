@@ -39,9 +39,6 @@ export function LogoutButton({
 
             toast.success('Déconnexion réussie');
 
-            // Rafraîchir le routeur pour vider le cache
-            router.refresh();
-
             // Rediriger vers /accueil
             router.push('/accueil');
         } catch (error) {

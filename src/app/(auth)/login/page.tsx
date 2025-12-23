@@ -83,9 +83,6 @@ export default function LoginPage() {
 
             toast.success('Connexion réussie !');
             
-            // Rafraîchir le cache avant la navigation
-            router.refresh();
-            
             // Récupérer le rôle et rediriger en conséquence
             const userId = authData.user?.id;
             if (userId) {
