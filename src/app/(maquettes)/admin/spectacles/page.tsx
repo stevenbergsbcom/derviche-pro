@@ -46,7 +46,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { SafeHtml } from '@/components/ui/safe-html';
-import { cn, searchMatch } from '@/lib/utils';
+import { searchMatch } from '@/lib/utils';
 import {
     mockShows,
     mockCompanies,
@@ -1195,11 +1195,11 @@ function AdminSpectaclesContent() {
                                     {formData.imageUrl ? (
                                         <div className="relative">
                                             <div className="relative w-full h-48 border rounded-md overflow-hidden bg-muted">
-                                            <Image
-                                            src={formData.imageUrl}
-                                            alt="Aperçu"
-                                            fill
-                                                sizes="(max-width: 768px) 100vw, 50vw"
+                                                <Image
+                                                    src={formData.imageUrl}
+                                                    alt="Aperçu"
+                                                    fill
+                                                    sizes="(max-width: 768px) 100vw, 50vw"
                                                     className="object-cover"
                                                     unoptimized={formData.imageUrl.startsWith('data:')}
                                                 />
