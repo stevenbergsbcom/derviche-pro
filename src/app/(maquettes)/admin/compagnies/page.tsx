@@ -31,15 +31,21 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Search, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, Theater, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 import {
     mockCompanies,
+    mockShows,
     generateMockId,
     type MockCompany,
 } from '@/lib/mock-data';
+import { searchMatch } from '@/lib/utils';
 
 export default function AdminCompagniesPage() {
+    const router = useRouter();
+    
     // État pour éviter les erreurs d'hydratation SSR/Client
     const [isMounted, setIsMounted] = useState(false);
 
@@ -63,18 +69,28 @@ export default function AdminCompagniesPage() {
         contactPhone: null,
     });
 
-    // Filtrer les compagnies selon la recherche
+    // Compter les spectacles par compagnie
+    const getShowsCountByCompany = (companyId: string): number => {
+        return mockShows.filter((show) => show.companyId === companyId).length;
+    };
+
+    // Naviguer vers les spectacles filtrés par compagnie
+    const handleViewShows = (companyName: string) => {
+        router.push(`/admin/spectacles?search=${encodeURIComponent(companyName)}`);
+    };
+
+    // Filtrer les compagnies selon la recherche (insensible aux accents et à la casse)
     const filteredCompanies = useMemo(() => {
         if (!searchQuery.trim()) {
             return companies;
         }
 
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.trim();
         return companies.filter(
             (company) =>
-                company.name.toLowerCase().includes(query) ||
-                (company.city?.toLowerCase().includes(query) ?? false) ||
-                (company.contactName?.toLowerCase().includes(query) ?? false)
+                searchMatch(company.name, query) ||
+                searchMatch(company.city || '', query) ||
+                searchMatch(company.contactName || '', query)
         );
     }, [searchQuery, companies]);
 
@@ -234,6 +250,7 @@ export default function AdminCompagniesPage() {
                         <TableRow>
                             <TableHead>Nom</TableHead>
                             <TableHead>Ville</TableHead>
+                            <TableHead>Spectacles</TableHead>
                             <TableHead>Contact</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -250,6 +267,22 @@ export default function AdminCompagniesPage() {
                                     </button>
                                 </TableCell>
                                 <TableCell>{company.city || '-'}</TableCell>
+                                <TableCell>
+                                    {(() => {
+                                        const count = getShowsCountByCompany(company.id);
+                                        return count > 0 ? (
+                                            <Badge
+                                                className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
+                                                onClick={() => handleViewShows(company.name)}
+                                            >
+                                                <Theater className="w-3 h-3 mr-1" />
+                                                {count} spectacle{count > 1 ? 's' : ''}
+                                            </Badge>
+                                        ) : (
+                                            <span className="text-muted-foreground text-sm">-</span>
+                                        );
+                                    })()}
+                                </TableCell>
                                 <TableCell className="text-muted-foreground">
                                     {company.contactName || '-'}
                                 </TableCell>
@@ -304,6 +337,18 @@ export default function AdminCompagniesPage() {
                                         {company.name}
                                     </CardTitle>
                                     <p className="text-sm text-muted-foreground">{company.city || '-'}</p>
+                                    {(() => {
+                                        const count = getShowsCountByCompany(company.id);
+                                        return count > 0 ? (
+                                            <Badge
+                                                className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20 mt-2"
+                                                onClick={() => handleViewShows(company.name)}
+                                            >
+                                                <Theater className="w-3 h-3 mr-1" />
+                                                {count} spectacle{count > 1 ? 's' : ''}
+                                            </Badge>
+                                        ) : null;
+                                    })()}
                                 </div>
                             </div>
                         </CardHeader>
@@ -464,6 +509,41 @@ export default function AdminCompagniesPage() {
 
                     <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4">
                         <div className="space-y-4">
+                            {/* Spectacles associés */}
+                            {viewingCompany && (() => {
+                                const count = getShowsCountByCompany(viewingCompany.id);
+                                return (
+                                    <div className="border rounded-lg p-4 bg-muted/10">
+                                        <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                            <Theater className="w-4 h-4" />
+                                            Spectacles
+                                        </p>
+                                        {count > 0 ? (
+                                            <div className="mt-2">
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    {count} spectacle{count > 1 ? 's' : ''} associé{count > 1 ? 's' : ''} à cette compagnie
+                                                </p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setViewingCompany(null);
+                                                        handleViewShows(viewingCompany.name);
+                                                    }}
+                                                >
+                                                    Voir les spectacles
+                                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-muted-foreground mt-1 italic">
+                                                Aucun spectacle associé
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             {/* Description */}
                             {viewingCompany?.description && (
                                 <div>

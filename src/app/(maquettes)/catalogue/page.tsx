@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Search, ArrowUp } from 'lucide-react';
+import { searchMatch } from '@/lib/utils';
 import {
   mockShows,
   mockRepresentations,
@@ -259,11 +260,11 @@ export default function CataloguePage() {
         if (spectacle.remainingSlots !== undefined && spectacle.remainingSlots === 0) return false;
       }
 
-      // Filtre par recherche (title et company, insensible à la casse)
+      // Filtre par recherche (title et company, insensible aux accents et à la casse)
       if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = spectacle.title.toLowerCase().includes(query);
-        const matchesCompany = spectacle.company.toLowerCase().includes(query);
+        const query = searchQuery.trim();
+        const matchesTitle = searchMatch(spectacle.title, query);
+        const matchesCompany = searchMatch(spectacle.company, query);
         if (!matchesTitle && !matchesCompany) {
           return false;
         }
@@ -361,19 +362,22 @@ export default function CataloguePage() {
                   </Select>
                 </div>
 
-                {/* Checkbox Seulement disponibles */}
-                <div className="flex items-end space-x-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
+                {/* Switch Disponibles uniquement */}
+                <div className="space-y-2">
+                  <Label htmlFor="available" className="text-sm text-muted-foreground">
+                    Disponibilité
+                  </Label>
+                  <div className="flex items-center gap-3 h-10">
+                    <Switch
                       id="available"
                       checked={onlyAvailable}
-                      onCheckedChange={(checked) => setOnlyAvailable(checked === true)}
+                      onCheckedChange={setOnlyAvailable}
                     />
                     <Label
                       htmlFor="available"
                       className="text-sm font-normal cursor-pointer"
                     >
-                      Seulement disponibles
+                      Disponibles uniquement
                     </Label>
                   </div>
                 </div>
