@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,7 +68,20 @@ function slugify(text: string): string {
         .replace(/^-+|-+$/g, '');
 }
 
+// Composant wrapper avec Suspense pour useSearchParams
 export default function AdminSpectaclesPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+            </div>
+        }>
+            <AdminSpectaclesContent />
+        </Suspense>
+    );
+}
+
+function AdminSpectaclesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
