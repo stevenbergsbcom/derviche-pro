@@ -39,11 +39,8 @@ export function LogoutButton({
 
             toast.success('Déconnexion réussie');
 
-            // Rafraîchir le routeur pour vider le cache
-            router.refresh();
-
-            // Rediriger vers /login
-            router.push('/login');
+            // Rediriger vers /accueil
+            router.push('/accueil');
         } catch (error) {
             logger.error('[Logout] Erreur lors de la déconnexion', error as Error);
             toast.error('Une erreur est survenue lors de la déconnexion');

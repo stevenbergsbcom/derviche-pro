@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserRoleServer, getRedirectUrlByRole } from '@/lib/auth/get-user-role-server';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
         const supabase = await createClient();
 
         // Échanger le code contre une session
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
         if (error) {
             logger.error('[Auth Callback] Erreur lors de l\'échange du code', error as Error);
@@ -39,12 +40,24 @@ export async function GET(request: NextRequest) {
             if (next.startsWith('/')) {
                 redirectUrl = next;
             } else {
-                // Si "next" ne commence pas par "/", utiliser la valeur par défaut
-                redirectUrl = '/dashboard';
+                // Si "next" ne commence pas par "/", rediriger selon le rôle
+                const userId = data.user?.id;
+                if (userId) {
+                    const role = await getUserRoleServer(userId);
+                    redirectUrl = getRedirectUrlByRole(role);
+                } else {
+                    redirectUrl = '/dashboard';
+                }
             }
         } else {
-            // Redirection par défaut
-            redirectUrl = '/dashboard';
+            // Redirection selon le rôle de l'utilisateur
+            const userId = data.user?.id;
+            if (userId) {
+                const role = await getUserRoleServer(userId);
+                redirectUrl = getRedirectUrlByRole(role);
+            } else {
+                redirectUrl = '/dashboard';
+            }
         }
 
         return NextResponse.redirect(new URL(redirectUrl, requestUrl.origin));
@@ -55,4 +68,3 @@ export async function GET(request: NextRequest) {
         );
     }
 }
-

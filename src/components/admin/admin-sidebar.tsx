@@ -12,6 +12,7 @@ import {
     Settings,
     LogOut,
     X,
+    ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
@@ -146,6 +147,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
                 {/* Footer avec utilisateur */}
                 <div className="p-4 border-t border-derviche/30">
+                    {/* Bouton Voir le site */}
+                    <Link
+                        href="/accueil"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={onClose}
+                        className="flex items-center justify-center gap-2 w-full px-3 py-2.5 mb-3 rounded-lg bg-gold/20 text-gold hover:bg-gold/30 transition-colors"
+                    >
+                        <ExternalLink className="w-4 h-4" />
+                        <span className="text-sm font-medium">Voir le site</span>
+                    </Link>
+                    
                     <div className="mb-3 px-3">
                         <p className="text-xs text-white/50 mb-1">Connecté en tant que</p>
                         <p className="text-sm font-medium text-white">{mockUser.role} - {mockUser.firstName}</p>

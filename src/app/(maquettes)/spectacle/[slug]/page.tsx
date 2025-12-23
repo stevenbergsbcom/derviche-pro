@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Header, Footer } from '@/components/layout';
+import { SafeHtml } from '@/components/ui/safe-html';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -956,9 +957,11 @@ export default function SpectacleDetailPage() {
 
                                         {/* Description avec "Lire la suite" */}
                                         <div className="pt-4 border-t border-border">
-                                            <div className={`text-sm text-muted-foreground leading-relaxed whitespace-pre-line ${!showFullDescription ? 'line-clamp-3' : ''}`}>
-                                                {spectacleData.description}
-                                            </div>
+                                            <SafeHtml
+                                                html={spectacleData.description}
+                                                className={`text-sm text-muted-foreground leading-relaxed ${!showFullDescription ? 'line-clamp-3 [&_p]:m-0' : ''}`}
+                                                disableProse={!showFullDescription}
+                                            />
                                             <button
                                                 onClick={() => setShowFullDescription(!showFullDescription)}
                                                 className="flex items-center gap-1 text-sm font-medium text-derviche hover:text-derviche-dark mt-2 transition-colors cursor-pointer"

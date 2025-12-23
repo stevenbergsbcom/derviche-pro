@@ -1,13 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { LogoutButton } from '@/components/auth/logout-button';
+import { Menu, X, User } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import type { User as SupabaseUser, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Écouter les changements d'authentification (inclut l'état initial)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <header className="border-b bg-white sticky top-0 z-50">
@@ -45,12 +64,32 @@ export function Header() {
 
         {/* Auth buttons Desktop */}
         <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" className="text-lg" asChild>
-            <Link href="/login">Connexion</Link>
-          </Button>
-          <Button className="text-lg bg-derviche hover:bg-derviche-dark" asChild>
-            <Link href="/register">Inscription</Link>
-          </Button>
+          {isLoading ? (
+            // Placeholder pendant le chargement pour éviter le flash
+            <div className="w-32 h-10" />
+          ) : user ? (
+            // Utilisateur connecté
+            <>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
+              >
+                <User className="w-4 h-4" />
+                Mon compte
+              </Link>
+              <LogoutButton variant="outline" className="text-base" />
+            </>
+          ) : (
+            // Utilisateur non connecté
+            <>
+              <Button variant="ghost" className="text-lg" asChild>
+                <Link href="/login">Connexion</Link>
+              </Button>
+              <Button className="text-lg bg-derviche hover:bg-derviche-dark" asChild>
+                <Link href="/register">Inscription</Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Menu Burger Mobile */}
@@ -86,18 +125,43 @@ export function Header() {
               Contact
             </Link>
             <hr className="my-2 w-full" />
-            <Link
-              href="/login"
-              className="text-lg font-medium py-2 hover:text-derviche transition"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Connexion
-            </Link>
-            <Button className="w-full max-w-xs text-lg bg-derviche hover:bg-derviche-dark" asChild>
-              <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                Inscription
-              </Link>
-            </Button>
+
+            {isLoading ? (
+              // Placeholder pendant le chargement
+              <div className="w-32 h-10" />
+            ) : user ? (
+              // Utilisateur connecté - Mobile
+              <>
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <User className="w-5 h-5" />
+                  Mon compte
+                </Link>
+                <LogoutButton
+                  variant="outline"
+                  className="w-full max-w-xs text-lg"
+                />
+              </>
+            ) : (
+              // Utilisateur non connecté - Mobile
+              <>
+                <Link
+                  href="/login"
+                  className="text-lg font-medium py-2 hover:text-derviche transition"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Connexion
+                </Link>
+                <Button className="w-full max-w-xs text-lg bg-derviche hover:bg-derviche-dark" asChild>
+                  <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                    Inscription
+                  </Link>
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       )}

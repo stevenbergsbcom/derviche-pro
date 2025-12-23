@@ -245,7 +245,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-1',
     companyName: 'Compagnie du Soleil',
     categories: ['Théâtre'],
-    description: '<p>Un spectacle poétique et intimiste qui interroge notre rapport à l\'identité et à l\'autre.</p>',
+    description: '<p>Un spectacle poétique et intimiste qui interroge notre rapport à l\'identité et à l\'autre. Dans un espace scénique dépouillé, deux comédiens explorent les frontières de l\'intime et du collectif, du "moi" et du "nous".</p><p>À travers une succession de tableaux sensibles, la pièce nous invite à questionner ce qui nous définit vraiment : nos souvenirs, nos désirs, nos peurs, nos rencontres. Le texte, ciselé comme une partition musicale, alterne moments de tension et instants de grâce.</p><p>La mise en scène, épurée et lumineuse, laisse toute la place aux corps et aux mots. Un voyage introspectif d\'une grande beauté, porté par deux interprètes habités.</p>',
     shortDescription: 'Un spectacle poétique sur l\'identité',
     imageUrl: '/images/spectacles/a-moi.jpg',
     duration: 60,

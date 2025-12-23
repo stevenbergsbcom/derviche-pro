@@ -29,6 +29,8 @@ export async function middleware(request: NextRequest) {
     );
 
     // Rafraîchir la session (important pour Supabase)
+    // D'abord getSession pour rafraîchir les cookies, puis getUser pour valider
+    await supabase.auth.getSession();
     const {
         data: { user },
     } = await supabase.auth.getUser();
