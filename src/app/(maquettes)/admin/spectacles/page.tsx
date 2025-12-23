@@ -1175,12 +1175,13 @@ function AdminSpectaclesContent() {
                                 <div className="space-y-2">
                                     <Label htmlFor="dervisheManagerId">Responsable Derviche</Label>
                                     <Select
-                                        value={formData.dervisheManagerId || ''}
+                                        value={formData.dervisheManagerId || 'none'}
                                         onValueChange={(value) => {
-                                            const selectedUser = mockDervisheUsers.find(u => u.id === value);
+                                            const actualValue = value === 'none' ? '' : value;
+                                            const selectedUser = mockDervisheUsers.find(u => u.id === actualValue);
                                             setFormData({
                                                 ...formData,
-                                                dervisheManagerId: value || '',
+                                                dervisheManagerId: actualValue,
                                                 dervisheManager: selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : '',
                                             });
                                         }}
