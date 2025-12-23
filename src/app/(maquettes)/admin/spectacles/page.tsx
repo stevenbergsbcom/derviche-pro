@@ -53,9 +53,11 @@ import {
     mockCategories,
     mockAudiences,
     mockTargetAudiences,
+    mockDervisheUsers,
     generateMockId,
     type MockShow,
     type MockCompany,
+    type MockUser,
 } from '@/lib/mock-data';
 import type { ShowStatus } from '@/types/database';
 
@@ -1171,13 +1173,38 @@ function AdminSpectaclesContent() {
 
                                 {/* Responsable Derviche */}
                                 <div className="space-y-2">
-                                    <Label htmlFor="dervisheManager">Responsable Derviche</Label>
-                                    <WysiwygEditor
-                                        value={formData.dervisheManager || ''}
-                                        onChange={(value) => setFormData({ ...formData, dervisheManager: value })}
-                                        placeholder="Nom du responsable..."
-                                        rows={2}
-                                    />
+                                    <Label htmlFor="dervisheManagerId">Responsable Derviche</Label>
+                                    <Select
+                                        value={formData.dervisheManagerId || ''}
+                                        onValueChange={(value) => {
+                                            const selectedUser = mockDervisheUsers.find(u => u.id === value);
+                                            setFormData({
+                                                ...formData,
+                                                dervisheManagerId: value || '',
+                                                dervisheManager: selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : '',
+                                            });
+                                        }}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Sélectionner un responsable" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">Aucun responsable</SelectItem>
+                                            {mockDervisheUsers
+                                                .filter(user => user.role === 'super-admin' || user.role === 'admin')
+                                                .map((user) => (
+                                                    <SelectItem key={user.id} value={user.id}>
+                                                        {user.firstName} {user.lastName}
+                                                        <span className="text-xs text-muted-foreground ml-2">
+                                                            ({user.role === 'super-admin' ? 'Super Admin' : 'Admin'})
+                                                        </span>
+                                                    </SelectItem>
+                                                ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-xs text-muted-foreground">
+                                        Personne responsable du suivi de ce spectacle chez Derviche Diffusion
+                                    </p>
                                 </div>
 
                                 {/* URL du dossier */}
@@ -1804,11 +1831,12 @@ function AdminSpectaclesContent() {
                                 {/* Responsable Derviche */}
                                 <div>
                                     <p className="text-xs text-muted-foreground">Responsable</p>
-                                    {viewingShow?.dervisheManager ? (
-                                        <SafeHtml
-                                            html={viewingShow.dervisheManager}
-                                            className="text-sm text-foreground"
-                                        />
+                                    {viewingShow?.dervisheManagerId ? (
+                                        <p className="text-sm text-foreground">
+                                            {mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)
+                                                ? `${mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)?.firstName} ${mockDervisheUsers.find(u => u.id === viewingShow.dervisheManagerId)?.lastName}`
+                                                : viewingShow.dervisheManager || 'Non assigné'}
+                                        </p>
                                     ) : (
                                         <p className="text-sm italic text-muted-foreground">Non assigné</p>
                                     )}
