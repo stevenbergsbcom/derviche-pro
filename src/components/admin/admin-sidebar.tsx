@@ -13,6 +13,7 @@ import {
     LogOut,
     X,
     ExternalLink,
+    User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
@@ -163,6 +164,17 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                         <p className="text-xs text-white/50 mb-1">Connecté en tant que</p>
                         <p className="text-sm font-medium text-white">{mockUser.role} - {mockUser.firstName}</p>
                     </div>
+                    
+                    {/* Lien Mon compte */}
+                    <Link
+                        href="/admin/mon-compte"
+                        onClick={onClose}
+                        className="flex items-center gap-2 w-full px-3 py-2.5 mb-2 rounded-lg text-white/70 hover:text-gold hover:bg-derviche/50 transition-colors"
+                    >
+                        <User className="w-4 h-4" />
+                        <span className="text-sm font-medium">Mon compte</span>
+                    </Link>
+                    
                     <LogoutButton
                         variant="ghost"
                         className="w-full justify-start text-white/70 hover:text-gold hover:bg-derviche/50"
