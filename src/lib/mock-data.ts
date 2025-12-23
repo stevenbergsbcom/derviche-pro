@@ -58,15 +58,17 @@ export interface MockShow {
   companyId: string;
   companyName: string; // Dénormalisé pour faciliter l'affichage
   categories: string[];
+  targetAudienceIds: string[]; // CDC V4 - Relation N-N avec target_audiences
   description?: string;
   shortDescription: string | null;
   imageUrl: string | null;
   duration: number | null; // en minutes
-  audience?: string;
+  audience?: string; // Legacy - garder pour compatibilité
   status: ShowStatus;
   priceType: ShowPriceType;
   period?: string;
-  dervisheManager?: string;
+  dervisheManagerId?: string; // CDC V4 - FK vers profiles
+  dervisheManager?: string; // Legacy - nom pour affichage
   invitationPolicy?: string;
   maxParticipantsPerBooking?: number;
   closureDates?: string;
@@ -233,7 +235,24 @@ export const mockDervisheUsers: MockUser[] = [
 /** Catégories de spectacles */
 export const mockCategories: string[] = ['Danse', 'Théâtre', 'Jeune public', 'Cirque', 'Marionnettes'];
 
-/** Types de public */
+/** Public cible mock (CDC V4 - nouvelle table) */
+export interface MockTargetAudience {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  displayOrder: number;
+}
+
+/** Publics cibles (CDC V4) */
+export const mockTargetAudiences: MockTargetAudience[] = [
+  { id: 'audience-1', name: 'Tout public', slug: 'tout-public', displayOrder: 1 },
+  { id: 'audience-2', name: 'Adultes', slug: 'adultes', displayOrder: 2 },
+  { id: 'audience-3', name: 'Jeune public', slug: 'jeune-public', displayOrder: 3 },
+  { id: 'audience-4', name: 'Famille', slug: 'famille', displayOrder: 4 },
+];
+
+/** Types de public (legacy - pour compatibilité) */
 export const mockAudiences: string[] = ['Tout public', 'Adultes', 'Jeune public', 'Famille'];
 
 /** Spectacles */
@@ -245,6 +264,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-1',
     companyName: 'Compagnie du Soleil',
     categories: ['Théâtre'],
+    targetAudienceIds: ['audience-1'], // Tout public
     description: '<p>Un spectacle poétique et intimiste qui interroge notre rapport à l\'identité et à l\'autre. Dans un espace scénique dépouillé, deux comédiens explorent les frontières de l\'intime et du collectif, du "moi" et du "nous".</p><p>À travers une succession de tableaux sensibles, la pièce nous invite à questionner ce qui nous définit vraiment : nos souvenirs, nos désirs, nos peurs, nos rencontres. Le texte, ciselé comme une partition musicale, alterne moments de tension et instants de grâce.</p><p>La mise en scène, épurée et lumineuse, laisse toute la place aux corps et aux mots. Un voyage introspectif d\'une grande beauté, porté par deux interprètes habités.</p>',
     shortDescription: 'Un spectacle poétique sur l\'identité',
     imageUrl: '/images/spectacles/a-moi.jpg',
@@ -253,6 +273,7 @@ export const mockShows: MockShow[] = [
     status: 'published',
     priceType: 'free',
     period: 'Automne 2025',
+    dervisheManagerId: 'user-1',
     dervisheManager: 'Alexandra Martin',
     representationsCount: 9,
     captationAvailable: true,
@@ -265,6 +286,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-2',
     companyName: 'Les Artistes Associés',
     categories: ['Théâtre', 'Jeune public'],
+    targetAudienceIds: ['audience-3', 'audience-4'], // Jeune public, Famille
     description: '<p>Une adaptation magique du célèbre conte d\'Andersen.</p>',
     shortDescription: 'D\'après le conte d\'Andersen',
     imageUrl: '/images/spectacles/rossignol-a-la-langue-pourrie.jpg',
@@ -273,6 +295,7 @@ export const mockShows: MockShow[] = [
     status: 'published',
     priceType: 'free',
     period: 'Printemps 2025',
+    dervisheManagerId: 'user-2',
     dervisheManager: 'Sophie Bernard',
     representationsCount: 3,
     captationAvailable: false,
@@ -284,6 +307,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-3',
     companyName: 'Théâtre Nomade',
     categories: ['Théâtre'],
+    targetAudienceIds: ['audience-2'], // Adultes
     description: '<p>Une adaptation audacieuse du chef-d\'\u0153uvre de Flaubert.</p>',
     shortDescription: 'Adaptation du roman de Flaubert',
     imageUrl: '/images/spectacles/madame-bovary.jpg',
@@ -292,6 +316,7 @@ export const mockShows: MockShow[] = [
     status: 'published',
     priceType: 'paid_on_site',
     period: 'Été 2025',
+    dervisheManagerId: 'user-3',
     dervisheManager: 'Pierre Dupont',
     representationsCount: 2,
     captationAvailable: true,
@@ -303,6 +328,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-4',
     companyName: 'Collectif Éphémère',
     categories: ['Théâtre'],
+    targetAudienceIds: ['audience-1'], // Tout public
     shortDescription: 'Théâtre d\'improvisation',
     imageUrl: '/images/spectacles/jeu.jpg',
     duration: 55,
@@ -319,6 +345,7 @@ export const mockShows: MockShow[] = [
     companyId: 'company-5',
     companyName: 'La Troupe Vagabonde',
     categories: ['Danse'],
+    targetAudienceIds: ['audience-1', 'audience-4'], // Tout public, Famille
     shortDescription: 'Une odyssée maritime',
     imageUrl: '/images/spectacles/la-mer.jpg',
     duration: 70,
@@ -599,6 +626,24 @@ export function getUserById(userId: string): MockUser | undefined {
  */
 export function getCompanyById(companyId: string): MockCompany | undefined {
   return mockCompanies.find((company) => company.id === companyId);
+}
+
+/**
+ * Récupère un public cible par son ID
+ */
+export function getTargetAudienceById(audienceId: string): MockTargetAudience | undefined {
+  return mockTargetAudiences.find((audience) => audience.id === audienceId);
+}
+
+/**
+ * Récupère les publics cibles d'un spectacle
+ */
+export function getTargetAudiencesByShowId(showId: string): MockTargetAudience[] {
+  const show = getShowById(showId);
+  if (!show) return [];
+  return show.targetAudienceIds
+    .map((id) => getTargetAudienceById(id))
+    .filter((audience): audience is MockTargetAudience => audience !== undefined);
 }
 
 /**
