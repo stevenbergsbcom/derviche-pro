@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Settings, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 // Emails des admins (fallback pour le mode maquette sans BDD)
 const ADMIN_EMAILS = ['steven.berg@sbcom.fr'];
@@ -35,7 +35,7 @@ export function AdminBar() {
     };
 
     // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       const isAdmin = checkIsAdmin(session?.user ?? null);
       setIsVisible(isAdmin);
     });
@@ -59,7 +59,7 @@ export function AdminBar() {
             Mode Admin — Vous visualisez le site public
           </span>
         </div>
-        
+
         <div className="flex items-center gap-4">
           <Link
             href="/admin/spectacles"
@@ -67,7 +67,7 @@ export function AdminBar() {
           >
             ← Retour à l&apos;administration
           </Link>
-          
+
           <button
             onClick={() => setIsDismissed(true)}
             className="p-1 hover:bg-white/10 rounded transition-colors"

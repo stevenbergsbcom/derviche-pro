@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { Menu, X, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser } from '@supabase/supabase-js';
+import type { User as SupabaseUser, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -18,7 +18,7 @@ export function Header() {
     const supabase = createClient();
 
     // Écouter les changements d'authentification (inclut l'état initial)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
@@ -125,7 +125,7 @@ export function Header() {
               Contact
             </Link>
             <hr className="my-2 w-full" />
-            
+
             {isLoading ? (
               // Placeholder pendant le chargement
               <div className="w-32 h-10" />
@@ -140,8 +140,8 @@ export function Header() {
                   <User className="w-5 h-5" />
                   Mon compte
                 </Link>
-                <LogoutButton 
-                  variant="outline" 
+                <LogoutButton
+                  variant="outline"
                   className="w-full max-w-xs text-lg"
                 />
               </>

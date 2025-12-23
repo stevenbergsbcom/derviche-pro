@@ -285,7 +285,7 @@ export default function ConfirmationPage() {
                     className="object-cover opacity-30"
                   />
                 )}
-                <div className="absolute inset-0 bg-linear-to-t from-derviche-dark/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-derviche-dark/80 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                   <p className="text-sm text-white/80 mb-1">{confirmation.show.companyName}</p>
                   <h2 className="text-xl md:text-2xl font-bold">{confirmation.show.title}</h2>
