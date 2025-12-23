@@ -54,7 +54,9 @@ import {
     MapPin,
     Copy,
     AlertTriangle,
+    RotateCcw,
 } from 'lucide-react';
+import { searchMatch } from '@/lib/utils';
 import {
     mockVenues,
     mockDervisheUsers,
@@ -172,6 +174,16 @@ export default function AdminRepresentationsPage() {
     const [venueFilter, setVenueFilter] = useState<string>('all');
     const [dateSearch, setDateSearch] = useState<string>('');
 
+    // Vérifier si des filtres sont actifs
+    const hasActiveFilters = monthFilter !== 'all' || venueFilter !== 'all' || dateSearch.trim() !== '';
+
+    // Réinitialiser les filtres
+    const resetFilters = () => {
+        setMonthFilter('all');
+        setVenueFilter('all');
+        setDateSearch('');
+    };
+
     // Extraire les mois disponibles depuis les représentations
     const availableMonths = useMemo(() => {
         const months = new Set<string>();
@@ -204,12 +216,11 @@ export default function AdminRepresentationsPage() {
             filtered = filtered.filter((rep) => rep.venueId === venueFilter);
         }
 
-        // Recherche par date
+        // Recherche par date (insensible aux accents et à la casse)
         if (dateSearch.trim()) {
-            const searchLower = dateSearch.toLowerCase();
             filtered = filtered.filter((rep) => {
-                const formattedDate = formatDate(rep.date).toLowerCase();
-                return formattedDate.includes(searchLower);
+                const formattedDate = formatDate(rep.date);
+                return searchMatch(formattedDate, dateSearch);
             });
         }
 
@@ -603,46 +614,68 @@ export default function AdminRepresentationsPage() {
             </div>
 
             {/* Barre de filtres */}
-            <div className="space-y-3 sm:space-y-0 sm:flex sm:flex-row sm:gap-4">
-                <div className="grid grid-cols-2 gap-2 sm:contents">
-                    <div className="sm:flex-1">
-                        <Select value={monthFilter} onValueChange={setMonthFilter}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Tous les mois" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tous les mois</SelectItem>
-                                {availableMonths.map((month) => (
-                                    <SelectItem key={month} value={month}>
-                                        {formatMonth(month)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="sm:flex-1">
-                        <Select value={venueFilter} onValueChange={setVenueFilter}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Tous les lieux" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Tous les lieux</SelectItem>
-                                {usedVenues.map((venue) => (
-                                    <SelectItem key={venue.id} value={String(venue.id)}>
-                                        {venue.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+            <div className="space-y-3">
+                {/* Compteur de résultats */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {filteredRepresentations.length} représentation{filteredRepresentations.length > 1 ? 's' : ''}
+                        {hasActiveFilters && ` (sur ${representations.length} au total)`}
+                    </p>
+                    {hasActiveFilters && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={resetFilters}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            Réinitialiser
+                        </Button>
+                    )}
                 </div>
-                <div className="sm:flex-1">
-                    <Input
-                        type="text"
-                        placeholder="Rechercher par date..."
-                        value={dateSearch}
-                        onChange={(e) => setDateSearch(e.target.value)}
-                    />
+
+                {/* Filtres */}
+                <div className="sm:flex sm:flex-row sm:gap-4">
+                    <div className="grid grid-cols-2 gap-2 sm:contents">
+                        <div className="sm:flex-1">
+                            <Select value={monthFilter} onValueChange={setMonthFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tous les mois" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tous les mois</SelectItem>
+                                    {availableMonths.map((month) => (
+                                        <SelectItem key={month} value={month}>
+                                            {formatMonth(month)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="sm:flex-1">
+                            <Select value={venueFilter} onValueChange={setVenueFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Tous les lieux" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Tous les lieux</SelectItem>
+                                    {usedVenues.map((venue) => (
+                                        <SelectItem key={venue.id} value={String(venue.id)}>
+                                            {venue.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="mt-2 sm:mt-0 sm:flex-1">
+                        <Input
+                            type="text"
+                            placeholder="Rechercher par date..."
+                            value={dateSearch}
+                            onChange={(e) => setDateSearch(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 

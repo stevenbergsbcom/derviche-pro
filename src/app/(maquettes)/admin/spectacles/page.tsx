@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,11 +41,12 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { SafeHtml } from '@/components/ui/safe-html';
+import { cn, searchMatch } from '@/lib/utils';
 import {
     mockShows,
     mockCompanies,
@@ -69,17 +70,35 @@ function slugify(text: string): string {
 
 export default function AdminSpectaclesPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // État pour éviter les erreurs d'hydratation SSR/Client
     const [isMounted, setIsMounted] = useState(false);
+    const [shows, setShows] = useState<MockShow[]>(mockShows);
+    const [searchQuery, setSearchQuery] = useState<string>('');
+
+    // Extraire la valeur du paramètre search (stable pour les dépendances)
+    const urlSearchParam = searchParams.get('search') || '';
 
     // Fix d'hydratation : nécessaire pour éviter les différences SSR/Client avec Radix UI
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
-    const [shows, setShows] = useState<MockShow[]>(mockShows);
-    const [searchQuery, setSearchQuery] = useState<string>('');
+    // Synchroniser la recherche avec le paramètre URL
+    useEffect(() => {
+        setSearchQuery(urlSearchParam);
+    }, [urlSearchParam]);
+
+    // Vérifier si des filtres sont actifs
+    const hasActiveFilters = searchQuery.trim() !== '';
+
+    // Réinitialiser les filtres (et nettoyer l'URL)
+    const resetFilters = () => {
+        setSearchQuery('');
+        // Nettoyer le paramètre search de l'URL
+        router.push('/admin/spectacles');
+    };
     const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
     const [editingShow, setEditingShow] = useState<MockShow | null>(null);
     const [showToDelete, setShowToDelete] = useState<MockShow | null>(null);
@@ -154,12 +173,12 @@ export default function AdminSpectaclesPage() {
             return shows;
         }
 
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.trim();
         return shows.filter(
             (show) =>
-                show.title.toLowerCase().includes(query) ||
-                show.companyName.toLowerCase().includes(query) ||
-                show.categories.some((cat) => cat.toLowerCase().includes(query))
+                searchMatch(show.title, query) ||
+                searchMatch(show.companyName, query) ||
+                show.categories.some((cat) => searchMatch(cat, query))
         );
     }, [searchQuery, shows]);
 
@@ -452,6 +471,25 @@ export default function AdminSpectaclesPage() {
                     <Plus className="w-4 h-4 mr-2" />
                     Ajouter un spectacle
                 </Button>
+            </div>
+
+            {/* Compteur de résultats et bouton réinitialiser */}
+            <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                    {filteredShows.length} spectacle{filteredShows.length > 1 ? 's' : ''}
+                    {hasActiveFilters && ` (sur ${shows.length} au total)`}
+                </p>
+                {hasActiveFilters && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetFilters}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Réinitialiser
+                    </Button>
+                )}
             </div>
 
             {/* Barre de recherche + Toggle vue */}
