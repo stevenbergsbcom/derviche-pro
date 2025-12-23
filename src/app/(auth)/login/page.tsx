@@ -11,6 +11,7 @@ import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
+import { getUserRole, getRedirectUrlByRole } from '@/lib/auth/get-user-role';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,7 +70,7 @@ export default function LoginPage() {
 
         try {
             const supabase = createClient();
-            const { error } = await supabase.auth.signInWithPassword({
+            const { data: authData, error } = await supabase.auth.signInWithPassword({
                 email: data.email,
                 password: data.password,
             });
@@ -81,8 +82,19 @@ export default function LoginPage() {
             }
 
             toast.success('Connexion réussie !');
-            router.push('/dashboard');
+            
+            // Rafraîchir le cache avant la navigation
             router.refresh();
+            
+            // Récupérer le rôle et rediriger en conséquence
+            const userId = authData.user?.id;
+            if (userId) {
+                const role = await getUserRole(userId);
+                const redirectUrl = getRedirectUrlByRole(role);
+                router.push(redirectUrl);
+            } else {
+                router.push('/dashboard');
+            }
         } catch (error) {
             logger.error('[Login] Erreur de connexion', error as Error);
             toast.error('Une erreur est survenue lors de la connexion');

@@ -6,7 +6,7 @@ import DOMPurify from 'dompurify';
  */
 
 // Balises HTML autorisées pour le contenu WYSIWYG
-export const ALLOWED_TAGS = ['b', 'strong', 'i', 'em', 'a', 'br'];
+export const ALLOWED_TAGS = ['p', 'b', 'strong', 'i', 'em', 'a', 'br', 'ul', 'ol', 'li'];
 
 // Attributs HTML autorisés
 export const ALLOWED_ATTR = ['href', 'target', 'rel'];

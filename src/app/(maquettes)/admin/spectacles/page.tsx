@@ -412,7 +412,7 @@ export default function AdminSpectaclesPage() {
     const getShowUrl = (slug: string) => {
         // En production, utiliser window.location.origin
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        return `${baseUrl}/spectacles/${slug}`;
+        return `${baseUrl}/spectacle/${slug}`;
     };
 
     // Copier le lien du spectacle
