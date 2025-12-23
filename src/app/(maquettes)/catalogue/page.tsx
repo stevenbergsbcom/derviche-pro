@@ -429,7 +429,7 @@ export default function CataloguePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredSpectacles.map((spectacle) => (
-                <SpectacleCard key={spectacle.id} spectacle={spectacle} variant="grid" />
+                <SpectacleCard key={spectacle.id} spectacle={spectacle} />
               ))}
             </div>
           )}

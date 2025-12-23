@@ -21,12 +21,9 @@ export interface Spectacle {
 
 interface SpectacleCardProps {
   spectacle: Spectacle;
-  /** Mode d'affichage: 'carousel' pour le carousel de l'accueil, 'grid' pour la grille du catalogue */
-  variant?: 'carousel' | 'grid';
 }
 
-export function SpectacleCard({ spectacle, variant = 'grid' }: SpectacleCardProps) {
-  // Note: variant est accepté pour compatibilité mais n'affecte pas le rendu actuellement
+export function SpectacleCard({ spectacle }: SpectacleCardProps) {
   const isComingSoon = spectacle.status === 'coming_soon';
   const isClosed = spectacle.status === 'closed';
   const isLastRepresentations = !isComingSoon && !isClosed && spectacle.remainingSlots !== undefined && spectacle.remainingSlots > 0 && spectacle.remainingSlots < 2;

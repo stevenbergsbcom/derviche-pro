@@ -382,7 +382,7 @@ export default function MaquetteAccueil() {
                   className="flex-shrink-0"
                   style={{ width: `calc(${100 / cardsVisible}% - ${cardsVisible > 1 ? '1.125rem' : '0rem'})` }}
                 >
-                  <SpectacleCard spectacle={show} variant="carousel" />
+                  <SpectacleCard spectacle={show} />
                 </div>
               ))}
             </div>
