@@ -52,6 +52,7 @@ import {
     mockCompanies,
     mockCategories,
     mockAudiences,
+    mockTargetAudiences,
     generateMockId,
     type MockShow,
     type MockCompany,
@@ -155,10 +156,12 @@ function AdminSpectaclesContent() {
 
     const [categories, setCategories] = useState<string[]>(mockCategories);
     const [audiences, setAudiences] = useState<string[]>(mockAudiences);
+    const [targetAudiences, setTargetAudiences] = useState<{ id: string; name: string }[]>(mockTargetAudiences.map(ta => ({ id: ta.id, name: ta.name })));
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [newCategory, setNewCategory] = useState<string>('');
     const [newAudience, setNewAudience] = useState<string>('');
+    const [newTargetAudience, setNewTargetAudience] = useState<string>('');
     const [companies, setCompanies] = useState<MockCompany[]>(mockCompanies);
     const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
     const [newCompanyData, setNewCompanyData] = useState<{ name: string; email: string }>({
@@ -397,6 +400,12 @@ function AdminSpectaclesContent() {
     };
 
     const handleRemoveCategory = (category: string) => {
+        // Vérifier si la catégorie est utilisée par un spectacle
+        const isUsed = shows.some(show => show.categories.includes(category));
+        if (isUsed) {
+            alert(`Impossible de supprimer "${category}" : cette catégorie est utilisée par un ou plusieurs spectacles.`);
+            return;
+        }
         setCategories(categories.filter((c) => c !== category));
     };
 
@@ -410,6 +419,26 @@ function AdminSpectaclesContent() {
 
     const handleRemoveAudience = (audience: string) => {
         setAudiences(audiences.filter((a) => a !== audience));
+    };
+
+    // Gérer les publics cibles (target audiences)
+    const handleAddTargetAudience = () => {
+        if (newTargetAudience.trim() && !targetAudiences.some(ta => ta.name === newTargetAudience.trim())) {
+            const newId = generateMockId('audience');
+            setTargetAudiences([...targetAudiences, { id: newId, name: newTargetAudience.trim() }]);
+            setNewTargetAudience('');
+        }
+    };
+
+    const handleRemoveTargetAudience = (audienceId: string) => {
+        // Vérifier si le public cible est utilisé par un spectacle
+        const audienceName = targetAudiences.find(ta => ta.id === audienceId)?.name || '';
+        const isUsed = shows.some(show => show.targetAudienceIds?.includes(audienceId));
+        if (isUsed) {
+            alert(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par un ou plusieurs spectacles.`);
+            return;
+        }
+        setTargetAudiences(targetAudiences.filter((ta) => ta.id !== audienceId));
     };
 
     // Gérer l'upload d'image
@@ -1005,11 +1034,11 @@ function AdminSpectaclesContent() {
                                     </div>
                                 </div>
 
-                                {/* Encadré Public */}
+                                {/* Encadré Publics cibles (multiselect) */}
                                 <div className="border rounded-lg p-4 bg-muted/20">
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <Label htmlFor="audience">Public</Label>
+                                            <Label>Publics cibles</Label>
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -1020,23 +1049,38 @@ function AdminSpectaclesContent() {
                                                 Gérer
                                             </Button>
                                         </div>
-                                        <Select
-                                            value={formData.audience || ''}
-                                            onValueChange={(value) => setFormData({ ...formData, audience: value })}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Sélectionner un public" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {audiences.map((audience) => (
-                                                    <SelectItem key={audience} value={audience}>
-                                                        {audience}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <p className="text-xs text-muted-foreground">
+                                            Sélectionnez un ou plusieurs publics cibles pour ce spectacle.
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {targetAudiences.map((targetAudience) => (
+                                                <div key={targetAudience.id} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`target-audience-${targetAudience.id}`}
+                                                        checked={formData.targetAudienceIds.includes(targetAudience.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    targetAudienceIds: [...formData.targetAudienceIds, targetAudience.id],
+                                                                });
+                                                            } else {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    targetAudienceIds: formData.targetAudienceIds.filter((id) => id !== targetAudience.id),
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Label htmlFor={`target-audience-${targetAudience.id}`} className="font-normal cursor-pointer">
+                                                        {targetAudience.name}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
+
 
                                 {/* Statut et Durée */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1332,27 +1376,27 @@ function AdminSpectaclesContent() {
                 </DialogContent>
             </Dialog>
 
-            {/* Modale de gestion des publics */}
+            {/* Modale de gestion des publics cibles */}
             <Dialog open={isAudiencesDialogOpen} onOpenChange={setIsAudiencesDialogOpen}>
                 <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Gérer les publics</DialogTitle>
+                        <DialogTitle>Gérer les publics cibles</DialogTitle>
                         <DialogDescription>
-                            Ajoutez ou supprimez des publics cibles.
+                            Ajoutez ou supprimez des publics cibles pour vos spectacles.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                         <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                            {audiences.map((audience) => (
-                                <div key={audience} className="flex items-center justify-between p-2 border rounded">
-                                    <span className="text-sm">{audience}</span>
+                            {targetAudiences.map((audience) => (
+                                <div key={audience.id} className="flex items-center justify-between p-2 border rounded">
+                                    <span className="text-sm">{audience.name}</span>
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         size="icon"
                                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() => handleRemoveAudience(audience)}
+                                        onClick={() => handleRemoveTargetAudience(audience.id)}
                                     >
                                         <Trash2 className="w-4 h-4" />
                                         <span className="sr-only">Supprimer</span>
@@ -1363,17 +1407,17 @@ function AdminSpectaclesContent() {
 
                         <div className="flex gap-2">
                             <Input
-                                value={newAudience}
-                                onChange={(e) => setNewAudience(e.target.value)}
-                                placeholder="Nouveau public"
+                                value={newTargetAudience}
+                                onChange={(e) => setNewTargetAudience(e.target.value)}
+                                placeholder="Nouveau public cible"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        handleAddAudience();
+                                        handleAddTargetAudience();
                                     }
                                 }}
                             />
-                            <Button type="button" onClick={handleAddAudience}>
+                            <Button type="button" onClick={handleAddTargetAudience}>
                                 Ajouter
                             </Button>
                         </div>
