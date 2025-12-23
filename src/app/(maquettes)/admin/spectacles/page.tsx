@@ -40,6 +40,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import Image from 'next/image';
 import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -594,10 +595,13 @@ export default function AdminSpectaclesPage() {
                             {/* Image avec badges */}
                             <div className="aspect-4/3 overflow-hidden relative">
                                 {show.imageUrl ? (
-                                    <img
+                                    <Image
                                         src={show.imageUrl}
                                         alt={show.title}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        fill
+                                        sizes="(max-width: 1280px) 50vw, (max-width: 1536px) 33vw, 25vw"
+                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                        unoptimized={show.imageUrl.startsWith('data:')}
                                     />
                                 ) : (
                                     <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -708,10 +712,13 @@ export default function AdminSpectaclesPage() {
                         {/* Image avec badges */}
                         <div className="aspect-video overflow-hidden relative">
                             {show.imageUrl ? (
-                                <img
+                                <Image
                                     src={show.imageUrl}
                                     alt={show.title}
-                                    className="w-full h-full object-cover"
+                                    fill
+                                    sizes="100vw"
+                                    className="object-cover"
+                                    unoptimized={show.imageUrl.startsWith('data:')}
                                 />
                             ) : (
                                 <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -1137,10 +1144,13 @@ export default function AdminSpectaclesPage() {
                                     {formData.imageUrl ? (
                                         <div className="relative">
                                             <div className="relative w-full h-48 border rounded-md overflow-hidden bg-muted">
-                                                <img
-                                                    src={formData.imageUrl}
-                                                    alt="Aperçu"
-                                                    className="w-full h-full object-cover"
+                                            <Image
+                                            src={formData.imageUrl}
+                                            alt="Aperçu"
+                                            fill
+                                                sizes="(max-width: 768px) 100vw, 50vw"
+                                                    className="object-cover"
+                                                    unoptimized={formData.imageUrl.startsWith('data:')}
                                                 />
                                                 <Button
                                                     type="button"
@@ -1423,10 +1433,13 @@ export default function AdminSpectaclesPage() {
                     {/* Image en haut sans espace */}
                     {viewingShow?.imageUrl && (
                         <div className="relative w-full h-48 sm:h-56 overflow-hidden rounded-t-lg">
-                            <img
+                            <Image
                                 src={viewingShow.imageUrl}
                                 alt={viewingShow.title}
-                                className="w-full h-full object-cover"
+                                fill
+                                sizes="(max-width: 640px) 100vw, 672px"
+                                className="object-cover"
+                                unoptimized={viewingShow.imageUrl.startsWith('data:')}
                             />
                         </div>
                     )}

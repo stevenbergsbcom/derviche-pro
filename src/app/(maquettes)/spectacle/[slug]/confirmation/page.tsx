@@ -62,7 +62,7 @@ function formatDateFr(dateStr: string): string {
  */
 function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
   const showReps = representations.filter((rep) => rep.showId === show.id);
-  
+
   const sortedReps = [...showReps].sort((a, b) => {
     const dateA = new Date(`${a.date}T${a.time}`);
     const dateB = new Date(`${b.date}T${b.time}`);
@@ -71,13 +71,13 @@ function transformShowToSpectacle(show: MockShow, representations: MockRepresent
 
   // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
   const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-  
+
   const futureReps = sortedReps.filter((rep) => {
     return rep.date >= todayISO; // Comparaison de chaînes ISO
   });
 
   const nextRep = futureReps[0];
-  
+
   const availableSlots = futureReps.filter((rep) => {
     if (rep.capacity === null) return true;
     return rep.booked < rep.capacity;
@@ -395,7 +395,7 @@ export default function ConfirmationPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {suggestions.map((spectacle) => (
-                <SpectacleCard key={spectacle.id} spectacle={spectacle} variant="grid" />
+                <SpectacleCard key={spectacle.id} spectacle={spectacle} />
               ))}
             </div>
           </div>
@@ -406,7 +406,7 @@ export default function ConfirmationPage() {
           <Button asChild variant="outline" size="lg">
             <Link href="/accueil">
               <Home className="w-4 h-4 mr-2" />
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </Button>
         </div>

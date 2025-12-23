@@ -350,7 +350,7 @@ export default function SpectacleDetailPage() {
                 <Header />
                 <div className="container mx-auto px-4 py-12 text-center">
                     <h1 className="text-2xl font-bold text-derviche-dark mb-4">Spectacle non trouvé</h1>
-                    <p className="text-muted-foreground mb-6">Ce spectacle n'existe pas ou n'est plus disponible.</p>
+                    <p className="text-muted-foreground mb-6">Ce spectacle n&apos;existe pas ou n&apos;est plus disponible.</p>
                     <Button asChild>
                         <Link href="/catalogue">Retour au catalogue</Link>
                     </Button>
@@ -498,7 +498,7 @@ export default function SpectacleDetailPage() {
     const renderCalendarStep = () => (
         <>
             <h2 className="text-xl font-bold text-derviche-dark mb-6">
-                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l\'heure'}
+                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l&apos;heure'}
             </h2>
 
             {/* Message si spectacle bientôt réservable */}
@@ -591,7 +591,7 @@ export default function SpectacleDetailPage() {
                     {/* Fuseau horaire */}
                     <div className="mt-8 pt-6 border-t border-border flex items-center gap-2 text-sm text-muted-foreground">
                         <Globe className="w-4 h-4" />
-                        <span>Fuseau horaire : Heure d'Europe centrale</span>
+                        <span>Fuseau horaire : Heure d&apos;Europe centrale</span>
                     </div>
                 </>
             )}
