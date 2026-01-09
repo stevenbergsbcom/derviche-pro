@@ -14,7 +14,7 @@ import type {
   CompanyRow, 
   ShowCategoryRow,
   ReservationRow,
-  ProfileRow 
+  // ProfileRow - commenté car non utilisé actuellement
 } from './database';
 
 // ============================================

@@ -15,7 +15,6 @@ import { getUserRole, getRedirectUrlByRole } from '@/lib/auth/get-user-role';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Form,
     FormControl,
@@ -275,7 +274,7 @@ export default function LoginPage() {
             <div className="text-center text-sm">
                 <span className="text-muted-foreground">Pas encore de compte ? </span>
                 <Link href="/register" className="text-primary hover:underline font-medium">
-                    S'inscrire
+                    S{"'"}inscrire
                 </Link>
             </div>
         </div>

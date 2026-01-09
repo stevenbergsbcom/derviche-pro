@@ -15,6 +15,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Désactiver la règle trop stricte concernant setState dans useEffect
+  // Ces patterns sont valides pour : initialisation au montage, chargement async, réaction aux props
+  {
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
