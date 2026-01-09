@@ -18,8 +18,10 @@ export interface VenueQuickCreateDialogProps {
     open: boolean;
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
-    /** Callback quand un lieu est créé */
-    onCreateVenue: (data: { name: string; city: string }) => void;
+    /** Callback quand un lieu est créé - retourne l'ID pour auto-sélection */
+    onCreateVenue: (data: { name: string; city: string }) => string;
+    /** Callback optionnel appelé après création avec l'ID du nouveau lieu */
+    onVenueCreated?: (venueId: string) => void;
 }
 
 /**
@@ -29,6 +31,7 @@ export function VenueQuickCreateDialog({
     open,
     onOpenChange,
     onCreateVenue,
+    onVenueCreated,
 }: VenueQuickCreateDialogProps) {
     const [formData, setFormData] = useState<{ name: string; city: string }>({
         name: '',
@@ -44,10 +47,14 @@ export function VenueQuickCreateDialog({
         if (!formData.name.trim() || !formData.city.trim()) {
             return;
         }
-        onCreateVenue({
+        const newId = onCreateVenue({
             name: formData.name.trim(),
             city: formData.city.trim(),
         });
+        // Notifier le parent pour auto-sélection
+        if (onVenueCreated) {
+            onVenueCreated(newId);
+        }
         handleClose();
     };
 

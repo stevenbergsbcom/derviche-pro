@@ -48,6 +48,10 @@ export interface RepresentationFormDialogProps {
     dervisheUsers: MockUser[];
     /** Callback pour ouvrir la modale de création de lieu */
     onOpenNewVenueDialog: () => void;
+    /** ID du lieu nouvellement créé (pour auto-sélection) */
+    newlyCreatedVenueId?: string | null;
+    /** Callback pour reset l'ID du lieu nouvellement créé */
+    onClearNewlyCreatedVenueId?: () => void;
 }
 
 // Valeurs par défaut du formulaire
@@ -71,9 +75,21 @@ export function RepresentationFormDialog({
     venues,
     dervisheUsers,
     onOpenNewVenueDialog,
+    newlyCreatedVenueId,
+    onClearNewlyCreatedVenueId,
 }: RepresentationFormDialogProps) {
     const [formData, setFormData] = useState<RepresentationFormData>(defaultFormData);
     const [isUnlimited, setIsUnlimited] = useState<boolean>(true);
+
+    // Auto-sélection du nouveau lieu créé
+    useEffect(() => {
+        if (newlyCreatedVenueId && open) {
+            setFormData((prev) => ({ ...prev, venueId: newlyCreatedVenueId }));
+            if (onClearNewlyCreatedVenueId) {
+                onClearNewlyCreatedVenueId();
+            }
+        }
+    }, [newlyCreatedVenueId, open, onClearNewlyCreatedVenueId]);
 
     // Initialiser le formulaire quand on ouvre la modale
     useEffect(() => {

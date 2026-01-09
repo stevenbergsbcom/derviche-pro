@@ -14,7 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { User, Mail, Phone, Shield, Key, Save } from 'lucide-react';
+import { User, Mail, Shield, Key, Save } from 'lucide-react';
 
 // Données mock pour la maquette
 const mockUserData = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,6 +73,10 @@ export interface GenerateSeriesDialogProps {
     existingRepresentations: MockRepresentation[];
     /** Callback pour ouvrir la modale de création de lieu */
     onOpenNewVenueDialog: () => void;
+    /** ID du lieu nouvellement créé (pour auto-sélection) */
+    newlyCreatedVenueId?: string | null;
+    /** Callback pour reset l'ID du lieu nouvellement créé */
+    onClearNewlyCreatedVenueId?: () => void;
 }
 
 // Labels des jours de la semaine
@@ -116,9 +120,21 @@ export function GenerateSeriesDialog({
     dervisheUsers,
     existingRepresentations,
     onOpenNewVenueDialog,
+    newlyCreatedVenueId,
+    onClearNewlyCreatedVenueId,
 }: GenerateSeriesDialogProps) {
     const [seriesData, setSeriesData] = useState<GenerateSeriesData>(defaultSeriesData);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
+
+    // Auto-sélection du nouveau lieu créé
+    useEffect(() => {
+        if (newlyCreatedVenueId && open) {
+            setSeriesData((prev) => ({ ...prev, venueId: newlyCreatedVenueId }));
+            if (onClearNewlyCreatedVenueId) {
+                onClearNewlyCreatedVenueId();
+            }
+        }
+    }, [newlyCreatedVenueId, open, onClearNewlyCreatedVenueId]);
 
     const handleClose = () => {
         onOpenChange(false);

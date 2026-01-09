@@ -130,7 +130,7 @@ export default function ResetPasswordPage() {
                         Lien invalide ou expiré
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                        Ce lien de réinitialisation n'est plus valide
+                        Ce lien de réinitialisation n&apos;est plus valide
                     </p>
                 </div>
 
@@ -138,7 +138,7 @@ export default function ResetPasswordPage() {
                     <CardHeader>
                         <CardTitle>Session expirée</CardTitle>
                         <CardDescription>
-                            Le lien de réinitialisation a expiré ou n'est plus valide.
+                            Le lien de réinitialisation a expiré ou n&apos;est plus valide.
                             Veuillez demander un nouveau lien.
                         </CardDescription>
                     </CardHeader>

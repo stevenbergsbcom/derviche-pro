@@ -111,6 +111,7 @@ export default function AdminRepresentationsPage() {
     const [isNewVenueDialogOpen, setIsNewVenueDialogOpen] = useState<boolean>(false);
     const [newVenueSource, setNewVenueSource] = useState<'simple' | 'series'>('simple');
     const [isGenerateSeriesOpen, setIsGenerateSeriesOpen] = useState(false);
+    const [newlyCreatedVenueId, setNewlyCreatedVenueId] = useState<string | null>(null);
 
     // Filtres
     const [monthFilter, setMonthFilter] = useState<string>('all');
@@ -286,7 +287,7 @@ export default function AdminRepresentationsPage() {
         setIsNewVenueDialogOpen(true);
     };
 
-    const handleCreateVenue = (data: { name: string; city: string }) => {
+    const handleCreateVenue = (data: { name: string; city: string }): string => {
         const newId = generateMockId('venue');
         const newVenue: MockVenue = {
             id: newId,
@@ -294,7 +295,18 @@ export default function AdminRepresentationsPage() {
             city: data.city,
         };
         setVenues((prev) => [...prev, newVenue]);
-        // Note: La sélection automatique du nouveau lieu doit être gérée par les composants
+        return newId;
+    };
+
+    // Auto-sélection du nouveau lieu créé
+    const handleVenueCreated = (venueId: string) => {
+        if (newVenueSource === 'simple') {
+            // Fermer et rouvrir le formulaire avec le nouveau lieu sélectionné
+            setNewlyCreatedVenueId(venueId);
+        } else {
+            // Pour la série, on stocke aussi l'ID
+            setNewlyCreatedVenueId(venueId);
+        }
     };
 
     // Calculer le pourcentage de capacité
@@ -600,6 +612,8 @@ export default function AdminRepresentationsPage() {
                 venues={venues}
                 dervisheUsers={mockDervisheUsers}
                 onOpenNewVenueDialog={() => handleOpenNewVenueDialog('simple')}
+                newlyCreatedVenueId={newVenueSource === 'simple' ? newlyCreatedVenueId : null}
+                onClearNewlyCreatedVenueId={() => setNewlyCreatedVenueId(null)}
             />
 
             {/* Génération de série */}
@@ -611,6 +625,8 @@ export default function AdminRepresentationsPage() {
                 dervisheUsers={mockDervisheUsers}
                 existingRepresentations={representations}
                 onOpenNewVenueDialog={() => handleOpenNewVenueDialog('series')}
+                newlyCreatedVenueId={newVenueSource === 'series' ? newlyCreatedVenueId : null}
+                onClearNewlyCreatedVenueId={() => setNewlyCreatedVenueId(null)}
             />
 
             {/* Création de lieu */}
@@ -618,6 +634,7 @@ export default function AdminRepresentationsPage() {
                 open={isNewVenueDialogOpen}
                 onOpenChange={setIsNewVenueDialogOpen}
                 onCreateVenue={handleCreateVenue}
+                onVenueCreated={handleVenueCreated}
             />
 
             {/* Confirmation de suppression */}
