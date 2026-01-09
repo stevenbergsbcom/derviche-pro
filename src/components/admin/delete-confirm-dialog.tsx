@@ -17,8 +17,8 @@ export interface DeleteConfirmDialogProps {
   open: boolean;
   /** Callback quand la modale se ferme (annulation ou clic extérieur) */
   onOpenChange: (open: boolean) => void;
-  /** Callback quand l'utilisateur confirme la suppression */
-  onConfirm: () => void;
+  /** Callback quand l'utilisateur confirme la suppression (peut être async) */
+  onConfirm: () => void | Promise<void>;
   /** Titre de la modale */
   title?: string;
   /** Description/message de confirmation (peut être du texte ou du JSX) */
