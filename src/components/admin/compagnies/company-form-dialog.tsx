@@ -177,7 +177,7 @@ export function CompanyFormDialog({
         await onSubmit(cleanedData, editingCompany !== null);
     };
 
-    const isValid = formData.name.trim() && formData.contact_email.trim() && isValidEmail(formData.contact_email);
+    const isValid = formData.name.trim() && formData.contact_email.trim() && isValidEmail(formData.contact_email.trim());
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {

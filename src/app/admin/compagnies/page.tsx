@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +47,9 @@ export default function AdminCompagniesPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCheckingUsage, setIsCheckingUsage] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
+
+    // Ref pour éviter les race conditions lors de la vérification d'usage
+    const pendingDeleteCheckRef = useRef<string | null>(null);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
@@ -95,6 +98,7 @@ export default function AdminCompagniesPage() {
     const handleDeleteClick = async (company: CompanyWithShowsCount) => {
         // Capturer l'ID pour éviter les race conditions
         const companyId = company.id;
+        pendingDeleteCheckRef.current = companyId;
         
         // Afficher le dialog avec un état de chargement pendant la vérification
         setIsCheckingUsage(true);
@@ -106,19 +110,13 @@ export default function AdminCompagniesPage() {
 
         // Vérifier que l'utilisateur n'a pas changé de compagnie pendant l'appel async
         // (protection contre les race conditions)
-        setCompanyToDelete((current) => {
-            if (current?.id !== companyId) {
-                // L'utilisateur a changé de compagnie, ignorer ce résultat
-                return current;
-            }
-            // Même compagnie, on peut mettre à jour le warning
+        if (pendingDeleteCheckRef.current === companyId) {
             if (used) {
                 setDeleteWarning(`Cette compagnie est associée à ${count} spectacle(s). Supprimez d'abord les spectacles associés.`);
             }
-            return current;
-        });
-
-        setIsCheckingUsage(false);
+            setIsCheckingUsage(false);
+        }
+        // Si l'ID a changé, on ignore silencieusement ce résultat
     };
 
     const handleConfirmDelete = async () => {
@@ -307,7 +305,7 @@ export default function AdminCompagniesPage() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleDeleteClick(company)}
+                                                onClick={() => void handleDeleteClick(company)}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                                 <span className="sr-only">Supprimer</span>
@@ -371,7 +369,7 @@ export default function AdminCompagniesPage() {
                                         variant="ghost"
                                         size="sm"
                                         className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        onClick={() => handleDeleteClick(company)}
+                                        onClick={() => void handleDeleteClick(company)}
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" />
                                         Supprimer
@@ -398,7 +396,7 @@ export default function AdminCompagniesPage() {
                 company={viewingCompany}
                 onClose={() => setViewingCompany(null)}
                 onEdit={handleViewToEdit}
-                onDelete={handleViewToDelete}
+                onDelete={() => void handleViewToDelete()}
                 showsCount={viewingCompany?.shows_count ?? 0}
                 onViewShows={() => viewingCompany && handleViewShows(viewingCompany.name)}
             />
@@ -411,7 +409,7 @@ export default function AdminCompagniesPage() {
                         setDeleteWarning(null);
                     }
                 }}
-                onConfirm={handleConfirmDelete}
+                onConfirm={() => void handleConfirmDelete()}
                 title="Supprimer cette compagnie ?"
                 description={
                     deleteWarning

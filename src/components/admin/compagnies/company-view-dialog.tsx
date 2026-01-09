@@ -21,8 +21,8 @@ export interface CompanyViewDialogProps {
     onClose: () => void;
     /** Callback pour passer en mode édition */
     onEdit: () => void;
-    /** Callback pour supprimer */
-    onDelete: () => void;
+    /** Callback pour supprimer (peut être async) */
+    onDelete: () => void | Promise<void>;
     /** Nombre de spectacles de la compagnie */
     showsCount: number;
     /** Callback pour voir les spectacles */

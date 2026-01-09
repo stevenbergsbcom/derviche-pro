@@ -68,46 +68,57 @@ export async function getCompanies(): Promise<CompaniesResult> {
 }
 
 /**
- * Récupère toutes les compagnies avec le nombre de spectacles associés
+ * Récupère toutes les compagnies avec le nombre de spectacles actifs associés
  * Triées par nom
- * Utilise une jointure Supabase pour éviter N+1 requêtes
+ * Utilise deux requêtes pour filtrer correctement les spectacles supprimés
  */
 export async function getCompaniesWithShowsCount(): Promise<CompaniesWithCountResult> {
   try {
     const supabase = createClient();
     
-    // Supabase permet de compter les relations avec la syntaxe shows(count)
-    const { data, error } = await supabase
+    // Requête 1: Récupérer les compagnies actives
+    const { data: companies, error: companiesError } = await supabase
       .from('companies')
-      .select(`
-        *,
-        shows(count)
-      `)
+      .select('*')
       .is('deleted_at', null)
       .order('name', { ascending: true });
 
-    if (error) {
-      logger.error('Erreur récupération companies avec count', error);
-      return { data: [], error: error.message };
+    if (companiesError) {
+      logger.error('Erreur récupération companies', companiesError);
+      return { data: [], error: companiesError.message };
     }
 
-    // Transformer le résultat pour avoir shows_count directement
-    // Supabase retourne : { ...company, shows: [{ count: N }] }
-    const companiesWithCount: CompanyWithShowsCount[] = (data || []).map((company) => {
-      // Le count est dans un tableau, on extrait la valeur
-      // On filtre aussi les spectacles supprimés (deleted_at != null)
-      const showsArray = company.shows as { count: number }[] | null;
-      const count = showsArray?.[0]?.count ?? 0;
-      
-      // Retirer la propriété shows et ajouter shows_count
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { shows, ...companyData } = company;
-      
-      return {
-        ...companyData,
-        shows_count: count,
-      } as CompanyWithShowsCount;
+    if (!companies || companies.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Requête 2: Compter les spectacles ACTIFS (non supprimés) par compagnie
+    const { data: showsData, error: showsError } = await supabase
+      .from('shows')
+      .select('company_id')
+      .is('deleted_at', null)
+      .in('company_id', companies.map(c => c.id));
+
+    if (showsError) {
+      logger.error('Erreur comptage shows', showsError);
+      // En cas d'erreur, on retourne les compagnies avec count = 0
+      return { 
+        data: companies.map(c => ({ ...c, shows_count: 0 })), 
+        error: null 
+      };
+    }
+
+    // Agréger les counts par company_id
+    const countMap: Record<string, number> = {};
+    (showsData || []).forEach(show => {
+      countMap[show.company_id] = (countMap[show.company_id] || 0) + 1;
     });
+
+    // Fusionner les données
+    const companiesWithCount: CompanyWithShowsCount[] = companies.map(company => ({
+      ...company,
+      shows_count: countMap[company.id] || 0,
+    }));
 
     return { data: companiesWithCount, error: null };
   } catch (err) {
