@@ -59,6 +59,10 @@ export interface SpectacleFormDialogProps {
     onOpenTargetAudiencesManager: () => void;
     /** Callback pour ouvrir la modale de création de compagnie */
     onOpenNewCompanyDialog: () => void;
+    /** ID de la compagnie nouvellement créée (pour auto-sélection) */
+    newlyCreatedCompanyId?: string | null;
+    /** Callback pour reset l'ID de la compagnie nouvellement créée */
+    onClearNewlyCreatedCompanyId?: () => void;
 }
 
 // Fonction slugify
@@ -113,10 +117,22 @@ export function SpectacleFormDialog({
     onOpenCategoriesManager,
     onOpenTargetAudiencesManager,
     onOpenNewCompanyDialog,
+    newlyCreatedCompanyId,
+    onClearNewlyCreatedCompanyId,
 }: SpectacleFormDialogProps) {
     const [formData, setFormData] = useState<SpectacleFormData>(defaultFormData);
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-sélection de la nouvelle compagnie créée
+    useEffect(() => {
+        if (newlyCreatedCompanyId && open) {
+            setFormData((prev) => ({ ...prev, companyId: newlyCreatedCompanyId }));
+            if (onClearNewlyCreatedCompanyId) {
+                onClearNewlyCreatedCompanyId();
+            }
+        }
+    }, [newlyCreatedCompanyId, open, onClearNewlyCreatedCompanyId]);
 
     // Initialiser le formulaire quand on ouvre la modale
     useEffect(() => {

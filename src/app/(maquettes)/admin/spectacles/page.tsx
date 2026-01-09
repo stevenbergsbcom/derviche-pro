@@ -85,6 +85,7 @@ function AdminSpectaclesContent() {
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
+    const [newlyCreatedCompanyId, setNewlyCreatedCompanyId] = useState<string | null>(null);
 
     // État pour le feedback de copie
     const [copiedShowId, setCopiedShowId] = useState<string | null>(null);
@@ -258,7 +259,7 @@ function AdminSpectaclesContent() {
     };
 
     // Gérer la création de compagnie
-    const handleCreateCompany = (data: { name: string; email: string }) => {
+    const handleCreateCompany = (data: { name: string; email: string }): string => {
         const newId = generateMockId('company');
         const newCompany: MockCompany = {
             id: newId,
@@ -267,6 +268,12 @@ function AdminSpectaclesContent() {
             contactPhone: null,
         };
         setCompanies((prev) => [...prev, newCompany]);
+        return newId;
+    };
+
+    // Auto-sélection de la compagnie nouvellement créée
+    const handleCompanyCreated = (companyId: string) => {
+        setNewlyCreatedCompanyId(companyId);
     };
 
     // Générer l'URL de la page spectacle
@@ -578,6 +585,8 @@ function AdminSpectaclesContent() {
                 onOpenCategoriesManager={() => setIsCategoriesDialogOpen(true)}
                 onOpenTargetAudiencesManager={() => setIsAudiencesDialogOpen(true)}
                 onOpenNewCompanyDialog={() => setIsNewCompanyDialogOpen(true)}
+                newlyCreatedCompanyId={newlyCreatedCompanyId}
+                onClearNewlyCreatedCompanyId={() => setNewlyCreatedCompanyId(null)}
             />
 
             {/* Modale de visualisation */}
@@ -615,6 +624,7 @@ function AdminSpectaclesContent() {
                 open={isNewCompanyDialogOpen}
                 onOpenChange={setIsNewCompanyDialogOpen}
                 onCreateCompany={handleCreateCompany}
+                onCompanyCreated={handleCompanyCreated}
             />
 
             {/* Modale de confirmation de suppression */}

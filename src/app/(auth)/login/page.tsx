@@ -272,9 +272,9 @@ export default function LoginPage() {
             </Tabs>
 
             <div className="text-center text-sm">
-                <span className="text-muted-foreground">Pas encore de compte&nbsp;? </span>
+                <span className="text-muted-foreground">Pas encore de compte ? </span>
                 <Link href="/register" className="text-primary hover:underline font-medium">
-                    S&apos;inscrire
+                    S{"'"}inscrire
                 </Link>
             </div>
         </div>

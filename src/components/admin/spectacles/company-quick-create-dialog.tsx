@@ -18,8 +18,10 @@ export interface CompanyQuickCreateDialogProps {
     open: boolean;
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
-    /** Callback quand une compagnie est créée (retourne name et email) */
-    onCreateCompany: (data: { name: string; email: string }) => void;
+    /** Callback quand une compagnie est créée - retourne l'ID pour auto-sélection */
+    onCreateCompany: (data: { name: string; email: string }) => string;
+    /** Callback optionnel appelé après création avec l'ID de la nouvelle compagnie */
+    onCompanyCreated?: (companyId: string) => void;
 }
 
 /**
@@ -29,6 +31,7 @@ export function CompanyQuickCreateDialog({
     open,
     onOpenChange,
     onCreateCompany,
+    onCompanyCreated,
 }: CompanyQuickCreateDialogProps) {
     const [formData, setFormData] = useState<{ name: string; email: string }>({
         name: '',
@@ -44,10 +47,14 @@ export function CompanyQuickCreateDialog({
         if (!formData.name.trim() || !formData.email.trim()) {
             return;
         }
-        onCreateCompany({
+        const newId = onCreateCompany({
             name: formData.name.trim(),
             email: formData.email.trim(),
         });
+        // Notifier le parent pour auto-sélection
+        if (onCompanyCreated) {
+            onCompanyCreated(newId);
+        }
         handleClose();
     };
 
