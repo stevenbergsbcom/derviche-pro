@@ -14,10 +14,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import type { MockVenue } from '@/lib/mock-data';
+import type { VenueRow, VenueInsert } from '@/types/database';
 
-// Type pour les données du formulaire
-export type VenueFormData = Omit<MockVenue, 'id'>;
+// Type pour les données du formulaire (compatible avec VenueInsert)
+export type VenueFormData = VenueInsert;
 
 export interface VenueFormDialogProps {
     /** Contrôle l'ouverture de la modale */
@@ -25,9 +25,11 @@ export interface VenueFormDialogProps {
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
     /** Lieu en cours d'édition (null = mode création) */
-    editingVenue: MockVenue | null;
+    editingVenue: VenueRow | null;
     /** Callback à la soumission du formulaire */
     onSubmit: (data: VenueFormData, isEditing: boolean) => void;
+    /** État de chargement */
+    isSubmitting?: boolean;
 }
 
 // Valeurs par défaut du formulaire
@@ -35,14 +37,15 @@ const defaultFormData: VenueFormData = {
     name: '',
     city: '',
     address: '',
-    postalCode: '',
+    postal_code: '',
+    country: 'France',
     capacity: undefined,
     description: '',
-    contactEmail: '',
-    contactPhone: '',
+    contact_email: '',
+    contact_phone: '',
     latitude: undefined,
     longitude: undefined,
-    pmrAccessible: false,
+    pmr_accessible: false,
     parking: false,
     transports: '',
 };
@@ -55,6 +58,7 @@ export function VenueFormDialog({
     onOpenChange,
     editingVenue,
     onSubmit,
+    isSubmitting = false,
 }: VenueFormDialogProps) {
     const [formData, setFormData] = useState<VenueFormData>(defaultFormData);
 
@@ -67,14 +71,15 @@ export function VenueFormDialog({
                     name: editingVenue.name,
                     city: editingVenue.city,
                     address: editingVenue.address || '',
-                    postalCode: editingVenue.postalCode || '',
-                    capacity: editingVenue.capacity,
+                    postal_code: editingVenue.postal_code || '',
+                    country: editingVenue.country || 'France',
+                    capacity: editingVenue.capacity ?? undefined,
                     description: editingVenue.description || '',
-                    contactEmail: editingVenue.contactEmail || '',
-                    contactPhone: editingVenue.contactPhone || '',
-                    latitude: editingVenue.latitude,
-                    longitude: editingVenue.longitude,
-                    pmrAccessible: editingVenue.pmrAccessible || false,
+                    contact_email: editingVenue.contact_email || '',
+                    contact_phone: editingVenue.contact_phone || '',
+                    latitude: editingVenue.latitude ?? undefined,
+                    longitude: editingVenue.longitude ?? undefined,
+                    pmr_accessible: editingVenue.pmr_accessible || false,
                     parking: editingVenue.parking || false,
                     transports: editingVenue.transports || '',
                 });
@@ -95,7 +100,6 @@ export function VenueFormDialog({
             return;
         }
         onSubmit(formData, editingVenue !== null);
-        handleClose();
     };
 
     const isValid = formData.name.trim() && formData.city.trim();
@@ -127,6 +131,7 @@ export function VenueFormDialog({
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="Ex: Théâtre de la Ville"
                                 required
+                                disabled={isSubmitting}
                             />
                         </div>
                         <div className="space-y-2">
@@ -139,6 +144,7 @@ export function VenueFormDialog({
                                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                                 placeholder="Ex: Avignon"
                                 required
+                                disabled={isSubmitting}
                             />
                         </div>
                     </div>
@@ -151,17 +157,19 @@ export function VenueFormDialog({
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             placeholder="Ex: 12 rue du Théâtre"
+                            disabled={isSubmitting}
                         />
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="postalCode">Code postal</Label>
+                            <Label htmlFor="postal_code">Code postal</Label>
                             <Input
-                                id="postalCode"
-                                value={formData.postalCode}
-                                onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                                id="postal_code"
+                                value={formData.postal_code}
+                                onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                                 placeholder="Ex: 84000"
+                                disabled={isSubmitting}
                             />
                         </div>
                         <div className="space-y-2">
@@ -173,6 +181,7 @@ export function VenueFormDialog({
                                 value={formData.capacity || ''}
                                 onChange={(e) => setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
                                 placeholder="Ex: 500"
+                                disabled={isSubmitting}
                             />
                         </div>
                     </div>
@@ -182,33 +191,36 @@ export function VenueFormDialog({
                         <Label htmlFor="description">Description</Label>
                         <Textarea
                             id="description"
-                            value={formData.description}
+                            value={formData.description || ''}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             placeholder="Description du lieu..."
                             rows={3}
+                            disabled={isSubmitting}
                         />
                     </div>
 
                     {/* Contact */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="contactEmail">Email de contact</Label>
+                            <Label htmlFor="contact_email">Email de contact</Label>
                             <Input
-                                id="contactEmail"
+                                id="contact_email"
                                 type="email"
-                                value={formData.contactEmail}
-                                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                                value={formData.contact_email || ''}
+                                onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
                                 placeholder="contact@theatre.fr"
+                                disabled={isSubmitting}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="contactPhone">Téléphone</Label>
+                            <Label htmlFor="contact_phone">Téléphone</Label>
                             <Input
-                                id="contactPhone"
+                                id="contact_phone"
                                 type="tel"
-                                value={formData.contactPhone}
-                                onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                value={formData.contact_phone || ''}
+                                onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
                                 placeholder="01 23 45 67 89"
+                                disabled={isSubmitting}
                             />
                         </div>
                     </div>
@@ -224,6 +236,7 @@ export function VenueFormDialog({
                                 value={formData.latitude || ''}
                                 onChange={(e) => setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined })}
                                 placeholder="Ex: 43.9493"
+                                disabled={isSubmitting}
                             />
                         </div>
                         <div className="space-y-2">
@@ -235,6 +248,7 @@ export function VenueFormDialog({
                                 value={formData.longitude || ''}
                                 onChange={(e) => setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined })}
                                 placeholder="Ex: 4.8055"
+                                disabled={isSubmitting}
                             />
                         </div>
                     </div>
@@ -244,20 +258,22 @@ export function VenueFormDialog({
                         <Label htmlFor="transports">Accès transports</Label>
                         <Input
                             id="transports"
-                            value={formData.transports}
+                            value={formData.transports || ''}
                             onChange={(e) => setFormData({ ...formData, transports: e.target.value })}
                             placeholder="Ex: Métro ligne 1, Bus 42"
+                            disabled={isSubmitting}
                         />
                     </div>
 
                     <div className="flex flex-wrap gap-6">
                         <div className="flex items-center space-x-2">
                             <Checkbox
-                                id="pmrAccessible"
-                                checked={formData.pmrAccessible}
-                                onCheckedChange={(checked) => setFormData({ ...formData, pmrAccessible: checked === true })}
+                                id="pmr_accessible"
+                                checked={formData.pmr_accessible}
+                                onCheckedChange={(checked) => setFormData({ ...formData, pmr_accessible: checked === true })}
+                                disabled={isSubmitting}
                             />
-                            <Label htmlFor="pmrAccessible" className="font-normal cursor-pointer">
+                            <Label htmlFor="pmr_accessible" className="font-normal cursor-pointer">
                                 Accessible PMR
                             </Label>
                         </div>
@@ -266,6 +282,7 @@ export function VenueFormDialog({
                                 id="parking"
                                 checked={formData.parking}
                                 onCheckedChange={(checked) => setFormData({ ...formData, parking: checked === true })}
+                                disabled={isSubmitting}
                             />
                             <Label htmlFor="parking" className="font-normal cursor-pointer">
                                 Parking disponible
@@ -275,15 +292,20 @@ export function VenueFormDialog({
                 </div>
 
                 <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">
+                    <Button 
+                        variant="outline" 
+                        onClick={handleClose} 
+                        className="w-full sm:w-auto"
+                        disabled={isSubmitting}
+                    >
                         Annuler
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={!isValid}
+                        disabled={!isValid || isSubmitting}
                         className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                     >
-                        {editingVenue ? 'Modifier' : 'Créer'}
+                        {isSubmitting ? 'Enregistrement...' : editingVenue ? 'Modifier' : 'Créer'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -27,6 +27,8 @@ export interface DeleteConfirmDialogProps {
   confirmText?: string;
   /** Texte du bouton d'annulation */
   cancelText?: string;
+  /** Désactive le bouton de confirmation (ex: si élément utilisé ailleurs) */
+  confirmDisabled?: boolean;
 }
 
 /**
@@ -54,6 +56,15 @@ export interface DeleteConfirmDialogProps {
  *     </div>
  *   }
  * />
+ * 
+ * // Exemple avec confirmation désactivée (élément utilisé)
+ * <DeleteConfirmDialog
+ *   open={venueToDelete !== null}
+ *   onOpenChange={(open) => !open && setVenueToDelete(null)}
+ *   onConfirm={handleConfirmDelete}
+ *   description="Ce lieu est utilisé par 5 représentations."
+ *   confirmDisabled={true}
+ * />
  * ```
  */
 export function DeleteConfirmDialog({
@@ -64,6 +75,7 @@ export function DeleteConfirmDialog({
   description,
   confirmText = 'Supprimer',
   cancelText = 'Annuler',
+  confirmDisabled = false,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -81,7 +93,8 @@ export function DeleteConfirmDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90"
+            disabled={confirmDisabled}
+            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {confirmText}
           </AlertDialogAction>
