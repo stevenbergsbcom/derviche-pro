@@ -23,16 +23,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+// Composant admin réutilisable pour la suppression
+import { DeleteConfirmDialog } from '@/components/admin';
 import {
     Table,
     TableBody,
@@ -1162,56 +1154,43 @@ export default function AdminRepresentationsPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Modale suppression */}
-            <AlertDialog
+            {/* Modale suppression - utilise le composant réutilisable */}
+            <DeleteConfirmDialog
                 open={!!representationToDelete}
                 onOpenChange={(open) => !open && setRepresentationToDelete(null)}
-            >
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Supprimer cette représentation ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            {representationToDelete && representationToDelete.booked > 0 ? (
-                                <div className="space-y-2 mt-2">
-                                    <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
-                                        <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                                        <div className="text-sm">
-                                            <p className="font-medium text-orange-900">
-                                                Attention : {representationToDelete.booked} place(s) déjà réservée(s)
-                                            </p>
-                                            <p className="text-orange-700 mt-1">
-                                                La suppression de cette représentation affectera les réservations existantes.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm">
-                                        Êtes-vous sûr de vouloir supprimer la représentation du{' '}
-                                        <strong>{formatDate(representationToDelete.date)}</strong> à{' '}
-                                        <strong>{representationToDelete.time}</strong> ? Cette action est irréversible.
+                onConfirm={handleConfirmDelete}
+                title="Supprimer cette représentation ?"
+                description={
+                    representationToDelete && representationToDelete.booked > 0 ? (
+                        <div className="space-y-2 mt-2">
+                            <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                                <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                                <div className="text-sm">
+                                    <p className="font-medium text-orange-900">
+                                        Attention : {representationToDelete.booked} place(s) déjà réservée(s)
+                                    </p>
+                                    <p className="text-orange-700 mt-1">
+                                        La suppression de cette représentation affectera les réservations existantes.
                                     </p>
                                 </div>
-                            ) : (
-                                <p>
-                                    Êtes-vous sûr de vouloir supprimer la représentation du{' '}
-                                    <strong>
-                                        {representationToDelete && formatDate(representationToDelete.date)}
-                                    </strong>{' '}
-                                    à <strong>{representationToDelete?.time}</strong> ? Cette action est irréversible.
-                                </p>
-                            )}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleConfirmDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                            Supprimer
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                            </div>
+                            <p className="text-sm">
+                                Êtes-vous sûr de vouloir supprimer la représentation du{' '}
+                                <strong>{formatDate(representationToDelete.date)}</strong> à{' '}
+                                <strong>{representationToDelete.time}</strong> ? Cette action est irréversible.
+                            </p>
+                        </div>
+                    ) : (
+                        <span>
+                            Êtes-vous sûr de vouloir supprimer la représentation du{' '}
+                            <strong>
+                                {representationToDelete && formatDate(representationToDelete.date)}
+                            </strong>{' '}
+                            à <strong>{representationToDelete?.time}</strong> ? Cette action est irréversible.
+                        </span>
+                    )
+                }
+            />
 
             {/* Modale génération de série */}
             <Dialog open={isGenerateSeriesOpen} onOpenChange={(open) => !open && handleCloseGenerateSeries()}>

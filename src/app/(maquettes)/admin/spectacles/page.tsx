@@ -23,16 +23,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
     Table,
     TableBody,
     TableCell,
@@ -41,7 +31,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, Search, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight, RotateCcw } from 'lucide-react';
+import { Pencil, Trash2, Eye, Settings, Upload, X, Maximize2, Minimize2, FolderOpen, Video, Film, Clock, Calendar, Users, User, Copy, Check, LayoutGrid, LayoutList, ArrowRight, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
@@ -58,6 +48,14 @@ import {
     type MockCompany,
 } from '@/lib/mock-data';
 import type { ShowStatus } from '@/types/database';
+
+// Composants admin réutilisables
+import {
+    AdminPageHeader,
+    SearchInput,
+    StatusBadge,
+    DeleteConfirmDialog,
+} from '@/components/admin';
 
 // Fonction slugify
 function slugify(text: string): string {
@@ -451,20 +449,6 @@ function AdminSpectaclesContent() {
         }
     };
 
-    // Obtenir le badge de statut
-    const getStatusBadge = (status: ShowStatus) => {
-        switch (status) {
-            case 'published':
-                return <Badge className="bg-green-500/10 text-green-700 border-green-500/20">Disponible</Badge>;
-            case 'draft':
-                return <Badge className="bg-orange-500/10 text-orange-700 border-orange-500/20">Bientôt</Badge>;
-            case 'archived':
-                return <Badge className="bg-red-500/10 text-red-700 border-red-500/20">Terminé</Badge>;
-            default:
-                return null;
-        }
-    };
-
     // Générer l'URL de la page spectacle
     const getShowUrl = (slug: string) => {
         // En production, utiliser window.location.origin
@@ -497,19 +481,12 @@ function AdminSpectaclesContent() {
 
     return (
         <div className="space-y-6">
-            {/* Header avec titre et bouton */}
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-derviche-dark">
-                    Gestion des Spectacles
-                </h1>
-                <Button
-                    className="bg-derviche hover:bg-derviche-light text-white w-full lg:w-auto"
-                    onClick={handleCreate}
-                >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter un spectacle
-                </Button>
-            </div>
+            {/* Header avec titre et bouton - utilise le composant réutilisable */}
+            <AdminPageHeader
+                title="Gestion des Spectacles"
+                actionLabel="Ajouter un spectacle"
+                onAction={handleCreate}
+            />
 
             {/* Compteur de résultats et bouton réinitialiser */}
             <div className="flex items-center justify-between">
@@ -532,16 +509,12 @@ function AdminSpectaclesContent() {
 
             {/* Barre de recherche + Toggle vue */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="relative w-full lg:max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                        type="text"
-                        placeholder="Rechercher un spectacle..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                    />
-                </div>
+                {/* Utilise le composant SearchInput réutilisable */}
+                <SearchInput
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Rechercher un spectacle..."
+                />
 
                 {/* Toggle vue - Desktop uniquement */}
                 <div className="hidden lg:flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
@@ -610,7 +583,10 @@ function AdminSpectaclesContent() {
                                             {show.representationsCount} repr.
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{getStatusBadge(show.status)}</TableCell>
+                                    <TableCell>
+                                        {/* Utilise le composant StatusBadge réutilisable */}
+                                        <StatusBadge status={show.status} />
+                                    </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <Button
@@ -1575,7 +1551,8 @@ function AdminSpectaclesContent() {
                                     {cat}
                                 </Badge>
                             ))}
-                            {getStatusBadge(viewingShow?.status || 'published')}
+                            {/* Utilise le composant StatusBadge réutilisable */}
+                            <StatusBadge status={viewingShow?.status || 'published'} />
                         </div>
 
                         {/* Slug avec bouton copier */}
@@ -1852,26 +1829,15 @@ function AdminSpectaclesContent() {
                 </DialogContent>
             </Dialog>
 
-            {/* Modale de confirmation de suppression */}
-            <AlertDialog open={showToDelete !== null} onOpenChange={(open) => !open && setShowToDelete(null)}>
-                <AlertDialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Supprimer ce spectacle ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Êtes-vous sûr de vouloir supprimer le spectacle « {showToDelete?.title} » ? Cette action est irréversible.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-                        <AlertDialogCancel className="w-full sm:w-auto">Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleConfirmDelete}
-                            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90"
-                        >
-                            Confirmer
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Modale de confirmation de suppression - utilise le composant réutilisable */}
+            <DeleteConfirmDialog
+                open={showToDelete !== null}
+                onOpenChange={(open) => !open && setShowToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Supprimer ce spectacle ?"
+                description={`Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ? Cette action est irréversible.`}
+                confirmText="Confirmer"
+            />
         </div>
     );
 }
