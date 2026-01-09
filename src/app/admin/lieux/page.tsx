@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -10,13 +10,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Plus, Pencil, Trash2, Eye } from 'lucide-react';
+import { Pencil, Trash2, Eye, AlertCircle, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-    mockVenues,
-    generateMockId,
-    type MockVenue,
-} from '@/lib/mock-data';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import type { VenueRow, VenueInsert } from '@/types/database';
+
+// Hook Supabase
+import { useVenues } from '@/hooks/useVenues';
 
 // Composants admin réutilisables
 import {
@@ -32,46 +32,37 @@ import {
     type VenueFormData,
 } from '@/components/admin/lieux';
 
+// Utilitaire de recherche
+import { searchMatch } from '@/lib/utils';
+
 export default function AdminLieuxPage() {
-    // État pour éviter les erreurs d'hydratation SSR/Client
-    const [isMounted, setIsMounted] = useState(false);
+    // Hook Supabase pour les données
+    const { venues, isLoading, error, refresh, create, update, remove, checkUsage } = useVenues();
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    // Données
-    const [venues, setVenues] = useState<MockVenue[]>(mockVenues);
+    // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCheckingUsage, setIsCheckingUsage] = useState(false);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
-    const [editingVenue, setEditingVenue] = useState<MockVenue | null>(null);
-    const [venueToDelete, setVenueToDelete] = useState<MockVenue | null>(null);
-    const [viewingVenue, setViewingVenue] = useState<MockVenue | null>(null);
+    const [editingVenue, setEditingVenue] = useState<VenueRow | null>(null);
+    const [venueToDelete, setVenueToDelete] = useState<VenueRow | null>(null);
+    const [viewingVenue, setViewingVenue] = useState<VenueRow | null>(null);
+    const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
 
     // Filtrer les lieux selon la recherche
     const filteredVenues = useMemo(() => {
         if (!searchQuery.trim()) {
             return venues;
         }
-        const query = searchQuery.toLowerCase();
         return venues.filter(
             (venue) =>
-                venue.name.toLowerCase().includes(query) ||
-                venue.city.toLowerCase().includes(query) ||
-                (venue.postalCode?.toLowerCase().includes(query) ?? false)
+                searchMatch(venue.name, searchQuery) ||
+                searchMatch(venue.city, searchQuery) ||
+                searchMatch(venue.postal_code || '', searchQuery)
         );
     }, [searchQuery, venues]);
-
-    // Attendre que le composant soit monté
-    if (!isMounted) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-pulse text-muted-foreground">Chargement...</div>
-            </div>
-        );
-    }
 
     // === HANDLERS ===
 
@@ -80,23 +71,43 @@ export default function AdminLieuxPage() {
         setIsFormDialogOpen(true);
     };
 
-    const handleEdit = (venue: MockVenue) => {
+    const handleEdit = (venue: VenueRow) => {
         setEditingVenue(venue);
         setIsFormDialogOpen(true);
     };
 
-    const handleView = (venue: MockVenue) => {
+    const handleView = (venue: VenueRow) => {
         setViewingVenue(venue);
     };
 
-    const handleDeleteClick = (venue: MockVenue) => {
+    const handleDeleteClick = async (venue: VenueRow) => {
+        // Afficher le dialog avec un état de chargement pendant la vérification
+        setIsCheckingUsage(true);
         setVenueToDelete(venue);
+        setDeleteWarning(null);
+        
+        // Vérifier si le lieu est utilisé
+        const { used, count } = await checkUsage(venue.id);
+        
+        if (used) {
+            setDeleteWarning(`Ce lieu est utilisé par ${count} représentation(s). Supprimez d'abord les représentations associées.`);
+        }
+        
+        setIsCheckingUsage(false);
     };
 
-    const handleConfirmDelete = () => {
-        if (venueToDelete) {
-            setVenues((prev) => prev.filter((v) => v.id !== venueToDelete.id));
-            setVenueToDelete(null);
+    const handleConfirmDelete = async () => {
+        if (venueToDelete && !deleteWarning) {
+            setIsSubmitting(true);
+            const result = await remove(venueToDelete.id);
+            setIsSubmitting(false);
+            
+            if (result.success) {
+                setVenueToDelete(null);
+            } else {
+                // Afficher l'erreur (on pourrait ajouter un toast ici)
+                console.error('Erreur suppression:', result.error);
+            }
         }
     };
 
@@ -108,27 +119,70 @@ export default function AdminLieuxPage() {
         }
     };
 
-    const handleViewToDelete = () => {
+    const handleViewToDelete = async () => {
         if (viewingVenue) {
             const venueToRemove = viewingVenue;
             setViewingVenue(null);
-            handleDeleteClick(venueToRemove);
+            await handleDeleteClick(venueToRemove);
         }
     };
 
-    const handleFormSubmit = (formData: VenueFormData, isEditing: boolean) => {
+    const handleFormSubmit = async (formData: VenueFormData, isEditing: boolean) => {
+        setIsSubmitting(true);
+
         if (isEditing && editingVenue) {
-            setVenues((prev) =>
-                prev.map((v) =>
-                    v.id === editingVenue.id ? { ...v, ...formData } : v
-                )
-            );
+            const result = await update(editingVenue.id, formData);
+            if (result.success) {
+                setIsFormDialogOpen(false);
+                setEditingVenue(null);
+            } else {
+                console.error('Erreur mise à jour:', result.error);
+            }
         } else {
-            const newId = generateMockId('venue');
-            setVenues((prev) => [...prev, { id: newId, ...formData }]);
+            const result = await create(formData as VenueInsert);
+            if (result.success) {
+                setIsFormDialogOpen(false);
+            } else {
+                console.error('Erreur création:', result.error);
+            }
         }
-        setEditingVenue(null);
+
+        setIsSubmitting(false);
     };
+
+    // État de chargement initial
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span>Chargement des lieux...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // Erreur de chargement
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <AdminPageHeader
+                    title="Gestion des Lieux"
+                    actionLabel="Ajouter un lieu"
+                    onAction={handleCreate}
+                />
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                        Erreur lors du chargement des lieux : {error}
+                        <Button variant="link" onClick={refresh} className="ml-2">
+                            Réessayer
+                        </Button>
+                    </AlertDescription>
+                </Alert>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -168,7 +222,7 @@ export default function AdminLieuxPage() {
                         {filteredVenues.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                    Aucun lieu trouvé
+                                    {searchQuery ? 'Aucun lieu trouvé' : 'Aucun lieu enregistré'}
                                 </TableCell>
                             </TableRow>
                         ) : (
@@ -183,7 +237,7 @@ export default function AdminLieuxPage() {
                                         </button>
                                     </TableCell>
                                     <TableCell>{venue.city}</TableCell>
-                                    <TableCell>{venue.postalCode || '-'}</TableCell>
+                                    <TableCell>{venue.postal_code || '-'}</TableCell>
                                     <TableCell>{venue.capacity ? `${venue.capacity} places` : '-'}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -228,7 +282,7 @@ export default function AdminLieuxPage() {
                 {filteredVenues.length === 0 ? (
                     <Card>
                         <CardContent className="py-8 text-center text-muted-foreground">
-                            Aucun lieu trouvé
+                            {searchQuery ? 'Aucun lieu trouvé' : 'Aucun lieu enregistré'}
                         </CardContent>
                     </Card>
                 ) : (
@@ -245,7 +299,7 @@ export default function AdminLieuxPage() {
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
                                             {venue.city}
-                                            {venue.postalCode && ` (${venue.postalCode})`}
+                                            {venue.postal_code && ` (${venue.postal_code})`}
                                         </p>
                                     </div>
                                     {venue.capacity && (
@@ -286,6 +340,7 @@ export default function AdminLieuxPage() {
                 onOpenChange={setIsFormDialogOpen}
                 editingVenue={editingVenue}
                 onSubmit={handleFormSubmit}
+                isSubmitting={isSubmitting}
             />
 
             <VenueViewDialog
@@ -297,10 +352,21 @@ export default function AdminLieuxPage() {
 
             <DeleteConfirmDialog
                 open={!!venueToDelete}
-                onOpenChange={(open) => !open && setVenueToDelete(null)}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setVenueToDelete(null);
+                        setDeleteWarning(null);
+                    }
+                }}
                 onConfirm={handleConfirmDelete}
                 title="Supprimer ce lieu ?"
-                description={`Êtes-vous sûr de vouloir supprimer le lieu « ${venueToDelete?.name} » ? Cette action est irréversible.`}
+                description={
+                    deleteWarning 
+                        ? deleteWarning 
+                        : `Êtes-vous sûr de vouloir supprimer le lieu « ${venueToDelete?.name} » ? Cette action est irréversible.`
+                }
+                confirmDisabled={!!deleteWarning || isCheckingUsage}
+                isSubmitting={isSubmitting || isCheckingUsage}
             />
         </div>
     );

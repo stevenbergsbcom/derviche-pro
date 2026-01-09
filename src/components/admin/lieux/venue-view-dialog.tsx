@@ -11,11 +11,11 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Mail, Phone, Car, Accessibility, Train } from 'lucide-react';
-import type { MockVenue } from '@/lib/mock-data';
+import type { VenueRow } from '@/types/database';
 
 export interface VenueViewDialogProps {
     /** Lieu à afficher (null = modale fermée) */
-    venue: MockVenue | null;
+    venue: VenueRow | null;
     /** Callback pour fermer la modale */
     onClose: () => void;
     /** Callback pour passer en mode édition */
@@ -43,7 +43,7 @@ export function VenueViewDialog({
                     <DialogDescription className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
                         {venue.city}
-                        {venue.postalCode && ` (${venue.postalCode})`}
+                        {venue.postal_code && ` (${venue.postal_code})`}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -53,7 +53,7 @@ export function VenueViewDialog({
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-1">Adresse</h4>
                             <p>{venue.address}</p>
-                            <p>{venue.postalCode} {venue.city}</p>
+                            <p>{venue.postal_code} {venue.city}</p>
                         </div>
                     )}
 
@@ -74,23 +74,23 @@ export function VenueViewDialog({
                     )}
 
                     {/* Contact */}
-                    {(venue.contactEmail || venue.contactPhone) && (
+                    {(venue.contact_email || venue.contact_phone) && (
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-2">Contact</h4>
                             <div className="space-y-1">
-                                {venue.contactEmail && (
+                                {venue.contact_email && (
                                     <p className="flex items-center gap-2 text-sm">
                                         <Mail className="w-4 h-4 text-muted-foreground" />
-                                        <a href={`mailto:${venue.contactEmail}`} className="text-derviche hover:underline">
-                                            {venue.contactEmail}
+                                        <a href={`mailto:${venue.contact_email}`} className="text-derviche hover:underline">
+                                            {venue.contact_email}
                                         </a>
                                     </p>
                                 )}
-                                {venue.contactPhone && (
+                                {venue.contact_phone && (
                                     <p className="flex items-center gap-2 text-sm">
                                         <Phone className="w-4 h-4 text-muted-foreground" />
-                                        <a href={`tel:${venue.contactPhone}`} className="text-derviche hover:underline">
-                                            {venue.contactPhone}
+                                        <a href={`tel:${venue.contact_phone}`} className="text-derviche hover:underline">
+                                            {venue.contact_phone}
                                         </a>
                                     </p>
                                 )}
@@ -113,7 +113,7 @@ export function VenueViewDialog({
                     <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2">Services</h4>
                         <div className="flex flex-wrap gap-2">
-                            {venue.pmrAccessible && (
+                            {venue.pmr_accessible && (
                                 <Badge variant="outline" className="flex items-center gap-1">
                                     <Accessibility className="w-3 h-3" />
                                     Accessible PMR
@@ -125,7 +125,7 @@ export function VenueViewDialog({
                                     Parking
                                 </Badge>
                             )}
-                            {!venue.pmrAccessible && !venue.parking && (
+                            {!venue.pmr_accessible && !venue.parking && (
                                 <span className="text-sm text-muted-foreground italic">
                                     Aucun service renseigné
                                 </span>
@@ -134,7 +134,7 @@ export function VenueViewDialog({
                     </div>
 
                     {/* Coordonnées GPS */}
-                    {(venue.latitude && venue.longitude) && (
+                    {(venue.latitude !== null && venue.longitude !== null) && (
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-1">Coordonnées GPS</h4>
                             <p className="text-sm font-mono">

@@ -27,6 +27,10 @@ export interface DeleteConfirmDialogProps {
   confirmText?: string;
   /** Texte du bouton d'annulation */
   cancelText?: string;
+  /** Désactive le bouton de confirmation (ex: si élément utilisé ailleurs) */
+  confirmDisabled?: boolean;
+  /** Indique si une opération est en cours (désactive le bouton) */
+  isSubmitting?: boolean;
 }
 
 /**
@@ -54,6 +58,15 @@ export interface DeleteConfirmDialogProps {
  *     </div>
  *   }
  * />
+ * 
+ * // Exemple avec confirmation désactivée (élément utilisé)
+ * <DeleteConfirmDialog
+ *   open={venueToDelete !== null}
+ *   onOpenChange={(open) => !open && setVenueToDelete(null)}
+ *   onConfirm={handleConfirmDelete}
+ *   description="Ce lieu est utilisé par 5 représentations."
+ *   confirmDisabled={true}
+ * />
  * ```
  */
 export function DeleteConfirmDialog({
@@ -64,6 +77,8 @@ export function DeleteConfirmDialog({
   description,
   confirmText = 'Supprimer',
   cancelText = 'Annuler',
+  confirmDisabled = false,
+  isSubmitting = false,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -76,14 +91,15 @@ export function DeleteConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel className="w-full sm:w-auto">
+          <AlertDialogCancel className="w-full sm:w-auto" disabled={isSubmitting}>
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90"
+            disabled={confirmDisabled || isSubmitting}
+            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {confirmText}
+            {isSubmitting ? 'Suppression...' : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
