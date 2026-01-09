@@ -10,12 +10,13 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Phone, User, Theater, ArrowRight } from 'lucide-react';
-import type { MockCompany } from '@/lib/mock-data';
+import { MapPin, Mail, Phone, User, Theater, ArrowRight, Globe } from 'lucide-react';
+import type { CompanyRow } from '@/types/database';
 
+// La vue accepte CompanyRow ou tout type qui l'étend (comme CompanyWithShowsCount)
 export interface CompanyViewDialogProps {
     /** Compagnie à afficher (null = modale fermée) */
-    company: MockCompany | null;
+    company: (CompanyRow & { shows_count?: number }) | null;
     /** Callback pour fermer la modale */
     onClose: () => void;
     /** Callback pour passer en mode édition */
@@ -88,33 +89,51 @@ export function CompanyViewDialog({
                         </div>
                     )}
 
+                    {/* Site web */}
+                    {company.website && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Site web</h4>
+                            <p className="flex items-center gap-2 text-sm">
+                                <Globe className="w-4 h-4 text-muted-foreground" />
+                                <a 
+                                    href={company.website} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-derviche hover:underline"
+                                >
+                                    {company.website}
+                                </a>
+                            </p>
+                        </div>
+                    )}
+
                     {/* Contact */}
                     <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2">Contact</h4>
                         <div className="space-y-2">
-                            {company.contactName && (
+                            {company.contact_name && (
                                 <p className="flex items-center gap-2 text-sm">
                                     <User className="w-4 h-4 text-muted-foreground" />
-                                    {company.contactName}
+                                    {company.contact_name}
                                 </p>
                             )}
-                            {company.contactEmail && (
+                            {company.contact_email && (
                                 <p className="flex items-center gap-2 text-sm">
                                     <Mail className="w-4 h-4 text-muted-foreground" />
-                                    <a href={`mailto:${company.contactEmail}`} className="text-derviche hover:underline">
-                                        {company.contactEmail}
+                                    <a href={`mailto:${company.contact_email}`} className="text-derviche hover:underline">
+                                        {company.contact_email}
                                     </a>
                                 </p>
                             )}
-                            {company.contactPhone && (
+                            {company.contact_phone && (
                                 <p className="flex items-center gap-2 text-sm">
                                     <Phone className="w-4 h-4 text-muted-foreground" />
-                                    <a href={`tel:${company.contactPhone}`} className="text-derviche hover:underline">
-                                        {company.contactPhone}
+                                    <a href={`tel:${company.contact_phone}`} className="text-derviche hover:underline">
+                                        {company.contact_phone}
                                     </a>
                                 </p>
                             )}
-                            {!company.contactName && !company.contactEmail && !company.contactPhone && (
+                            {!company.contact_name && !company.contact_email && !company.contact_phone && (
                                 <span className="text-sm text-muted-foreground italic">
                                     Aucun contact renseigné
                                 </span>
