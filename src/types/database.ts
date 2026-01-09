@@ -176,9 +176,9 @@ export interface UserRoleInsert {
 export interface VenueRow {
   id: string;
   name: string;
-  address: string;
+  address: string | null;
   city: string;
-  postal_code: string;
+  postal_code: string | null;
   country: string;
   latitude: number | null;
   longitude: number | null;
@@ -200,9 +200,9 @@ export interface VenueRow {
 /** Données pour créer une nouvelle salle */
 export interface VenueInsert {
   name: string;
-  address: string;
+  address?: string | null;
   city: string;
-  postal_code: string;
+  postal_code?: string | null;
   country?: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -220,9 +220,9 @@ export interface VenueInsert {
 /** Données pour mettre à jour une salle */
 export interface VenueUpdate {
   name?: string;
-  address?: string;
+  address?: string | null;
   city?: string;
-  postal_code?: string;
+  postal_code?: string | null;
   country?: string;
   latitude?: number | null;
   longitude?: number | null;

@@ -12,7 +12,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2, Eye, Theater, ArrowRight } from 'lucide-react';
+import { Pencil, Trash2, Eye, Theater } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     mockCompanies,

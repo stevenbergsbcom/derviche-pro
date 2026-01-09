@@ -29,6 +29,8 @@ export interface DeleteConfirmDialogProps {
   cancelText?: string;
   /** Désactive le bouton de confirmation (ex: si élément utilisé ailleurs) */
   confirmDisabled?: boolean;
+  /** Indique si une opération est en cours (désactive le bouton) */
+  isSubmitting?: boolean;
 }
 
 /**
@@ -76,6 +78,7 @@ export function DeleteConfirmDialog({
   confirmText = 'Supprimer',
   cancelText = 'Annuler',
   confirmDisabled = false,
+  isSubmitting = false,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -88,15 +91,15 @@ export function DeleteConfirmDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-          <AlertDialogCancel className="w-full sm:w-auto">
+          <AlertDialogCancel className="w-full sm:w-auto" disabled={isSubmitting}>
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            disabled={confirmDisabled}
+            disabled={confirmDisabled || isSubmitting}
             className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {confirmText}
+            {isSubmitting ? 'Suppression...' : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

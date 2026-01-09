@@ -42,6 +42,7 @@ export default function AdminLieuxPage() {
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCheckingUsage, setIsCheckingUsage] = useState(false);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
@@ -80,14 +81,19 @@ export default function AdminLieuxPage() {
     };
 
     const handleDeleteClick = async (venue: VenueRow) => {
+        // Afficher le dialog avec un état de chargement pendant la vérification
+        setIsCheckingUsage(true);
+        setVenueToDelete(venue);
+        setDeleteWarning(null);
+        
         // Vérifier si le lieu est utilisé
         const { used, count } = await checkUsage(venue.id);
+        
         if (used) {
             setDeleteWarning(`Ce lieu est utilisé par ${count} représentation(s). Supprimez d'abord les représentations associées.`);
-        } else {
-            setDeleteWarning(null);
         }
-        setVenueToDelete(venue);
+        
+        setIsCheckingUsage(false);
     };
 
     const handleConfirmDelete = async () => {
@@ -113,11 +119,11 @@ export default function AdminLieuxPage() {
         }
     };
 
-    const handleViewToDelete = () => {
+    const handleViewToDelete = async () => {
         if (viewingVenue) {
             const venueToRemove = viewingVenue;
             setViewingVenue(null);
-            handleDeleteClick(venueToRemove);
+            await handleDeleteClick(venueToRemove);
         }
     };
 
@@ -359,7 +365,8 @@ export default function AdminLieuxPage() {
                         ? deleteWarning 
                         : `Êtes-vous sûr de vouloir supprimer le lieu « ${venueToDelete?.name} » ? Cette action est irréversible.`
                 }
-                confirmDisabled={!!deleteWarning}
+                confirmDisabled={!!deleteWarning || isCheckingUsage}
+                isSubmitting={isSubmitting || isCheckingUsage}
             />
         </div>
     );

@@ -1,6 +1,6 @@
 import { createBrowserClient } from '@supabase/ssr';
 import { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env';
-import type { Database } from '@/types/database';
+import type { Database } from '@/types/supabase';
 
 // Singleton pour éviter de recréer le client à chaque appel
 let supabaseClient: ReturnType<typeof createBrowserClient<Database>> | null = null;

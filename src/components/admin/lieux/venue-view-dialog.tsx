@@ -134,7 +134,7 @@ export function VenueViewDialog({
                     </div>
 
                     {/* Coordonnées GPS */}
-                    {(venue.latitude && venue.longitude) && (
+                    {(venue.latitude !== null && venue.longitude !== null) && (
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-1">Coordonnées GPS</h4>
                             <p className="text-sm font-mono">

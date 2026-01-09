@@ -90,9 +90,13 @@ export function VenueFormDialog({
         }
     }, [open, editingVenue]);
 
-    const handleClose = () => {
-        onOpenChange(false);
+    const resetForm = () => {
         setFormData(defaultFormData);
+    };
+
+    const handleClose = () => {
+        resetForm();
+        onOpenChange(false);
     };
 
     const handleSubmit = () => {
@@ -105,7 +109,10 @@ export function VenueFormDialog({
     const isValid = formData.name.trim() && formData.city.trim();
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen) resetForm();
+            onOpenChange(isOpen);
+        }}>
             <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle>
@@ -154,7 +161,7 @@ export function VenueFormDialog({
                         <Label htmlFor="address">Adresse</Label>
                         <Input
                             id="address"
-                            value={formData.address}
+                            value={formData.address ?? ''}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             placeholder="Ex: 12 rue du Théâtre"
                             disabled={isSubmitting}
@@ -166,7 +173,7 @@ export function VenueFormDialog({
                             <Label htmlFor="postal_code">Code postal</Label>
                             <Input
                                 id="postal_code"
-                                value={formData.postal_code}
+                                value={formData.postal_code ?? ''}
                                 onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                                 placeholder="Ex: 84000"
                                 disabled={isSubmitting}
@@ -178,8 +185,8 @@ export function VenueFormDialog({
                                 id="capacity"
                                 type="number"
                                 min="1"
-                                value={formData.capacity || ''}
-                                onChange={(e) => setFormData({ ...formData, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+                                value={formData.capacity ?? ''}
+                                onChange={(e) => setFormData({ ...formData, capacity: e.target.value !== '' ? parseInt(e.target.value) : undefined })}
                                 placeholder="Ex: 500"
                                 disabled={isSubmitting}
                             />
@@ -233,8 +240,8 @@ export function VenueFormDialog({
                                 id="latitude"
                                 type="number"
                                 step="any"
-                                value={formData.latitude || ''}
-                                onChange={(e) => setFormData({ ...formData, latitude: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                value={formData.latitude ?? ''}
+                                onChange={(e) => setFormData({ ...formData, latitude: e.target.value !== '' ? parseFloat(e.target.value) : undefined })}
                                 placeholder="Ex: 43.9493"
                                 disabled={isSubmitting}
                             />
@@ -245,8 +252,8 @@ export function VenueFormDialog({
                                 id="longitude"
                                 type="number"
                                 step="any"
-                                value={formData.longitude || ''}
-                                onChange={(e) => setFormData({ ...formData, longitude: e.target.value ? parseFloat(e.target.value) : undefined })}
+                                value={formData.longitude ?? ''}
+                                onChange={(e) => setFormData({ ...formData, longitude: e.target.value !== '' ? parseFloat(e.target.value) : undefined })}
                                 placeholder="Ex: 4.8055"
                                 disabled={isSubmitting}
                             />

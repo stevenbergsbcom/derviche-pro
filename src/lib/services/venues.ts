@@ -44,14 +44,14 @@ export async function getVenues(): Promise<VenuesResult> {
       .order('name', { ascending: true });
 
     if (error) {
-      logger.error('Erreur récupération venues:', error);
+      logger.error('Erreur récupération venues', error);
       return { data: [], error: error.message };
     }
 
     return { data: data || [], error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception getVenues:', message);
+    logger.error('Exception getVenues', { message });
     return { data: [], error: message };
   }
 }
@@ -71,14 +71,14 @@ export async function getVenueById(id: string): Promise<VenueResult> {
       .single();
 
     if (error) {
-      logger.error(`Erreur récupération venue ${id}:`, error);
+      logger.error('Erreur récupération venue', { id, error: error.message });
       return { data: null, error: error.message };
     }
 
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception getVenueById:', message);
+    logger.error('Exception getVenueById', { message });
     return { data: null, error: message };
   }
 }
@@ -97,7 +97,7 @@ export async function createVenue(venue: VenueInsert): Promise<VenueResult> {
       .single();
 
     if (error) {
-      logger.error('Erreur création venue:', error);
+      logger.error('Erreur création venue', error);
       return { data: null, error: error.message };
     }
 
@@ -105,7 +105,7 @@ export async function createVenue(venue: VenueInsert): Promise<VenueResult> {
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception createVenue:', message);
+    logger.error('Exception createVenue', { message });
     return { data: null, error: message };
   }
 }
@@ -126,7 +126,7 @@ export async function updateVenue(id: string, venue: VenueUpdate): Promise<Venue
       .single();
 
     if (error) {
-      logger.error(`Erreur mise à jour venue ${id}:`, error);
+      logger.error('Erreur mise à jour venue', { id, error: error.message });
       return { data: null, error: error.message };
     }
 
@@ -134,7 +134,7 @@ export async function updateVenue(id: string, venue: VenueUpdate): Promise<Venue
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception updateVenue:', message);
+    logger.error('Exception updateVenue', { message });
     return { data: null, error: message };
   }
 }
@@ -156,7 +156,7 @@ export async function deleteVenue(id: string): Promise<VenueResult> {
       .single();
 
     if (error) {
-      logger.error(`Erreur suppression venue ${id}:`, error);
+      logger.error('Erreur suppression venue', { id, error: error.message });
       return { data: null, error: error.message };
     }
 
@@ -164,7 +164,7 @@ export async function deleteVenue(id: string): Promise<VenueResult> {
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception deleteVenue:', message);
+    logger.error('Exception deleteVenue', { message });
     return { data: null, error: message };
   }
 }
@@ -183,14 +183,14 @@ export async function isVenueUsed(id: string): Promise<{ used: boolean; count: n
       .eq('venue_id', id);
 
     if (error) {
-      logger.error(`Erreur vérification utilisation venue ${id}:`, error);
+      logger.error('Erreur vérification utilisation venue', { id, error: error.message });
       return { used: false, count: 0, error: error.message };
     }
 
     return { used: (count || 0) > 0, count: count || 0, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception isVenueUsed:', message);
+    logger.error('Exception isVenueUsed', { message });
     return { used: false, count: 0, error: message };
   }
 }

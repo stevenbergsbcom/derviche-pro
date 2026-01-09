@@ -38,7 +38,7 @@ export interface UseVenuesReturn {
   /** Supprimer un lieu */
   remove: (id: string) => Promise<{ success: boolean; error?: string }>;
   /** Vérifier si un lieu est utilisé */
-  checkUsage: (id: string) => Promise<{ used: boolean; count: number }>;
+  checkUsage: (id: string) => Promise<{ used: boolean; count: number; error: string | null }>;
 }
 
 // ============================================
@@ -59,7 +59,7 @@ export function useVenues(): UseVenuesReturn {
 
     if (result.error) {
       setError(result.error);
-      logger.error('useVenues - Erreur chargement:', result.error);
+      logger.error('useVenues - Erreur chargement', { error: result.error });
     } else {
       setVenues(result.data);
     }
@@ -128,7 +128,12 @@ export function useVenues(): UseVenuesReturn {
   // Vérifier si un lieu est utilisé
   const checkUsage = useCallback(async (id: string) => {
     const result = await isVenueUsed(id);
-    return { used: result.used, count: result.count };
+    if (result.error) {
+      // En cas d'erreur, on considère le lieu comme utilisé par sécurité
+      logger.error('Erreur vérification usage venue', { error: result.error });
+      return { used: true, count: 0, error: result.error };
+    }
+    return { used: result.used, count: result.count, error: null };
   }, []);
 
   return {
