@@ -13,19 +13,20 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import Image from 'next/image';
-import { Pencil, Trash2, Eye, Copy, Check, LayoutGrid, LayoutList, Calendar, RotateCcw } from 'lucide-react';
+import { Pencil, Trash2, Eye, Copy, Check, LayoutGrid, LayoutList, Calendar, RotateCcw, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { searchMatch } from '@/lib/utils';
-import {
-    mockShows,
-    mockCompanies,
-    mockCategories,
-    mockTargetAudiences,
-    mockDervisheUsers,
-    generateMockId,
-    type MockShow,
-    type MockCompany,
-} from '@/lib/mock-data';
+
+// Hooks Supabase
+import { useShows } from '@/hooks/useShows';
+import { useCategories } from '@/hooks/useCategories';
+import { useTargetAudiences } from '@/hooks/useTargetAudiences';
+import { useCompanies } from '@/hooks/useCompanies';
+import type { ShowWithRelations } from '@/lib/services/shows';
+import type { ShowStatus, ShowPriceType } from '@/types/database';
+
+// Mock pour les users Derviche (à connecter plus tard)
+import { mockDervisheUsers } from '@/lib/mock-data';
 
 // Composants admin réutilisables
 import {
@@ -42,8 +43,36 @@ import {
     CategoryManagerDialog,
     TargetAudienceManagerDialog,
     CompanyQuickCreateDialog,
-    type SpectacleFormData,
 } from '@/components/admin/spectacles';
+import type { SpectacleFormData } from '@/components/admin/spectacles/spectacle-form-dialog';
+
+// Type pour l'affichage (compatible avec MockShow)
+interface ShowForDisplay {
+    id: string;
+    slug: string;
+    title: string;
+    companyId: string;
+    companyName: string;
+    categories: string[];
+    targetAudienceIds: string[];
+    description?: string;
+    shortDescription: string | null;
+    imageUrl: string | null;
+    duration: number | null;
+    status: ShowStatus;
+    priceType: ShowPriceType;
+    period?: string;
+    dervisheManagerId?: string;
+    dervisheManager?: string;
+    invitationPolicy?: string;
+    maxParticipantsPerBooking?: number;
+    closureDates?: string;
+    representationsCount: number;
+    folderUrl?: string;
+    teaserUrl?: string;
+    captationAvailable: boolean;
+    captationUrl?: string;
+}
 
 // Composant wrapper avec Suspense pour useSearchParams
 export default function AdminSpectaclesPage() {
@@ -65,12 +94,97 @@ function AdminSpectaclesContent() {
     // État pour éviter les erreurs d'hydratation SSR/Client
     const [isMounted, setIsMounted] = useState(false);
 
-    // Données principales
-    const [shows, setShows] = useState<MockShow[]>(mockShows);
-    const [companies, setCompanies] = useState<MockCompany[]>(mockCompanies);
-    const [categories, setCategories] = useState<string[]>(mockCategories);
-    const [targetAudiences, setTargetAudiences] = useState<{ id: string; name: string }[]>(
-        mockTargetAudiences.map(ta => ({ id: ta.id, name: ta.name }))
+    // Hooks Supabase
+    const {
+        shows: rawShows,
+        isLoading: isLoadingShows,
+        error: showsError,
+        create: createShow,
+        update: updateShow,
+        remove: removeShow,
+        checkUsage: checkShowUsage,
+        generateSlug,
+    } = useShows();
+
+    const {
+        categories: rawCategories,
+        isLoading: isLoadingCategories,
+        create: createCategory,
+        remove: removeCategory,
+        checkUsage: checkCategoryUsage,
+    } = useCategories();
+
+    const {
+        targetAudiences: rawTargetAudiences,
+        isLoading: isLoadingTargetAudiences,
+        create: createTargetAudience,
+        remove: removeTargetAudience,
+        checkUsage: checkTargetAudienceUsage,
+    } = useTargetAudiences();
+
+    const {
+        companies: rawCompanies,
+        isLoading: isLoadingCompanies,
+        create: createCompany,
+    } = useCompanies();
+
+    // Convertir les données Supabase vers le format d'affichage
+    const shows: ShowForDisplay[] = useMemo(() => {
+        return rawShows.map((show: ShowWithRelations) => {
+            // Mapper les category_ids vers les noms de catégories
+            const categoryNames = show.category_ids
+                .map(id => rawCategories.find(c => c.id === id)?.name)
+                .filter((name): name is string => name !== undefined);
+
+            return {
+                id: show.id,
+                slug: show.slug,
+                title: show.title,
+                companyId: show.company_id,
+                companyName: show.company_name,
+                categories: categoryNames,
+                targetAudienceIds: show.target_audience_ids,
+                description: show.long_description || undefined,
+                shortDescription: show.short_description,
+                imageUrl: show.image_url,
+                duration: show.duration_minutes,
+                status: show.status as ShowStatus,
+                priceType: show.price_type as ShowPriceType,
+                period: show.period || undefined,
+                dervisheManagerId: show.derviche_manager_id || undefined,
+                invitationPolicy: show.invitation_policy || undefined,
+                maxParticipantsPerBooking: show.max_reservations_per_booking,
+                closureDates: show.closure_dates || undefined,
+                representationsCount: show.representations_count,
+                folderUrl: show.folder_url || undefined,
+                teaserUrl: show.teaser_url || undefined,
+                captationAvailable: show.captation_available,
+                captationUrl: show.captation_url || undefined,
+            };
+        });
+    }, [rawShows, rawCategories]);
+
+    // Convertir les catégories pour SpectacleFormDialog (id + name)
+    const categoryOptions = useMemo(() =>
+        rawCategories.map(c => ({ id: c.id, name: c.name })),
+        [rawCategories]
+    );
+
+    // Convertir les target audiences pour l'UI
+    const targetAudiences = useMemo(() =>
+        rawTargetAudiences.map(ta => ({ id: ta.id, name: ta.name })),
+        [rawTargetAudiences]
+    );
+
+    // Convertir les compagnies pour l'UI
+    const companies = useMemo(() =>
+        rawCompanies.map(c => ({
+            id: c.id,
+            name: c.name,
+            contactEmail: c.contact_email,
+            contactPhone: c.contact_phone,
+        })),
+        [rawCompanies]
     );
 
     // État de recherche
@@ -79,17 +193,26 @@ function AdminSpectaclesContent() {
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
-    const [editingShow, setEditingShow] = useState<MockShow | null>(null);
-    const [viewingShow, setViewingShow] = useState<MockShow | null>(null);
-    const [showToDelete, setShowToDelete] = useState<MockShow | null>(null);
+    const [editingShow, setEditingShow] = useState<ShowForDisplay | null>(null);
+    const [editingShowRaw, setEditingShowRaw] = useState<ShowWithRelations | null>(null); // Pour SpectacleFormDialog
+    const [viewingShow, setViewingShow] = useState<ShowForDisplay | null>(null);
+    const [viewingShowRaw, setViewingShowRaw] = useState<ShowWithRelations | null>(null); // Pour SpectacleViewDialog
+    const [showToDelete, setShowToDelete] = useState<ShowForDisplay | null>(null);
+    const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
     const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
     const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
     const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
     const [newlyCreatedCompanyId, setNewlyCreatedCompanyId] = useState<string | null>(null);
+    
+    // État d'erreur pour les opérations
+    const [operationError, setOperationError] = useState<string | null>(null);
 
     // État pour le feedback de copie
     const [copiedShowId, setCopiedShowId] = useState<string | null>(null);
     const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Ref pour éviter les race conditions lors de la suppression
+    const pendingDeleteCheckRef = useRef<string | null>(null);
 
     // État d'affichage
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -136,6 +259,9 @@ function AdminSpectaclesContent() {
         );
     }, [searchQuery, shows]);
 
+    // Loading global
+    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies;
+
     // Attendre que le composant soit monté
     if (!isMounted) {
         return (
@@ -145,36 +271,85 @@ function AdminSpectaclesContent() {
         );
     }
 
+    // Affichage du chargement
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="animate-pulse text-muted-foreground">Chargement des spectacles...</div>
+            </div>
+        );
+    }
+
+    // Affichage des erreurs
+    if (showsError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <AlertCircle className="w-12 h-12 text-destructive" />
+                <p className="text-destructive">Erreur: {showsError}</p>
+                <Button onClick={() => window.location.reload()}>Réessayer</Button>
+            </div>
+        );
+    }
+
     // === HANDLERS ===
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
         setEditingShow(null);
+        setEditingShowRaw(null);
+        setOperationError(null);
         setIsFormDialogOpen(true);
     };
 
     // Ouvrir la modale en mode édition
-    const handleEdit = (show: MockShow) => {
+    const handleEdit = (show: ShowForDisplay) => {
         setEditingShow(show);
+        // Trouver le show brut correspondant dans rawShows
+        const rawShow = rawShows.find(s => s.id === show.id) || null;
+        setEditingShowRaw(rawShow);
+        setOperationError(null);
         setIsFormDialogOpen(true);
     };
 
-    // Gérer la suppression
-    const handleDeleteClick = (show: MockShow) => {
+    // Gérer la suppression - vérifier l'utilisation
+    const handleDeleteClick = async (show: ShowForDisplay) => {
+        pendingDeleteCheckRef.current = show.id;
+        setDeleteWarning(null);
         setShowToDelete(show);
-    };
 
-    // Confirmer la suppression
-    const handleConfirmDelete = () => {
-        if (showToDelete) {
-            setShows((prev) => prev.filter((s) => s.id !== showToDelete.id));
-            setShowToDelete(null);
+        const usage = await checkShowUsage(show.id);
+        
+        // Vérifier que c'est toujours le même spectacle qu'on veut supprimer
+        if (pendingDeleteCheckRef.current !== show.id) {
+            return;
+        }
+
+        if (usage.used) {
+            setDeleteWarning(
+                `Ce spectacle a ${usage.count} représentation(s) associée(s). La suppression masquera le spectacle mais conservera les données.`
+            );
         }
     };
 
+    // Confirmer la suppression
+    const handleConfirmDelete = async () => {
+        if (!showToDelete) return;
+
+        const result = await removeShow(showToDelete.id);
+        if (result.error) {
+            setOperationError(result.error);
+        }
+        setShowToDelete(null);
+        setDeleteWarning(null);
+        pendingDeleteCheckRef.current = null;
+    };
+
     // Ouvrir la modale de visualisation
-    const handleView = (show: MockShow) => {
+    const handleView = (show: ShowForDisplay) => {
         setViewingShow(show);
+        // Trouver le show brut correspondant dans rawShows
+        const rawShow = rawShows.find(s => s.id === show.id) || null;
+        setViewingShowRaw(rawShow);
     };
 
     // Fermer la modale de visualisation et ouvrir l'édition
@@ -191,84 +366,126 @@ function AdminSpectaclesContent() {
         if (viewingShow) {
             const showToRemove = viewingShow;
             setViewingShow(null);
-            handleDeleteClick(showToRemove);
+            void handleDeleteClick(showToRemove);
         }
     };
 
     // Soumettre le formulaire de spectacle
-    const handleFormSubmit = (formData: SpectacleFormData, isEditing: boolean) => {
+    const handleFormSubmit = async (formData: SpectacleFormData, isEditing: boolean) => {
+        setOperationError(null);
+
+        // Préparer les données pour Supabase
+        const showData = {
+            slug: formData.slug || generateSlug(formData.title),
+            title: formData.title.trim(),
+            company_id: formData.companyId,
+            short_description: formData.shortDescription?.trim() || null,
+            long_description: formData.description?.trim() || null,
+            duration_minutes: formData.duration,
+            image_url: formData.imageUrl,
+            status: formData.status,
+            price_type: formData.priceType,
+            period: formData.period?.trim() || null,
+            derviche_manager_id: formData.dervisheManagerId || null,
+            invitation_policy: formData.invitationPolicy?.trim() || null,
+            max_reservations_per_booking: formData.maxParticipantsPerBooking || 5,
+            closure_dates: formData.closureDates?.trim() || null,
+            folder_url: formData.folderUrl?.trim() || null,
+            teaser_url: formData.teaserUrl?.trim() || null,
+            captation_available: formData.captationAvailable,
+            captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
+        };
+
         if (isEditing && editingShow) {
-            // Édition
-            setShows((prev) =>
-                prev.map((s) =>
-                    s.id === editingShow.id
-                        ? {
-                            ...s,
-                            ...formData,
-                            companyName: companies.find((c) => c.id === formData.companyId)?.name || s.companyName,
-                        }
-                        : s
-                )
-            );
+            const result = await updateShow(editingShow.id, {
+                show: showData,
+                category_ids: formData.categoryIds,
+                target_audience_ids: formData.targetAudienceIds,
+            });
+
+            if (result.error) {
+                setOperationError(result.error);
+                return;
+            }
         } else {
-            // Création
-            const newId = generateMockId('show');
-            const companyName = companies.find((c) => c.id === formData.companyId)?.name || '';
-            setShows((prev) => [
-                ...prev,
-                {
-                    id: newId,
-                    ...formData,
-                    companyName,
-                },
-            ]);
+            const result = await createShow({
+                show: showData,
+                category_ids: formData.categoryIds,
+                target_audience_ids: formData.targetAudienceIds,
+            });
+
+            if (result.error) {
+                setOperationError(result.error);
+                return;
+            }
         }
+
+        setIsFormDialogOpen(false);
         setEditingShow(null);
+        setEditingShowRaw(null);
     };
 
     // Gérer les catégories
-    const handleAddCategory = (category: string) => {
-        if (!categories.includes(category)) {
-            setCategories([...categories, category]);
+    const handleAddCategory = async (categoryName: string) => {
+        const result = await createCategory(categoryName);
+        if (result.error) {
+            alert(`Erreur: ${result.error}`);
         }
     };
 
-    const handleRemoveCategory = (category: string) => {
-        const isUsed = shows.some(show => show.categories.includes(category));
-        if (isUsed) {
-            alert(`Impossible de supprimer "${category}" : cette catégorie est utilisée par un ou plusieurs spectacles.`);
+    // Supprimer une catégorie par ID (pour CategoryManagerDialog)
+    const handleRemoveCategoryById = async (categoryId: string) => {
+        const category = rawCategories.find(c => c.id === categoryId);
+        const categoryName = category?.name || 'cette catégorie';
+
+        const usage = await checkCategoryUsage(categoryId);
+        if (usage.used) {
+            alert(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
             return;
         }
-        setCategories(categories.filter((c) => c !== category));
+
+        const result = await removeCategory(categoryId);
+        if (result.error) {
+            alert(`Erreur: ${result.error}`);
+        }
     };
 
     // Gérer les publics cibles
-    const handleAddTargetAudience = (name: string) => {
-        const newId = generateMockId('audience');
-        setTargetAudiences([...targetAudiences, { id: newId, name }]);
+    const handleAddTargetAudience = async (name: string) => {
+        const result = await createTargetAudience(name);
+        if (result.error) {
+            alert(`Erreur: ${result.error}`);
+        }
     };
 
-    const handleRemoveTargetAudience = (id: string) => {
-        const audienceName = targetAudiences.find(ta => ta.id === id)?.name || '';
-        const isUsed = shows.some(show => show.targetAudienceIds?.includes(id));
-        if (isUsed) {
-            alert(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par un ou plusieurs spectacles.`);
+    const handleRemoveTargetAudience = async (id: string) => {
+        const usage = await checkTargetAudienceUsage(id);
+        const audienceName = rawTargetAudiences.find(ta => ta.id === id)?.name || '';
+        
+        if (usage.used) {
+            alert(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
             return;
         }
-        setTargetAudiences(targetAudiences.filter((ta) => ta.id !== id));
+
+        const result = await removeTargetAudience(id);
+        if (result.error) {
+            alert(`Erreur: ${result.error}`);
+        }
     };
 
     // Gérer la création de compagnie
-    const handleCreateCompany = (data: { name: string; email: string }): string => {
-        const newId = generateMockId('company');
-        const newCompany: MockCompany = {
-            id: newId,
-            name: data.name,
-            contactEmail: data.email,
-            contactPhone: null,
-        };
-        setCompanies((prev) => [...prev, newCompany]);
-        return newId;
+    const handleCreateCompany = async (data: { name: string; email: string }): Promise<string> => {
+        const result = await createCompany({
+            name: data.name.trim(),
+            contact_email: data.email.trim(),
+        });
+
+        if (result.error || !result.data) {
+            alert(`Erreur: ${result.error || 'Erreur inconnue'}`);
+            return '';
+        }
+
+        return result.data.id;
     };
 
     // Auto-sélection de la compagnie nouvellement créée
@@ -282,8 +499,8 @@ function AdminSpectaclesContent() {
         return `${baseUrl}/spectacle/${slug}`;
     };
 
-    // Copier le lien du spectacle
-    const handleCopyLink = async (show: MockShow) => {
+    // Copier le lien du spectacle (accepte tout objet avec id et slug)
+    const handleCopyLink = async (show: { id: string; slug: string }) => {
         const url = getShowUrl(show.slug);
         try {
             await navigator.clipboard.writeText(url);
@@ -313,6 +530,22 @@ function AdminSpectaclesContent() {
                 actionLabel="Ajouter un spectacle"
                 onAction={handleCreate}
             />
+
+            {/* Message d'erreur global */}
+            {operationError && (
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
+                    <p className="text-sm text-destructive">{operationError}</p>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setOperationError(null)}
+                        className="ml-auto"
+                    >
+                        Fermer
+                    </Button>
+                </div>
+            )}
 
             {/* Compteur de résultats et bouton réinitialiser */}
             <div className="flex items-center justify-between">
@@ -417,7 +650,7 @@ function AdminSpectaclesContent() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8"
-                                                onClick={() => handleCopyLink(show)}
+                                                onClick={() => void handleCopyLink(show)}
                                                 title="Copier le lien de réservation"
                                             >
                                                 {copiedShowId === show.id ? (
@@ -449,7 +682,7 @@ function AdminSpectaclesContent() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => handleDeleteClick(show)}
+                                                onClick={() => void handleDeleteClick(show)}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                                 <span className="sr-only">Supprimer</span>
@@ -508,7 +741,7 @@ function AdminSpectaclesContent() {
                                     </Badge>
                                 </div>
                                 <div className="mt-auto flex items-center gap-1 pt-3 border-t">
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleCopyLink(show)} title="Copier le lien">
+                                    <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => void handleCopyLink(show)} title="Copier le lien">
                                         {copiedShowId === show.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                                     </Button>
                                     <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)} title="Voir">
@@ -517,7 +750,7 @@ function AdminSpectaclesContent() {
                                     <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)} title="Modifier">
                                         <Pencil className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteClick(show)} title="Supprimer">
+                                    <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)} title="Supprimer">
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -558,12 +791,12 @@ function AdminSpectaclesContent() {
                                 </Badge>
                             </div>
                             <div className="flex items-center gap-1 pt-3 mt-3 border-t">
-                                <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleCopyLink(show)}>
+                                <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => void handleCopyLink(show)}>
                                     {copiedShowId === show.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                                 </Button>
                                 <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)}><Eye className="w-4 h-4" /></Button>
                                 <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)}><Pencil className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteClick(show)}><Trash2 className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)}><Trash2 className="w-4 h-4" /></Button>
                             </div>
                         </CardContent>
                     </Card>
@@ -576,10 +809,10 @@ function AdminSpectaclesContent() {
             <SpectacleFormDialog
                 open={isFormDialogOpen}
                 onOpenChange={setIsFormDialogOpen}
-                editingShow={editingShow}
-                onSubmit={handleFormSubmit}
+                editingShow={editingShowRaw}
+                onSubmit={(data, isEditing) => handleFormSubmit(data, isEditing)}
                 companies={companies}
-                categories={categories}
+                categories={categoryOptions}
                 targetAudiences={targetAudiences}
                 dervisheUsers={mockDervisheUsers}
                 onOpenCategoriesManager={() => setIsCategoriesDialogOpen(true)}
@@ -591,11 +824,16 @@ function AdminSpectaclesContent() {
 
             {/* Modale de visualisation */}
             <SpectacleViewDialog
-                show={viewingShow}
-                onClose={() => setViewingShow(null)}
+                show={viewingShowRaw}
+                categories={rawCategories}
+                targetAudiences={rawTargetAudiences}
+                onClose={() => {
+                    setViewingShow(null);
+                    setViewingShowRaw(null);
+                }}
                 onEdit={handleViewToEdit}
                 onDelete={handleViewToDelete}
-                onCopyLink={handleCopyLink}
+                onCopyLink={(show) => void handleCopyLink(show)}
                 copiedShowId={copiedShowId}
                 onNavigateToRepresentations={handleNavigateToRepresentations}
                 dervisheUsers={mockDervisheUsers}
@@ -605,9 +843,9 @@ function AdminSpectaclesContent() {
             <CategoryManagerDialog
                 open={isCategoriesDialogOpen}
                 onOpenChange={setIsCategoriesDialogOpen}
-                categories={categories}
-                onAddCategory={handleAddCategory}
-                onRemoveCategory={handleRemoveCategory}
+                categories={rawCategories}
+                onAddCategory={(name) => handleAddCategory(name)}
+                onRemoveCategory={(id) => handleRemoveCategoryById(id)}
             />
 
             {/* Modale de gestion des publics cibles */}
@@ -615,25 +853,35 @@ function AdminSpectaclesContent() {
                 open={isAudiencesDialogOpen}
                 onOpenChange={setIsAudiencesDialogOpen}
                 targetAudiences={targetAudiences}
-                onAddTargetAudience={handleAddTargetAudience}
-                onRemoveTargetAudience={handleRemoveTargetAudience}
+                onAddTargetAudience={(name) => handleAddTargetAudience(name)}
+                onRemoveTargetAudience={(id) => handleRemoveTargetAudience(id)}
             />
 
             {/* Modale création de compagnie */}
             <CompanyQuickCreateDialog
                 open={isNewCompanyDialogOpen}
                 onOpenChange={setIsNewCompanyDialogOpen}
-                onCreateCompany={handleCreateCompany}
+                onCreateCompany={(data) => handleCreateCompany(data)}
                 onCompanyCreated={handleCompanyCreated}
             />
 
             {/* Modale de confirmation de suppression */}
             <DeleteConfirmDialog
                 open={showToDelete !== null}
-                onOpenChange={(open) => !open && setShowToDelete(null)}
-                onConfirm={handleConfirmDelete}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setShowToDelete(null);
+                        setDeleteWarning(null);
+                        pendingDeleteCheckRef.current = null;
+                    }
+                }}
+                onConfirm={() => void handleConfirmDelete()}
                 title="Supprimer ce spectacle ?"
-                description={`Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ? Cette action est irréversible.`}
+                description={
+                    deleteWarning
+                        ? `${deleteWarning} Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ?`
+                        : `Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ? Cette action est irréversible.`
+                }
             />
         </div>
     );

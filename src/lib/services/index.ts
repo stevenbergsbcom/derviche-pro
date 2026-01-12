@@ -1,12 +1,11 @@
-// Services Supabase pour Derviche Diffusion
+/**
+ * Index des services Supabase
+ * Derviche Diffusion
+ */
 
-// Venues (Lieux)
-export {
-  getVenues,
-  getVenueById,
-  createVenue,
-  updateVenue,
-  deleteVenue,
-  isVenueUsed,
-} from './venues';
-export type { VenueResult, VenuesResult } from './venues';
+// Services
+export * from './shows';
+export * from './companies';
+export * from './categories';
+export * from './target-audiences';
+export * from './venues';
