@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -23,25 +24,38 @@ import {
 } from 'lucide-react';
 import { SafeHtml } from '@/components/ui/safe-html';
 import { StatusBadge } from '@/components/admin';
-import type { MockShow, MockUser } from '@/lib/mock-data';
+import type { ShowWithRelations } from '@/lib/services/shows';
+import type { ShowCategoryRow, TargetAudienceRow } from '@/types/database';
+
+// Type pour les utilisateurs Derviche
+interface DervisheUser {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+}
 
 export interface SpectacleViewDialogProps {
     /** Le spectacle à afficher (null = modale fermée) */
-    show: MockShow | null;
+    show: ShowWithRelations | null;
+    /** Liste des catégories pour afficher les noms */
+    categories: ShowCategoryRow[];
+    /** Liste des publics cibles pour afficher les noms */
+    targetAudiences: TargetAudienceRow[];
     /** Callback quand la modale se ferme */
     onClose: () => void;
     /** Callback pour passer en mode édition */
     onEdit: () => void;
     /** Callback pour supprimer */
-    onDelete: () => void;
+    onDelete: () => void | Promise<void>;
     /** Callback pour copier le lien */
-    onCopyLink: (show: MockShow) => void;
+    onCopyLink: (show: ShowWithRelations) => void | Promise<void>;
     /** ID du spectacle dont le lien vient d'être copié */
     copiedShowId: string | null;
     /** Callback pour naviguer vers les représentations */
     onNavigateToRepresentations: (showId: string) => void;
     /** Liste des utilisateurs Derviche pour afficher le responsable */
-    dervisheUsers: MockUser[];
+    dervisheUsers: DervisheUser[];
 }
 
 /**
@@ -49,6 +63,8 @@ export interface SpectacleViewDialogProps {
  */
 export function SpectacleViewDialog({
     show,
+    categories,
+    targetAudiences,
     onClose,
     onEdit,
     onDelete,
@@ -59,24 +75,44 @@ export function SpectacleViewDialog({
 }: SpectacleViewDialogProps) {
     if (!show) return null;
 
+    // Helper pour obtenir les noms de catégories
+    const getCategoryNames = (categoryIds: string[]): string[] => {
+        return categoryIds
+            .map(id => categories.find(c => c.id === id)?.name)
+            .filter((name): name is string => name !== undefined);
+    };
+
+    // Helper pour obtenir les noms des publics cibles
+    const getTargetAudienceNames = (audienceIds: string[]): string[] => {
+        return audienceIds
+            .map(id => targetAudiences.find(ta => ta.id === id)?.name)
+            .filter((name): name is string => name !== undefined);
+    };
+
+    const categoryNames = getCategoryNames(show.category_ids);
+    const audienceNames = getTargetAudienceNames(show.target_audience_ids);
+
     return (
         <Dialog open={show !== null} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] p-0 gap-0 flex flex-col">
                 {/* Titre caché pour l'accessibilité (lecteurs d'écran) */}
                 <DialogHeader className="sr-only">
                     <DialogTitle>{show.title}</DialogTitle>
+                    <DialogDescription>
+                        Détails du spectacle {show.title} de {show.company_name}
+                    </DialogDescription>
                 </DialogHeader>
 
                 {/* Image en haut sans espace */}
-                {show.imageUrl && (
+                {show.image_url && (
                     <div className="relative w-full h-48 sm:h-56 overflow-hidden rounded-t-lg">
                         <Image
-                            src={show.imageUrl}
+                            src={show.image_url}
                             alt={show.title}
                             fill
                             sizes="(max-width: 640px) 100vw, 672px"
                             className="object-cover"
-                            unoptimized={show.imageUrl.startsWith('data:')}
+                            unoptimized={show.image_url.startsWith('data:')}
                         />
                     </div>
                 )}
@@ -84,19 +120,31 @@ export function SpectacleViewDialog({
                 {/* Header avec titre et compagnie */}
                 <div className="px-4 sm:px-6 pt-4 pb-2">
                     <h2 className="text-xl sm:text-2xl font-bold text-foreground">{show.title}</h2>
-                    <p className="text-base text-muted-foreground mt-1">{show.companyName}</p>
+                    <p className="text-base text-muted-foreground mt-1">{show.company_name}</p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4">
                     {/* Catégories et Statut en ligne */}
                     <div className="flex flex-wrap items-center gap-2 mb-2">
-                        {show.categories?.map((cat) => (
+                        {categoryNames.map((cat) => (
                             <Badge key={cat} className="bg-gold/10 text-gold border-gold/20">
                                 {cat}
                             </Badge>
                         ))}
                         <StatusBadge status={show.status} />
                     </div>
+
+                    {/* Publics cibles */}
+                    {audienceNames.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-xs text-muted-foreground">Publics :</span>
+                            {audienceNames.map((name) => (
+                                <Badge key={name} variant="outline" className="text-xs">
+                                    {name}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Slug avec bouton copier */}
                     <div className="flex items-center gap-2 mb-4">
@@ -108,7 +156,7 @@ export function SpectacleViewDialog({
                             variant="ghost"
                             size="sm"
                             className="h-6 px-2 text-xs"
-                            onClick={() => onCopyLink(show)}
+                            onClick={() => void onCopyLink(show)}
                         >
                             {copiedShowId === show.id ? (
                                 <>
@@ -125,10 +173,10 @@ export function SpectacleViewDialog({
                     </div>
 
                     {/* Description */}
-                    {show.description && (
+                    {show.long_description && (
                         <div className="mb-6">
                             <SafeHtml
-                                html={show.description}
+                                html={show.long_description}
                                 className="text-sm text-muted-foreground"
                             />
                         </div>
@@ -142,26 +190,26 @@ export function SpectacleViewDialog({
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                             {/* Durée */}
-                            {show.duration && (
+                            {show.duration_minutes && (
                                 <div className="flex items-start gap-2">
                                     <Clock className="w-4 h-4 text-muted-foreground mt-0.5" />
                                     <div>
                                         <p className="text-xs text-muted-foreground">Durée</p>
-                                        <p className="text-sm text-foreground">{show.duration} min</p>
+                                        <p className="text-sm text-foreground">{show.duration_minutes} min</p>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Public */}
-                            {show.audience && (
-                                <div className="flex items-start gap-2">
-                                    <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Public</p>
-                                        <p className="text-sm text-foreground">{show.audience}</p>
-                                    </div>
+                            {/* Tarif */}
+                            <div className="flex items-start gap-2">
+                                <Users className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Tarif</p>
+                                    <p className="text-sm text-foreground">
+                                        {show.price_type === 'free' ? 'Gratuit' : `Payant sur place${show.price_amount ? ` (${show.price_amount}€)` : ''}`}
+                                    </p>
                                 </div>
-                            )}
+                            </div>
 
                             {/* Période */}
                             {show.period && (
@@ -172,10 +220,10 @@ export function SpectacleViewDialog({
                             )}
 
                             {/* Dates de relâche */}
-                            {show.closureDates && (
+                            {show.closure_dates && (
                                 <div className="sm:col-span-2">
                                     <p className="text-xs text-muted-foreground">Relâche</p>
-                                    <p className="text-sm text-foreground">{show.closureDates}</p>
+                                    <p className="text-sm text-foreground">{show.closure_dates}</p>
                                 </div>
                             )}
                         </div>
@@ -188,10 +236,10 @@ export function SpectacleViewDialog({
                             Représentations
                         </h3>
                         <div className="space-y-3">
-                            {show.representationsCount > 0 ? (
+                            {show.representations_count > 0 ? (
                                 <>
                                     <p className="text-sm text-foreground">
-                                        {show.representationsCount} représentation{show.representationsCount > 1 ? 's' : ''} programmée{show.representationsCount > 1 ? 's' : ''}
+                                        {show.representations_count} représentation{show.representations_count > 1 ? 's' : ''} programmée{show.representations_count > 1 ? 's' : ''}
                                     </p>
                                     <Button
                                         variant="outline"
@@ -228,27 +276,20 @@ export function SpectacleViewDialog({
                         </h3>
                         <div className="space-y-3">
                             {/* Max participants */}
-                            {show.maxParticipantsPerBooking && (
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Nombre max de participants par réservation</p>
-                                    <p className="text-sm text-foreground font-medium">{show.maxParticipantsPerBooking} personne(s)</p>
-                                </div>
-                            )}
+                            <div>
+                                <p className="text-xs text-muted-foreground">Nombre max de participants par réservation</p>
+                                <p className="text-sm text-foreground font-medium">{show.max_reservations_per_booking} personne(s)</p>
+                            </div>
 
                             {/* Politique invitation/détaxe */}
-                            {show.invitationPolicy && (
+                            {show.invitation_policy && (
                                 <div>
                                     <p className="text-xs text-muted-foreground">Politique invitation/détaxe</p>
                                     <SafeHtml
-                                        html={show.invitationPolicy}
+                                        html={show.invitation_policy}
                                         className="text-sm text-foreground"
                                     />
                                 </div>
-                            )}
-
-                            {/* Si aucune info */}
-                            {!show.maxParticipantsPerBooking && !show.invitationPolicy && (
-                                <p className="text-sm text-muted-foreground italic">Aucune politique définie</p>
                             )}
                         </div>
                     </div>
@@ -265,9 +306,9 @@ export function SpectacleViewDialog({
                                 <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5" />
                                 <div>
                                     <p className="text-xs text-muted-foreground">Dossier</p>
-                                    {show.folderUrl ? (
+                                    {show.folder_url ? (
                                         <a
-                                            href={show.folderUrl}
+                                            href={show.folder_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm text-derviche hover:underline"
@@ -285,9 +326,9 @@ export function SpectacleViewDialog({
                                 <Film className="w-4 h-4 text-muted-foreground mt-0.5" />
                                 <div>
                                     <p className="text-xs text-muted-foreground">Teaser</p>
-                                    {show.teaserUrl ? (
+                                    {show.teaser_url ? (
                                         <a
-                                            href={show.teaserUrl}
+                                            href={show.teaser_url}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm text-derviche hover:underline"
@@ -305,10 +346,10 @@ export function SpectacleViewDialog({
                                 <Video className="w-4 h-4 text-muted-foreground mt-0.5" />
                                 <div>
                                     <p className="text-xs text-muted-foreground">Captation</p>
-                                    {show.captationAvailable ? (
-                                        show.captationUrl ? (
+                                    {show.captation_available ? (
+                                        show.captation_url ? (
                                             <a
-                                                href={show.captationUrl}
+                                                href={show.captation_url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-sm text-derviche hover:underline"
@@ -336,11 +377,11 @@ export function SpectacleViewDialog({
                             {/* Responsable Derviche */}
                             <div>
                                 <p className="text-xs text-muted-foreground">Responsable</p>
-                                {show.dervisheManagerId ? (() => {
-                                    const manager = dervisheUsers.find(u => u.id === show.dervisheManagerId);
+                                {show.derviche_manager_id ? (() => {
+                                    const manager = dervisheUsers.find(u => u.id === show.derviche_manager_id);
                                     return (
                                         <p className="text-sm text-foreground">
-                                            {manager ? `${manager.firstName} ${manager.lastName}` : show.dervisheManager || 'Non assigné'}
+                                            {manager ? `${manager.firstName} ${manager.lastName}` : 'Non assigné'}
                                         </p>
                                     );
                                 })() : (
@@ -363,7 +404,7 @@ export function SpectacleViewDialog({
                     <Button
                         type="button"
                         variant="destructive"
-                        onClick={onDelete}
+                        onClick={() => void onDelete()}
                         className="w-full sm:w-auto"
                     >
                         Supprimer

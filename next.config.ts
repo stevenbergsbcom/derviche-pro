@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
         hostname: 'sbcom.fr',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'qtssokeebzbjglteiayn.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
 };

@@ -12,4 +12,14 @@ export { SpectacleViewDialog } from './spectacle-view-dialog';
 export type { SpectacleViewDialogProps } from './spectacle-view-dialog';
 
 export { SpectacleFormDialog } from './spectacle-form-dialog';
-export type { SpectacleFormDialogProps, SpectacleFormData } from './spectacle-form-dialog';
+export type { 
+    SpectacleFormDialogProps, 
+    SpectacleFormData,
+    CategoryOption,
+    TargetAudienceOption,
+    CompanyOption,
+    DervisheUserOption,
+} from './spectacle-form-dialog';
+
+export { ImageUploader } from './image-uploader';
+export type { ImageUploaderProps } from './image-uploader';

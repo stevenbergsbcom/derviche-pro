@@ -18,8 +18,8 @@ export interface CompanyQuickCreateDialogProps {
     open: boolean;
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
-    /** Callback quand une compagnie est créée - retourne l'ID pour auto-sélection */
-    onCreateCompany: (data: { name: string; email: string }) => string;
+    /** Callback quand une compagnie est créée - retourne l'ID pour auto-sélection (sync ou async) */
+    onCreateCompany: (data: { name: string; email: string }) => string | Promise<string>;
     /** Callback optionnel appelé après création avec l'ID de la nouvelle compagnie */
     onCompanyCreated?: (companyId: string) => void;
 }
@@ -37,25 +37,47 @@ export function CompanyQuickCreateDialog({
         name: '',
         email: '',
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleClose = () => {
         onOpenChange(false);
         setFormData({ name: '', email: '' });
+        setError(null);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!formData.name.trim() || !formData.email.trim()) {
             return;
         }
-        const newId = onCreateCompany({
-            name: formData.name.trim(),
-            email: formData.email.trim(),
-        });
-        // Notifier le parent pour auto-sélection
-        if (onCompanyCreated) {
-            onCompanyCreated(newId);
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            const result = onCreateCompany({
+                name: formData.name.trim(),
+                email: formData.email.trim(),
+            });
+            
+            // Supporter les fonctions sync et async
+            const newId = result instanceof Promise ? await result : result;
+
+            if (!newId) {
+                setError('Erreur lors de la création de la compagnie');
+                return;
+            }
+
+            // Notifier le parent pour auto-sélection
+            if (onCompanyCreated) {
+                onCompanyCreated(newId);
+            }
+            handleClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        } finally {
+            setIsSubmitting(false);
         }
-        handleClose();
     };
 
     const isValid = formData.name.trim() && formData.email.trim();
@@ -70,6 +92,11 @@ export function CompanyQuickCreateDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
+                    {error && (
+                        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                            <p className="text-sm text-destructive">{error}</p>
+                        </div>
+                    )}
                     <div className="space-y-2">
                         <Label htmlFor="newCompanyName">
                             Nom de la compagnie <span className="text-destructive">*</span>
@@ -83,6 +110,7 @@ export function CompanyQuickCreateDialog({
                             }
                             placeholder="Ex: Compagnie du Soleil"
                             required
+                            disabled={isSubmitting}
                         />
                     </div>
                     <div className="space-y-2">
@@ -101,6 +129,7 @@ export function CompanyQuickCreateDialog({
                             }
                             placeholder="email@compagnie.fr"
                             required
+                            disabled={isSubmitting}
                         />
                     </div>
                 </div>
@@ -109,15 +138,16 @@ export function CompanyQuickCreateDialog({
                         variant="outline"
                         onClick={handleClose}
                         className="w-full sm:w-auto"
+                        disabled={isSubmitting}
                     >
                         Annuler
                     </Button>
                     <Button
-                        onClick={handleSubmit}
-                        disabled={!isValid}
+                        onClick={() => void handleSubmit()}
+                        disabled={!isValid || isSubmitting}
                         className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                     >
-                        Créer et sélectionner
+                        {isSubmitting ? 'Création...' : 'Créer et sélectionner'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

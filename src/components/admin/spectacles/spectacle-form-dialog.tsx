@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,20 +20,67 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import Image from 'next/image';
-import { Settings, Upload, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Settings, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
-import type { MockShow, MockCompany, MockUser } from '@/lib/mock-data';
-import type { ShowStatus } from '@/types/database';
+import { ImageUploader } from './image-uploader';
+import type { ShowWithRelations } from '@/lib/services/shows';
+import type { ShowStatus, ShowPriceType } from '@/types/database';
 
-// Type pour les données du formulaire
-export type SpectacleFormData = Omit<MockShow, 'id' | 'companyName'>;
+// Type pour les données du formulaire (adapté pour Supabase)
+export interface SpectacleFormData {
+    slug: string;
+    title: string;
+    companyId: string;
+    categoryIds: string[];
+    targetAudienceIds: string[];
+    description: string;
+    shortDescription: string | null;
+    imageUrl: string | null;
+    /** Fichier image à uploader (si nouvelle image sélectionnée) */
+    imageFile: File | null;
+    /** Indique si l'image doit être supprimée */
+    imageRemoved: boolean;
+    duration: number | null;
+    status: ShowStatus;
+    priceType: ShowPriceType;
+    period: string;
+    dervisheManagerId: string;
+    invitationPolicy: string;
+    maxParticipantsPerBooking: number | undefined;
+    closureDates: string;
+    folderUrl: string;
+    teaserUrl: string;
+    captationAvailable: boolean;
+    captationUrl: string;
+}
 
-// Type pour les publics cibles
-export interface TargetAudience {
+// Type pour les catégories (id + name)
+export interface CategoryOption {
     id: string;
     name: string;
+}
+
+// Type pour les publics cibles
+export interface TargetAudienceOption {
+    id: string;
+    name: string;
+}
+
+// Type pour les compagnies
+export interface CompanyOption {
+    id: string;
+    name: string;
+    contactEmail: string;
+    contactPhone: string | null;
+}
+
+// Type pour les utilisateurs Derviche
+export interface DervisheUserOption {
+    id: string;
+    firstName: string;
+    lastName: string;
+    role: string;
 }
 
 export interface SpectacleFormDialogProps {
@@ -42,17 +89,17 @@ export interface SpectacleFormDialogProps {
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
     /** Spectacle en cours d'édition (null = mode création) */
-    editingShow: MockShow | null;
+    editingShow: ShowWithRelations | null;
     /** Callback à la soumission du formulaire */
-    onSubmit: (data: SpectacleFormData, isEditing: boolean) => void;
+    onSubmit: (data: SpectacleFormData, isEditing: boolean) => void | Promise<void>;
     /** Liste des compagnies disponibles */
-    companies: MockCompany[];
-    /** Liste des catégories disponibles */
-    categories: string[];
+    companies: CompanyOption[];
+    /** Liste des catégories disponibles (id + name) */
+    categories: CategoryOption[];
     /** Liste des publics cibles disponibles */
-    targetAudiences: TargetAudience[];
+    targetAudiences: TargetAudienceOption[];
     /** Liste des utilisateurs Derviche (pour le responsable) */
-    dervisheUsers: MockUser[];
+    dervisheUsers: DervisheUserOption[];
     /** Callback pour ouvrir la modale de gestion des catégories */
     onOpenCategoriesManager: () => void;
     /** Callback pour ouvrir la modale de gestion des publics cibles */
@@ -63,6 +110,8 @@ export interface SpectacleFormDialogProps {
     newlyCreatedCompanyId?: string | null;
     /** Callback pour reset l'ID de la compagnie nouvellement créée */
     onClearNewlyCreatedCompanyId?: () => void;
+    /** Callback pour supprimer le spectacle (mode édition uniquement) */
+    onDelete?: () => void | Promise<void>;
 }
 
 // Fonction slugify
@@ -80,22 +129,21 @@ const defaultFormData: SpectacleFormData = {
     slug: '',
     title: '',
     companyId: '',
-    categories: [],
+    categoryIds: [],
     targetAudienceIds: [],
     description: '',
     shortDescription: null,
     imageUrl: null,
+    imageFile: null,
+    imageRemoved: false,
     duration: null,
-    audience: '',
     status: 'published',
     priceType: 'free',
     period: '',
     dervisheManagerId: '',
-    dervisheManager: '',
     invitationPolicy: '',
     maxParticipantsPerBooking: undefined,
     closureDates: '',
-    representationsCount: 0,
     folderUrl: '',
     teaserUrl: '',
     captationAvailable: false,
@@ -119,10 +167,12 @@ export function SpectacleFormDialog({
     onOpenNewCompanyDialog,
     newlyCreatedCompanyId,
     onClearNewlyCreatedCompanyId,
+    onDelete,
 }: SpectacleFormDialogProps) {
     const [formData, setFormData] = useState<SpectacleFormData>(defaultFormData);
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Auto-sélection de la nouvelle compagnie créée
     useEffect(() => {
@@ -138,31 +188,30 @@ export function SpectacleFormDialog({
     useEffect(() => {
         if (open) {
             if (editingShow) {
-                // Mode édition
+                // Mode édition - convertir ShowWithRelations vers SpectacleFormData
                 setFormData({
                     slug: editingShow.slug,
                     title: editingShow.title,
-                    companyId: editingShow.companyId,
-                    categories: editingShow.categories,
-                    targetAudienceIds: editingShow.targetAudienceIds || [],
-                    description: editingShow.description || '',
-                    shortDescription: editingShow.shortDescription,
-                    imageUrl: editingShow.imageUrl,
-                    duration: editingShow.duration,
-                    audience: editingShow.audience || '',
+                    companyId: editingShow.company_id,
+                    categoryIds: editingShow.category_ids || [],
+                    targetAudienceIds: editingShow.target_audience_ids || [],
+                    description: editingShow.long_description || '',
+                    shortDescription: editingShow.short_description,
+                    imageUrl: editingShow.image_url,
+                    imageFile: null,
+                    imageRemoved: false,
+                    duration: editingShow.duration_minutes,
                     status: editingShow.status,
-                    priceType: editingShow.priceType,
+                    priceType: editingShow.price_type,
                     period: editingShow.period || '',
-                    dervisheManagerId: editingShow.dervisheManagerId || '',
-                    dervisheManager: editingShow.dervisheManager || '',
-                    invitationPolicy: editingShow.invitationPolicy || '',
-                    maxParticipantsPerBooking: editingShow.maxParticipantsPerBooking,
-                    closureDates: editingShow.closureDates || '',
-                    representationsCount: editingShow.representationsCount,
-                    folderUrl: editingShow.folderUrl || '',
-                    teaserUrl: editingShow.teaserUrl || '',
-                    captationAvailable: editingShow.captationAvailable,
-                    captationUrl: editingShow.captationUrl || '',
+                    dervisheManagerId: editingShow.derviche_manager_id || '',
+                    invitationPolicy: editingShow.invitation_policy || '',
+                    maxParticipantsPerBooking: editingShow.max_reservations_per_booking,
+                    closureDates: editingShow.closure_dates || '',
+                    folderUrl: editingShow.folder_url || '',
+                    teaserUrl: editingShow.teaser_url || '',
+                    captationAvailable: editingShow.captation_available,
+                    captationUrl: editingShow.captation_url || '',
                 });
             } else {
                 // Mode création
@@ -180,41 +229,70 @@ export function SpectacleFormDialog({
 
     const handleClose = () => {
         onOpenChange(false);
-        setFormData(defaultFormData);
-        setIsDialogExpanded(false);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData, editingShow !== null);
-        handleClose();
-    };
-
-    // Gérer l'upload d'image
-    const handleImageClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData({ ...formData, imageUrl: reader.result as string });
-            };
-            reader.readAsDataURL(file);
+        setError(null);
+        
+        // Validation complète des champs requis
+        if (!formData.title.trim()) {
+            setError('Le titre est obligatoire');
+            return;
+        }
+        
+        if (!formData.companyId) {
+            setError('Veuillez sélectionner une compagnie');
+            return;
+        }
+        
+        if (formData.categoryIds.length === 0) {
+            setError('Veuillez sélectionner au moins une catégorie');
+            return;
+        }
+        
+        setIsSubmitting(true);
+        try {
+            await onSubmit(formData, editingShow !== null);
+            handleClose();
+        } catch (err) {
+            // Capturer l'erreur et l'afficher dans le dialog
+            setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
-    const handleRemoveImage = () => {
-        setFormData({ ...formData, imageUrl: null });
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+    // Gérer le changement d'image via ImageUploader
+    const handleImageChange = (file: File | null) => {
+        if (file) {
+            // Nouvelle image sélectionnée
+            setFormData({ 
+                ...formData, 
+                imageFile: file, 
+                imageRemoved: false 
+            });
+        } else {
+            // Image supprimée
+            setFormData({ 
+                ...formData, 
+                imageFile: null, 
+                imageUrl: null,
+                imageRemoved: true 
+            });
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                // Réinitialiser le formulaire avant de fermer
+                setFormData(defaultFormData);
+                setIsDialogExpanded(false);
+                setError(null);
+            }
+            onOpenChange(isOpen);
+        }}>
             <DialogContent className={`w-full max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-hidden flex flex-col transition-all duration-200 ${isDialogExpanded ? 'sm:max-w-6xl sm:h-[90vh]' : 'sm:max-w-3xl'}`}>
                 <DialogHeader className="relative">
                     <div className="flex items-start justify-between">
@@ -246,7 +324,23 @@ export function SpectacleFormDialog({
                     </div>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col flex-1 overflow-hidden">
+                    {/* Message d'erreur */}
+                    {error && (
+                        <div className="mx-1 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-start gap-3">
+                            <div className="text-sm text-destructive flex-1">{error}</div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setError(null)}
+                                className="h-6 px-2 text-xs"
+                            >
+                                Fermer
+                            </Button>
+                        </div>
+                    )}
+                    
                     <div className="flex-1 overflow-y-auto px-1">
                         <div className="space-y-4">
                             {/* Titre + Slug affiché */}
@@ -313,26 +407,26 @@ export function SpectacleFormDialog({
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         {categories.map((category) => (
-                                            <div key={category} className="flex items-center space-x-2">
+                                            <div key={category.id} className="flex items-center space-x-2">
                                                 <Checkbox
-                                                    id={`category-${category}`}
-                                                    checked={formData.categories.includes(category)}
+                                                    id={`category-${category.id}`}
+                                                    checked={formData.categoryIds.includes(category.id)}
                                                     onCheckedChange={(checked) => {
                                                         if (checked) {
                                                             setFormData({
                                                                 ...formData,
-                                                                categories: [...formData.categories, category],
+                                                                categoryIds: [...formData.categoryIds, category.id],
                                                             });
                                                         } else {
                                                             setFormData({
                                                                 ...formData,
-                                                                categories: formData.categories.filter((c) => c !== category),
+                                                                categoryIds: formData.categoryIds.filter((id) => id !== category.id),
                                                             });
                                                         }
                                                     }}
                                                 />
-                                                <Label htmlFor={`category-${category}`} className="font-normal cursor-pointer">
-                                                    {category}
+                                                <Label htmlFor={`category-${category.id}`} className="font-normal cursor-pointer">
+                                                    {category.name}
                                                 </Label>
                                             </div>
                                         ))}
@@ -481,11 +575,9 @@ export function SpectacleFormDialog({
                                     value={formData.dervisheManagerId || 'none'}
                                     onValueChange={(value) => {
                                         const actualValue = value === 'none' ? '' : value;
-                                        const selectedUser = dervisheUsers.find(u => u.id === actualValue);
                                         setFormData({
                                             ...formData,
                                             dervisheManagerId: actualValue,
-                                            dervisheManager: selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : '',
                                         });
                                     }}
                                 >
@@ -577,83 +669,51 @@ export function SpectacleFormDialog({
                             {/* Image */}
                             <div className="space-y-2">
                                 <Label>Image</Label>
-                                {formData.imageUrl ? (
-                                    <div className="relative">
-                                        <div className="relative w-full h-48 border rounded-md overflow-hidden bg-muted">
-                                            <Image
-                                                src={formData.imageUrl}
-                                                alt="Aperçu"
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 50vw"
-                                                className="object-cover"
-                                                unoptimized={formData.imageUrl.startsWith('data:')}
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8"
-                                                onClick={handleRemoveImage}
-                                            >
-                                                <X className="w-4 h-4" />
-                                                <span className="sr-only">Supprimer l&apos;image</span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={handleImageClick}
-                                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                                    >
-                                        <div className="flex flex-col items-center justify-center space-y-2">
-                                            <Upload className="w-8 h-8 text-muted-foreground" />
-                                            <p className="text-sm font-medium text-center">
-                                                Glissez une image ou cliquez pour sélectionner
-                                            </p>
-                                            <p className="text-xs text-muted-foreground text-center">
-                                                Formats acceptés : JPG, PNG, WebP. Taille max : 300 Ko. Dimensions recommandées : 800x600px
-                                            </p>
-                                        </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp"
-                                            className="hidden"
-                                            onChange={handleImageChange}
-                                        />
-                                    </div>
-                                )}
+                                <ImageUploader
+                                    value={formData.imageUrl}
+                                    onChange={handleImageChange}
+                                    disabled={isSubmitting}
+                                />
                             </div>
                         </div>
                     </div>
 
                     <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
+                        {/* Bouton supprimer à gauche (mode édition uniquement) */}
+                        {editingShow && onDelete && (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    handleClose();
+                                    void onDelete();
+                                }}
+                                className="w-full sm:w-auto sm:mr-auto"
+                                disabled={isSubmitting}
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
                             onClick={handleClose}
                             className="w-full sm:w-auto"
+                            disabled={isSubmitting}
                         >
                             Annuler
                         </Button>
                         <Button
                             type="submit"
                             className="bg-derviche hover:bg-derviche-light text-white w-full sm:w-auto"
+                            disabled={isSubmitting}
                         >
-                            Enregistrer
+                            {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
                         </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
         </Dialog>
     );
-}
-
-// Export pour permettre la mise à jour de la compagnie depuis l'extérieur
-export function useSpectacleFormCompanyUpdate(
-    setCompanyId: (id: string) => void
-) {
-    return (companyId: string) => {
-        setCompanyId(companyId);
-    };
 }

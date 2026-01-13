@@ -47,12 +47,16 @@ export function CompanyViewDialog({
             <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-xl">{company.name}</DialogTitle>
-                    {company.city && (
-                        <DialogDescription className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {company.city}
-                        </DialogDescription>
-                    )}
+                    <DialogDescription className="flex items-center gap-1">
+                        {company.city ? (
+                            <>
+                                <MapPin className="w-4 h-4" />
+                                {company.city}
+                            </>
+                        ) : (
+                            <span>Détails de la compagnie</span>
+                        )}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
