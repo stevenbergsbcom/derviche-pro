@@ -64,6 +64,7 @@ export function CategoryManagerDialog({
     };
 
     const handleRemove = async (categoryId: string) => {
+        setError(null);
         setDeletingId(categoryId);
         try {
             await onRemoveCategory(categoryId);

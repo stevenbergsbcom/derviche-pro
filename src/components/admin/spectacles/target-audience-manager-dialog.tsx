@@ -70,6 +70,7 @@ export function TargetAudienceManagerDialog({
     };
 
     const handleRemove = async (audienceId: string) => {
+        setError(null);
         setDeletingId(audienceId);
         try {
             await onRemoveTargetAudience(audienceId);

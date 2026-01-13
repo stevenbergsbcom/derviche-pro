@@ -20,3 +20,6 @@ export type {
     CompanyOption,
     DervisheUserOption,
 } from './spectacle-form-dialog';
+
+export { ImageUploader } from './image-uploader';
+export type { ImageUploaderProps } from './image-uploader';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,10 +20,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import Image from 'next/image';
-import { Settings, Upload, X, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { Settings, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
+import { ImageUploader } from './image-uploader';
 import type { ShowWithRelations } from '@/lib/services/shows';
 import type { ShowStatus, ShowPriceType } from '@/types/database';
 
@@ -37,6 +37,10 @@ export interface SpectacleFormData {
     description: string;
     shortDescription: string | null;
     imageUrl: string | null;
+    /** Fichier image à uploader (si nouvelle image sélectionnée) */
+    imageFile: File | null;
+    /** Indique si l'image doit être supprimée */
+    imageRemoved: boolean;
     duration: number | null;
     status: ShowStatus;
     priceType: ShowPriceType;
@@ -130,6 +134,8 @@ const defaultFormData: SpectacleFormData = {
     description: '',
     shortDescription: null,
     imageUrl: null,
+    imageFile: null,
+    imageRemoved: false,
     duration: null,
     status: 'published',
     priceType: 'free',
@@ -167,7 +173,6 @@ export function SpectacleFormDialog({
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-sélection de la nouvelle compagnie créée
     useEffect(() => {
@@ -193,6 +198,8 @@ export function SpectacleFormDialog({
                     description: editingShow.long_description || '',
                     shortDescription: editingShow.short_description,
                     imageUrl: editingShow.image_url,
+                    imageFile: null,
+                    imageRemoved: false,
                     duration: editingShow.duration_minutes,
                     status: editingShow.status,
                     priceType: editingShow.price_type,
@@ -259,26 +266,23 @@ export function SpectacleFormDialog({
         }
     };
 
-    // Gérer l'upload d'image
-    const handleImageClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
+    // Gérer le changement d'image via ImageUploader
+    const handleImageChange = (file: File | null) => {
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData({ ...formData, imageUrl: reader.result as string });
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleRemoveImage = () => {
-        setFormData({ ...formData, imageUrl: null });
-        if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            // Nouvelle image sélectionnée
+            setFormData({ 
+                ...formData, 
+                imageFile: file, 
+                imageRemoved: false 
+            });
+        } else {
+            // Image supprimée
+            setFormData({ 
+                ...formData, 
+                imageFile: null, 
+                imageUrl: null,
+                imageRemoved: true 
+            });
         }
     };
 
@@ -660,52 +664,11 @@ export function SpectacleFormDialog({
                             {/* Image */}
                             <div className="space-y-2">
                                 <Label>Image</Label>
-                                {formData.imageUrl ? (
-                                    <div className="relative">
-                                        <div className="relative w-full h-48 border rounded-md overflow-hidden bg-muted">
-                                            <Image
-                                                src={formData.imageUrl}
-                                                alt="Aperçu"
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, 50vw"
-                                                className="object-cover"
-                                                unoptimized={formData.imageUrl.startsWith('data:')}
-                                            />
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8"
-                                                onClick={handleRemoveImage}
-                                            >
-                                                <X className="w-4 h-4" />
-                                                <span className="sr-only">Supprimer l&apos;image</span>
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        onClick={handleImageClick}
-                                        className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
-                                    >
-                                        <div className="flex flex-col items-center justify-center space-y-2">
-                                            <Upload className="w-8 h-8 text-muted-foreground" />
-                                            <p className="text-sm font-medium text-center">
-                                                Glissez une image ou cliquez pour sélectionner
-                                            </p>
-                                            <p className="text-xs text-muted-foreground text-center">
-                                                Formats acceptés : JPG, PNG, WebP. Taille max : 300 Ko. Dimensions recommandées : 800x600px
-                                            </p>
-                                        </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            accept="image/jpeg,image/png,image/webp"
-                                            className="hidden"
-                                            onChange={handleImageChange}
-                                        />
-                                    </div>
-                                )}
+                                <ImageUploader
+                                    value={formData.imageUrl}
+                                    onChange={handleImageChange}
+                                    disabled={isSubmitting}
+                                />
                             </div>
                         </div>
                     </div>

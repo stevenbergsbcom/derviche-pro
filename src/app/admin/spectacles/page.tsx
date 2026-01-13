@@ -25,6 +25,9 @@ import { useCompanies } from '@/hooks/useCompanies';
 import type { ShowWithRelations } from '@/lib/services/shows';
 import type { ShowStatus, ShowPriceType } from '@/types/database';
 
+// Service de gestion des images
+import { uploadShowImage, deleteShowImage, replaceShowImage } from '@/lib/services/storage';
+
 // Mock pour les users Derviche (à connecter plus tard)
 import { mockDervisheUsers } from '@/lib/mock-data';
 
@@ -323,6 +326,7 @@ function AdminSpectaclesContent() {
 
     // Ouvrir la modale en mode création
     const handleCreate = () => {
+        setOperationError(null);
         setEditingShow(null);
         setEditingShowRaw(null);
         setIsFormDialogOpen(true);
@@ -330,6 +334,7 @@ function AdminSpectaclesContent() {
 
     // Ouvrir la modale en mode édition
     const handleEdit = (show: ShowForDisplay) => {
+        setOperationError(null);
         // Trouver le show brut correspondant dans rawShows
         const rawShow = rawShows.find(s => s.id === show.id);
         if (!rawShow) {
@@ -343,6 +348,7 @@ function AdminSpectaclesContent() {
 
     // Gérer la suppression - vérifier l'utilisation
     const handleDeleteClick = async (show: ShowForDisplay) => {
+        setOperationError(null);
         pendingDeleteCheckRef.current = show.id;
         setDeleteWarning(null);
         setShowToDelete(show);
@@ -375,6 +381,13 @@ function AdminSpectaclesContent() {
 
         setIsDeleting(true);
         try {
+            // Supprimer l'image associée si elle existe
+            const rawShow = rawShows.find(s => s.id === showToDelete.id);
+            if (rawShow?.image_url) {
+                await deleteShowImage(rawShow.image_url);
+                // On ne bloque pas si la suppression de l'image échoue
+            }
+            
             const result = await removeShow(showToDelete.id);
             if (result.error) {
                 setOperationError(result.error);
@@ -425,29 +438,51 @@ function AdminSpectaclesContent() {
 
     // Soumettre le formulaire de spectacle
     const handleFormSubmit = async (formData: SpectacleFormData, isEditing: boolean) => {
-        // Préparer les données pour Supabase
-        const showData = {
-            slug: formData.slug || generateSlug(formData.title),
-            title: formData.title.trim(),
-            company_id: formData.companyId,
-            short_description: formData.shortDescription?.trim() || null,
-            long_description: formData.description?.trim() || null,
-            duration_minutes: formData.duration,
-            image_url: formData.imageUrl,
-            status: formData.status,
-            price_type: formData.priceType,
-            period: formData.period?.trim() || null,
-            derviche_manager_id: formData.dervisheManagerId || null,
-            invitation_policy: formData.invitationPolicy?.trim() || null,
-            max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
-            closure_dates: formData.closureDates?.trim() || null,
-            folder_url: formData.folderUrl?.trim() || null,
-            teaser_url: formData.teaserUrl?.trim() || null,
-            captation_available: formData.captationAvailable,
-            captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
-        };
-
+        // Gérer l'upload de l'image si une nouvelle image a été sélectionnée
+        let finalImageUrl: string | null = formData.imageUrl;
+        
+        // Pour une création, on doit d'abord créer le spectacle pour avoir l'ID
+        // Puis uploader l'image, puis mettre à jour l'URL
+        // Pour une édition, on peut uploader directement avec l'ID existant
+        
         if (isEditing && editingShow) {
+            // Mode édition
+            if (formData.imageFile) {
+                // Nouvelle image sélectionnée - remplacer l'ancienne
+                const oldImageUrl = editingShowRaw?.image_url || null;
+                const uploadResult = await replaceShowImage(formData.imageFile, editingShow.id, oldImageUrl);
+                if (!uploadResult.success) {
+                    throw new Error(uploadResult.error || 'Erreur lors de l\'upload de l\'image');
+                }
+                finalImageUrl = uploadResult.url || null;
+            } else if (formData.imageRemoved && editingShowRaw?.image_url) {
+                // Image supprimée
+                await deleteShowImage(editingShowRaw.image_url);
+                finalImageUrl = null;
+            }
+            
+            // Préparer les données pour Supabase
+            const showData = {
+                slug: formData.slug || generateSlug(formData.title),
+                title: formData.title.trim(),
+                company_id: formData.companyId,
+                short_description: formData.shortDescription?.trim() || null,
+                long_description: formData.description?.trim() || null,
+                duration_minutes: formData.duration,
+                image_url: finalImageUrl,
+                status: formData.status,
+                price_type: formData.priceType,
+                period: formData.period?.trim() || null,
+                derviche_manager_id: formData.dervisheManagerId || null,
+                invitation_policy: formData.invitationPolicy?.trim() || null,
+                max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
+                closure_dates: formData.closureDates?.trim() || null,
+                folder_url: formData.folderUrl?.trim() || null,
+                teaser_url: formData.teaserUrl?.trim() || null,
+                captation_available: formData.captationAvailable,
+                captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
+            };
+            
             const result = await updateShow(editingShow.id, {
                 show: showData,
                 category_ids: formData.categoryIds,
@@ -455,17 +490,80 @@ function AdminSpectaclesContent() {
             });
 
             if (result.error) {
-                throw new Error(result.error); // L'erreur est gérée par le dialog
+                throw new Error(result.error);
             }
         } else {
-            const result = await createShow({
+            // Mode création
+            // D'abord créer le spectacle sans image
+            const showData = {
+                slug: formData.slug || generateSlug(formData.title),
+                title: formData.title.trim(),
+                company_id: formData.companyId,
+                short_description: formData.shortDescription?.trim() || null,
+                long_description: formData.description?.trim() || null,
+                duration_minutes: formData.duration,
+                image_url: null, // Sera mis à jour après l'upload
+                status: formData.status,
+                price_type: formData.priceType,
+                period: formData.period?.trim() || null,
+                derviche_manager_id: formData.dervisheManagerId || null,
+                invitation_policy: formData.invitationPolicy?.trim() || null,
+                max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
+                closure_dates: formData.closureDates?.trim() || null,
+                folder_url: formData.folderUrl?.trim() || null,
+                teaser_url: formData.teaserUrl?.trim() || null,
+                captation_available: formData.captationAvailable,
+                captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
+            };
+            
+            const createResult = await createShow({
                 show: showData,
                 category_ids: formData.categoryIds,
                 target_audience_ids: formData.targetAudienceIds,
             });
 
-            if (result.error) {
-                throw new Error(result.error); // L'erreur est gérée par le dialog
+            if (createResult.error || !createResult.data) {
+                throw new Error(createResult.error || 'Erreur lors de la création du spectacle');
+            }
+            
+            // Si une image a été sélectionnée, l'uploader et mettre à jour le spectacle
+            if (formData.imageFile) {
+                const newShowId = createResult.data.id;
+                const uploadResult = await uploadShowImage(formData.imageFile, newShowId);
+                
+                if (!uploadResult.success) {
+                    // L'upload a échoué - on ferme le dialog mais on informe l'utilisateur
+                    setIsFormDialogOpen(false);
+                    setEditingShow(null);
+                    setEditingShowRaw(null);
+                    setOperationError(`Le spectacle a été créé, mais l'image n'a pas pu être uploadée: ${uploadResult.error || 'Erreur inconnue'}`);
+                    return;
+                }
+                
+                if (!uploadResult.url) {
+                    // Upload réussi mais pas d'URL retournée - cas edge
+                    setIsFormDialogOpen(false);
+                    setEditingShow(null);
+                    setEditingShowRaw(null);
+                    setOperationError('Le spectacle a été créé, mais l\'URL de l\'image n\'a pas été générée. Vous pouvez réessayer en modifiant le spectacle.');
+                    return;
+                }
+                
+                // Mettre à jour le spectacle avec l'URL de l'image
+                const updateResult = await updateShow(newShowId, {
+                    show: { image_url: uploadResult.url },
+                    category_ids: formData.categoryIds,
+                    target_audience_ids: formData.targetAudienceIds,
+                });
+                
+                if (updateResult.error) {
+                    // Le spectacle est créé mais l'image n'a pas pu être liée
+                    setIsFormDialogOpen(false);
+                    setEditingShow(null);
+                    setEditingShowRaw(null);
+                    setOperationError('Le spectacle a été créé, mais l\'image n\'a pas pu être liée. Vous pouvez la réajouter en modifiant le spectacle.');
+                    return;
+                }
             }
         }
 
