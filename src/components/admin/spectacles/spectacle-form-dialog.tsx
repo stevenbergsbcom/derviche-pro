@@ -228,6 +228,9 @@ export function SpectacleFormDialog({
         try {
             await onSubmit(formData, editingShow !== null);
             handleClose();
+        } catch {
+            // L'erreur est gérée par le parent (page.tsx) via setOperationError
+            // On ne ferme pas le dialog pour permettre à l'utilisateur de corriger
         } finally {
             setIsSubmitting(false);
         }

@@ -109,6 +109,7 @@ function AdminSpectaclesContent() {
     const {
         categories: rawCategories,
         isLoading: isLoadingCategories,
+        error: categoriesError,
         create: createCategory,
         remove: removeCategory,
         checkUsage: checkCategoryUsage,
@@ -117,6 +118,7 @@ function AdminSpectaclesContent() {
     const {
         targetAudiences: rawTargetAudiences,
         isLoading: isLoadingTargetAudiences,
+        error: targetAudiencesError,
         create: createTargetAudience,
         remove: removeTargetAudience,
         checkUsage: checkTargetAudienceUsage,
@@ -125,6 +127,7 @@ function AdminSpectaclesContent() {
     const {
         companies: rawCompanies,
         isLoading: isLoadingCompanies,
+        error: companiesError,
         create: createCompany,
     } = useCompanies();
 
@@ -206,6 +209,12 @@ function AdminSpectaclesContent() {
     
     // État d'erreur pour les opérations
     const [operationError, setOperationError] = useState<string | null>(null);
+    
+    // État de suppression en cours
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+    
+    // État pour rouvrir la vue après édition
+    const [showIdToReopen, setShowIdToReopen] = useState<string | null>(null);
 
     // État pour le feedback de copie
     const [copiedShowId, setCopiedShowId] = useState<string | null>(null);
@@ -235,6 +244,24 @@ function AdminSpectaclesContent() {
             }
         };
     }, []);
+    
+    // Rouvrir la vue après édition
+    useEffect(() => {
+        if (showIdToReopen && !isFormDialogOpen) {
+            // Petit délai pour s'assurer que les données sont à jour
+            const timeout = setTimeout(() => {
+                const show = shows.find(s => s.id === showIdToReopen);
+                const rawShow = rawShows.find(s => s.id === showIdToReopen);
+                if (show && rawShow) {
+                    setViewingShow(show);
+                    setViewingShowRaw(rawShow);
+                    setShowIdToReopen(null);
+                }
+            }, 100);
+            
+            return () => clearTimeout(timeout);
+        }
+    }, [showIdToReopen, isFormDialogOpen, shows, rawShows]);
 
     // Vérifier si des filtres sont actifs
     const hasActiveFilters = searchQuery.trim() !== '';
@@ -280,12 +307,13 @@ function AdminSpectaclesContent() {
         );
     }
 
-    // Affichage des erreurs
-    if (showsError) {
+    // Affichage des erreurs de chargement
+    const loadingError = showsError || categoriesError || targetAudiencesError || companiesError;
+    if (loadingError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
                 <AlertCircle className="w-12 h-12 text-destructive" />
-                <p className="text-destructive">Erreur: {showsError}</p>
+                <p className="text-destructive">Erreur: {loadingError}</p>
                 <Button onClick={() => window.location.reload()}>Réessayer</Button>
             </div>
         );
@@ -303,9 +331,13 @@ function AdminSpectaclesContent() {
 
     // Ouvrir la modale en mode édition
     const handleEdit = (show: ShowForDisplay) => {
-        setEditingShow(show);
         // Trouver le show brut correspondant dans rawShows
-        const rawShow = rawShows.find(s => s.id === show.id) || null;
+        const rawShow = rawShows.find(s => s.id === show.id);
+        if (!rawShow) {
+            setOperationError('Ce spectacle n\'est plus disponible. Veuillez rafraîchir la page.');
+            return;
+        }
+        setEditingShow(show);
         setEditingShowRaw(rawShow);
         setOperationError(null);
         setIsFormDialogOpen(true);
@@ -324,6 +356,14 @@ function AdminSpectaclesContent() {
             return;
         }
 
+        // Gérer l'erreur de vérification
+        if (usage.error) {
+            setDeleteWarning(
+                'Impossible de vérifier les représentations associées. La suppression sera quand même possible.'
+            );
+            return;
+        }
+
         if (usage.used) {
             setDeleteWarning(
                 `Ce spectacle a ${usage.count} représentation(s) associée(s). La suppression masquera le spectacle mais conservera les données.`
@@ -335,20 +375,31 @@ function AdminSpectaclesContent() {
     const handleConfirmDelete = async () => {
         if (!showToDelete) return;
 
-        const result = await removeShow(showToDelete.id);
-        if (result.error) {
-            setOperationError(result.error);
+        setIsDeleting(true);
+        try {
+            const result = await removeShow(showToDelete.id);
+            if (result.error) {
+                setOperationError(result.error);
+                // Ne pas fermer le dialog en cas d'erreur
+                return;
+            }
+            setShowToDelete(null);
+            setDeleteWarning(null);
+            pendingDeleteCheckRef.current = null;
+        } finally {
+            setIsDeleting(false);
         }
-        setShowToDelete(null);
-        setDeleteWarning(null);
-        pendingDeleteCheckRef.current = null;
     };
 
     // Ouvrir la modale de visualisation
     const handleView = (show: ShowForDisplay) => {
-        setViewingShow(show);
         // Trouver le show brut correspondant dans rawShows
-        const rawShow = rawShows.find(s => s.id === show.id) || null;
+        const rawShow = rawShows.find(s => s.id === show.id);
+        if (!rawShow) {
+            setOperationError('Ce spectacle n\'est plus disponible. Veuillez rafraîchir la page.');
+            return;
+        }
+        setViewingShow(show);
         setViewingShowRaw(rawShow);
     };
 
@@ -356,7 +407,10 @@ function AdminSpectaclesContent() {
     const handleViewToEdit = () => {
         if (viewingShow) {
             const showToEdit = viewingShow;
+            // Sauvegarder l'ID pour rouvrir la vue après édition
+            setShowIdToReopen(showToEdit.id);
             setViewingShow(null);
+            setViewingShowRaw(null);
             handleEdit(showToEdit);
         }
     };
@@ -388,7 +442,7 @@ function AdminSpectaclesContent() {
             period: formData.period?.trim() || null,
             derviche_manager_id: formData.dervisheManagerId || null,
             invitation_policy: formData.invitationPolicy?.trim() || null,
-            max_reservations_per_booking: formData.maxParticipantsPerBooking || 5,
+            max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
             closure_dates: formData.closureDates?.trim() || null,
             folder_url: formData.folderUrl?.trim() || null,
             teaser_url: formData.teaserUrl?.trim() || null,
@@ -405,7 +459,7 @@ function AdminSpectaclesContent() {
 
             if (result.error) {
                 setOperationError(result.error);
-                return;
+                throw new Error(result.error); // Permet au dialog de rester ouvert
             }
         } else {
             const result = await createShow({
@@ -416,7 +470,7 @@ function AdminSpectaclesContent() {
 
             if (result.error) {
                 setOperationError(result.error);
-                return;
+                throw new Error(result.error); // Permet au dialog de rester ouvert
             }
         }
 
@@ -430,6 +484,7 @@ function AdminSpectaclesContent() {
         const result = await createCategory(categoryName);
         if (result.error) {
             alert(`Erreur: ${result.error}`);
+            throw new Error(result.error); // Permet au dialog de ne pas clear l'input
         }
     };
 
@@ -439,6 +494,13 @@ function AdminSpectaclesContent() {
         const categoryName = category?.name || 'cette catégorie';
 
         const usage = await checkCategoryUsage(categoryId);
+        
+        // Gérer l'erreur de vérification
+        if (usage.error) {
+            alert(`Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`);
+            return;
+        }
+        
         if (usage.used) {
             alert(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
             return;
@@ -455,12 +517,20 @@ function AdminSpectaclesContent() {
         const result = await createTargetAudience(name);
         if (result.error) {
             alert(`Erreur: ${result.error}`);
+            throw new Error(result.error); // Permet au dialog de ne pas clear l'input
         }
     };
 
     const handleRemoveTargetAudience = async (id: string) => {
+        const audienceName = rawTargetAudiences.find(ta => ta.id === id)?.name || 'ce public cible';
+        
         const usage = await checkTargetAudienceUsage(id);
-        const audienceName = rawTargetAudiences.find(ta => ta.id === id)?.name || '';
+        
+        // Gérer l'erreur de vérification
+        if (usage.error) {
+            alert(`Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`);
+            return;
+        }
         
         if (usage.used) {
             alert(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
@@ -869,7 +939,7 @@ function AdminSpectaclesContent() {
             <DeleteConfirmDialog
                 open={showToDelete !== null}
                 onOpenChange={(open) => {
-                    if (!open) {
+                    if (!open && !isDeleting) {
                         setShowToDelete(null);
                         setDeleteWarning(null);
                         pendingDeleteCheckRef.current = null;
@@ -882,6 +952,7 @@ function AdminSpectaclesContent() {
                         ? `${deleteWarning} Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ?`
                         : `Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ? Cette action est irréversible.`
                 }
+                isSubmitting={isDeleting}
             />
         </div>
     );
