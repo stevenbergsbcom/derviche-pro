@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { Upload, X, Loader2, AlertCircle, ImageIcon } from 'lucide-react';
@@ -35,6 +35,12 @@ export function ImageUploader({
     const [validationError, setValidationError] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Réinitialiser la preview quand la valeur externe change (changement de spectacle)
+    useEffect(() => {
+        setPreviewUrl(null);
+        setValidationError(null);
+    }, [value]);
 
     // L'URL à afficher : preview locale ou URL existante
     const displayUrl = previewUrl || value;

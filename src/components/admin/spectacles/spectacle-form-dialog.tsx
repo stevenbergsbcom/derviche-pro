@@ -229,9 +229,6 @@ export function SpectacleFormDialog({
 
     const handleClose = () => {
         onOpenChange(false);
-        setFormData(defaultFormData);
-        setIsDialogExpanded(false);
-        setError(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -287,7 +284,15 @@ export function SpectacleFormDialog({
     };
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+        <Dialog open={open} onOpenChange={(isOpen) => {
+            if (!isOpen) {
+                // Réinitialiser le formulaire avant de fermer
+                setFormData(defaultFormData);
+                setIsDialogExpanded(false);
+                setError(null);
+            }
+            onOpenChange(isOpen);
+        }}>
             <DialogContent className={`w-full max-w-[calc(100vw-2rem)] max-h-[85vh] overflow-hidden flex flex-col transition-all duration-200 ${isDialogExpanded ? 'sm:max-w-6xl sm:h-[90vh]' : 'sm:max-w-3xl'}`}>
                 <DialogHeader className="relative">
                     <div className="flex items-start justify-between">
