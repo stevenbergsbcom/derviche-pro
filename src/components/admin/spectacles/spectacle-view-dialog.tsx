@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -97,6 +98,9 @@ export function SpectacleViewDialog({
                 {/* Titre caché pour l'accessibilité (lecteurs d'écran) */}
                 <DialogHeader className="sr-only">
                     <DialogTitle>{show.title}</DialogTitle>
+                    <DialogDescription>
+                        Détails du spectacle {show.title} de {show.company_name}
+                    </DialogDescription>
                 </DialogHeader>
 
                 {/* Image en haut sans espace */}
