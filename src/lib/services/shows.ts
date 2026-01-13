@@ -209,6 +209,7 @@ export async function getShowById(id: string): Promise<{ data: ShowWithRelations
 
 /**
  * Crée un nouveau spectacle avec ses relations N-N
+ * Le slug est généré automatiquement à partir du titre (avec unicité garantie)
  */
 export async function createShow(
   input: ShowWithRelationsInput
@@ -217,10 +218,20 @@ export async function createShow(
     const supabase = createClient();
     const { show, category_ids = [], target_audience_ids = [] } = input;
 
+    // Générer un slug unique à partir du titre
+    const showInsert = show as ShowInsert;
+    const uniqueSlug = await generateUniqueSlug(showInsert.title);
+    
+    // Remplacer le slug fourni par le slug unique généré
+    const showWithUniqueSlug: ShowInsert = {
+      ...showInsert,
+      slug: uniqueSlug,
+    };
+
     // 1. Créer le spectacle
     const { data: newShow, error: showError } = await supabase
       .from('shows')
-      .insert(show as ShowInsert)
+      .insert(showWithUniqueSlug)
       .select(`
         *,
         companies!inner(name)
@@ -481,7 +492,7 @@ export async function isShowUsed(id: string): Promise<{ used: boolean; count: nu
 }
 
 /**
- * Génère un slug unique à partir du titre
+ * Génère un slug à partir du titre (sans vérification d'unicité)
  */
 export function generateSlug(title: string): string {
   return title
@@ -491,4 +502,49 @@ export function generateSlug(title: string): string {
     .replace(/[^a-z0-9]+/g, '-')     // Remplacer les caractères spéciaux par des tirets
     .replace(/^-+|-+$/g, '')         // Retirer les tirets en début et fin
     .substring(0, 100);              // Limiter la longueur
+}
+
+/**
+ * Génère un slug unique à partir du titre
+ * Si le slug existe déjà, ajoute un suffixe numérique (-2, -3, etc.)
+ * En cas d'erreur de requête, retourne le slug de base (la contrainte UNIQUE en BDD gèrera les doublons)
+ */
+export async function generateUniqueSlug(title: string): Promise<string> {
+  const supabase = createClient();
+  const baseSlug = generateSlug(title);
+  
+  // Chercher tous les slugs qui commencent par le slug de base
+  const { data: existing, error } = await supabase
+    .from('shows')
+    .select('slug')
+    .like('slug', `${baseSlug}%`)
+    .is('deleted_at', null);
+  
+  // En cas d'erreur de requête, on retourne le slug de base
+  // La contrainte UNIQUE en BDD gèrera les doublons si nécessaire
+  if (error) {
+    logger.error('Erreur recherche slugs existants', { error: error.message, baseSlug });
+    return baseSlug;
+  }
+  
+  // Si aucun résultat, le slug de base est disponible
+  if (!existing || existing.length === 0) {
+    return baseSlug;
+  }
+  
+  // Créer un Set pour recherche rapide
+  const existingSlugs = new Set(existing.map(s => s.slug));
+  
+  // Si le slug de base exact n'existe pas, on le retourne
+  if (!existingSlugs.has(baseSlug)) {
+    return baseSlug;
+  }
+  
+  // Trouver le prochain numéro disponible
+  let counter = 2;
+  while (existingSlugs.has(`${baseSlug}-${counter}`)) {
+    counter++;
+  }
+  
+  return `${baseSlug}-${counter}`;
 }

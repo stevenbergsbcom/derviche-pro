@@ -29,6 +29,7 @@ import {
     Minimize2,
     Clock,
     AlertTriangle,
+    Loader2,
 } from 'lucide-react';
 import type { MockRepresentation, MockVenue, MockUser } from '@/lib/mock-data';
 import type { SlotHostedBy } from '@/types/database';
@@ -63,8 +64,8 @@ export interface GenerateSeriesDialogProps {
     open: boolean;
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
-    /** Callback à la soumission (retourne les représentations à créer) */
-    onSubmit: (data: GenerateSeriesData, representationsToCreate: GeneratedRepresentation[]) => void;
+    /** Callback à la soumission (peut être async) */
+    onSubmit: (data: GenerateSeriesData, representationsToCreate: GeneratedRepresentation[]) => void | Promise<void>;
     /** Liste des lieux disponibles */
     venues: MockVenue[];
     /** Liste des utilisateurs Derviche */
@@ -81,6 +82,14 @@ export interface GenerateSeriesDialogProps {
 
 // Labels des jours de la semaine
 const weekDayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+
+// Fonction pour obtenir la date locale au format YYYY-MM-DD
+function getLocalDateString(date: Date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 // Valeurs par défaut
 const defaultSeriesData: GenerateSeriesData = {
@@ -125,6 +134,7 @@ export function GenerateSeriesDialog({
 }: GenerateSeriesDialogProps) {
     const [seriesData, setSeriesData] = useState<GenerateSeriesData>(defaultSeriesData);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
     // Auto-sélection du nouveau lieu créé
     useEffect(() => {
@@ -136,10 +146,18 @@ export function GenerateSeriesDialog({
         }
     }, [newlyCreatedVenueId, open, onClearNewlyCreatedVenueId]);
 
+    // Réinitialiser isSubmitting à l'ouverture
+    useEffect(() => {
+        if (open) {
+            setIsSubmitting(false);
+        }
+    }, [open]);
+
     const handleClose = () => {
         onOpenChange(false);
         setSeriesData(defaultSeriesData);
         setIsExpanded(false);
+        // Note: pas de setIsSubmitting(false) ici car le composant se démonte
     };
 
     // Calculer les représentations générées
@@ -231,8 +249,10 @@ export function GenerateSeriesDialog({
         , [generatedRepresentations]);
 
     // Validation
+    // Note: hostedById est temporairement optionnel car les mockDervisheUsers ont des IDs non-UUID
+    // TODO: Rendre obligatoire quand useDervisheUsers sera implémenté
     const isValid = useMemo(() => {
-        const { startDate, endDate, weekDays, times, venueId, hostedBy, hostedById, isUnlimited, capacity } = seriesData;
+        const { startDate, endDate, weekDays, times, venueId, isUnlimited, capacity } = seriesData;
 
         if (!startDate || !endDate) return false;
         if (new Date(endDate) < new Date(startDate)) return false;
@@ -240,15 +260,24 @@ export function GenerateSeriesDialog({
         if (times.length === 0 || times.some((t) => !t.trim())) return false;
         if (!venueId) return false;
         if (!isUnlimited && (!capacity || capacity < 1)) return false;
-        if (hostedBy === 'derviche' && !hostedById) return false;
+        // hostedById temporairement optionnel - sera validé côté page
         if (representationsToCreate.length === 0) return false;
         return true;
     }, [seriesData, representationsToCreate.length]);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!isValid) return;
-        onSubmit(seriesData, representationsToCreate);
-        handleClose();
+
+        setIsSubmitting(true);
+
+        try {
+            // Attendre que onSubmit se termine avant de fermer
+            await onSubmit(seriesData, representationsToCreate);
+            handleClose();
+        } catch (error) {
+            console.error('Erreur lors de la génération:', error);
+            setIsSubmitting(false);
+        }
     };
 
     const handleAddTime = () => {
@@ -316,6 +345,7 @@ export function GenerateSeriesDialog({
                                 type="date"
                                 value={seriesData.startDate}
                                 onChange={(e) => setSeriesData({ ...seriesData, startDate: e.target.value })}
+                                min={getLocalDateString()} // Empêcher dates passées (timezone local)
                                 required
                             />
                         </div>
@@ -328,7 +358,7 @@ export function GenerateSeriesDialog({
                                 type="date"
                                 value={seriesData.endDate}
                                 onChange={(e) => setSeriesData({ ...seriesData, endDate: e.target.value })}
-                                min={seriesData.startDate}
+                                min={seriesData.startDate || getLocalDateString()} // Minimum = date début ou aujourd'hui (timezone local)
                                 required
                             />
                         </div>
@@ -642,26 +672,30 @@ export function GenerateSeriesDialog({
                 </div>
 
                 <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
-                    <Button variant="outline" onClick={handleClose} className="w-full sm:w-auto">
+                    <Button
+                        variant="outline"
+                        onClick={handleClose}
+                        disabled={isSubmitting}
+                        className="w-full sm:w-auto"
+                    >
                         Annuler
                     </Button>
                     <Button
-                        onClick={handleSubmit}
-                        disabled={!isValid}
+                        onClick={() => void handleSubmit()}
+                        disabled={!isValid || isSubmitting}
                         className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                     >
-                        Générer {representationsToCreate.length > 0 && `(${representationsToCreate.length})`}
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Génération...
+                            </>
+                        ) : (
+                            <>Générer {representationsToCreate.length > 0 && `(${representationsToCreate.length})`}</>
+                        )}
                     </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     );
-}
-
-// Export pour mise à jour externe du venueId
-export function updateSeriesVenueId(
-    setSeriesData: React.Dispatch<React.SetStateAction<GenerateSeriesData>>,
-    venueId: string
-) {
-    setSeriesData((prev) => ({ ...prev, venueId }));
 }

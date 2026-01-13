@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -33,17 +33,21 @@ import {
     Copy,
     AlertTriangle,
     RotateCcw,
+    Loader2,
 } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import {
-    mockVenues,
     mockDervisheUsers,
-    getRepresentationsByShowId,
-    getShowById,
-    generateMockId,
     type MockRepresentation,
     type MockVenue,
 } from '@/lib/mock-data';
+
+// Hooks Supabase
+import { useRepresentations } from '@/hooks/useRepresentations';
+import { useVenues } from '@/hooks/useVenues';
+import { useShows } from '@/hooks/useShows';
+import type { SlotWithRelations } from '@/lib/services/representations';
+import type { VenueRow } from '@/types/database';
 
 // Composants admin réutilisables
 import { DeleteConfirmDialog } from '@/components/admin';
@@ -57,6 +61,10 @@ import {
     type GenerateSeriesData,
     type GeneratedRepresentation,
 } from '@/components/admin/representations';
+
+// ============================================
+// FONCTIONS UTILITAIRES
+// ============================================
 
 // Fonction pour formater la date
 function formatDate(dateString: string): string {
@@ -85,6 +93,52 @@ function formatMonth(monthString: string): string {
     return `${months[parseInt(month) - 1]} ${year}`;
 }
 
+// ============================================
+// FONCTIONS DE MAPPING (Supabase → Mock)
+// ============================================
+
+/**
+ * Convertit un SlotWithRelations en MockRepresentation
+ * Pour compatibilité avec les composants existants
+ * Note: capacity >= 999999 est considéré comme "illimité" (null dans le format Mock)
+ */
+function slotToMockRepresentation(slot: SlotWithRelations, showTitle: string, companyName: string): MockRepresentation {
+    // Convertir capacity >= 999999 en null (illimité)
+    const capacity = slot.capacity >= 999999 ? null : slot.capacity;
+    // Protéger contre les valeurs négatives (si remaining_capacity > capacity par erreur de données)
+    const booked = capacity !== null ? Math.max(0, capacity - slot.remaining_capacity) : 0;
+    
+    return {
+        id: slot.id,
+        showId: slot.show_id,
+        showTitle,
+        companyName,
+        date: slot.date,
+        time: slot.time.slice(0, 5), // Convertir HH:MM:SS → HH:MM
+        venueId: slot.venue_id,
+        venueName: slot.venue?.name || 'Lieu inconnu',
+        capacity,
+        booked,
+        hostedBy: slot.hosted_by as 'derviche' | 'company',
+        hostedById: slot.hosted_by_id,
+    };
+}
+
+/**
+ * Convertit un VenueRow en MockVenue
+ */
+function venueToMockVenue(venue: VenueRow): MockVenue {
+    return {
+        id: venue.id,
+        name: venue.name,
+        city: venue.city,
+    };
+}
+
+// ============================================
+// COMPOSANT PRINCIPAL
+// ============================================
+
 export default function AdminRepresentationsPage() {
     const params = useParams();
     const router = useRouter();
@@ -97,21 +151,58 @@ export default function AdminRepresentationsPage() {
         setIsMounted(true);
     }, []);
 
-    // Trouver le spectacle correspondant
+    // Hooks Supabase
+    const { 
+        representations: slotsData, 
+        isLoading: slotsLoading, 
+        error: slotsError,
+        create: createSlot,
+        createBatch: createSlotBatch,
+        update: updateSlot,
+        remove: removeSlot,
+        checkReservations,
+        refresh: refreshSlots,
+    } = useRepresentations(showId);
+    
+    const { 
+        venues: venuesData, 
+        isLoading: venuesLoading,
+        error: venuesError,
+        create: createVenue,
+        refresh: refreshVenues,
+    } = useVenues();
+    
+    const { getShowById, isLoading: showsLoading, hasLoaded: showsHasLoaded, error: showsError, refresh: refreshShows } = useShows();
+    
+    // Trouver le spectacle
     const show = getShowById(showId);
 
-    // États des données
-    const [representations, setRepresentations] = useState<MockRepresentation[]>(getRepresentationsByShowId(showId));
-    const [venues, setVenues] = useState<MockVenue[]>(mockVenues);
+    // Convertir les données Supabase en format Mock pour les composants
+    const representations: MockRepresentation[] = useMemo(() => {
+        if (!show) return [];
+        return slotsData.map(slot => 
+            slotToMockRepresentation(slot, show.title, show.company?.name || 'Compagnie inconnue')
+        );
+    }, [slotsData, show]);
+
+    const venues: MockVenue[] = useMemo(() => {
+        return venuesData.map(venueToMockVenue);
+    }, [venuesData]);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
     const [editingRepresentation, setEditingRepresentation] = useState<MockRepresentation | null>(null);
+    const [editingReservationsCount, setEditingReservationsCount] = useState<number>(0);
     const [representationToDelete, setRepresentationToDelete] = useState<MockRepresentation | null>(null);
+    const [deleteReservationsCount, setDeleteReservationsCount] = useState<number>(0);
     const [isNewVenueDialogOpen, setIsNewVenueDialogOpen] = useState<boolean>(false);
     const [newVenueSource, setNewVenueSource] = useState<'simple' | 'series'>('simple');
     const [isGenerateSeriesOpen, setIsGenerateSeriesOpen] = useState(false);
     const [newlyCreatedVenueId, setNewlyCreatedVenueId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Ref pour éviter les race conditions lors de la vérification des réservations
+    const pendingDeleteRef = useRef<string | null>(null);
 
     // Filtres
     const [monthFilter, setMonthFilter] = useState<string>('all');
@@ -172,19 +263,56 @@ export default function AdminRepresentationsPage() {
         });
     }, [representations, monthFilter, venueFilter, dateSearch]);
 
+    // Loading state
+    const isLoading = !isMounted || slotsLoading || venuesLoading || showsLoading;
+
     // Attendre que le composant soit monté
-    if (!isMounted) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-pulse text-muted-foreground">Chargement...</div>
+                <Loader2 className="w-8 h-8 animate-spin text-derviche" />
             </div>
         );
     }
 
-    // Si le spectacle n'existe pas, rediriger
-    if (!show) {
+    // Erreur de chargement
+    const loadingError = slotsError || venuesError || showsError;
+    
+    // Fonction pour rafraîchir toutes les données
+    const refreshAllData = async () => {
+        await Promise.all([
+            refreshSlots(),
+            refreshVenues(),
+            refreshShows(),
+        ]);
+    };
+    
+    if (loadingError) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <AlertTriangle className="w-12 h-12 text-destructive" />
+                <p className="text-destructive">Erreur : {loadingError}</p>
+                <Button onClick={() => void refreshAllData()} variant="outline">
+                    Réessayer
+                </Button>
+            </div>
+        );
+    }
+
+    // Si le spectacle n'existe pas ET que les shows sont chargés, rediriger
+    // On vérifie hasLoaded pour éviter une redirection prématurée
+    if (!show && showsHasLoaded) {
         router.push('/admin/spectacles');
         return null;
+    }
+
+    // Si show est null mais les données ne sont pas encore chargées, afficher un spinner
+    if (!show) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="w-8 h-8 animate-spin text-derviche" />
+            </div>
+        );
     }
 
     // === HANDLERS ===
@@ -192,93 +320,160 @@ export default function AdminRepresentationsPage() {
     // Création simple
     const handleCreate = () => {
         setEditingRepresentation(null);
+        setEditingReservationsCount(0);
         setIsFormDialogOpen(true);
     };
 
-    // Édition
-    const handleEdit = (representation: MockRepresentation) => {
+    // Édition - vérifier les réservations avant d'ouvrir le formulaire
+    const handleEdit = async (representation: MockRepresentation) => {
+        const result = await checkReservations(representation.id);
+        setEditingReservationsCount(result.count);
         setEditingRepresentation(representation);
         setIsFormDialogOpen(true);
     };
 
-    // Suppression
-    const handleDeleteClick = (representation: MockRepresentation) => {
+    // Suppression - vérifier les réservations d'abord
+    // Utilise useRef pour éviter les race conditions si l'utilisateur clique rapidement
+    const handleDeleteClick = async (representation: MockRepresentation) => {
+        // Stocker l'ID de la représentation pour vérifier après l'appel async
+        pendingDeleteRef.current = representation.id;
+        
+        const result = await checkReservations(representation.id);
+        
+        // Vérifier que c'est toujours la même représentation qu'on veut supprimer
+        // (l'utilisateur n'a pas cliqué sur une autre entre-temps)
+        if (pendingDeleteRef.current !== representation.id) {
+            return; // Ignorer ce résultat, un autre clic a eu lieu
+        }
+        
+        // En cas d'erreur, on affiche quand même le dialog avec count=0
+        // L'erreur est déjà loggée dans le hook
+        if (result.error) {
+            console.error('Erreur vérification réservations:', result.error);
+        }
+        
+        setDeleteReservationsCount(result.count);
         setRepresentationToDelete(representation);
     };
 
-    const handleConfirmDelete = () => {
+    const handleConfirmDelete = async () => {
         if (representationToDelete) {
-            setRepresentations((prev) => prev.filter((rep) => rep.id !== representationToDelete.id));
-            setRepresentationToDelete(null);
+            setIsSubmitting(true);
+            try {
+                const result = await removeSlot(representationToDelete.id);
+                
+                if (result.success) {
+                    // Fermer le dialog seulement si la suppression a réussi
+                    setRepresentationToDelete(null);
+                    setDeleteReservationsCount(0);
+                } else {
+                    // En cas d'erreur, garder le dialog ouvert
+                    console.error('Erreur suppression:', result.error);
+                }
+            } catch (error) {
+                // En cas d'exception, garder le dialog ouvert
+                console.error('Erreur suppression:', error);
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
     // Soumission du formulaire
-    const handleFormSubmit = (formData: RepresentationFormData, isEditing: boolean) => {
-        const venue = venues.find((v) => v.id === formData.venueId);
-        if (!venue) return;
-
+    const handleFormSubmit = async (formData: RepresentationFormData, isEditing: boolean) => {
+        // Note: pas de try/catch ici - les erreurs remontent au dialog qui gère le retry
+        
+        // Convertir capacity null (illimité) en grande valeur pour Supabase
+        // Note: La contrainte SQL est capacity > 0, donc on utilise 999999 pour "illimité"
+        const capacity = formData.capacity === null ? 999999 : formData.capacity;
+        
+        // Vérifier si hosted_by_id est un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const hostedById = formData.hostedById && uuidRegex.test(formData.hostedById) 
+            ? formData.hostedById 
+            : null;
+        
         if (isEditing && editingRepresentation) {
-            setRepresentations((prev) =>
-                prev.map((rep) =>
-                    rep.id === editingRepresentation.id
-                        ? {
-                            ...rep,
-                            date: formData.date,
-                            time: formData.time,
-                            venueId: formData.venueId,
-                            venueName: venue.name,
-                            capacity: formData.capacity,
-                            hostedBy: formData.hostedBy,
-                            hostedById: formData.hostedById,
-                        }
-                        : rep
-                )
-            );
+            // Trouver la représentation originale pour calculer remaining_capacity
+            const originalSlot = slotsData.find(s => s.id === editingRepresentation.id);
+            
+            // Calculer le nombre de places réservées
+            // booked = old_capacity - old_remaining_capacity
+            // Pour capacity=999999 (illimité), on considère booked = 0
+            const oldCapacity = originalSlot?.capacity ?? 999999;
+            const oldRemaining = originalSlot?.remaining_capacity ?? 999999;
+            const booked = oldCapacity >= 999999 ? 0 : oldCapacity - oldRemaining;
+            
+            // Calculer le nouveau remaining
+            // Si nouvelle capacité >= 999999 (illimité), remaining = 999999
+            // Sinon, remaining = nouvelle_capacité - booked (min 0)
+            const newRemaining = capacity >= 999999 ? 999999 : Math.max(0, capacity - booked);
+            
+            const result = await updateSlot(editingRepresentation.id, {
+                date: formData.date,
+                time: formData.time + ':00', // Ajouter les secondes
+                venue_id: formData.venueId,
+                capacity,
+                remaining_capacity: newRemaining,
+                hosted_by: formData.hostedBy,
+                hosted_by_id: hostedById,
+            });
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Erreur lors de la mise à jour');
+            }
         } else {
-            const newId = generateMockId('rep');
-            setRepresentations((prev) => [
-                ...prev,
-                {
-                    id: newId,
-                    showId: showId,
-                    showTitle: show.title,
-                    companyName: show.companyName,
-                    date: formData.date,
-                    time: formData.time,
-                    venueId: formData.venueId,
-                    venueName: venue.name,
-                    capacity: formData.capacity,
-                    booked: 0,
-                    hostedBy: formData.hostedBy,
-                    hostedById: formData.hostedById,
-                },
-            ]);
+            const result = await createSlot({
+                show_id: showId,
+                date: formData.date,
+                time: formData.time + ':00', // Ajouter les secondes
+                venue_id: formData.venueId,
+                capacity,
+                remaining_capacity: capacity,
+                hosted_by: formData.hostedBy,
+                hosted_by_id: hostedById,
+            });
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Erreur lors de la création');
+            }
         }
+        
         setEditingRepresentation(null);
     };
 
     // Génération de série
-    const handleGenerateSeriesSubmit = (data: GenerateSeriesData, repsToCreate: GeneratedRepresentation[]) => {
-        const venue = venues.find((v) => v.id === data.venueId);
-        if (!venue) return;
-
-        const newRepresentations: MockRepresentation[] = repsToCreate.map((rep) => ({
-            id: generateMockId('rep'),
-            showId: showId,
-            showTitle: show.title,
-            companyName: show.companyName,
+    const handleGenerateSeriesSubmit = async (data: GenerateSeriesData, repsToCreate: GeneratedRepresentation[]) => {
+        if (repsToCreate.length === 0) return;
+        
+        // Note: pas de try/catch ici - les erreurs remontent au dialog qui gère le retry
+        
+        // Convertir capacity null (illimité) en grande valeur pour Supabase
+        // Note: La contrainte SQL est capacity > 0, donc on utilise 999999 pour "illimité"
+        const capacity = data.isUnlimited ? 999999 : (data.capacity || 1);
+        
+        // Vérifier si hosted_by_id est un UUID valide
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const hostedById = data.hostedById && uuidRegex.test(data.hostedById) 
+            ? data.hostedById 
+            : null;
+        
+        const slotsToInsert = repsToCreate.map((rep) => ({
+            show_id: showId,
             date: rep.date,
-            time: rep.time,
-            venueId: rep.venueId,
-            venueName: venue.name,
-            capacity: data.isUnlimited ? null : data.capacity,
-            booked: 0,
-            hostedBy: data.hostedBy,
-            hostedById: data.hostedById,
+            time: rep.time + ':00', // Ajouter les secondes
+            venue_id: rep.venueId,
+            capacity,
+            remaining_capacity: capacity,
+            hosted_by: data.hostedBy,
+            hosted_by_id: hostedById,
         }));
 
-        setRepresentations((prev) => [...prev, ...newRepresentations]);
+        const result = await createSlotBatch(slotsToInsert);
+        
+        if (!result.success) {
+            throw new Error(result.error || 'Erreur lors de la génération de la série');
+        }
     };
 
     // Création de lieu
@@ -287,24 +482,25 @@ export default function AdminRepresentationsPage() {
         setIsNewVenueDialogOpen(true);
     };
 
-    const handleCreateVenue = (data: { name: string; city: string }): string => {
-        const newId = generateMockId('venue');
-        const newVenue: MockVenue = {
-            id: newId,
+    const handleCreateVenue = async (data: { name: string; city: string }): Promise<string> => {
+        const result = await createVenue({
             name: data.name,
             city: data.city,
-        };
-        setVenues((prev) => [...prev, newVenue]);
-        return newId;
+        });
+        
+        if (!result.success || !result.data) {
+            throw new Error(result.error || 'Erreur lors de la création du lieu');
+        }
+        
+        setNewlyCreatedVenueId(result.data.id);
+        return result.data.id;
     };
 
     // Auto-sélection du nouveau lieu créé
     const handleVenueCreated = (venueId: string) => {
-        if (newVenueSource === 'simple') {
-            // Fermer et rouvrir le formulaire avec le nouveau lieu sélectionné
-            setNewlyCreatedVenueId(venueId);
-        } else {
-            // Pour la série, on stocke aussi l'ID
+        // Cette fonction n'est plus nécessaire car on utilise newlyCreatedVenueId directement
+        // mais on la garde pour compatibilité
+        if (venueId) {
             setNewlyCreatedVenueId(venueId);
         }
     };
@@ -338,18 +534,23 @@ export default function AdminRepresentationsPage() {
                     <h1 className="text-xl sm:text-2xl font-bold text-derviche-dark truncate">
                         Représentations de « {show.title} »
                     </h1>
-                    <p className="text-sm text-muted-foreground">{show.companyName}</p>
+                    <p className="text-sm text-muted-foreground">{show.company?.name || 'Compagnie inconnue'}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <Button
                         variant="outline"
                         onClick={() => setIsGenerateSeriesOpen(true)}
                         className="w-full sm:w-auto"
+                        disabled={isSubmitting}
                     >
                         <Copy className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Générer une série</span>
                     </Button>
-                    <Button onClick={handleCreate} className="w-full sm:w-auto bg-derviche hover:bg-derviche-light">
+                    <Button 
+                        onClick={handleCreate} 
+                        className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
+                        disabled={isSubmitting}
+                    >
                         <Plus className="w-4 h-4 mr-2" />
                         <span className="sm:hidden">Ajouter</span>
                         <span className="hidden sm:inline">Ajouter une représentation</span>
@@ -492,7 +693,13 @@ export default function AdminRepresentationsPage() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(rep)}>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8" 
+                                                    onClick={() => void handleEdit(rep)}
+                                                    disabled={isSubmitting}
+                                                >
                                                     <Pencil className="w-4 h-4" />
                                                     <span className="sr-only">Modifier</span>
                                                 </Button>
@@ -500,7 +707,8 @@ export default function AdminRepresentationsPage() {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleDeleteClick(rep)}
+                                                    onClick={() => void handleDeleteClick(rep)}
+                                                    disabled={isSubmitting}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                     <span className="sr-only">Supprimer</span>
@@ -580,7 +788,13 @@ export default function AdminRepresentationsPage() {
                                     )}
 
                                     <div className="flex items-center gap-2 pt-2 border-t">
-                                        <Button variant="ghost" size="sm" className="flex-1" onClick={() => handleEdit(rep)}>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="sm" 
+                                            className="flex-1" 
+                                            onClick={() => void handleEdit(rep)}
+                                            disabled={isSubmitting}
+                                        >
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Modifier
                                         </Button>
@@ -588,7 +802,8 @@ export default function AdminRepresentationsPage() {
                                             variant="ghost"
                                             size="sm"
                                             className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => handleDeleteClick(rep)}
+                                            onClick={() => void handleDeleteClick(rep)}
+                                            disabled={isSubmitting}
                                         >
                                             <Trash2 className="w-4 h-4 mr-2" />
                                             Supprimer
@@ -614,6 +829,7 @@ export default function AdminRepresentationsPage() {
                 onOpenNewVenueDialog={() => handleOpenNewVenueDialog('simple')}
                 newlyCreatedVenueId={newVenueSource === 'simple' ? newlyCreatedVenueId : null}
                 onClearNewlyCreatedVenueId={() => setNewlyCreatedVenueId(null)}
+                hasReservations={editingReservationsCount > 0}
             />
 
             {/* Génération de série */}
@@ -640,27 +856,35 @@ export default function AdminRepresentationsPage() {
             {/* Confirmation de suppression */}
             <DeleteConfirmDialog
                 open={!!representationToDelete}
-                onOpenChange={(open) => !open && setRepresentationToDelete(null)}
-                onConfirm={handleConfirmDelete}
-                title="Supprimer cette représentation ?"
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setRepresentationToDelete(null);
+                        setDeleteReservationsCount(0);
+                        pendingDeleteRef.current = null; // Réinitialiser la ref pour éviter les réouvertures intempestives
+                    }
+                }}
+                onConfirm={() => void handleConfirmDelete()}
+                isSubmitting={isSubmitting}
+                confirmDisabled={deleteReservationsCount > 0} // Bloquer si réservations existantes
+                title={deleteReservationsCount > 0 ? "Suppression impossible" : "Supprimer cette représentation ?"}
                 description={
-                    representationToDelete && representationToDelete.booked > 0 ? (
+                    representationToDelete && deleteReservationsCount > 0 ? (
                         <div className="space-y-2 mt-2">
-                            <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-md">
-                                <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                            <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                                <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                                 <div className="text-sm">
-                                    <p className="font-medium text-orange-900">
-                                        Attention : {representationToDelete.booked} place(s) déjà réservée(s)
+                                    <p className="font-medium text-destructive">
+                                        {deleteReservationsCount} réservation{deleteReservationsCount > 1 ? 's' : ''} existante{deleteReservationsCount > 1 ? 's' : ''}
                                     </p>
-                                    <p className="text-orange-700 mt-1">
-                                        La suppression de cette représentation affectera les réservations existantes.
+                                    <p className="text-muted-foreground mt-1">
+                                        Impossible de supprimer une représentation avec des réservations. Annulez d&apos;abord les réservations concernées.
                                     </p>
                                 </div>
                             </div>
-                            <p className="text-sm">
-                                Êtes-vous sûr de vouloir supprimer la représentation du{' '}
+                            <p className="text-sm text-muted-foreground">
+                                Représentation du{' '}
                                 <strong>{formatDate(representationToDelete.date)}</strong> à{' '}
-                                <strong>{representationToDelete.time}</strong> ? Cette action est irréversible.
+                                <strong>{representationToDelete.time}</strong>
                             </p>
                         </div>
                     ) : (
