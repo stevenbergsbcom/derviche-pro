@@ -65,7 +65,6 @@ export function CompanyQuickCreateDialog({
 
             if (!newId) {
                 setError('Erreur lors de la création de la compagnie');
-                setIsSubmitting(false);
                 return;
             }
 

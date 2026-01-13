@@ -46,17 +46,26 @@ export function TargetAudienceManagerDialog({
     const [newTargetAudience, setNewTargetAudience] = useState<string>('');
     const [isAdding, setIsAdding] = useState<boolean>(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleAdd = async () => {
         const trimmed = newTargetAudience.trim();
-        if (trimmed && !targetAudiences.some(ta => ta.name.toLowerCase() === trimmed.toLowerCase())) {
-            setIsAdding(true);
-            try {
-                await onAddTargetAudience(trimmed);
-                setNewTargetAudience('');
-            } finally {
-                setIsAdding(false);
-            }
+        if (!trimmed) return;
+        
+        if (targetAudiences.some(ta => ta.name.toLowerCase() === trimmed.toLowerCase())) {
+            setError('Ce public cible existe déjà');
+            return;
+        }
+        
+        setError(null);
+        setIsAdding(true);
+        try {
+            await onAddTargetAudience(trimmed);
+            setNewTargetAudience('');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur lors de l\'ajout');
+        } finally {
+            setIsAdding(false);
         }
     };
 
@@ -64,6 +73,8 @@ export function TargetAudienceManagerDialog({
         setDeletingId(audienceId);
         try {
             await onRemoveTargetAudience(audienceId);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur lors de la suppression');
         } finally {
             setDeletingId(null);
         }
@@ -116,25 +127,35 @@ export function TargetAudienceManagerDialog({
                         )}
                     </div>
 
-                    <div className="flex gap-2">
-                        <Input
-                            value={newTargetAudience}
-                            onChange={(e) => setNewTargetAudience(e.target.value)}
-                            placeholder="Nouveau public cible"
-                            onKeyDown={handleKeyDown}
-                            disabled={isAdding}
-                        />
-                        <Button 
-                            type="button" 
-                            onClick={() => void handleAdd()}
-                            disabled={isAdding || !newTargetAudience.trim()}
-                        >
-                            {isAdding ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                'Ajouter'
-                            )}
-                        </Button>
+                    <div className="space-y-2">
+                        {error && (
+                            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+                                {error}
+                            </div>
+                        )}
+                        <div className="flex gap-2">
+                            <Input
+                                value={newTargetAudience}
+                                onChange={(e) => {
+                                    setNewTargetAudience(e.target.value);
+                                    if (error) setError(null);
+                                }}
+                                placeholder="Nouveau public cible"
+                                onKeyDown={handleKeyDown}
+                                disabled={isAdding}
+                            />
+                            <Button 
+                                type="button" 
+                                onClick={() => void handleAdd()}
+                                disabled={isAdding || !newTargetAudience.trim()}
+                            >
+                                {isAdding ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    'Ajouter'
+                                )}
+                            </Button>
+                        </div>
                     </div>
                 </div>
 

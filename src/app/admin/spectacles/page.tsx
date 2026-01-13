@@ -325,7 +325,6 @@ function AdminSpectaclesContent() {
     const handleCreate = () => {
         setEditingShow(null);
         setEditingShowRaw(null);
-        setOperationError(null);
         setIsFormDialogOpen(true);
     };
 
@@ -339,7 +338,6 @@ function AdminSpectaclesContent() {
         }
         setEditingShow(show);
         setEditingShowRaw(rawShow);
-        setOperationError(null);
         setIsFormDialogOpen(true);
     };
 
@@ -420,14 +418,13 @@ function AdminSpectaclesContent() {
         if (viewingShow) {
             const showToRemove = viewingShow;
             setViewingShow(null);
+            setViewingShowRaw(null);
             void handleDeleteClick(showToRemove);
         }
     };
 
     // Soumettre le formulaire de spectacle
     const handleFormSubmit = async (formData: SpectacleFormData, isEditing: boolean) => {
-        setOperationError(null);
-
         // Préparer les données pour Supabase
         const showData = {
             slug: formData.slug || generateSlug(formData.title),
@@ -458,8 +455,7 @@ function AdminSpectaclesContent() {
             });
 
             if (result.error) {
-                setOperationError(result.error);
-                throw new Error(result.error); // Permet au dialog de rester ouvert
+                throw new Error(result.error); // L'erreur est gérée par le dialog
             }
         } else {
             const result = await createShow({
@@ -469,8 +465,7 @@ function AdminSpectaclesContent() {
             });
 
             if (result.error) {
-                setOperationError(result.error);
-                throw new Error(result.error); // Permet au dialog de rester ouvert
+                throw new Error(result.error); // L'erreur est gérée par le dialog
             }
         }
 
@@ -483,8 +478,7 @@ function AdminSpectaclesContent() {
     const handleAddCategory = async (categoryName: string) => {
         const result = await createCategory(categoryName);
         if (result.error) {
-            alert(`Erreur: ${result.error}`);
-            throw new Error(result.error); // Permet au dialog de ne pas clear l'input
+            throw new Error(result.error); // L'erreur est gérée par le dialog
         }
     };
 
@@ -497,18 +491,16 @@ function AdminSpectaclesContent() {
         
         // Gérer l'erreur de vérification
         if (usage.error) {
-            alert(`Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`);
-            return;
+            throw new Error(`Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`);
         }
         
         if (usage.used) {
-            alert(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
-            return;
+            throw new Error(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
         }
 
         const result = await removeCategory(categoryId);
         if (result.error) {
-            alert(`Erreur: ${result.error}`);
+            throw new Error(result.error);
         }
     };
 
@@ -516,8 +508,7 @@ function AdminSpectaclesContent() {
     const handleAddTargetAudience = async (name: string) => {
         const result = await createTargetAudience(name);
         if (result.error) {
-            alert(`Erreur: ${result.error}`);
-            throw new Error(result.error); // Permet au dialog de ne pas clear l'input
+            throw new Error(result.error); // L'erreur est gérée par le dialog
         }
     };
 
@@ -528,18 +519,16 @@ function AdminSpectaclesContent() {
         
         // Gérer l'erreur de vérification
         if (usage.error) {
-            alert(`Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`);
-            return;
+            throw new Error(`Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`);
         }
         
         if (usage.used) {
-            alert(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
-            return;
+            throw new Error(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
         }
 
         const result = await removeTargetAudience(id);
         if (result.error) {
-            alert(`Erreur: ${result.error}`);
+            throw new Error(result.error);
         }
     };
 
@@ -551,8 +540,7 @@ function AdminSpectaclesContent() {
         });
 
         if (result.error || !result.data) {
-            alert(`Erreur: ${result.error || 'Erreur inconnue'}`);
-            return '';
+            throw new Error(result.error || 'Erreur lors de la création de la compagnie');
         }
 
         return result.data.id;
@@ -890,6 +878,7 @@ function AdminSpectaclesContent() {
                 onOpenNewCompanyDialog={() => setIsNewCompanyDialogOpen(true)}
                 newlyCreatedCompanyId={newlyCreatedCompanyId}
                 onClearNewlyCreatedCompanyId={() => setNewlyCreatedCompanyId(null)}
+                onDelete={editingShow ? () => void handleDeleteClick(editingShow) : undefined}
             />
 
             {/* Modale de visualisation */}

@@ -21,7 +21,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import Image from 'next/image';
-import { Settings, Upload, X, Maximize2, Minimize2 } from 'lucide-react';
+import { Settings, Upload, X, Maximize2, Minimize2, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import type { ShowWithRelations } from '@/lib/services/shows';
@@ -106,6 +106,8 @@ export interface SpectacleFormDialogProps {
     newlyCreatedCompanyId?: string | null;
     /** Callback pour reset l'ID de la compagnie nouvellement créée */
     onClearNewlyCreatedCompanyId?: () => void;
+    /** Callback pour supprimer le spectacle (mode édition uniquement) */
+    onDelete?: () => void | Promise<void>;
 }
 
 // Fonction slugify
@@ -159,10 +161,12 @@ export function SpectacleFormDialog({
     onOpenNewCompanyDialog,
     newlyCreatedCompanyId,
     onClearNewlyCreatedCompanyId,
+    onDelete,
 }: SpectacleFormDialogProps) {
     const [formData, setFormData] = useState<SpectacleFormData>(defaultFormData);
     const [isDialogExpanded, setIsDialogExpanded] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-sélection de la nouvelle compagnie créée
@@ -220,17 +224,36 @@ export function SpectacleFormDialog({
         onOpenChange(false);
         setFormData(defaultFormData);
         setIsDialogExpanded(false);
+        setError(null);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(null);
+        
+        // Validation complète des champs requis
+        if (!formData.title.trim()) {
+            setError('Le titre est obligatoire');
+            return;
+        }
+        
+        if (!formData.companyId) {
+            setError('Veuillez sélectionner une compagnie');
+            return;
+        }
+        
+        if (formData.categoryIds.length === 0) {
+            setError('Veuillez sélectionner au moins une catégorie');
+            return;
+        }
+        
         setIsSubmitting(true);
         try {
             await onSubmit(formData, editingShow !== null);
             handleClose();
-        } catch {
-            // L'erreur est gérée par le parent (page.tsx) via setOperationError
-            // On ne ferme pas le dialog pour permettre à l'utilisateur de corriger
+        } catch (err) {
+            // Capturer l'erreur et l'afficher dans le dialog
+            setError(err instanceof Error ? err.message : 'Une erreur est survenue');
         } finally {
             setIsSubmitting(false);
         }
@@ -293,6 +316,22 @@ export function SpectacleFormDialog({
                 </DialogHeader>
 
                 <form onSubmit={(e) => void handleSubmit(e)} className="flex flex-col flex-1 overflow-hidden">
+                    {/* Message d'erreur */}
+                    {error && (
+                        <div className="mx-1 mb-4 bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex items-start gap-3">
+                            <div className="text-sm text-destructive flex-1">{error}</div>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setError(null)}
+                                className="h-6 px-2 text-xs"
+                            >
+                                Fermer
+                            </Button>
+                        </div>
+                    )}
+                    
                     <div className="flex-1 overflow-y-auto px-1">
                         <div className="space-y-4">
                             {/* Titre + Slug affiché */}
@@ -672,6 +711,22 @@ export function SpectacleFormDialog({
                     </div>
 
                     <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">
+                        {/* Bouton supprimer à gauche (mode édition uniquement) */}
+                        {editingShow && onDelete && (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    handleClose();
+                                    void onDelete();
+                                }}
+                                className="w-full sm:w-auto sm:mr-auto"
+                                disabled={isSubmitting}
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Supprimer
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"

@@ -40,17 +40,26 @@ export function CategoryManagerDialog({
     const [newCategory, setNewCategory] = useState<string>('');
     const [isAdding, setIsAdding] = useState<boolean>(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleAdd = async () => {
         const trimmed = newCategory.trim();
-        if (trimmed && !categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
-            setIsAdding(true);
-            try {
-                await onAddCategory(trimmed);
-                setNewCategory('');
-            } finally {
-                setIsAdding(false);
-            }
+        if (!trimmed) return;
+        
+        if (categories.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+            setError('Cette catégorie existe déjà');
+            return;
+        }
+        
+        setError(null);
+        setIsAdding(true);
+        try {
+            await onAddCategory(trimmed);
+            setNewCategory('');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur lors de l\'ajout');
+        } finally {
+            setIsAdding(false);
         }
     };
 
@@ -58,6 +67,8 @@ export function CategoryManagerDialog({
         setDeletingId(categoryId);
         try {
             await onRemoveCategory(categoryId);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erreur lors de la suppression');
         } finally {
             setDeletingId(null);
         }
@@ -110,25 +121,35 @@ export function CategoryManagerDialog({
                         )}
                     </div>
 
-                    <div className="flex gap-2">
-                        <Input
-                            value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value)}
-                            placeholder="Nouvelle catégorie"
-                            onKeyDown={handleKeyDown}
-                            disabled={isAdding}
-                        />
-                        <Button 
-                            type="button" 
-                            onClick={() => void handleAdd()}
-                            disabled={isAdding || !newCategory.trim()}
-                        >
-                            {isAdding ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                'Ajouter'
-                            )}
-                        </Button>
+                    <div className="space-y-2">
+                        {error && (
+                            <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded p-2">
+                                {error}
+                            </div>
+                        )}
+                        <div className="flex gap-2">
+                            <Input
+                                value={newCategory}
+                                onChange={(e) => {
+                                    setNewCategory(e.target.value);
+                                    if (error) setError(null);
+                                }}
+                                placeholder="Nouvelle catégorie"
+                                onKeyDown={handleKeyDown}
+                                disabled={isAdding}
+                            />
+                            <Button 
+                                type="button" 
+                                onClick={() => void handleAdd()}
+                                disabled={isAdding || !newCategory.trim()}
+                            >
+                                {isAdding ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    'Ajouter'
+                                )}
+                            </Button>
+                        </div>
                     </div>
                 </div>
 
