@@ -372,17 +372,26 @@ export function RepresentationFormDialog({
                                     <SelectValue placeholder="Sélectionner un membre Derviche" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {dervisheUsers.map((user) => (
-                                        <SelectItem key={user.id} value={String(user.id)}>
-                                            {user.firstName} {user.lastName} - [
-                                            {user.role === 'super-admin'
-                                                ? 'Super Admin'
-                                                : user.role === 'admin'
-                                                    ? 'Admin'
-                                                    : 'Externe'}
-                                            ]
+                                    {dervisheUsers.length === 0 ? (
+                                        <SelectItem value="_empty" disabled>
+                                            Aucun membre disponible
                                         </SelectItem>
-                                    ))}
+                                    ) : (
+                                        dervisheUsers.map((user) => (
+                                            <SelectItem key={user.id} value={String(user.id)}>
+                                                {user.firstName || user.lastName
+                                                    ? `${user.firstName} ${user.lastName}`.trim()
+                                                    : user.email
+                                                } - [
+                                                {user.role === 'super-admin'
+                                                    ? 'Super Admin'
+                                                    : user.role === 'admin'
+                                                        ? 'Admin'
+                                                        : 'Externe'}
+                                                ]
+                                            </SelectItem>
+                                        ))
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>

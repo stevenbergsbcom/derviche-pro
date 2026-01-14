@@ -37,10 +37,14 @@ import {
 } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import {
-    mockDervisheUsers,
     type MockRepresentation,
     type MockVenue,
+    type MockUser,
 } from '@/lib/mock-data';
+
+// Hook pour les utilisateurs internes (remplace mockDervisheUsers)
+import { useInternalUsers } from '@/hooks/useInternalUsers';
+import type { InternalUser } from '@/types/database';
 
 // Hooks Supabase
 import { useRepresentations } from '@/hooks/useRepresentations';
@@ -137,6 +141,20 @@ function venueToMockVenue(venue: VenueRow): MockVenue {
     };
 }
 
+/**
+ * Convertit un InternalUser en MockUser
+ * Pour compatibilité avec les composants existants
+ */
+function internalUserToMockUser(user: InternalUser): MockUser {
+    return {
+        id: user.id,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        email: user.email,
+        role: user.role,
+    };
+}
+
 // ============================================
 // COMPOSANT PRINCIPAL
 // ============================================
@@ -176,6 +194,14 @@ export default function AdminRepresentationsPage() {
 
     const { shows: showsData, isLoading: showsLoading, hasLoaded: showsHasLoaded, error: showsError, refresh: refreshShows } = useShows();
 
+    // Hook pour les utilisateurs internes (remplace mockDervisheUsers)
+    const {
+        users: internalUsersData,
+        isLoading: usersLoading,
+        error: usersError,
+        refresh: refreshUsers,
+    } = useInternalUsers();
+
     // Trouver le spectacle - mémorisé pour éviter les recalculs inutiles
     // getShowById crée un nouvel objet à chaque appel, donc on mémorise directement
     // en utilisant les données brutes pour éviter les changements de référence inutiles
@@ -203,6 +229,11 @@ export default function AdminRepresentationsPage() {
     const venues: MockVenue[] = useMemo(() => {
         return venuesData.map(venueToMockVenue);
     }, [venuesData]);
+
+    // Convertir les utilisateurs internes en format MockUser pour compatibilité
+    const internalUsers: MockUser[] = useMemo(() => {
+        return internalUsersData.map(internalUserToMockUser);
+    }, [internalUsersData]);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
@@ -284,7 +315,7 @@ export default function AdminRepresentationsPage() {
     }, [representations, monthFilter, venueFilter, dateSearch]);
 
     // Loading state
-    const isLoading = !isMounted || slotsLoading || venuesLoading || showsLoading;
+    const isLoading = !isMounted || slotsLoading || venuesLoading || showsLoading || usersLoading;
 
     // Attendre que le composant soit monté
     if (isLoading) {
@@ -296,7 +327,7 @@ export default function AdminRepresentationsPage() {
     }
 
     // Erreur de chargement
-    const loadingError = slotsError || venuesError || showsError;
+    const loadingError = slotsError || venuesError || showsError || usersError;
 
     // Fonction pour rafraîchir toutes les données
     const refreshAllData = async () => {
@@ -304,6 +335,7 @@ export default function AdminRepresentationsPage() {
             refreshSlots(),
             refreshVenues(),
             refreshShows(),
+            refreshUsers(),
         ]);
     };
 
@@ -810,7 +842,7 @@ export default function AdminRepresentationsPage() {
                                                 <Badge className="bg-derviche/10 text-derviche border-derviche/20">
                                                     {rep.hostedById
                                                         ? (() => {
-                                                            const user = mockDervisheUsers.find((u) => u.id === rep.hostedById);
+                                                            const user = internalUsers.find((u) => u.id === rep.hostedById);
                                                             return user ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.` : 'Derviche';
                                                         })()
                                                         : 'Derviche'}
@@ -888,7 +920,7 @@ export default function AdminRepresentationsPage() {
                                             <Badge className="bg-derviche/10 text-derviche border-derviche/20 shrink-0">
                                                 {rep.hostedById
                                                     ? (() => {
-                                                        const user = mockDervisheUsers.find((u) => u.id === rep.hostedById);
+                                                        const user = internalUsers.find((u) => u.id === rep.hostedById);
                                                         return user ? `Derviche - ${user.firstName} ${user.lastName.charAt(0)}.` : 'Derviche';
                                                     })()
                                                     : 'Derviche'}
@@ -962,7 +994,7 @@ export default function AdminRepresentationsPage() {
                 editingRepresentation={editingRepresentation}
                 onSubmit={handleFormSubmit}
                 venues={venues}
-                dervisheUsers={mockDervisheUsers}
+                dervisheUsers={internalUsers}
                 onOpenNewVenueDialog={() => handleOpenNewVenueDialog('simple')}
                 newlyCreatedVenueId={newVenueSource === 'simple' ? newlyCreatedVenueId : null}
                 onClearNewlyCreatedVenueId={() => setNewlyCreatedVenueId(null)}
@@ -975,7 +1007,7 @@ export default function AdminRepresentationsPage() {
                 onOpenChange={setIsGenerateSeriesOpen}
                 onSubmit={handleGenerateSeriesSubmit}
                 venues={venues}
-                dervisheUsers={mockDervisheUsers}
+                dervisheUsers={internalUsers}
                 existingRepresentations={representations}
                 onOpenNewVenueDialog={() => handleOpenNewVenueDialog('series')}
                 newlyCreatedVenueId={newVenueSource === 'series' ? newlyCreatedVenueId : null}
