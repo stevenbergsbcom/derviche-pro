@@ -52,7 +52,7 @@ export interface ShowWithRelationsInput {
 export async function getShows(): Promise<ShowsResult> {
   try {
     const supabase = createClient();
-    
+
     // Requête 1: Récupérer les spectacles avec le nom de la compagnie
     const { data: shows, error: showsError } = await supabase
       .from('shows')
@@ -120,11 +120,11 @@ export async function getShows(): Promise<ShowsResult> {
     const showsWithRelations: ShowWithRelations[] = shows.map(show => {
       // Extraire le nom de la compagnie (Supabase retourne un objet)
       const companyData = show.companies as { name: string } | null;
-      
+
       // Retirer la propriété companies et ajouter les données enrichies
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { companies, ...showData } = show;
-      
+
       // Cast explicite pour les champs enum (Supabase les renvoie comme string)
       return {
         ...showData,
@@ -151,7 +151,7 @@ export async function getShows(): Promise<ShowsResult> {
 export async function getShowById(id: string): Promise<{ data: ShowWithRelations | null; error: string | null }> {
   try {
     const supabase = createClient();
-    
+
     const { data: show, error } = await supabase
       .from('shows')
       .select(`
@@ -209,6 +209,7 @@ export async function getShowById(id: string): Promise<{ data: ShowWithRelations
 
 /**
  * Crée un nouveau spectacle avec ses relations N-N
+ * Le slug est généré automatiquement à partir du titre (avec unicité garantie)
  */
 export async function createShow(
   input: ShowWithRelationsInput
@@ -217,10 +218,37 @@ export async function createShow(
     const supabase = createClient();
     const { show, category_ids = [], target_audience_ids = [] } = input;
 
+    // Vérifier que le titre est présent et non vide (requis pour la création)
+    const showInsert = show as ShowInsert;
+    if (!showInsert.title || !showInsert.title.trim()) {
+      return { data: null, error: 'Le titre est requis pour créer un spectacle' };
+    }
+
+    // Générer un slug unique à partir du titre
+    let uniqueSlug: string;
+    try {
+      uniqueSlug = await generateUniqueSlug(showInsert.title);
+    } catch (err) {
+      // generateUniqueSlug peut lancer une erreur si le slug généré est vide
+      const errorMessage = err instanceof Error ? err.message : 'Le titre doit contenir au moins un caractère alphanumérique';
+      return { data: null, error: errorMessage };
+    }
+
+    // Vérification de sécurité supplémentaire (ne devrait jamais être nécessaire si generateUniqueSlug fonctionne correctement)
+    if (!uniqueSlug || !uniqueSlug.trim()) {
+      return { data: null, error: 'Le titre doit contenir au moins un caractère alphanumérique' };
+    }
+
+    // Remplacer le slug fourni par le slug unique généré
+    const showWithUniqueSlug: ShowInsert = {
+      ...showInsert,
+      slug: uniqueSlug,
+    };
+
     // 1. Créer le spectacle
     const { data: newShow, error: showError } = await supabase
       .from('shows')
-      .insert(show as ShowInsert)
+      .insert(showWithUniqueSlug)
       .select(`
         *,
         companies!inner(name)
@@ -425,7 +453,7 @@ export async function updateShow(
 export async function deleteShow(id: string): Promise<ShowResult> {
   try {
     const supabase = createClient();
-    
+
     const { data, error } = await supabase
       .from('shows')
       .update({ deleted_at: new Date().toISOString() })
@@ -461,7 +489,7 @@ export async function deleteShow(id: string): Promise<ShowResult> {
 export async function isShowUsed(id: string): Promise<{ used: boolean; count: number; error: string | null }> {
   try {
     const supabase = createClient();
-    
+
     const { count, error } = await supabase
       .from('slots')
       .select('*', { count: 'exact', head: true })
@@ -481,7 +509,7 @@ export async function isShowUsed(id: string): Promise<{ used: boolean; count: nu
 }
 
 /**
- * Génère un slug unique à partir du titre
+ * Génère un slug à partir du titre (sans vérification d'unicité)
  */
 export function generateSlug(title: string): string {
   return title
@@ -491,4 +519,56 @@ export function generateSlug(title: string): string {
     .replace(/[^a-z0-9]+/g, '-')     // Remplacer les caractères spéciaux par des tirets
     .replace(/^-+|-+$/g, '')         // Retirer les tirets en début et fin
     .substring(0, 100);              // Limiter la longueur
+}
+
+/**
+ * Génère un slug unique à partir du titre
+ * Si le slug existe déjà, ajoute un suffixe numérique (-2, -3, etc.)
+ * En cas d'erreur de requête, retourne le slug de base (la contrainte UNIQUE en BDD gèrera les doublons)
+ * @throws Si le slug généré est vide (titre invalide)
+ */
+export async function generateUniqueSlug(title: string): Promise<string> {
+  const supabase = createClient();
+  const baseSlug = generateSlug(title);
+
+  // Vérifier que le slug de base n'est pas vide
+  // Cela peut arriver si le titre ne contient que des caractères spéciaux ou des espaces
+  if (!baseSlug || !baseSlug.trim()) {
+    throw new Error('Le titre doit contenir au moins un caractère alphanumérique pour générer un slug valide');
+  }
+
+  // Chercher tous les slugs qui commencent par le slug de base
+  const { data: existing, error } = await supabase
+    .from('shows')
+    .select('slug')
+    .like('slug', `${baseSlug}%`)
+    .is('deleted_at', null);
+
+  // En cas d'erreur de requête, on retourne le slug de base
+  // La contrainte UNIQUE en BDD gèrera les doublons si nécessaire
+  if (error) {
+    logger.error('Erreur recherche slugs existants', { error: error.message, baseSlug });
+    return baseSlug;
+  }
+
+  // Si aucun résultat, le slug de base est disponible
+  if (!existing || existing.length === 0) {
+    return baseSlug;
+  }
+
+  // Créer un Set pour recherche rapide
+  const existingSlugs = new Set(existing.map(s => s.slug));
+
+  // Si le slug de base exact n'existe pas, on le retourne
+  if (!existingSlugs.has(baseSlug)) {
+    return baseSlug;
+  }
+
+  // Trouver le prochain numéro disponible
+  let counter = 2;
+  while (existingSlugs.has(`${baseSlug}-${counter}`)) {
+    counter++;
+  }
+
+  return `${baseSlug}-${counter}`;
 }

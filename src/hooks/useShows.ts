@@ -24,15 +24,26 @@ import { logger } from '@/lib/logger';
 // TYPES
 // ============================================
 
+/** Type enrichi pour l'affichage avec company en objet */
+export interface ShowForDisplay extends ShowWithRelations {
+  company: {
+    name: string;
+  };
+}
+
 export interface UseShowsReturn {
   /** Liste des spectacles avec leurs relations */
   shows: ShowWithRelations[];
   /** Chargement en cours */
   isLoading: boolean;
+  /** Indique si le chargement initial est terminé (même si erreur) */
+  hasLoaded: boolean;
   /** Message d'erreur */
   error: string | null;
   /** Recharger les données */
   refresh: () => Promise<void>;
+  /** Récupérer un spectacle par ID */
+  getShowById: (id: string) => ShowForDisplay | null;
   /** Créer un spectacle */
   create: (input: ShowWithRelationsInput) => Promise<{ success: boolean; data?: ShowWithRelations; error?: string }>;
   /** Mettre à jour un spectacle */
@@ -52,6 +63,7 @@ export interface UseShowsReturn {
 export function useShows(): UseShowsReturn {
   const [shows, setShows] = useState<ShowWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Charger les spectacles
@@ -69,12 +81,27 @@ export function useShows(): UseShowsReturn {
     }
 
     setIsLoading(false);
+    setHasLoaded(true);
   }, []);
 
   // Charger au montage
   useEffect(() => {
     loadShows();
   }, [loadShows]);
+
+  // Récupérer un spectacle par ID
+  const getShowById = useCallback((id: string): ShowForDisplay | null => {
+    const show = shows.find((s) => s.id === id);
+    if (!show) return null;
+    
+    // Enrichir avec l'objet company pour compatibilité
+    return {
+      ...show,
+      company: {
+        name: show.company_name,
+      },
+    };
+  }, [shows]);
 
   // Créer un spectacle
   const create = useCallback(async (input: ShowWithRelationsInput) => {
@@ -142,8 +169,10 @@ export function useShows(): UseShowsReturn {
   return {
     shows,
     isLoading,
+    hasLoaded,
     error,
     refresh: loadShows,
+    getShowById,
     create,
     update,
     remove,
