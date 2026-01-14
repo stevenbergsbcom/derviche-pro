@@ -363,9 +363,13 @@ export default function AdminRepresentationsPage() {
                 return; // Ignorer ce résultat, un autre clic a eu lieu
             }
 
-            // En cas d'erreur, on log et on continue avec count=0
+            // En cas d'erreur de vérification, NE PAS ouvrir le dialog
+            // pour éviter de permettre des modifications sur des réservations inconnues
             if (result.error) {
                 console.error('Erreur vérification réservations (handleEdit):', result.error);
+                // TODO: Afficher un toast d'erreur à l'utilisateur
+                // Pour l'instant, on ne fait rien (le dialog ne s'ouvre pas)
+                return;
             }
 
             setEditingReservationsCount(result.count);
@@ -376,16 +380,16 @@ export default function AdminRepresentationsPage() {
             // Si le ref correspond toujours à cette opération, on peut réinitialiser en toute sécurité
             // Si le ref a changé vers un autre ID, cela signifie qu'une nouvelle opération a commencé,
             // donc on ne réinitialise pas (la nouvelle opération en a besoin)
-            // Si le ref est null, cela signifie qu'une nouvelle opération s'est terminée,
-            // donc on peut réinitialiser le flag pour éviter qu'il reste bloqué
+            // Si le ref est null, cela signifie qu'une autre opération s'est terminée,
+            // mais on ne réinitialise pas car une nouvelle opération pourrait démarrer immédiatement
             const currentRef = pendingEditRef.current;
-            if (currentRef === representationId || currentRef === null) {
+            if (currentRef === representationId) {
                 setIsEditing(false);
-                // Réinitialiser le ref seulement si c'est toujours cette opération
-                if (currentRef === representationId) {
-                    pendingEditRef.current = null;
-                }
+                pendingEditRef.current = null;
             }
+            // Si currentRef !== representationId, on ne fait rien car :
+            // - Si c'est un autre ID, une nouvelle opération est en cours
+            // - Si c'est null, une autre opération s'est terminée et pourrait être suivie d'une nouvelle
         }
     };
 
@@ -408,10 +412,13 @@ export default function AdminRepresentationsPage() {
                 return; // Ignorer ce résultat, un autre clic a eu lieu
             }
 
-            // En cas d'erreur, on affiche quand même le dialog avec count=0
-            // L'erreur est déjà loggée dans le hook
+            // En cas d'erreur de vérification, NE PAS ouvrir le dialog
+            // pour éviter de supprimer une représentation avec des réservations inconnues
             if (result.error) {
                 console.error('Erreur vérification réservations:', result.error);
+                // TODO: Afficher un toast d'erreur à l'utilisateur
+                // Pour l'instant, on ne fait rien (le dialog ne s'ouvre pas)
+                return;
             }
 
             setDeleteReservationsCount(result.count);
@@ -422,16 +429,16 @@ export default function AdminRepresentationsPage() {
             // Si le ref correspond toujours à cette opération, on peut réinitialiser en toute sécurité
             // Si le ref a changé vers un autre ID, cela signifie qu'une nouvelle opération a commencé,
             // donc on ne réinitialise pas (la nouvelle opération en a besoin)
-            // Si le ref est null, cela signifie qu'une nouvelle opération s'est terminée,
-            // donc on peut réinitialiser le flag pour éviter qu'il reste bloqué
+            // Si le ref est null, cela signifie qu'une autre opération s'est terminée,
+            // mais on ne réinitialise pas car une nouvelle opération pourrait démarrer immédiatement
             const currentRef = pendingDeleteRef.current;
-            if (currentRef === representationId || currentRef === null) {
+            if (currentRef === representationId) {
                 setIsDeleting(false);
-                // Réinitialiser le ref seulement si c'est toujours cette opération
-                if (currentRef === representationId) {
-                    pendingDeleteRef.current = null;
-                }
+                pendingDeleteRef.current = null;
             }
+            // Si currentRef !== representationId, on ne fait rien car :
+            // - Si c'est un autre ID, une nouvelle opération est en cours
+            // - Si c'est null, une autre opération s'est terminée et pourrait être suivie d'une nouvelle
         }
     };
 
@@ -506,6 +513,18 @@ export default function AdminRepresentationsPage() {
                 );
             }
             const booked = reservationsResult.count;
+
+            // Protection: empêcher la modification de date/heure si des réservations existent
+            // (Vérification fraîche pour gérer le cas où des réservations sont faites pendant l'édition)
+            if (booked > 0) {
+                const dateChanged = formData.date !== editingRepresentation.date;
+                const timeChanged = formData.time !== editingRepresentation.time;
+                if (dateChanged || timeChanged) {
+                    throw new Error(
+                        'Impossible de modifier la date ou l\'heure : des réservations ont été effectuées depuis l\'ouverture du formulaire. Veuillez fermer et réouvrir le formulaire.'
+                    );
+                }
+            }
 
             // Vérifier que la nouvelle capacité n'est pas inférieure au nombre de places réservées
             // (sauf si capacité illimitée)
@@ -979,7 +998,9 @@ export default function AdminRepresentationsPage() {
                         setRepresentationToDelete(null);
                         setDeleteReservationsCount(0);
                         setDeleteError(null);
-                        pendingDeleteRef.current = null; // Réinitialiser la ref pour éviter les réouvertures intempestives
+                        // Ne pas réinitialiser pendingDeleteRef ici car cela peut interférer
+                        // avec les opérations async en cours. Le ref sera réinitialisé dans
+                        // le finally de handleDeleteClick quand l'opération se termine.
                     }
                 }}
                 onConfirm={() => void handleConfirmDelete()}

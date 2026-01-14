@@ -2,7 +2,6 @@
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -10,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -105,13 +105,16 @@ export function DeleteConfirmDialog({
           <AlertDialogCancel className="w-full sm:w-auto" disabled={isSubmitting}>
             {cancelText}
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
+          {/* Utiliser Button au lieu de AlertDialogAction pour contrôler
+              manuellement la fermeture du dialog (AlertDialogAction ferme
+              automatiquement même avec preventDefault sur certaines versions) */}
+          <Button
+            onClick={() => void onConfirm()}
             disabled={confirmDisabled || isSubmitting}
-            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto text-white bg-destructive hover:bg-destructive/90"
           >
             {isSubmitting ? 'Suppression...' : confirmText}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

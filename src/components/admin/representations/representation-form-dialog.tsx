@@ -241,12 +241,9 @@ export function RepresentationFormDialog({
                                 value={formData.date}
                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                 min={
-                                    // En mode création : toujours empêcher les dates passées
-                                    // En mode édition : permettre les dates passées si pas de réservations
-                                    // (pour éviter un état HTML5 invalide si la date originale est passée)
-                                    editingRepresentation && !hasReservations
-                                        ? undefined
-                                        : getLocalDateString()
+                                    // En mode création : empêcher les dates passées
+                                    // En mode édition : pas de min (champ potentiellement disabled ou date passée existante)
+                                    editingRepresentation ? undefined : getLocalDateString()
                                 }
                                 required
                                 disabled={hasReservations && editingRepresentation !== null}

@@ -76,6 +76,8 @@ export function useRepresentations(showId: string): UseRepresentationsReturn {
 
     // Vérifier que le showId n'a pas changé pendant l'appel async
     // Si c'est le cas, ignorer ce résultat (un autre chargement est en cours)
+    // Note: NE PAS appeler setIsLoading(false) ici car le nouveau chargement
+    // a déjà démarré et gère son propre état isLoading
     if (loadingRef.current !== currentShowId) {
       return { success: false, error: 'Le spectacle a changé pendant le chargement' };
     }
@@ -145,12 +147,13 @@ export function useRepresentations(showId: string): UseRepresentationsReturn {
 
     if (!reloadResult.success) {
       // Les représentations ont été créées mais le rechargement a échoué
-      // Retourner une erreur pour indiquer le problème
-      return {
-        success: false,
+      // IMPORTANT: Retourner success: true pour fermer le dialog et éviter les doublons
+      // L'utilisateur verra les données au prochain chargement de la page
+      logger.warn('useRepresentations - Créations réussies mais rechargement échoué', {
         count: result.count,
-        error: reloadResult.error || 'Les représentations ont été créées mais le rechargement a échoué'
-      };
+        reloadError: reloadResult.error,
+      });
+      return { success: true, count: result.count };
     }
 
     return { success: true, count: result.count };
