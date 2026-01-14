@@ -15,7 +15,6 @@ import {
   deleteShow,
   isShowUsed,
   generateSlug,
-  generateUniqueSlug,
   type ShowWithRelations,
   type ShowWithRelationsInput,
 } from '@/lib/services/shows';

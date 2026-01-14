@@ -135,6 +135,7 @@ export function GenerateSeriesDialog({
     const [seriesData, setSeriesData] = useState<GenerateSeriesData>(defaultSeriesData);
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Auto-sélection du nouveau lieu créé
     useEffect(() => {
@@ -146,10 +147,11 @@ export function GenerateSeriesDialog({
         }
     }, [newlyCreatedVenueId, open, onClearNewlyCreatedVenueId]);
 
-    // Réinitialiser isSubmitting à l'ouverture
+    // Réinitialiser les états à l'ouverture
     useEffect(() => {
         if (open) {
             setIsSubmitting(false);
+            setError(null);
         }
     }, [open]);
 
@@ -157,6 +159,7 @@ export function GenerateSeriesDialog({
         onOpenChange(false);
         setSeriesData(defaultSeriesData);
         setIsExpanded(false);
+        setError(null);
         // Note: pas de setIsSubmitting(false) ici car le composant se démonte
     };
 
@@ -269,14 +272,18 @@ export function GenerateSeriesDialog({
         if (!isValid) return;
 
         setIsSubmitting(true);
+        setError(null);
 
         try {
             // Attendre que onSubmit se termine avant de fermer
             await onSubmit(seriesData, representationsToCreate);
             handleClose();
-        } catch (error) {
-            console.error('Erreur lors de la génération:', error);
+        } catch (err) {
+            // Erreur : garder le dialog ouvert et permettre de réessayer
+            const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la génération';
+            setError(errorMessage);
             setIsSubmitting(false);
+            console.error('Erreur lors de la génération:', err);
         }
     };
 
@@ -334,6 +341,13 @@ export function GenerateSeriesDialog({
                 </DialogHeader>
 
                 <div className="flex-1 overflow-y-auto space-y-4 py-4 px-1">
+                    {/* Affichage de l'erreur */}
+                    {error && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-700">{error}</p>
+                        </div>
+                    )}
                     {/* Période */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">

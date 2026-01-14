@@ -93,6 +93,7 @@ export function RepresentationFormDialog({
     const [formData, setFormData] = useState<RepresentationFormData>(defaultFormData);
     const [isUnlimited, setIsUnlimited] = useState<boolean>(true);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Auto-sélection du nouveau lieu créé
     useEffect(() => {
@@ -107,9 +108,10 @@ export function RepresentationFormDialog({
     // Initialiser le formulaire quand on ouvre la modale
     useEffect(() => {
         if (open) {
-            // Réinitialiser isSubmitting à l'ouverture
+            // Réinitialiser les états à l'ouverture
             setIsSubmitting(false);
-            
+            setError(null);
+
             if (editingRepresentation) {
                 // Mode édition
                 const isUnlimitedValue = editingRepresentation.capacity === null;
@@ -134,6 +136,7 @@ export function RepresentationFormDialog({
         onOpenChange(false);
         setFormData(defaultFormData);
         setIsUnlimited(true);
+        setError(null);
         // Note: pas de setIsSubmitting(false) ici car le composant se démonte
     };
 
@@ -147,23 +150,37 @@ export function RepresentationFormDialog({
 
         const capacityValue = isUnlimited ? null : formData.capacity;
 
+        // Si des réservations existent, forcer les valeurs originales de date/time
+        // Cela garantit qu'aucune modification n'est possible même via manipulation
+        const finalDate = hasReservations && editingRepresentation
+            ? editingRepresentation.date
+            : formData.date;
+        const finalTime = hasReservations && editingRepresentation
+            ? editingRepresentation.time
+            : formData.time;
+
         setIsSubmitting(true);
+        setError(null);
 
         try {
             // Attendre que onSubmit se termine avant de fermer
             await onSubmit(
                 {
                     ...formData,
+                    date: finalDate,
+                    time: finalTime,
                     capacity: capacityValue,
                 },
                 editingRepresentation !== null
             );
             // Succès : fermer le dialog (le composant se démonte, pas besoin de reset isSubmitting)
             handleClose();
-        } catch (error) {
+        } catch (err) {
             // Erreur : garder le dialog ouvert et permettre de réessayer
-            console.error('Erreur lors de la soumission:', error);
+            const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue lors de la soumission';
+            setError(errorMessage);
             setIsSubmitting(false);
+            console.error('Erreur lors de la soumission:', err);
         }
         // Pas de finally : évite setState sur composant démonté
     };
@@ -206,6 +223,13 @@ export function RepresentationFormDialog({
                             </div>
                         </div>
                     )}
+                    {/* Affichage de l'erreur */}
+                    {error && (
+                        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                            <p className="text-sm text-red-700">{error}</p>
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="date">
@@ -216,10 +240,17 @@ export function RepresentationFormDialog({
                                 type="date"
                                 value={formData.date}
                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                min={getLocalDateString()} // Empêcher dates passées (timezone local)
+                                min={
+                                    // En mode création : toujours empêcher les dates passées
+                                    // En mode édition : permettre les dates passées si pas de réservations
+                                    // (pour éviter un état HTML5 invalide si la date originale est passée)
+                                    editingRepresentation && !hasReservations
+                                        ? undefined
+                                        : getLocalDateString()
+                                }
                                 required
-                                disabled={hasReservations}
-                                className={hasReservations ? 'bg-muted text-muted-foreground cursor-not-allowed' : ''}
+                                disabled={hasReservations && editingRepresentation !== null}
+                                className={hasReservations && editingRepresentation !== null ? 'bg-muted text-muted-foreground cursor-not-allowed' : ''}
                             />
                         </div>
                         <div className="space-y-2">
@@ -232,8 +263,8 @@ export function RepresentationFormDialog({
                                 value={formData.time}
                                 onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                                 required
-                                disabled={hasReservations}
-                                className={hasReservations ? 'bg-muted text-muted-foreground cursor-not-allowed' : ''}
+                                disabled={hasReservations && editingRepresentation !== null}
+                                className={hasReservations && editingRepresentation !== null ? 'bg-muted text-muted-foreground cursor-not-allowed' : ''}
                             />
                         </div>
                     </div>

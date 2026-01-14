@@ -46,6 +46,7 @@ import {
 import { useRepresentations } from '@/hooks/useRepresentations';
 import { useVenues } from '@/hooks/useVenues';
 import { useShows } from '@/hooks/useShows';
+import { getRepresentationById } from '@/lib/services/representations';
 import type { SlotWithRelations } from '@/lib/services/representations';
 import type { VenueRow } from '@/types/database';
 
@@ -103,11 +104,12 @@ function formatMonth(monthString: string): string {
  * Note: capacity >= 999999 est considéré comme "illimité" (null dans le format Mock)
  */
 function slotToMockRepresentation(slot: SlotWithRelations, showTitle: string, companyName: string): MockRepresentation {
-    // Convertir capacity >= 999999 en null (illimité)
-    const capacity = slot.capacity >= 999999 ? null : slot.capacity;
+    // Calculer booked à partir des valeurs brutes de la BDD (même pour capacité illimitée)
     // Protéger contre les valeurs négatives (si remaining_capacity > capacity par erreur de données)
-    const booked = capacity !== null ? Math.max(0, capacity - slot.remaining_capacity) : 0;
-    
+    const booked = Math.max(0, slot.capacity - slot.remaining_capacity);
+    // Convertir capacity >= 999999 en null (illimité) pour l'affichage
+    const capacity = slot.capacity >= 999999 ? null : slot.capacity;
+
     return {
         id: slot.id,
         showId: slot.show_id,
@@ -152,9 +154,9 @@ export default function AdminRepresentationsPage() {
     }, []);
 
     // Hooks Supabase
-    const { 
-        representations: slotsData, 
-        isLoading: slotsLoading, 
+    const {
+        representations: slotsData,
+        isLoading: slotsLoading,
         error: slotsError,
         create: createSlot,
         createBatch: createSlotBatch,
@@ -163,24 +165,37 @@ export default function AdminRepresentationsPage() {
         checkReservations,
         refresh: refreshSlots,
     } = useRepresentations(showId);
-    
-    const { 
-        venues: venuesData, 
+
+    const {
+        venues: venuesData,
         isLoading: venuesLoading,
         error: venuesError,
         create: createVenue,
         refresh: refreshVenues,
     } = useVenues();
-    
-    const { getShowById, isLoading: showsLoading, hasLoaded: showsHasLoaded, error: showsError, refresh: refreshShows } = useShows();
-    
-    // Trouver le spectacle
-    const show = getShowById(showId);
+
+    const { shows: showsData, isLoading: showsLoading, hasLoaded: showsHasLoaded, error: showsError, refresh: refreshShows } = useShows();
+
+    // Trouver le spectacle - mémorisé pour éviter les recalculs inutiles
+    // getShowById crée un nouvel objet à chaque appel, donc on mémorise directement
+    // en utilisant les données brutes pour éviter les changements de référence inutiles
+    const show = useMemo(() => {
+        const foundShow = showsData.find((s) => s.id === showId);
+        if (!foundShow) return null;
+
+        // Enrichir avec l'objet company pour compatibilité
+        return {
+            ...foundShow,
+            company: {
+                name: foundShow.company_name,
+            },
+        };
+    }, [showsData, showId]);
 
     // Convertir les données Supabase en format Mock pour les composants
     const representations: MockRepresentation[] = useMemo(() => {
         if (!show) return [];
-        return slotsData.map(slot => 
+        return slotsData.map(slot =>
             slotToMockRepresentation(slot, show.title, show.company?.name || 'Compagnie inconnue')
         );
     }, [slotsData, show]);
@@ -195,14 +210,19 @@ export default function AdminRepresentationsPage() {
     const [editingReservationsCount, setEditingReservationsCount] = useState<number>(0);
     const [representationToDelete, setRepresentationToDelete] = useState<MockRepresentation | null>(null);
     const [deleteReservationsCount, setDeleteReservationsCount] = useState<number>(0);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isNewVenueDialogOpen, setIsNewVenueDialogOpen] = useState<boolean>(false);
     const [newVenueSource, setNewVenueSource] = useState<'simple' | 'series'>('simple');
     const [isGenerateSeriesOpen, setIsGenerateSeriesOpen] = useState(false);
     const [newlyCreatedVenueId, setNewlyCreatedVenueId] = useState<string | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
+    const [isEditing, setIsEditing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    // État combiné pour les boutons qui doivent être désactivés pendant n'importe quelle opération
+    const isSubmitting = isEditing || isDeleting;
+
     // Ref pour éviter les race conditions lors de la vérification des réservations
     const pendingDeleteRef = useRef<string | null>(null);
+    const pendingEditRef = useRef<string | null>(null);
 
     // Filtres
     const [monthFilter, setMonthFilter] = useState<string>('all');
@@ -277,7 +297,7 @@ export default function AdminRepresentationsPage() {
 
     // Erreur de chargement
     const loadingError = slotsError || venuesError || showsError;
-    
+
     // Fonction pour rafraîchir toutes les données
     const refreshAllData = async () => {
         await Promise.all([
@@ -286,7 +306,7 @@ export default function AdminRepresentationsPage() {
             refreshShows(),
         ]);
     };
-    
+
     if (loadingError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -325,56 +345,122 @@ export default function AdminRepresentationsPage() {
     };
 
     // Édition - vérifier les réservations avant d'ouvrir le formulaire
+    // Utilise useRef pour éviter les race conditions si l'utilisateur clique rapidement
     const handleEdit = async (representation: MockRepresentation) => {
-        const result = await checkReservations(representation.id);
-        setEditingReservationsCount(result.count);
-        setEditingRepresentation(representation);
-        setIsFormDialogOpen(true);
+        // Capturer l'ID au début pour vérifier dans le finally
+        const representationId = representation.id;
+
+        // Stocker l'ID de la représentation pour vérifier après l'appel async
+        pendingEditRef.current = representationId;
+        setIsEditing(true);
+
+        try {
+            const result = await checkReservations(representationId);
+
+            // Vérifier que c'est toujours la même représentation qu'on veut éditer
+            // (l'utilisateur n'a pas cliqué sur une autre entre-temps)
+            if (pendingEditRef.current !== representationId) {
+                return; // Ignorer ce résultat, un autre clic a eu lieu
+            }
+
+            // En cas d'erreur, on log et on continue avec count=0
+            if (result.error) {
+                console.error('Erreur vérification réservations (handleEdit):', result.error);
+            }
+
+            setEditingReservationsCount(result.count);
+            setEditingRepresentation(representation);
+            setIsFormDialogOpen(true);
+        } finally {
+            // Réinitialiser le flag seulement si c'est toujours la même opération
+            // Si le ref correspond toujours à cette opération, on peut réinitialiser en toute sécurité
+            // Si le ref a changé vers un autre ID, cela signifie qu'une nouvelle opération a commencé,
+            // donc on ne réinitialise pas (la nouvelle opération en a besoin)
+            // Si le ref est null, cela signifie qu'une nouvelle opération s'est terminée,
+            // donc on peut réinitialiser le flag pour éviter qu'il reste bloqué
+            const currentRef = pendingEditRef.current;
+            if (currentRef === representationId || currentRef === null) {
+                setIsEditing(false);
+                // Réinitialiser le ref seulement si c'est toujours cette opération
+                if (currentRef === representationId) {
+                    pendingEditRef.current = null;
+                }
+            }
+        }
     };
 
     // Suppression - vérifier les réservations d'abord
     // Utilise useRef pour éviter les race conditions si l'utilisateur clique rapidement
     const handleDeleteClick = async (representation: MockRepresentation) => {
+        // Capturer l'ID au début pour vérifier dans le finally
+        const representationId = representation.id;
+
         // Stocker l'ID de la représentation pour vérifier après l'appel async
-        pendingDeleteRef.current = representation.id;
-        
-        const result = await checkReservations(representation.id);
-        
-        // Vérifier que c'est toujours la même représentation qu'on veut supprimer
-        // (l'utilisateur n'a pas cliqué sur une autre entre-temps)
-        if (pendingDeleteRef.current !== representation.id) {
-            return; // Ignorer ce résultat, un autre clic a eu lieu
+        pendingDeleteRef.current = representationId;
+        setIsDeleting(true);
+
+        try {
+            const result = await checkReservations(representationId);
+
+            // Vérifier que c'est toujours la même représentation qu'on veut supprimer
+            // (l'utilisateur n'a pas cliqué sur une autre entre-temps)
+            if (pendingDeleteRef.current !== representationId) {
+                return; // Ignorer ce résultat, un autre clic a eu lieu
+            }
+
+            // En cas d'erreur, on affiche quand même le dialog avec count=0
+            // L'erreur est déjà loggée dans le hook
+            if (result.error) {
+                console.error('Erreur vérification réservations:', result.error);
+            }
+
+            setDeleteReservationsCount(result.count);
+            setRepresentationToDelete(representation);
+            setDeleteError(null); // Réinitialiser l'erreur à l'ouverture
+        } finally {
+            // Réinitialiser le flag seulement si c'est toujours la même opération
+            // Si le ref correspond toujours à cette opération, on peut réinitialiser en toute sécurité
+            // Si le ref a changé vers un autre ID, cela signifie qu'une nouvelle opération a commencé,
+            // donc on ne réinitialise pas (la nouvelle opération en a besoin)
+            // Si le ref est null, cela signifie qu'une nouvelle opération s'est terminée,
+            // donc on peut réinitialiser le flag pour éviter qu'il reste bloqué
+            const currentRef = pendingDeleteRef.current;
+            if (currentRef === representationId || currentRef === null) {
+                setIsDeleting(false);
+                // Réinitialiser le ref seulement si c'est toujours cette opération
+                if (currentRef === representationId) {
+                    pendingDeleteRef.current = null;
+                }
+            }
         }
-        
-        // En cas d'erreur, on affiche quand même le dialog avec count=0
-        // L'erreur est déjà loggée dans le hook
-        if (result.error) {
-            console.error('Erreur vérification réservations:', result.error);
-        }
-        
-        setDeleteReservationsCount(result.count);
-        setRepresentationToDelete(representation);
     };
 
     const handleConfirmDelete = async () => {
         if (representationToDelete) {
-            setIsSubmitting(true);
+            setIsDeleting(true);
+            setDeleteError(null);
+
             try {
                 const result = await removeSlot(representationToDelete.id);
-                
+
                 if (result.success) {
                     // Fermer le dialog seulement si la suppression a réussi
                     setRepresentationToDelete(null);
                     setDeleteReservationsCount(0);
+                    setDeleteError(null);
                 } else {
-                    // En cas d'erreur, garder le dialog ouvert
+                    // En cas d'erreur, garder le dialog ouvert et afficher l'erreur
+                    const errorMessage = result.error || 'Une erreur est survenue lors de la suppression';
+                    setDeleteError(errorMessage);
                     console.error('Erreur suppression:', result.error);
                 }
             } catch (error) {
-                // En cas d'exception, garder le dialog ouvert
+                // En cas d'exception, garder le dialog ouvert et afficher l'erreur
+                const errorMessage = error instanceof Error ? error.message : 'Une erreur inattendue est survenue';
+                setDeleteError(errorMessage);
                 console.error('Erreur suppression:', error);
             } finally {
-                setIsSubmitting(false);
+                setIsDeleting(false);
             }
         }
     };
@@ -382,33 +468,58 @@ export default function AdminRepresentationsPage() {
     // Soumission du formulaire
     const handleFormSubmit = async (formData: RepresentationFormData, isEditing: boolean) => {
         // Note: pas de try/catch ici - les erreurs remontent au dialog qui gère le retry
-        
+
         // Convertir capacity null (illimité) en grande valeur pour Supabase
         // Note: La contrainte SQL est capacity > 0, donc on utilise 999999 pour "illimité"
         const capacity = formData.capacity === null ? 999999 : formData.capacity;
-        
+
         // Vérifier si hosted_by_id est un UUID valide (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const hostedById = formData.hostedById && uuidRegex.test(formData.hostedById) 
-            ? formData.hostedById 
+        const hostedById = formData.hostedById && uuidRegex.test(formData.hostedById)
+            ? formData.hostedById
             : null;
-        
+
         if (isEditing && editingRepresentation) {
             // Trouver la représentation originale pour calculer remaining_capacity
-            const originalSlot = slotsData.find(s => s.id === editingRepresentation.id);
-            
-            // Calculer le nombre de places réservées
-            // booked = old_capacity - old_remaining_capacity
-            // Pour capacity=999999 (illimité), on considère booked = 0
-            const oldCapacity = originalSlot?.capacity ?? 999999;
-            const oldRemaining = originalSlot?.remaining_capacity ?? 999999;
-            const booked = oldCapacity >= 999999 ? 0 : oldCapacity - oldRemaining;
-            
+            let originalSlot = slotsData.find(s => s.id === editingRepresentation.id);
+
+            // Si le slot n'est pas trouvé dans slotsData (race condition ou problème de sync),
+            // le récupérer directement depuis la base de données
+            if (!originalSlot) {
+                const slotResult = await getRepresentationById(editingRepresentation.id);
+                if (slotResult.error || !slotResult.data) {
+                    throw new Error(
+                        slotResult.error ||
+                        'Impossible de récupérer les données de la représentation. Veuillez réessayer.'
+                    );
+                }
+                originalSlot = slotResult.data;
+            }
+
+            // Obtenir le nombre réel de places réservées depuis la base de données
+            // Cela fonctionne même si la capacité était illimitée (999999)
+            const reservationsResult = await checkReservations(editingRepresentation.id);
+            if (reservationsResult.error) {
+                throw new Error(
+                    reservationsResult.error ||
+                    'Impossible de vérifier le nombre de réservations. Veuillez réessayer.'
+                );
+            }
+            const booked = reservationsResult.count;
+
+            // Vérifier que la nouvelle capacité n'est pas inférieure au nombre de places réservées
+            // (sauf si capacité illimitée)
+            if (capacity < 999999 && capacity < booked) {
+                throw new Error(`Impossible de réduire la capacité en dessous de ${booked} (places déjà réservées)`);
+            }
+
             // Calculer le nouveau remaining
-            // Si nouvelle capacité >= 999999 (illimité), remaining = 999999
-            // Sinon, remaining = nouvelle_capacité - booked (min 0)
-            const newRemaining = capacity >= 999999 ? 999999 : Math.max(0, capacity - booked);
-            
+            // Pour maintenir l'invariant remaining_capacity + booked = capacity :
+            // - Si capacité >= 999999 (illimité), remaining = 999999 - booked
+            //   (cela garantit que booked = capacity - remaining = 999999 - (999999 - booked) = booked)
+            // - Sinon, remaining = nouvelle_capacité - booked
+            const newRemaining = capacity >= 999999 ? 999999 - booked : capacity - booked;
+
             const result = await updateSlot(editingRepresentation.id, {
                 date: formData.date,
                 time: formData.time + ':00', // Ajouter les secondes
@@ -418,7 +529,7 @@ export default function AdminRepresentationsPage() {
                 hosted_by: formData.hostedBy,
                 hosted_by_id: hostedById,
             });
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Erreur lors de la mise à jour');
             }
@@ -433,31 +544,31 @@ export default function AdminRepresentationsPage() {
                 hosted_by: formData.hostedBy,
                 hosted_by_id: hostedById,
             });
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Erreur lors de la création');
             }
         }
-        
+
         setEditingRepresentation(null);
     };
 
     // Génération de série
     const handleGenerateSeriesSubmit = async (data: GenerateSeriesData, repsToCreate: GeneratedRepresentation[]) => {
         if (repsToCreate.length === 0) return;
-        
+
         // Note: pas de try/catch ici - les erreurs remontent au dialog qui gère le retry
-        
+
         // Convertir capacity null (illimité) en grande valeur pour Supabase
         // Note: La contrainte SQL est capacity > 0, donc on utilise 999999 pour "illimité"
         const capacity = data.isUnlimited ? 999999 : (data.capacity || 1);
-        
+
         // Vérifier si hosted_by_id est un UUID valide
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const hostedById = data.hostedById && uuidRegex.test(data.hostedById) 
-            ? data.hostedById 
+        const hostedById = data.hostedById && uuidRegex.test(data.hostedById)
+            ? data.hostedById
             : null;
-        
+
         const slotsToInsert = repsToCreate.map((rep) => ({
             show_id: showId,
             date: rep.date,
@@ -470,7 +581,7 @@ export default function AdminRepresentationsPage() {
         }));
 
         const result = await createSlotBatch(slotsToInsert);
-        
+
         if (!result.success) {
             throw new Error(result.error || 'Erreur lors de la génération de la série');
         }
@@ -487,11 +598,11 @@ export default function AdminRepresentationsPage() {
             name: data.name,
             city: data.city,
         });
-        
+
         if (!result.success || !result.data) {
             throw new Error(result.error || 'Erreur lors de la création du lieu');
         }
-        
+
         setNewlyCreatedVenueId(result.data.id);
         return result.data.id;
     };
@@ -546,8 +657,8 @@ export default function AdminRepresentationsPage() {
                         <Copy className="w-4 h-4 sm:mr-2" />
                         <span className="hidden sm:inline">Générer une série</span>
                     </Button>
-                    <Button 
-                        onClick={handleCreate} 
+                    <Button
+                        onClick={handleCreate}
                         className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
                         disabled={isSubmitting}
                     >
@@ -693,10 +804,10 @@ export default function AdminRepresentationsPage() {
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-8 w-8" 
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
                                                     onClick={() => void handleEdit(rep)}
                                                     disabled={isSubmitting}
                                                 >
@@ -788,10 +899,10 @@ export default function AdminRepresentationsPage() {
                                     )}
 
                                     <div className="flex items-center gap-2 pt-2 border-t">
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            className="flex-1" 
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-1"
                                             onClick={() => void handleEdit(rep)}
                                             disabled={isSubmitting}
                                         >
@@ -821,7 +932,14 @@ export default function AdminRepresentationsPage() {
             {/* Formulaire création/édition */}
             <RepresentationFormDialog
                 open={isFormDialogOpen}
-                onOpenChange={setIsFormDialogOpen}
+                onOpenChange={(open) => {
+                    setIsFormDialogOpen(open);
+                    // Réinitialiser le compteur de réservations quand on ferme le dialog
+                    // pour éviter qu'il persiste lors de la prochaine ouverture
+                    if (!open) {
+                        setEditingReservationsCount(0);
+                    }
+                }}
                 editingRepresentation={editingRepresentation}
                 onSubmit={handleFormSubmit}
                 venues={venues}
@@ -860,12 +978,14 @@ export default function AdminRepresentationsPage() {
                     if (!open) {
                         setRepresentationToDelete(null);
                         setDeleteReservationsCount(0);
+                        setDeleteError(null);
                         pendingDeleteRef.current = null; // Réinitialiser la ref pour éviter les réouvertures intempestives
                     }
                 }}
                 onConfirm={() => void handleConfirmDelete()}
                 isSubmitting={isSubmitting}
                 confirmDisabled={deleteReservationsCount > 0} // Bloquer si réservations existantes
+                error={deleteError}
                 title={deleteReservationsCount > 0 ? "Suppression impossible" : "Supprimer cette représentation ?"}
                 description={
                     representationToDelete && deleteReservationsCount > 0 ? (

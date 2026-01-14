@@ -10,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { AlertTriangle } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 export interface DeleteConfirmDialogProps {
@@ -31,6 +32,8 @@ export interface DeleteConfirmDialogProps {
   confirmDisabled?: boolean;
   /** Indique si une opération est en cours (désactive le bouton) */
   isSubmitting?: boolean;
+  /** Message d'erreur à afficher (si présent) */
+  error?: string | null;
 }
 
 /**
@@ -79,6 +82,7 @@ export function DeleteConfirmDialog({
   cancelText = 'Annuler',
   confirmDisabled = false,
   isSubmitting = false,
+  error = null,
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -90,6 +94,13 @@ export function DeleteConfirmDialog({
             <div className="text-sm text-muted-foreground">{description}</div>
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {/* Affichage de l'erreur */}
+        {error && (
+          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
         <AlertDialogFooter className="flex-col sm:flex-row gap-2">
           <AlertDialogCancel className="w-full sm:w-auto" disabled={isSubmitting}>
             {cancelText}

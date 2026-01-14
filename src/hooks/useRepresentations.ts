@@ -33,7 +33,7 @@ export interface UseRepresentationsReturn {
   /** Message d'erreur */
   error: string | null;
   /** Recharger les données */
-  refresh: () => Promise<void>;
+  refresh: () => Promise<{ success: boolean; error?: string }>;
   /** Créer une représentation */
   create: (slot: SlotInsert) => Promise<{ success: boolean; data?: SlotWithRelations; error?: string }>;
   /** Créer plusieurs représentations (série) */
@@ -54,35 +54,57 @@ export function useRepresentations(showId: string): UseRepresentationsReturn {
   const [representations, setRepresentations] = useState<SlotWithRelations[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Ref pour éviter les race conditions
-  const loadingRef = useRef(false);
+
+  // Ref pour éviter les race conditions et vérifier que le showId correspond toujours
+  const loadingRef = useRef<string | null>(null);
 
   // Charger les représentations
-  const loadRepresentations = useCallback(async () => {
-    // Éviter les appels multiples simultanés
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    
+  const loadRepresentations = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    // Capturer le showId actuel pour vérifier après l'appel async
+    const currentShowId = showId;
+
+    // Éviter les appels multiples simultanés pour le même showId
+    if (loadingRef.current === currentShowId) {
+      return { success: false, error: 'Chargement déjà en cours' };
+    }
+    loadingRef.current = currentShowId;
+
     setIsLoading(true);
     setError(null);
 
-    const result = await getRepresentationsByShowId(showId);
+    const result = await getRepresentationsByShowId(currentShowId);
+
+    // Vérifier que le showId n'a pas changé pendant l'appel async
+    // Si c'est le cas, ignorer ce résultat (un autre chargement est en cours)
+    if (loadingRef.current !== currentShowId) {
+      return { success: false, error: 'Le spectacle a changé pendant le chargement' };
+    }
 
     if (result.error) {
       setError(result.error);
-      logger.error('useRepresentations - Erreur chargement', { showId, error: result.error });
-    } else {
-      setRepresentations(result.data);
+      logger.error('useRepresentations - Erreur chargement', { showId: currentShowId, error: result.error });
+      setIsLoading(false);
+      // Réinitialiser le ref seulement si c'est toujours le même showId
+      if (loadingRef.current === currentShowId) {
+        loadingRef.current = null;
+      }
+      return { success: false, error: result.error };
     }
 
+    setRepresentations(result.data);
     setIsLoading(false);
-    loadingRef.current = false;
+    // Réinitialiser le ref seulement si c'est toujours le même showId
+    if (loadingRef.current === currentShowId) {
+      loadingRef.current = null;
+    }
+    return { success: true };
   }, [showId]);
 
   // Charger au montage et quand showId change
   useEffect(() => {
     if (showId) {
+      // Réinitialiser le ref quand le showId change pour permettre le nouveau chargement
+      loadingRef.current = null;
       void loadRepresentations();
     }
   }, [showId, loadRepresentations]);
@@ -97,7 +119,7 @@ export function useRepresentations(showId: string): UseRepresentationsReturn {
 
     if (result.data) {
       // Ajouter et re-trier par date/heure
-      setRepresentations((prev) => 
+      setRepresentations((prev) =>
         [...prev, result.data!].sort((a, b) => {
           const dateCompare = a.date.localeCompare(b.date);
           if (dateCompare !== 0) return dateCompare;
@@ -119,8 +141,18 @@ export function useRepresentations(showId: string): UseRepresentationsReturn {
     }
 
     // Recharger toutes les données pour avoir les relations
-    await loadRepresentations();
-    
+    const reloadResult = await loadRepresentations();
+
+    if (!reloadResult.success) {
+      // Les représentations ont été créées mais le rechargement a échoué
+      // Retourner une erreur pour indiquer le problème
+      return {
+        success: false,
+        count: result.count,
+        error: reloadResult.error || 'Les représentations ont été créées mais le rechargement a échoué'
+      };
+    }
+
     return { success: true, count: result.count };
   }, [loadRepresentations]);
 
