@@ -16,6 +16,9 @@
 /** Rôles utilisateurs disponibles dans l'application */
 export type UserRole = 'super-admin' | 'admin' | 'professional' | 'company' | 'externe-dd';
 
+/** Rôles internes (staff qui peut accueillir les spectacles) */
+export type InternalRole = 'super-admin' | 'admin' | 'externe-dd';
+
 /** Statut de publication d'un spectacle */
 export type ShowStatus = 'draft' | 'published' | 'archived';
 
@@ -577,6 +580,25 @@ export interface ShowCategoryMappingRow {
 export interface ShowTargetAudienceMappingRow {
   show_id: string;
   target_audience_id: string;
+}
+
+// ============================================
+// TYPES COMPOSÉS (jointures)
+// ============================================
+
+/**
+ * Utilisateur interne (staff) avec son rôle
+ * Jointure profiles + user_roles pour les rôles internes (super-admin, admin, externe-dd)
+ */
+export interface InternalUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  role: InternalRole;
+  created_at: string;
+  last_login_at: string | null;
 }
 
 // ============================================
