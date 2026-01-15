@@ -19,5 +19,5 @@ export type { UseCategoriesReturn } from './useCategories';
 export { useTargetAudiences } from './useTargetAudiences';
 export type { UseTargetAudiencesReturn } from './useTargetAudiences';
 
-export { useInternalUsers } from './useInternalUsers';
-export type { UseInternalUsersReturn } from './useInternalUsers';
+export { useInternalUsers, formatUserName, formatUserNameShort, translateRole } from './useInternalUsers';
+export type { UseInternalUsersReturn, UpdateUserData, OperationResult } from './useInternalUsers';
