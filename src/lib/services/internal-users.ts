@@ -71,16 +71,21 @@ export async function getInternalUsers(): Promise<UsersListResult> {
     const users: InternalUser[] = (data || []).map((profile) => {
       // Gérer les deux cas : tableau ou objet
       const userRoles = profile.user_roles;
-      let role: InternalRole;
+      let role: InternalRole | undefined;
       
-      if (Array.isArray(userRoles)) {
-        // Cas tableau
-        role = (userRoles as UserRoleRow[])[0]?.role as InternalRole;
-      } else if (userRoles && typeof userRoles === 'object') {
+      if (Array.isArray(userRoles) && userRoles.length > 0) {
+        // Cas tableau non vide
+        role = (userRoles as UserRoleRow[])[0]?.role as InternalRole | undefined;
+      } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles)) {
         // Cas objet unique
-        role = (userRoles as unknown as UserRoleRow).role as InternalRole;
-      } else {
-        // Fallback
+        role = (userRoles as unknown as UserRoleRow).role as InternalRole | undefined;
+      }
+      
+      // Fallback si role est undefined (tableau vide ou structure inattendue)
+      if (!role) {
+        logger.warn('internal-users.getInternalUsers - Rôle non trouvé, fallback externe-dd', { 
+          profileId: profile.id 
+        });
         role = 'externe-dd';
       }
       
@@ -144,13 +149,19 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
 
     // Gérer les deux cas : tableau ou objet
     const userRoles = data.user_roles;
-    let role: InternalRole;
+    let role: InternalRole | undefined;
     
-    if (Array.isArray(userRoles)) {
-      role = (userRoles as UserRoleRow[])[0]?.role as InternalRole;
-    } else if (userRoles && typeof userRoles === 'object') {
-      role = (userRoles as unknown as UserRoleRow).role as InternalRole;
-    } else {
+    if (Array.isArray(userRoles) && userRoles.length > 0) {
+      // Cas tableau non vide
+      role = (userRoles as UserRoleRow[])[0]?.role as InternalRole | undefined;
+    } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles)) {
+      // Cas objet unique
+      role = (userRoles as unknown as UserRoleRow).role as InternalRole | undefined;
+    }
+    
+    // Fallback si role est undefined (tableau vide ou structure inattendue)
+    if (!role) {
+      logger.warn('internal-users.getInternalUserById - Rôle non trouvé, fallback externe-dd', { userId });
       role = 'externe-dd';
     }
 
