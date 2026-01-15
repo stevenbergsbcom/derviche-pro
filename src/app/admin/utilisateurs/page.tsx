@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users } from 'lucide-react';
+import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users, Power } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { searchMatch } from '@/lib/utils';
@@ -26,7 +26,14 @@ import { createClient } from '@/lib/supabase/client';
 import type { InternalUser, InternalRole } from '@/types/database';
 
 // Hook Supabase
-import { useInternalUsers, type UpdateUserData } from '@/hooks/useInternalUsers';
+import { useInternalUsers, type UpdateUserData, type CreateUserData } from '@/hooks/useInternalUsers';
+
+// Tooltip pour les boutons désactivés
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Composants admin réutilisables
 import {
@@ -40,6 +47,7 @@ import {
     UserViewDialog,
     UserFormDialog,
     type UserFormData,
+    type CreateUserFormData,
 } from '@/components/admin/utilisateurs';
 
 // ============================================
@@ -102,10 +110,11 @@ function translateRole(role: InternalRole): string {
 
 export default function AdminUtilisateursPage() {
     // Hook Supabase pour les données
-    const { users, isLoading, error, refresh, update, remove } = useInternalUsers();
+    const { users, isLoading, error, refresh, create, update, remove, toggleStatus } = useInternalUsers();
 
-    // ID de l'utilisateur connecté (pour empêcher l'auto-suppression)
+    // ID et rôle de l'utilisateur connecté
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<InternalRole | null>(null);
 
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -120,13 +129,24 @@ export default function AdminUtilisateursPage() {
     const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
     const [viewingUser, setViewingUser] = useState<InternalUser | null>(null);
 
-    // Récupérer l'utilisateur connecté au montage
+    // Récupérer l'utilisateur connecté et son rôle au montage
     useEffect(() => {
         const fetchCurrentUser = async () => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setCurrentUserId(user.id);
+                
+                // Récupérer le rôle de l'utilisateur
+                const { data: roleData } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (roleData && (roleData.role === 'super-admin' || roleData.role === 'admin' || roleData.role === 'externe-dd')) {
+                    setCurrentUserRole(roleData.role as InternalRole);
+                }
             }
         };
         void fetchCurrentUser();
@@ -167,9 +187,8 @@ export default function AdminUtilisateursPage() {
     // === HANDLERS ===
 
     const handleCreate = () => {
-        // TODO: Implémenter la création de compte (nécessite API Route)
         setEditingUser(null);
-        setFormError('La création de compte sera disponible prochainement.');
+        setFormError(null);
         setIsFormDialogOpen(true);
     };
 
@@ -247,9 +266,36 @@ export default function AdminUtilisateursPage() {
         }
     };
 
+    /** Handler pour la création d'un utilisateur */
+    const handleCreateUser = async (formData: CreateUserFormData) => {
+        setIsSubmitting(true);
+        setFormError(null);
+
+        const createData: CreateUserData = {
+            email: formData.email,
+            password: formData.password,
+            first_name: formData.first_name || undefined,
+            last_name: formData.last_name || undefined,
+            phone: formData.phone || undefined,
+            role: formData.role,
+            must_change_password: formData.must_change_password,
+        };
+
+        const result = await create(createData);
+
+        if (result.success) {
+            setIsFormDialogOpen(false);
+            setEditingUser(null);
+        } else {
+            setFormError(result.error || 'Erreur lors de la création');
+        }
+
+        setIsSubmitting(false);
+    };
+
+    /** Handler pour la mise à jour d'un utilisateur */
     const handleFormSubmit = async (formData: UserFormData, isEditing: boolean) => {
         if (!isEditing || !editingUser) {
-            // Création pas encore implémentée
             return;
         }
 
@@ -285,6 +331,38 @@ export default function AdminUtilisateursPage() {
      */
     const canDeleteUser = (user: InternalUser): boolean => {
         return currentUserId !== user.id;
+    };
+
+    /**
+     * Vérifie si l'utilisateur courant peut activer/désactiver un compte
+     * Seuls les Super Admins peuvent faire ça
+     * On ne peut pas désactiver un Super Admin (mais on peut le réactiver s'il était désactivé)
+     */
+    const canToggleStatus = (user: InternalUser): boolean => {
+        // Seul un Super Admin peut toggle
+        if (currentUserRole !== 'super-admin') return false;
+        // On ne peut pas se toggle soi-même
+        if (currentUserId === user.id) return false;
+        // On ne peut pas DÉSACTIVER un Super Admin (mais on peut le réactiver)
+        if (user.role === 'super-admin' && user.disabled_at === null) return false;
+        return true;
+    };
+
+    /**
+     * Handler pour activer/désactiver un utilisateur
+     */
+    const handleToggleStatus = async (user: InternalUser) => {
+        if (!canToggleStatus(user)) return;
+        
+        setIsSubmitting(true);
+        const newDisabledState = user.disabled_at === null;
+        const result = await toggleStatus(user.id, newDisabledState);
+        setIsSubmitting(false);
+        
+        if (!result.success) {
+            // TODO: Afficher un toast d'erreur
+            console.error('Erreur toggle status:', result.error);
+        }
     };
 
     // État de chargement initial
@@ -401,8 +479,9 @@ export default function AdminUtilisateursPage() {
                         ) : (
                             filteredUsers.map((user) => {
                                 const isCurrentUser = currentUserId === user.id;
+                                const isDisabled = user.disabled_at !== null;
                                 return (
-                                    <TableRow key={user.id}>
+                                    <TableRow key={user.id} className={isDisabled ? 'opacity-60' : ''}>
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -414,6 +493,11 @@ export default function AdminUtilisateursPage() {
                                                 {isCurrentUser && (
                                                     <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                                                         Vous
+                                                    </Badge>
+                                                )}
+                                                {isDisabled && (
+                                                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                                        Inactif
                                                     </Badge>
                                                 )}
                                             </div>
@@ -447,6 +531,35 @@ export default function AdminUtilisateursPage() {
                                                     <Pencil className="w-4 h-4" />
                                                     <span className="sr-only">Modifier</span>
                                                 </Button>
+                                                {/* Bouton Toggle Status - visible uniquement pour Super Admin */}
+                                                {currentUserRole === 'super-admin' && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className={`h-8 w-8 ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                                                                    onClick={() => void handleToggleStatus(user)}
+                                                                    disabled={!canToggleStatus(user) || isSubmitting}
+                                                                >
+                                                                    <Power className="w-4 h-4" />
+                                                                    <span className="sr-only">{isDisabled ? 'Activer' : 'Désactiver'}</span>
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            {!canToggleStatus(user) 
+                                                                ? (user.role === 'super-admin' 
+                                                                    ? 'Les Super Admins ne peuvent pas être désactivés' 
+                                                                    : 'Action non autorisée')
+                                                                : isDisabled 
+                                                                    ? 'Activer ce compte' 
+                                                                    : 'Désactiver ce compte'
+                                                            }
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                )}
                                                 {canDeleteUser(user) ? (
                                                     <Button
                                                         variant="ghost"
@@ -493,12 +606,13 @@ export default function AdminUtilisateursPage() {
                 ) : (
                     filteredUsers.map((user) => {
                         const isCurrentUser = currentUserId === user.id;
+                        const isDisabled = user.disabled_at !== null;
                         return (
-                            <Card key={user.id}>
+                            <Card key={user.id} className={isDisabled ? 'opacity-60' : ''}>
                                 <CardContent className="p-4 space-y-3">
                                     <div className="flex items-start justify-between">
                                         <div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <h3
                                                     className="font-semibold cursor-pointer hover:text-derviche hover:underline"
                                                     onClick={() => handleView(user)}
@@ -510,6 +624,11 @@ export default function AdminUtilisateursPage() {
                                                         Vous
                                                     </Badge>
                                                 )}
+                                                {isDisabled && (
+                                                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                                        Inactif
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <p className="text-sm text-muted-foreground">{user.email}</p>
                                         </div>
@@ -518,7 +637,7 @@ export default function AdminUtilisateursPage() {
                                             {translateRole(user.role)}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center gap-2 pt-2 border-t">
+                                    <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -537,6 +656,19 @@ export default function AdminUtilisateursPage() {
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Modifier
                                         </Button>
+                                        {/* Bouton Toggle Status - visible uniquement pour Super Admin */}
+                                        {currentUserRole === 'super-admin' && canToggleStatus(user) && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className={`flex-1 ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                                                onClick={() => void handleToggleStatus(user)}
+                                                disabled={isSubmitting}
+                                            >
+                                                <Power className="w-4 h-4 mr-2" />
+                                                {isDisabled ? 'Activer' : 'Désactiver'}
+                                            </Button>
+                                        )}
                                         {canDeleteUser(user) ? (
                                             <Button
                                                 variant="ghost"
@@ -575,6 +707,7 @@ export default function AdminUtilisateursPage() {
                 onOpenChange={handleFormDialogChange}
                 editingUser={editingUser}
                 onSubmit={handleFormSubmit}
+                onCreate={handleCreateUser}
                 isSubmitting={isSubmitting}
                 error={formError}
             />

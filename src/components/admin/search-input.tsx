@@ -16,15 +16,6 @@ export interface SearchInputProps {
 
 /**
  * Champ de recherche avec icône intégrée
- * 
- * @example
- * ```tsx
- * <SearchInput
- *   value={searchQuery}
- *   onChange={setSearchQuery}
- *   placeholder="Rechercher un spectacle..."
- * />
- * ```
  */
 export function SearchInput({
   value,
@@ -34,13 +25,18 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <div className={`relative w-full lg:max-w-md ${className}`}>
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
       <Input
-        type="text"
+        type="search"
+        name="derviche_filter_query_field"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="pl-10"
+        autoComplete="off"
+        data-form-type="other"
+        data-1p-ignore="true"
+        data-lpignore="true"
       />
     </div>
   );

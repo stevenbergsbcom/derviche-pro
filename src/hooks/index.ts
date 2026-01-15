@@ -20,4 +20,4 @@ export { useTargetAudiences } from './useTargetAudiences';
 export type { UseTargetAudiencesReturn } from './useTargetAudiences';
 
 export { useInternalUsers, formatUserName, formatUserNameShort, translateRole } from './useInternalUsers';
-export type { UseInternalUsersReturn, UpdateUserData, OperationResult } from './useInternalUsers';
+export type { UseInternalUsersReturn, CreateUserData, UpdateUserData, OperationResult } from './useInternalUsers';

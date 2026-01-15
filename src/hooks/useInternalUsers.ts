@@ -11,14 +11,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getInternalUsers,
-  getInternalUserById,
   updateInternalUserProfile,
   updateInternalUserRole,
   formatUserName,
   formatUserNameShort,
   translateRole,
 } from '@/lib/services/internal-users';
-import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { InternalUser, InternalRole } from '@/types/database';
 
@@ -34,10 +32,22 @@ export interface UpdateUserData {
   role?: InternalRole;
 }
 
+/** Données pour créer un utilisateur */
+export interface CreateUserData {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  role: InternalRole;
+  must_change_password?: boolean;
+}
+
 /** Résultat d'une opération CRUD */
 export interface OperationResult {
   success: boolean;
   error?: string;
+  user?: { id: string; email: string };
 }
 
 export interface UseInternalUsersReturn {
@@ -53,10 +63,14 @@ export interface UseInternalUsersReturn {
   getUserById: (id: string) => InternalUser | undefined;
   /** Filtre les utilisateurs par rôle */
   getUsersByRole: (role: InternalRole) => InternalUser[];
+  /** Crée un nouvel utilisateur interne */
+  create: (data: CreateUserData) => Promise<OperationResult>;
   /** Met à jour un utilisateur (profil et/ou rôle) */
   update: (userId: string, data: UpdateUserData) => Promise<OperationResult>;
   /** Supprime un utilisateur interne (soft delete) */
   remove: (userId: string) => Promise<OperationResult>;
+  /** Active ou désactive un utilisateur (seul Super Admin peut faire ça) */
+  toggleStatus: (userId: string, disabled: boolean) => Promise<OperationResult>;
   /** Formate le nom complet d'un utilisateur */
   formatName: (user: InternalUser) => string;
   /** Formate le nom abrégé d'un utilisateur */
@@ -74,12 +88,15 @@ export interface UseInternalUsersReturn {
  * 
  * @example
  * ```tsx
- * const { users, isLoading, update, remove } = useInternalUsers();
+ * const { users, isLoading, create, update, remove } = useInternalUsers();
+ * 
+ * // Créer un utilisateur
+ * const result = await create({ email: 'user@example.com', password: 'Secret123!', role: 'admin' });
  * 
  * // Mettre à jour un utilisateur
  * const result = await update(userId, { first_name: 'Jean', role: 'admin' });
  * 
- * // Désactiver un utilisateur
+ * // Supprimer un utilisateur
  * const result = await remove(userId);
  * ```
  */
@@ -144,6 +161,49 @@ export function useInternalUsers(): UseInternalUsersReturn {
   );
 
   /**
+   * Crée un nouvel utilisateur interne via l'API
+   */
+  const create = useCallback(
+    async (data: CreateUserData): Promise<OperationResult> => {
+      try {
+        logger.info('useInternalUsers.create - Création', { email: data.email, role: data.role });
+
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        const result = await response.json() as { success: boolean; error?: string; user?: { id: string; email: string }; reactivated?: boolean };
+
+        if (!result.success) {
+          logger.error('useInternalUsers.create - Erreur API', { error: result.error });
+          return { success: false, error: result.error || 'Erreur lors de la création' };
+        }
+
+        // Rafraîchir la liste
+        await loadUsers();
+
+        // Log différent si réactivation
+        if (result.reactivated) {
+          logger.info('useInternalUsers.create - Compte réactivé', { user: result.user });
+        } else {
+          logger.info('useInternalUsers.create - Succès', { user: result.user });
+        }
+        
+        return { success: true, user: result.user };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erreur inconnue';
+        logger.error('useInternalUsers.create - Exception', { error: message });
+        return { success: false, error: message };
+      }
+    },
+    [loadUsers]
+  );
+
+  /**
    * Met à jour un utilisateur (profil et/ou rôle)
    */
   const update = useCallback(
@@ -187,36 +247,22 @@ export function useInternalUsers(): UseInternalUsersReturn {
   );
 
   /**
-   * Supprime un utilisateur interne (soft delete)
-   * Vérifie d'abord que l'utilisateur est bien un utilisateur interne
+   * Supprime un utilisateur interne (soft delete) via l'API
    */
   const remove = useCallback(
     async (userId: string): Promise<OperationResult> => {
       try {
         logger.info('useInternalUsers.remove - Suppression', { userId });
 
-        // Vérifier que l'utilisateur existe et est bien un utilisateur interne
-        const existingUser = await getInternalUserById(userId);
-        if (existingUser.error || !existingUser.data) {
-          const errorMessage = existingUser.error || 'Utilisateur interne non trouvé';
-          logger.warn('useInternalUsers.remove - Utilisateur non trouvé ou pas interne', { 
-            userId, 
-            error: errorMessage 
-          });
-          return { success: false, error: errorMessage };
-        }
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+        });
 
-        const supabase = createClient();
+        const result = await response.json() as { success: boolean; error?: string };
 
-        // Soft delete : mettre à jour deleted_at
-        const { error: deleteError } = await supabase
-          .from('profiles')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', userId);
-
-        if (deleteError) {
-          logger.error('useInternalUsers.remove - Erreur Supabase', { error: deleteError });
-          return { success: false, error: deleteError.message };
+        if (!result.success) {
+          logger.error('useInternalUsers.remove - Erreur API', { error: result.error });
+          return { success: false, error: result.error || 'Erreur lors de la suppression' };
         }
 
         // Rafraîchir la liste
@@ -227,6 +273,46 @@ export function useInternalUsers(): UseInternalUsersReturn {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Erreur inconnue';
         logger.error('useInternalUsers.remove - Exception', { error: message });
+        return { success: false, error: message };
+      }
+    },
+    [loadUsers]
+  );
+
+  /**
+   * Active ou désactive un utilisateur via l'API
+   * Seuls les Super Admins peuvent faire cette action
+   * Les Super Admins ne peuvent pas être désactivés
+   */
+  const toggleStatus = useCallback(
+    async (userId: string, disabled: boolean): Promise<OperationResult> => {
+      try {
+        const action = disabled ? 'Désactivation' : 'Réactivation';
+        logger.info(`useInternalUsers.toggleStatus - ${action}`, { userId });
+
+        const response = await fetch(`/api/admin/users/${userId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ disabled }),
+        });
+
+        const result = await response.json() as { success: boolean; error?: string };
+
+        if (!result.success) {
+          logger.error('useInternalUsers.toggleStatus - Erreur API', { error: result.error });
+          return { success: false, error: result.error || 'Erreur lors du changement de statut' };
+        }
+
+        // Rafraîchir la liste
+        await loadUsers();
+
+        logger.info('useInternalUsers.toggleStatus - Succès', { userId, disabled });
+        return { success: true };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erreur inconnue';
+        logger.error('useInternalUsers.toggleStatus - Exception', { error: message });
         return { success: false, error: message };
       }
     },
@@ -245,8 +331,10 @@ export function useInternalUsers(): UseInternalUsersReturn {
     refresh,
     getUserById,
     getUsersByRole,
+    create,
     update,
     remove,
+    toggleStatus,
     formatName: formatUserName,
     formatNameShort: formatUserNameShort,
     translateRole,

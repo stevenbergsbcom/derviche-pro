@@ -599,6 +599,7 @@ export interface InternalUser {
   role: InternalRole;
   created_at: string;
   last_login_at: string | null;
+  disabled_at: string | null; // NULL = actif, date = désactivé
 }
 
 // ============================================
