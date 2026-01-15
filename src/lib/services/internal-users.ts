@@ -7,7 +7,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import type { InternalUser, InternalRole, UserRoleRow } from '@/types/database';
+import type { InternalUser, InternalRole } from '@/types/database';
 
 // ============================================
 // TYPES
@@ -27,6 +27,13 @@ export interface UsersListResult {
 
 /** Rôles internes pour filtrage */
 const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe-dd'];
+
+/**
+ * Vérifie si une valeur est un rôle interne valide
+ */
+function isValidInternalRole(role: unknown): role is InternalRole {
+  return typeof role === 'string' && INTERNAL_ROLES.includes(role as InternalRole);
+}
 
 // ============================================
 // FONCTIONS DE LECTURE
@@ -71,20 +78,24 @@ export async function getInternalUsers(): Promise<UsersListResult> {
     const users: InternalUser[] = (data || []).map((profile) => {
       // Gérer les deux cas : tableau ou objet
       const userRoles = profile.user_roles;
-      let role: InternalRole | undefined;
+      let extractedRole: unknown;
       
       if (Array.isArray(userRoles) && userRoles.length > 0) {
         // Cas tableau non vide
-        role = (userRoles as UserRoleRow[])[0]?.role as InternalRole | undefined;
+        extractedRole = (userRoles[0] as { role?: unknown })?.role;
       } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles)) {
         // Cas objet unique
-        role = (userRoles as unknown as UserRoleRow).role as InternalRole | undefined;
+        extractedRole = (userRoles as { role?: unknown }).role;
       }
       
-      // Fallback si role est undefined (tableau vide ou structure inattendue)
-      if (!role) {
-        logger.warn('internal-users.getInternalUsers - Rôle non trouvé, fallback externe-dd', { 
-          profileId: profile.id 
+      // Valider que le rôle est bien un InternalRole
+      let role: InternalRole;
+      if (isValidInternalRole(extractedRole)) {
+        role = extractedRole;
+      } else {
+        logger.warn('internal-users.getInternalUsers - Rôle invalide ou non trouvé, fallback externe-dd', { 
+          profileId: profile.id,
+          extractedRole 
         });
         role = 'externe-dd';
       }
@@ -149,19 +160,25 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
 
     // Gérer les deux cas : tableau ou objet
     const userRoles = data.user_roles;
-    let role: InternalRole | undefined;
+    let extractedRole: unknown;
     
     if (Array.isArray(userRoles) && userRoles.length > 0) {
       // Cas tableau non vide
-      role = (userRoles as UserRoleRow[])[0]?.role as InternalRole | undefined;
+      extractedRole = (userRoles[0] as { role?: unknown })?.role;
     } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles)) {
       // Cas objet unique
-      role = (userRoles as unknown as UserRoleRow).role as InternalRole | undefined;
+      extractedRole = (userRoles as { role?: unknown }).role;
     }
     
-    // Fallback si role est undefined (tableau vide ou structure inattendue)
-    if (!role) {
-      logger.warn('internal-users.getInternalUserById - Rôle non trouvé, fallback externe-dd', { userId });
+    // Valider que le rôle est bien un InternalRole
+    let role: InternalRole;
+    if (isValidInternalRole(extractedRole)) {
+      role = extractedRole;
+    } else {
+      logger.warn('internal-users.getInternalUserById - Rôle invalide ou non trouvé, fallback externe-dd', { 
+        userId,
+        extractedRole 
+      });
       role = 'externe-dd';
     }
 
