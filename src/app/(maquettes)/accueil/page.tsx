@@ -48,7 +48,7 @@ function transformShowToSpectacle(show: PublicShow): Spectacle {
   }
 
   return {
-    id: parseInt(show.id.split('-')[0]) || 0, // Fallback pour l'ID numérique
+    id: 0, // Legacy - on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
     venue: show.nextVenue || 'Lieu à définir',
@@ -94,6 +94,14 @@ export default function MaquetteAccueil() {
       .filter((s) => s.status !== 'closed'); // Ne garder que les spectacles disponibles ou coming_soon
   }, [publicShows]);
 
+  // Spectacles avec image pour le Hero Slider (filtrés)
+  const spectaclesWithImage = useMemo(() => {
+    return spectacles.filter((s) => {
+      // Vérifier que l'image existe et n'est pas le placeholder
+      return s.image && !s.image.includes('placeholder');
+    });
+  }, [spectacles]);
+
   // Fix d'hydratation
   useEffect(() => {
     setIsMounted(true);
@@ -131,15 +139,15 @@ export default function MaquetteAccueil() {
     return () => window.removeEventListener('resize', updateCardsVisible);
   }, []);
 
-  // Slider automatique pour le Hero
+  // Slider automatique pour le Hero (uniquement spectacles avec image)
   useEffect(() => {
-    if (spectacles.length === 0) return;
+    if (spectaclesWithImage.length === 0) return;
     const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % spectacles.length);
+      setCurrentSlide((prev) => (prev + 1) % spectaclesWithImage.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [spectacles.length]);
+  }, [spectaclesWithImage.length]);
 
   // Carousel automatique pour les spectacles
   useEffect(() => {
@@ -243,11 +251,11 @@ export default function MaquetteAccueil() {
             </Button>
           </div>
 
-          {/* Hero Slider - Images des spectacles */}
-          {spectacles.length > 0 && (
+          {/* Hero Slider - Images des spectacles (uniquement ceux avec image) */}
+          {spectaclesWithImage.length > 0 && (
             <div className="max-w-4xl mx-auto">
               <div className="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
-                {spectacles.map((spectacle, index) => (
+                {spectaclesWithImage.map((spectacle, index) => (
                   <div
                     key={spectacle.slug}
                     className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'

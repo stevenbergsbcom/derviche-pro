@@ -25,3 +25,6 @@ export type { UseInternalUsersReturn, CreateUserData, UpdateUserData, OperationR
 // Hooks Supabase - Public
 export { usePublicCatalog } from './usePublicCatalog';
 export type { UsePublicCatalogReturn } from './usePublicCatalog';
+
+export { usePublicShow } from './usePublicShow';
+export type { UsePublicShowReturn } from './usePublicShow';
