@@ -147,6 +147,7 @@ export type Database = {
           company_id: string | null
           created_at: string
           deleted_at: string | null
+          disabled_at: string | null
           email: string
           email2: string | null
           first_name: string | null
@@ -157,6 +158,7 @@ export type Database = {
           id: string
           last_login_at: string | null
           last_name: string | null
+          must_change_password: boolean | null
           phone: string | null
           phone2: string | null
           structure: string | null
@@ -169,6 +171,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           deleted_at?: string | null
+          disabled_at?: string | null
           email: string
           email2?: string | null
           first_name?: string | null
@@ -179,6 +182,7 @@ export type Database = {
           id: string
           last_login_at?: string | null
           last_name?: string | null
+          must_change_password?: boolean | null
           phone?: string | null
           phone2?: string | null
           structure?: string | null
@@ -191,6 +195,7 @@ export type Database = {
           company_id?: string | null
           created_at?: string
           deleted_at?: string | null
+          disabled_at?: string | null
           email?: string
           email2?: string | null
           first_name?: string | null
@@ -201,6 +206,7 @@ export type Database = {
           id?: string
           last_login_at?: string | null
           last_name?: string | null
+          must_change_password?: boolean | null
           phone?: string | null
           phone2?: string | null
           structure?: string | null
