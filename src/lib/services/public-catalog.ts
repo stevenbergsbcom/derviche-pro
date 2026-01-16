@@ -204,8 +204,12 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      // Calculer booked correctement même pour capacité illimitée
-      const booked = slot.capacity - slot.remaining_capacity;
+      // Calculer booked : pour capacité illimitée, utiliser la différence brute
+      // Pour capacité limitée, calculer normalement
+      const isUnlimited = slot.capacity >= UNLIMITED_CAPACITY;
+      const booked = isUnlimited 
+        ? Math.max(0, UNLIMITED_CAPACITY - slot.remaining_capacity)
+        : Math.max(0, slot.capacity - slot.remaining_capacity);
 
       const publicSlot: PublicSlot = {
         id: slot.id,
@@ -376,7 +380,11 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      const booked = slot.capacity - slot.remaining_capacity;
+      // Calculer booked : pour capacité illimitée, utiliser la différence brute
+      const isUnlimited = slot.capacity >= UNLIMITED_CAPACITY;
+      const booked = isUnlimited 
+        ? Math.max(0, UNLIMITED_CAPACITY - slot.remaining_capacity)
+        : Math.max(0, slot.capacity - slot.remaining_capacity);
 
       return {
         id: slot.id,
@@ -387,7 +395,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         venueCity: venueData?.city || '',
         capacity,
         remainingCapacity,
-        booked: Math.max(0, booked),
+        booked,
         hostedBy: slot.hosted_by as SlotHostedBy,
       };
     });

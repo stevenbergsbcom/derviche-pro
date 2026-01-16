@@ -124,8 +124,8 @@ function ConfirmationContent() {
     const guestName = searchParams.get('name') || 'Jean Dupont';
     const guestEmail = searchParams.get('email') || 'jean.dupont@theatre.fr';
 
-    // Trouver le slot correspondant pour le lieu
-    const matchingSlot = show.slots.find(slot => slot.date === slotDate);
+    // Trouver le slot correspondant pour le lieu (matcher date ET heure)
+    const matchingSlot = show.slots.find(slot => slot.date === slotDate && slot.time === slotTime);
     const venueName = matchingSlot?.venueName || show.nextVenue || 'Théâtre';
     const venueCity = matchingSlot?.venueCity || '';
     const venueAddress = venueCity ? `${venueName}, ${venueCity}` : venueName;

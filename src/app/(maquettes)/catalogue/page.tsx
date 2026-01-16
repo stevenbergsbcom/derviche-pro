@@ -68,7 +68,7 @@ function transformShowToSpectacle(show: PublicShow): Spectacle {
   }
 
   return {
-    id: parseInt(show.id.split('-')[0]) || 0,
+    id: 0, // Legacy - on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
     venue: show.nextVenue || 'Lieu à définir',

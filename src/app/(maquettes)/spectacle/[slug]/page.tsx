@@ -39,7 +39,7 @@ import {
     Drama,
 } from 'lucide-react';
 import { usePublicShow } from '@/hooks/usePublicShow';
-import type { PublicShow, PublicSlot } from '@/lib/services/public-catalog';
+import type { PublicSlot } from '@/lib/services/public-catalog';
 import { createReservation } from '@/lib/services/reservations';
 
 // ============================================
@@ -101,20 +101,6 @@ function formatDuration(minutes: number | null): string {
     const mins = minutes % 60;
     if (mins === 0) return `${hours}h`;
     return `${hours}h${mins.toString().padStart(2, '0')}`;
-}
-
-/**
- * Déterminer le texte de pricing
- */
-function getPricingText(priceType: string): string {
-    switch (priceType) {
-        case 'paid_on_site':
-            return 'Payant sur place';
-        case 'paid_online':
-            return 'Payant en ligne';
-        default:
-            return 'Gratuit';
-    }
 }
 
 /**
@@ -409,9 +395,7 @@ export default function SpectacleDetailPage() {
 
     // Données calculées pour l'affichage
     const duration = formatDuration(show.durationMinutes);
-    const pricing = getPricingText(show.priceType);
     const period = buildPeriod(timeSlots);
-    const genre = show.categories[0] || 'Spectacle';
     const description = show.longDescription || show.shortDescription || 'Description du spectacle.';
     const firstSlot = timeSlots[0];
     const venueName = firstSlot?.venueName || 'Lieu à définir';

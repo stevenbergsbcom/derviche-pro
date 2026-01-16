@@ -7,7 +7,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
-import type { ReservationInsert, ReservationRow } from '@/types/database';
+import type { ReservationRow } from '@/types/database';
 import { logger } from '@/lib/logger';
 
 // ============================================
@@ -113,6 +113,7 @@ export async function createReservation(
 
     // Vérifier la capacité (999999 = illimité)
     const isUnlimited = slot.capacity >= 999999;
+    // Pour les slots illimités, on vérifie quand même car le trigger fait la vraie vérification
     const hasEnoughCapacity = isUnlimited || slot.remaining_capacity >= numPlaces;
 
     if (!hasEnoughCapacity) {
@@ -128,39 +129,31 @@ export async function createReservation(
     }
 
     // ============================================
-    // 2. Créer la réservation
+    // 2. Créer la réservation via RPC (bypass RLS)
     // ============================================
-    const reservationData: ReservationInsert = {
-      slot_id: slotId,
-      user_id: userId || null,
-      num_places: numPlaces,
-      status: 'confirmed',
-      // Infos guest
-      guest_first_name: formData.firstName.trim(),
-      guest_last_name: formData.lastName.trim(),
-      guest_email: formData.email.trim().toLowerCase(),
-      guest_phone: formData.phone.trim() || null,
-      guest_function: formData.function?.trim() || null,
-      guest_structure: formData.organization?.trim() || null,
-      // Champs secondaires
-      guest_email_secondary: formData.emailSecondary?.trim() || null,
-      guest_phone_secondary: formData.phoneSecondary?.trim() || null,
-      guest_address: formData.address?.trim() || null,
-      guest_postal_code: formData.postalCode?.trim() || null,
-      guest_city: formData.city?.trim() || null,
-      // Commentaires
-      special_requests: formData.comment?.trim() || null,
-    };
+    // On utilise une fonction RPC avec SECURITY DEFINER pour permettre
+    // aux utilisateurs anonymes de créer des réservations
+    const { data: reservationId, error: rpcError } = await supabase
+      .rpc('create_public_reservation', {
+        p_slot_id: slotId,
+        p_num_places: numPlaces,
+        p_first_name: formData.firstName.trim(),
+        p_last_name: formData.lastName.trim(),
+        p_email: formData.email.trim().toLowerCase(),
+        p_phone: formData.phone.trim() || undefined,
+        p_email_secondary: formData.emailSecondary?.trim() || undefined,
+        p_phone_secondary: formData.phoneSecondary?.trim() || undefined,
+        p_address: formData.address?.trim() || undefined,
+        p_postal_code: formData.postalCode?.trim() || undefined,
+        p_city: formData.city?.trim() || undefined,
+        p_organization: formData.organization?.trim() || undefined,
+        p_function: formData.function?.trim() || undefined,
+        p_comment: formData.comment?.trim() || undefined,
+      });
 
-    const { data: reservation, error: reservationError } = await supabase
-      .from('reservations')
-      .insert(reservationData)
-      .select('id')
-      .single();
-
-    if (reservationError || !reservation) {
-      logger.error('[reservations] Erreur création réservation', { 
-        error: reservationError 
+    if (rpcError || !reservationId) {
+      logger.error('[reservations] Erreur création réservation via RPC', { 
+        error: rpcError 
       });
       return {
         success: false,
@@ -168,36 +161,12 @@ export async function createReservation(
       };
     }
 
-    // ============================================
-    // 3. Décrémenter la capacité du créneau
-    // ============================================
-    // On ne décrémente pas si capacité illimitée
-    if (!isUnlimited) {
-      const newRemainingCapacity = slot.remaining_capacity - numPlaces;
-
-      const { error: updateError } = await supabase
-        .from('slots')
-        .update({ remaining_capacity: newRemainingCapacity })
-        .eq('id', slotId);
-
-      if (updateError) {
-        logger.error('[reservations] Erreur mise à jour capacité', { 
-          slotId, 
-          error: updateError 
-        });
-        // Note: On ne fait pas de rollback ici car la réservation est créée
-        // En production, on utiliserait une transaction ou une fonction RPC
-      }
-
-      logger.info('[reservations] Capacité mise à jour', {
-        slotId,
-        oldCapacity: slot.remaining_capacity,
-        newCapacity: newRemainingCapacity,
-      });
-    }
+    // NOTE: Le trigger 'update_slot_capacity' gère automatiquement
+    // la décrémentation de remaining_capacity lors de l'INSERT
+    const reservation = { id: reservationId as string };
 
     // ============================================
-    // 4. Retourner le succès
+    // 3. Retourner le succès
     // ============================================
     const code = generateReservationCode(reservation.id);
 
