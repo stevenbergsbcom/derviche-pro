@@ -22,14 +22,14 @@ import { useShows } from '@/hooks/useShows';
 import { useCategories } from '@/hooks/useCategories';
 import { useTargetAudiences } from '@/hooks/useTargetAudiences';
 import { useCompanies } from '@/hooks/useCompanies';
+import { useInternalUsers } from '@/hooks/useInternalUsers';
 import type { ShowWithRelations } from '@/lib/services/shows';
 import type { ShowStatus, ShowPriceType } from '@/types/database';
 
 // Service de gestion des images
 import { uploadShowImage, deleteShowImage, replaceShowImage } from '@/lib/services/storage';
 
-// Mock pour les users Derviche (à connecter plus tard)
-import { mockDervisheUsers } from '@/lib/mock-data';
+
 
 // Composants admin réutilisables
 import {
@@ -134,6 +134,12 @@ function AdminSpectaclesContent() {
         create: createCompany,
     } = useCompanies();
 
+    const {
+        users: rawInternalUsers,
+        isLoading: isLoadingInternalUsers,
+        error: internalUsersError,
+    } = useInternalUsers();
+
     // Convertir les données Supabase vers le format d'affichage
     const shows: ShowForDisplay[] = useMemo(() => {
         return rawShows.map((show: ShowWithRelations) => {
@@ -191,6 +197,20 @@ function AdminSpectaclesContent() {
             contactPhone: c.contact_phone,
         })),
         [rawCompanies]
+    );
+
+    // Convertir les utilisateurs internes pour l'UI (format DervisheUserOption)
+    // Filtrer uniquement les utilisateurs actifs (non désactivés)
+    const dervisheUsers = useMemo(() =>
+        rawInternalUsers
+            .filter(u => !u.disabled_at) // Exclure les utilisateurs désactivés
+            .map(u => ({
+                id: u.id,
+                firstName: u.first_name || '',
+                lastName: u.last_name || '',
+                role: u.role,
+            })),
+        [rawInternalUsers]
     );
 
     // État de recherche
@@ -290,7 +310,7 @@ function AdminSpectaclesContent() {
     }, [searchQuery, shows]);
 
     // Loading global
-    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies;
+    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies || isLoadingInternalUsers;
 
     // Attendre que le composant soit monté
     if (!isMounted) {
@@ -311,7 +331,7 @@ function AdminSpectaclesContent() {
     }
 
     // Affichage des erreurs de chargement
-    const loadingError = showsError || categoriesError || targetAudiencesError || companiesError;
+    const loadingError = showsError || categoriesError || targetAudiencesError || companiesError || internalUsersError;
     if (loadingError) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -970,7 +990,7 @@ function AdminSpectaclesContent() {
                 companies={companies}
                 categories={categoryOptions}
                 targetAudiences={targetAudiences}
-                dervisheUsers={mockDervisheUsers}
+                dervisheUsers={dervisheUsers}
                 onOpenCategoriesManager={() => setIsCategoriesDialogOpen(true)}
                 onOpenTargetAudiencesManager={() => setIsAudiencesDialogOpen(true)}
                 onOpenNewCompanyDialog={() => setIsNewCompanyDialogOpen(true)}
@@ -993,7 +1013,7 @@ function AdminSpectaclesContent() {
                 onCopyLink={(show) => void handleCopyLink(show)}
                 copiedShowId={copiedShowId}
                 onNavigateToRepresentations={handleNavigateToRepresentations}
-                dervisheUsers={mockDervisheUsers}
+                dervisheUsers={dervisheUsers}
             />
 
             {/* Modale de gestion des catégories */}

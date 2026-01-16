@@ -85,7 +85,7 @@ export async function DELETE(
       `)
       .eq('id', userId)
       .is('deleted_at', null)
-      .in('user_roles.role', ['super-admin', 'admin', 'externe-dd'])
+      .in('user_roles.role', ['super-admin', 'admin', 'externe'])
       .single();
 
     if (fetchError || !targetUser) {

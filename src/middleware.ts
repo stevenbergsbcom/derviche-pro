@@ -37,6 +37,24 @@ export async function middleware(request: NextRequest) {
 
     const { pathname } = request.nextUrl;
 
+    // Vérifier si l'utilisateur est désactivé
+    if (user) {
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('disabled_at')
+            .eq('id', user.id)
+            .single();
+
+        // Si erreur lors de la récupération du profil ou compte désactivé, déconnecter
+        if (profileError || profile?.disabled_at) {
+            await supabase.auth.signOut();
+            const url = request.nextUrl.clone();
+            url.pathname = '/login';
+            url.searchParams.set('error', profileError ? 'profile_error' : 'account_disabled');
+            return NextResponse.redirect(url);
+        }
+    }
+
     // Routes publiques (accessibles sans authentification)
     const publicRoutes = [
         '/',

@@ -71,14 +71,14 @@ export interface UserFormDialogProps {
 // ============================================
 
 /** Rôles internes disponibles */
-const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe-dd'];
+const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe'];
 
 /** Valeurs par défaut du formulaire (édition) */
 const defaultFormData: UserFormData = {
     first_name: '',
     last_name: '',
     phone: '',
-    role: 'externe-dd',
+    role: 'externe',
 };
 
 /** Valeurs par défaut du formulaire (création) */
@@ -189,6 +189,11 @@ export function UserFormDialog({
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
 
+        // Validation commune (création et édition)
+        if (!INTERNAL_ROLES.includes(formData.role)) {
+            errors.role = 'Veuillez sélectionner un rôle valide';
+        }
+
         if (isCreating) {
             // Validation email
             if (!formData.email.trim()) {
@@ -251,8 +256,8 @@ export function UserFormDialog({
 
     // Validation du formulaire
     const isValid = isCreating
-        ? isEmailValid && formData.password && validatePassword(formData.password).valid
-        : true;
+        ? isEmailValid && formData.password && validatePassword(formData.password).valid && INTERNAL_ROLES.includes(formData.role)
+        : INTERNAL_ROLES.includes(formData.role);
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
@@ -495,7 +500,7 @@ export function UserFormDialog({
                         <p className="text-xs text-muted-foreground">
                             {formData.role === 'super-admin' && 'Accès complet à toutes les fonctionnalités.'}
                             {formData.role === 'admin' && 'Gestion des spectacles, réservations et check-in.'}
-                            {formData.role === 'externe-dd' && 'Accueil et check-in sur les spectacles assignés.'}
+                            {formData.role === 'externe' && 'Accueil et check-in sur les spectacles assignés.'}
                         </p>
                     </div>
                 </div>

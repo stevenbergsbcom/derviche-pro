@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -14,9 +15,12 @@ import {
     X,
     ExternalLink,
     User,
+    Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
+import { createClient } from '@/lib/supabase/client';
+import type { InternalRole } from '@/types/database';
 
 interface NavItem {
     label: string;
@@ -62,11 +66,86 @@ interface AdminSidebarProps {
     onClose: () => void;
 }
 
-// Données mock pour la maquette
-const mockUser = { firstName: 'Steven', role: 'Super Admin' };
+/** Labels des rôles pour l'affichage */
+const ROLE_LABELS: Record<InternalRole, string> = {
+    'super-admin': 'Super Admin',
+    'admin': 'Admin',
+    'externe': 'Externe',
+};
+
+/** Données utilisateur pour la sidebar */
+interface SidebarUserData {
+    firstName: string | null;
+    lastName: string | null;
+    email: string;
+    role: string;
+}
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
     const pathname = usePathname();
+    const [userData, setUserData] = useState<SidebarUserData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Charger les données de l'utilisateur connecté
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (!user) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Récupérer le profil et le rôle
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select(`
+                        first_name,
+                        last_name,
+                        email,
+                        user_roles!inner (role)
+                    `)
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    // Extraire le rôle (peut être un tableau ou un objet)
+                    const userRoles = profile.user_roles;
+                    let roleValue = 'Utilisateur';
+                    
+                    if (Array.isArray(userRoles) && userRoles.length > 0) {
+                        const role = (userRoles[0] as { role: string }).role;
+                        roleValue = ROLE_LABELS[role as InternalRole] || role;
+                    } else if (userRoles && typeof userRoles === 'object' && 'role' in userRoles) {
+                        const role = (userRoles as { role: string }).role;
+                        roleValue = ROLE_LABELS[role as InternalRole] || role;
+                    }
+
+                    setUserData({
+                        firstName: profile.first_name,
+                        lastName: profile.last_name,
+                        email: profile.email,
+                        role: roleValue,
+                    });
+                }
+            } catch (error) {
+                console.error('Erreur chargement utilisateur sidebar:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        void fetchUserData();
+    }, []);
+
+    // Formater le nom d'affichage
+    const displayName = userData
+        ? (userData.firstName || userData.lastName)
+            ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim()
+            : userData.email
+        : 'Chargement...';
 
     return (
         <>
@@ -162,7 +241,17 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     
                     <div className="mb-3 px-3">
                         <p className="text-xs text-white/50 mb-1">Connecté en tant que</p>
-                        <p className="text-sm font-medium text-white">{mockUser.role} - {mockUser.firstName}</p>
+                        {isLoading ? (
+                            <div className="flex items-center gap-2 text-white/70">
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <span className="text-sm">Chargement...</span>
+                            </div>
+                        ) : (
+                            <>
+                                <p className="text-sm font-medium text-gold">{userData?.role || 'Utilisateur'}</p>
+                                <p className="text-sm text-white truncate">{displayName}</p>
+                            </>
+                        )}
                     </div>
                     
                     {/* Lien Mon compte */}

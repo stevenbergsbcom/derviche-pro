@@ -2,7 +2,7 @@
  * API Route - Création d'utilisateurs internes
  * POST /api/admin/users
  * 
- * Crée un nouvel utilisateur interne (super-admin, admin, externe-dd)
+ * Crée un nouvel utilisateur interne (super-admin, admin, externe)
  * avec son profil et son rôle.
  * 
  * Si l'email existe déjà avec un compte supprimé (soft delete),
@@ -88,7 +88,7 @@ function validateRequest(data: unknown): { valid: true; data: CreateUserRequest 
 
   // Rôle requis et valide
   if (!body.role || typeof body.role !== 'string' || !isValidInternalRole(body.role)) {
-    return { valid: false, error: 'Rôle invalide. Valeurs acceptées: super-admin, admin, externe-dd' };
+    return { valid: false, error: 'Rôle invalide. Valeurs acceptées: super-admin, admin, externe' };
   }
 
   return {
@@ -328,10 +328,15 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         code: profileUpsertError.code,
         details: profileUpsertError.details 
       });
-      // On continue malgré l'erreur (le compte est créé)
-    } else {
-      logger.info('API /admin/users - Profil créé/mis à jour', { userId });
+      // Rollback : supprimer l'utilisateur auth créé pour éviter un état incohérent
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      return NextResponse.json(
+        { success: false, error: 'Erreur lors de la création du profil utilisateur' },
+        { status: 500 }
+      );
     }
+    
+    logger.info('API /admin/users - Profil créé/mis à jour', { userId });
 
     // 7. Mettre à jour le rôle (le trigger a peut-être créé un rôle par défaut)
     const { error: roleError } = await supabaseAdmin

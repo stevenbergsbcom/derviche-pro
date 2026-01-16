@@ -227,9 +227,9 @@ export const mockDervisheUsers: MockUser[] = [
   { id: 'user-1', firstName: 'Alexandra', lastName: 'Martin', email: 'alexandra@derviche.com', role: 'super-admin' },
   { id: 'user-2', firstName: 'Sophie', lastName: 'Bernard', email: 'sophie@derviche.com', role: 'admin' },
   { id: 'user-3', firstName: 'Pierre', lastName: 'Dupont', email: 'pierre@derviche.com', role: 'admin' },
-  { id: 'user-4', firstName: 'Marie', lastName: 'Lefebvre', email: 'marie@derviche.com', role: 'externe-dd' },
-  { id: 'user-5', firstName: 'Jean', lastName: 'Moreau', email: 'jean@derviche.com', role: 'externe-dd' },
-  { id: 'user-6', firstName: 'Claire', lastName: 'Dubois', email: 'claire@derviche.com', role: 'externe-dd' },
+  { id: 'user-4', firstName: 'Marie', lastName: 'Lefebvre', email: 'marie@derviche.com', role: 'externe' },
+  { id: 'user-5', firstName: 'Jean', lastName: 'Moreau', email: 'jean@derviche.com', role: 'externe' },
+  { id: 'user-6', firstName: 'Claire', lastName: 'Dubois', email: 'claire@derviche.com', role: 'externe' },
 ];
 
 /** Catégories de spectacles */

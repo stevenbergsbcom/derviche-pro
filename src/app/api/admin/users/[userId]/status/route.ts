@@ -98,7 +98,7 @@ export async function PATCH(
       `)
       .eq('id', userId)
       .is('deleted_at', null)
-      .in('user_roles.role', ['super-admin', 'admin', 'externe-dd'])
+      .in('user_roles.role', ['super-admin', 'admin', 'externe'])
       .single();
 
     if (fetchError || !targetUser) {
@@ -119,7 +119,7 @@ export async function PATCH(
     
     if (Array.isArray(userRoles) && userRoles.length > 0) {
       targetRoleValue = (userRoles[0] as { role: string }).role;
-    } else if (userRoles && typeof userRoles === 'object' && 'role' in userRoles) {
+    } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles) && 'role' in userRoles) {
       targetRoleValue = (userRoles as { role: string }).role;
     }
     

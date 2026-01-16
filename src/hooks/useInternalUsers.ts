@@ -2,7 +2,7 @@
  * Hook React pour la gestion des utilisateurs internes (staff)
  * Derviche Diffusion - Plateforme de réservation professionnelle
  *
- * Fournit les utilisateurs internes (super-admin, admin, externe-dd) depuis Supabase
+ * Fournit les utilisateurs internes (super-admin, admin, externe) depuis Supabase
  * avec capacités CRUD complètes
  */
 
@@ -176,6 +176,14 @@ export function useInternalUsers(): UseInternalUsersReturn {
           body: JSON.stringify(data),
         });
 
+        // Vérifier le statut HTTP
+        if (!response.ok) {
+          const result = await response.json() as { success: boolean; error?: string };
+          const errorMessage = result.error || `Erreur HTTP ${response.status}`;
+          logger.error('useInternalUsers.create - Erreur HTTP', { status: response.status, error: errorMessage });
+          return { success: false, error: errorMessage };
+        }
+
         const result = await response.json() as { success: boolean; error?: string; user?: { id: string; email: string }; reactivated?: boolean };
 
         if (!result.success) {
@@ -258,6 +266,14 @@ export function useInternalUsers(): UseInternalUsersReturn {
           method: 'DELETE',
         });
 
+        // Vérifier le statut HTTP
+        if (!response.ok) {
+          const result = await response.json() as { success: boolean; error?: string };
+          const errorMessage = result.error || `Erreur HTTP ${response.status}`;
+          logger.error('useInternalUsers.remove - Erreur HTTP', { status: response.status, error: errorMessage });
+          return { success: false, error: errorMessage };
+        }
+
         const result = await response.json() as { success: boolean; error?: string };
 
         if (!result.success) {
@@ -297,6 +313,14 @@ export function useInternalUsers(): UseInternalUsersReturn {
           },
           body: JSON.stringify({ disabled }),
         });
+
+        // Vérifier le statut HTTP
+        if (!response.ok) {
+          const result = await response.json() as { success: boolean; error?: string };
+          const errorMessage = result.error || `Erreur HTTP ${response.status}`;
+          logger.error('useInternalUsers.toggleStatus - Erreur HTTP', { status: response.status, error: errorMessage });
+          return { success: false, error: errorMessage };
+        }
 
         const result = await response.json() as { success: boolean; error?: string };
 

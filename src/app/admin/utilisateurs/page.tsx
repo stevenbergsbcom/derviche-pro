@@ -56,14 +56,14 @@ import {
 // ============================================
 
 /** Tous les rôles internes pour le filtre */
-const ALL_ROLES: Array<InternalRole | 'all'> = ['all', 'super-admin', 'admin', 'externe-dd'];
+const ALL_ROLES: Array<InternalRole | 'all'> = ['all', 'super-admin', 'admin', 'externe'];
 
 /** Labels des rôles pour le filtre */
 const ROLE_LABELS: Record<InternalRole | 'all', string> = {
     'all': 'Tous les rôles',
     'super-admin': 'Super Admin',
     'admin': 'Admin',
-    'externe-dd': 'Externe DD',
+    'externe': 'Externe',
 };
 
 // ============================================
@@ -79,7 +79,7 @@ function getRoleBadgeClass(role: InternalRole): string {
             return 'bg-purple-100 text-purple-800 border-purple-200';
         case 'admin':
             return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'externe-dd':
+        case 'externe':
             return 'bg-amber-100 text-amber-800 border-amber-200';
         default:
             return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -138,15 +138,24 @@ export default function AdminUtilisateursPage() {
             if (user) {
                 setCurrentUserId(user.id);
                 
-                // Récupérer le rôle de l'utilisateur
-                const { data: roleData } = await supabase
+                // Récupérer tous les rôles de l'utilisateur (peut en avoir plusieurs)
+                const { data: rolesData } = await supabase
                     .from('user_roles')
                     .select('role')
-                    .eq('user_id', user.id)
-                    .single();
+                    .eq('user_id', user.id);
                 
-                if (roleData && (roleData.role === 'super-admin' || roleData.role === 'admin' || roleData.role === 'externe-dd')) {
-                    setCurrentUserRole(roleData.role as InternalRole);
+                if (rolesData && rolesData.length > 0) {
+                    // Priorité des rôles internes (du plus privilégié au moins privilégié)
+                    const rolePriority: InternalRole[] = ['super-admin', 'admin', 'externe'];
+                    const userRoles = rolesData.map(r => r.role);
+                    
+                    // Trouver le rôle interne avec la plus haute priorité
+                    for (const role of rolePriority) {
+                        if (userRoles.includes(role)) {
+                            setCurrentUserRole(role);
+                            break;
+                        }
+                    }
                 }
             }
         };
@@ -181,7 +190,7 @@ export default function AdminUtilisateursPage() {
         return {
             'super-admin': users.filter((u) => u.role === 'super-admin').length,
             'admin': users.filter((u) => u.role === 'admin').length,
-            'externe-dd': users.filter((u) => u.role === 'externe-dd').length,
+            'externe': users.filter((u) => u.role === 'externe').length,
         };
     }, [users]);
 
@@ -426,7 +435,7 @@ export default function AdminUtilisateursPage() {
                 </Badge>
                 <Badge variant="outline" className="bg-amber-50">
                     <Users className="w-3 h-3 mr-1" />
-                    {roleCounts['externe-dd']} Externe DD
+                    {roleCounts['externe']} Externe
                 </Badge>
             </div>
 

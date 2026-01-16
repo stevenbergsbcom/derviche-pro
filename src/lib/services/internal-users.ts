@@ -26,7 +26,7 @@ export interface UsersListResult {
 }
 
 /** Rôles internes pour filtrage */
-const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe-dd'];
+const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe'];
 
 /**
  * Vérifie si une valeur est un rôle interne valide
@@ -94,11 +94,11 @@ export async function getInternalUsers(): Promise<UsersListResult> {
       if (isValidInternalRole(extractedRole)) {
         role = extractedRole;
       } else {
-        logger.warn('internal-users.getInternalUsers - Rôle invalide ou non trouvé, fallback externe-dd', { 
+        logger.warn('internal-users.getInternalUsers - Rôle invalide ou non trouvé, fallback externe', { 
           profileId: profile.id,
           extractedRole 
         });
-        role = 'externe-dd';
+        role = 'externe';
       }
       
       return {
@@ -178,11 +178,11 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
     if (isValidInternalRole(extractedRole)) {
       role = extractedRole;
     } else {
-      logger.warn('internal-users.getInternalUserById - Rôle invalide ou non trouvé, fallback externe-dd', { 
+      logger.warn('internal-users.getInternalUserById - Rôle invalide ou non trouvé, fallback externe', { 
         userId,
         extractedRole 
       });
-      role = 'externe-dd';
+      role = 'externe';
     }
 
     const user: InternalUser = {
@@ -343,7 +343,7 @@ export function translateRole(role: InternalRole): string {
   const translations: Record<InternalRole, string> = {
     'super-admin': 'Super Admin',
     'admin': 'Admin',
-    'externe-dd': 'Externe DD',
+    'externe': 'Externe',
   };
   return translations[role] || role;
 }
