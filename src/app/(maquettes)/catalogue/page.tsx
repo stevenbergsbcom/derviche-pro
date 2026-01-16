@@ -15,44 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, ArrowUp } from 'lucide-react';
+import { Search, ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
-import {
-  mockShows,
-  mockRepresentations,
-  mockVenues,
-  type MockShow,
-  type MockRepresentation,
-} from '@/lib/mock-data';
+import { usePublicCatalog } from '@/hooks/usePublicCatalog';
+import type { PublicShow } from '@/lib/services/public-catalog';
 
 // ============================================
 // HELPERS
 // ============================================
-
-/**
- * Formater une date ISO en format français lisible
- */
-function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  const day = date.getDate();
-  const months = [
-    'jan.',
-    'fév.',
-    'mars',
-    'avr.',
-    'mai',
-    'juin',
-    'juil.',
-    'août',
-    'sept.',
-    'oct.',
-    'nov.',
-    'déc.',
-  ];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-}
 
 /**
  * Extraire le mois d'une date au format "15 jan. 2025"
@@ -79,74 +49,35 @@ function getMonthFromDateFr(dateStr: string): string {
 }
 
 /**
- * Transformer les données MockShow en Spectacle pour le composant SpectacleCard
+ * Transformer un PublicShow en Spectacle pour le composant SpectacleCard
  */
-function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
-  // Filtrer les représentations de ce spectacle
-  const showReps = representations.filter((rep) => rep.showId === show.id);
-
-  // Trier par date croissante
-  const sortedReps = [...showReps].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`);
-    const dateB = new Date(`${b.date}T${b.time}`);
-    return dateA.getTime() - dateB.getTime();
-  });
-
-  // Trouver la prochaine représentation (date >= aujourd'hui)
-  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
-  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-
-  const futureReps = sortedReps.filter((rep) => {
-    return rep.date >= todayISO; // Comparaison de chaînes ISO
-  });
-
-  const nextRep = futureReps[0];
-
-  // Calculer le nombre de créneaux avec places disponibles
-  const availableSlots = futureReps.filter((rep) => {
-    if (rep.capacity === null) return true; // Illimité = toujours disponible
-    return rep.booked < rep.capacity;
-  }).length;
-
+function transformShowToSpectacle(show: PublicShow): Spectacle {
   // Déterminer le statut
   let status: SpectacleStatus = 'available';
+
   if (show.status === 'draft') {
     status = 'coming_soon';
-  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+  } else if (show.status === 'archived') {
     status = 'closed';
-  } else if (availableSlots === 0 && futureReps.length > 0) {
+  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
+    // Tous les créneaux sont complets
     status = 'closed';
-  }
-
-  // Trouver le lieu de la prochaine représentation
-  // Pour coming_soon : on n'affiche pas de lieu spécifique
-  let venue = 'Lieu à définir';
-  if (status !== 'coming_soon') {
-    venue = nextRep
-      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
-      : sortedReps[0]
-        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
-        : 'Lieu à définir';
-  }
-
-  // Pour coming_soon : pas de nextDate (le composant affichera "Dates à venir")
-  // Pour closed : pas de nextDate non plus
-  let nextDate = '';
-  if (status === 'available' && nextRep) {
-    nextDate = formatDateFr(nextRep.date);
+  } else if (show.slots.length === 0) {
+    // Pas de créneaux futurs
+    status = 'coming_soon';
   }
 
   return {
-    id: parseInt(show.id.replace('show-', '')) || 0,
+    id: parseInt(show.id.split('-')[0]) || 0,
     title: show.title,
     company: show.companyName,
-    venue: venue,
+    venue: show.nextVenue || 'Lieu à définir',
     image: show.imageUrl || '/images/spectacles/placeholder.jpg',
     slug: show.slug,
     genre: show.categories[0] || 'Spectacle',
-    nextDate: nextDate,
-    remainingSlots: availableSlots,
-    status: status,
+    nextDate: status === 'available' ? (show.nextDate || '') : '',
+    remainingSlots: show.availableSlotsCount,
+    status,
   };
 }
 
@@ -165,6 +96,9 @@ export default function CataloguePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
 
+  // Hook Supabase pour les données
+  const { shows: publicShows, venues, isLoading, error, refresh } = usePublicCatalog();
+
   // Fix d'hydratation
   useEffect(() => {
     setIsMounted(true);
@@ -180,27 +114,24 @@ export default function CataloguePage() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Transformer les MockShow en Spectacle
+  // Transformer les PublicShow en Spectacle
   const spectacles = useMemo(() => {
-    return mockShows.map((show) => transformShowToSpectacle(show, mockRepresentations));
-  }, []);
+    return publicShows.map(transformShowToSpectacle);
+  }, [publicShows]);
 
   // Options pour les filtres - basées sur les données réelles
   const genres = useMemo(() => {
     const uniqueGenres = new Set<string>();
-    mockShows.forEach((show) => {
+    publicShows.forEach((show) => {
       show.categories.forEach((cat) => uniqueGenres.add(cat));
     });
     return ['Tous', ...Array.from(uniqueGenres).sort()];
-  }, []);
+  }, [publicShows]);
 
   const lieux = useMemo(() => {
-    const uniqueVenues = new Set<string>();
-    mockRepresentations.forEach((rep) => {
-      uniqueVenues.add(rep.venueName);
-    });
-    return ['Tous', ...Array.from(uniqueVenues).sort()];
-  }, []);
+    // Utiliser les lieux récupérés du hook (lieux avec représentations futures)
+    return ['Tous', ...venues.map((v) => v.name).sort()];
+  }, [venues]);
 
   const mois = [
     'Tous',
@@ -282,6 +213,41 @@ export default function CataloguePage() {
         <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
           <div className="container mx-auto px-4 text-center">
             <div className="animate-pulse text-muted-foreground">Chargement...</div>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Affichage pendant le chargement
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
+          <div className="container mx-auto px-4 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-derviche mx-auto mb-4" />
+            <p className="text-muted-foreground">Chargement des spectacles...</p>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Affichage en cas d'erreur
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
+          <div className="container mx-auto px-4 text-center">
+            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-destructive mb-4">Erreur : {error}</p>
+            <Button onClick={() => void refresh()} variant="outline">
+              Réessayer
+            </Button>
           </div>
         </section>
         <Footer />
@@ -433,7 +399,7 @@ export default function CataloguePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredSpectacles.map((spectacle) => (
-                <SpectacleCard key={spectacle.id} spectacle={spectacle} />
+                <SpectacleCard key={spectacle.slug} spectacle={spectacle} />
               ))}
             </div>
           )}

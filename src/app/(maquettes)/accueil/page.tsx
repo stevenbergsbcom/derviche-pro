@@ -18,111 +18,46 @@ import {
   Phone,
   MapPin,
   ArrowUp,
+  Loader2,
+  AlertTriangle,
 } from 'lucide-react';
-import {
-  mockShows,
-  mockRepresentations,
-  mockVenues,
-  type MockShow,
-  type MockRepresentation,
-} from '@/lib/mock-data';
+import { usePublicCatalog } from '@/hooks/usePublicCatalog';
+import type { PublicShow } from '@/lib/services/public-catalog';
 
 // ============================================
 // HELPERS
 // ============================================
 
 /**
- * Formater une date ISO en format français lisible
+ * Transformer un PublicShow en Spectacle pour le composant SpectacleCard
  */
-function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  const day = date.getDate();
-  const months = [
-    'jan.',
-    'fév.',
-    'mars',
-    'avr.',
-    'mai',
-    'juin',
-    'juil.',
-    'août',
-    'sept.',
-    'oct.',
-    'nov.',
-    'déc.',
-  ];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-}
-
-/**
- * Transformer un MockShow en Spectacle pour le composant SpectacleCard
- */
-function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
-  // Filtrer les représentations de ce spectacle
-  const showReps = representations.filter((rep) => rep.showId === show.id);
-  
-  // Trier par date croissante
-  const sortedReps = [...showReps].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`);
-    const dateB = new Date(`${b.date}T${b.time}`);
-    return dateA.getTime() - dateB.getTime();
-  });
-
-  // Trouver la prochaine représentation (date >= aujourd'hui)
-  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
-  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-  
-  const futureReps = sortedReps.filter((rep) => {
-    return rep.date >= todayISO; // Comparaison de chaînes ISO
-  });
-
-  const nextRep = futureReps[0];
-  
-  // Calculer le nombre de créneaux avec places disponibles
-  const availableSlots = futureReps.filter((rep) => {
-    if (rep.capacity === null) return true;
-    return rep.booked < rep.capacity;
-  }).length;
-
+function transformShowToSpectacle(show: PublicShow): Spectacle {
   // Déterminer le statut
   let status: SpectacleStatus = 'available';
+  
   if (show.status === 'draft') {
     status = 'coming_soon';
-  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+  } else if (show.status === 'archived') {
     status = 'closed';
-  } else if (availableSlots === 0 && futureReps.length > 0) {
+  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
+    // Tous les créneaux sont complets
     status = 'closed';
-  }
-
-  // Trouver le lieu de la prochaine représentation
-  let venue = 'Lieu à définir';
-  if (status !== 'coming_soon') {
-    venue = nextRep
-      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
-      : sortedReps[0]
-        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
-        : 'Lieu à définir';
-  }
-
-  // Pour coming_soon ou closed : pas de nextDate
-  let nextDate = '';
-  if (status === 'available' && nextRep) {
-    nextDate = formatDateFr(nextRep.date);
+  } else if (show.slots.length === 0) {
+    // Pas de créneaux futurs
+    status = 'coming_soon';
   }
 
   return {
-    id: parseInt(show.id.replace('show-', '')) || 0,
+    id: parseInt(show.id.split('-')[0]) || 0, // Fallback pour l'ID numérique
     title: show.title,
     company: show.companyName,
-    venue: venue,
+    venue: show.nextVenue || 'Lieu à définir',
     image: show.imageUrl || '/images/spectacles/placeholder.jpg',
     slug: show.slug,
     genre: show.categories[0] || 'Spectacle',
-    nextDate: nextDate,
-    remainingSlots: availableSlots,
-    status: status,
+    nextDate: status === 'available' ? (show.nextDate || '') : '',
+    remainingSlots: show.availableSlotsCount,
+    status,
   };
 }
 
@@ -149,12 +84,15 @@ export default function MaquetteAccueil() {
   const [cardsVisible, setCardsVisible] = useState(CARDS_VISIBLE.desktop);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Transformer les MockShow en Spectacle
+  // Hook Supabase pour les données
+  const { shows: publicShows, isLoading, error, refresh } = usePublicCatalog();
+
+  // Transformer les PublicShow en Spectacle
   const spectacles = useMemo(() => {
-    return mockShows
-      .map((show) => transformShowToSpectacle(show, mockRepresentations))
+    return publicShows
+      .map(transformShowToSpectacle)
       .filter((s) => s.status !== 'closed'); // Ne garder que les spectacles disponibles ou coming_soon
-  }, []);
+  }, [publicShows]);
 
   // Fix d'hydratation
   useEffect(() => {
@@ -245,6 +183,37 @@ export default function MaquetteAccueil() {
     );
   }
 
+  // Affichage pendant le chargement
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-derviche mx-auto mb-4" />
+          <p className="text-muted-foreground">Chargement des spectacles...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Affichage en cas d'erreur
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <p className="text-destructive mb-4">Erreur : {error}</p>
+          <Button onClick={() => void refresh()} variant="outline">
+            Réessayer
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background scroll-smooth">
       {/* Header réutilisable */}
@@ -275,31 +244,33 @@ export default function MaquetteAccueil() {
           </div>
 
           {/* Hero Slider - Images des spectacles */}
-          <div className="max-w-4xl mx-auto">
-            <div className="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
-              {spectacles.map((spectacle, index) => (
-                <div
-                  key={spectacle.id}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
-                    }`}
-                >
-                  <Image
-                    src={spectacle.image}
-                    alt={spectacle.title}
-                    width={1200}
-                    height={675}
-                    className="w-full h-full object-cover"
-                    priority={index === 0}
-                  />
-                  {/* Overlay avec titre du spectacle */}
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:p-6">
-                    <p className="text-white font-bold text-lg md:text-2xl">{spectacle.title}</p>
-                    <p className="text-white/80 text-sm md:text-base">{spectacle.company}</p>
+          {spectacles.length > 0 && (
+            <div className="max-w-4xl mx-auto">
+              <div className="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
+                {spectacles.map((spectacle, index) => (
+                  <div
+                    key={spectacle.slug}
+                    className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'
+                      }`}
+                  >
+                    <Image
+                      src={spectacle.image}
+                      alt={spectacle.title}
+                      width={1200}
+                      height={675}
+                      className="w-full h-full object-cover"
+                      priority={index === 0}
+                    />
+                    {/* Overlay avec titre du spectacle */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:p-6">
+                      <p className="text-white font-bold text-lg md:text-2xl">{spectacle.title}</p>
+                      <p className="text-white/80 text-sm md:text-base">{spectacle.company}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -352,85 +323,87 @@ export default function MaquetteAccueil() {
       </section>
 
       {/* Spectacles Section - Mobile First avec Carousel */}
-      <section className="py-12 md:py-20 bg-muted">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
-            <div>
-              <p className="text-sm text-gold font-medium mb-1 uppercase tracking-wider">Sélection</p>
-              <h2 className="text-2xl md:text-3xl font-bold text-derviche-dark">Spectacles à découvrir</h2>
-              <p className="text-muted-foreground text-sm md:text-base mt-1 md:mt-2">
-                Explorez les spectacles en tournée cette saison
-              </p>
+      {spectacles.length > 0 && (
+        <section className="py-12 md:py-20 bg-muted">
+          <div className="container mx-auto px-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 md:mb-10">
+              <div>
+                <p className="text-sm text-gold font-medium mb-1 uppercase tracking-wider">Sélection</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-derviche-dark">Spectacles à découvrir</h2>
+                <p className="text-muted-foreground text-sm md:text-base mt-1 md:mt-2">
+                  Explorez les spectacles en tournée cette saison
+                </p>
+              </div>
+              <Button variant="outline" className="hidden sm:flex" asChild>
+                <Link href="/catalogue">Voir tout le catalogue</Link>
+              </Button>
             </div>
-            <Button variant="outline" className="hidden sm:flex" asChild>
-              <Link href="/catalogue">Voir tout le catalogue</Link>
-            </Button>
-          </div>
 
-          {/* Carousel Spectacles */}
-          <div className="relative overflow-hidden">
-            <div
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{
-                transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'})))`,
-                gap: cardsVisible === 1 ? '0' : '1.5rem'
-              }}
-            >
-              {spectacles.map((show) => (
-                <div
-                  key={show.id}
-                  className="flex-shrink-0"
-                  style={{ width: `calc(${100 / cardsVisible}% - ${cardsVisible > 1 ? '1.125rem' : '0rem'})` }}
+            {/* Carousel Spectacles */}
+            <div className="relative overflow-hidden">
+              <div
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{
+                  transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'})))`,
+                  gap: cardsVisible === 1 ? '0' : '1.5rem'
+                }}
+              >
+                {spectacles.map((show) => (
+                  <div
+                    key={show.slug}
+                    className="flex-shrink-0"
+                    style={{ width: `calc(${100 / cardsVisible}% - ${cardsVisible > 1 ? '1.125rem' : '0rem'})` }}
+                  >
+                    <SpectacleCard spectacle={show} />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Carousel Navigation */}
+            <div className="flex items-center justify-between mt-6 md:mt-8">
+              <div className="flex gap-1.5">
+                {Array.from({ length: Math.max(1, spectacles.length - cardsVisible + 1) }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCarouselIndex(i)}
+                    className={`w-2.5 h-2.5 rounded-full transition-colors ${i === carouselIndex ? 'bg-derviche' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
+                      }`}
+                    aria-label={`Aller à la page ${i + 1}`}
+                  />
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={handlePrevCarousel}
+                  disabled={carouselIndex === 0}
                 >
-                  <SpectacleCard spectacle={show} />
-                </div>
-              ))}
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={handleNextCarousel}
+                  disabled={carouselIndex >= spectacles.length - cardsVisible}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Carousel Navigation */}
-          <div className="flex items-center justify-between mt-6 md:mt-8">
-            <div className="flex gap-1.5">
-              {Array.from({ length: Math.max(1, spectacles.length - cardsVisible + 1) }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCarouselIndex(i)}
-                  className={`w-2.5 h-2.5 rounded-full transition-colors ${i === carouselIndex ? 'bg-derviche' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-                    }`}
-                  aria-label={`Aller à la page ${i + 1}`}
-                />
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                onClick={handlePrevCarousel}
-                disabled={carouselIndex === 0}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                onClick={handleNextCarousel}
-                disabled={carouselIndex >= spectacles.length - cardsVisible}
-              >
-                <ChevronRight className="w-4 h-4" />
+            {/* Mobile CTA */}
+            <div className="mt-6 text-center sm:hidden">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/catalogue">Voir tout le catalogue</Link>
               </Button>
             </div>
           </div>
-
-          {/* Mobile CTA */}
-          <div className="mt-6 text-center sm:hidden">
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/catalogue">Voir tout le catalogue</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Chiffres Section - Mobile First */}
       <section className="py-12 md:py-20 bg-muted">
