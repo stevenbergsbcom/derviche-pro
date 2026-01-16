@@ -57,6 +57,8 @@ export interface PublicShow {
   durationMinutes: number | null;
   status: ShowStatus;
   priceType: ShowPriceType;
+  /** Nombre max de participants par réservation (défaut: 3) */
+  maxReservationsPerBooking: number;
   /** Catégories du spectacle */
   categories: string[];
   /** Publics cibles */
@@ -140,6 +142,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         duration_minutes,
         status,
         price_type,
+        max_reservations_per_booking,
         companies!inner(name)
       `)
       .eq('status', 'published')
@@ -282,6 +285,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         durationMinutes: show.duration_minutes,
         status: show.status as ShowStatus,
         priceType: show.price_type as ShowPriceType,
+        maxReservationsPerBooking: show.max_reservations_per_booking,
         categories: categoriesByShow[show.id] || [],
         targetAudiences: audiencesByShow[show.id] || [],
         slots: showSlots,
@@ -321,6 +325,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         duration_minutes,
         status,
         price_type,
+        max_reservations_per_booking,
         companies!inner(name)
       `)
       .eq('slug', slug)
@@ -429,6 +434,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       durationMinutes: show.duration_minutes,
       status: show.status as ShowStatus,
       priceType: show.price_type as ShowPriceType,
+      maxReservationsPerBooking: show.max_reservations_per_booking,
       categories,
       targetAudiences: audiences,
       slots: publicSlots,

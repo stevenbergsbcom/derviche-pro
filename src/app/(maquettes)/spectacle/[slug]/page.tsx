@@ -62,7 +62,8 @@ interface TimeSlot {
 
 type Step = 'calendar' | 'time' | 'participants' | 'form';
 
-const MAX_RESERVATIONS_PER_BOOKING = 3;
+/** Valeur par défaut si le spectacle n'a pas de max défini */
+const DEFAULT_MAX_RESERVATIONS = 3;
 
 // ============================================
 // HELPERS
@@ -94,8 +95,9 @@ function convertToTimeSlot(slot: PublicSlot): TimeSlot {
 /**
  * Formater la durée en minutes en texte lisible
  */
-function formatDuration(minutes: number | null): string {
-    if (!minutes) return 'Durée non précisée';
+function formatDuration(minutes: number | null | undefined): string {
+    if (minutes === null || minutes === undefined) return 'Durée non précisée';
+    if (minutes === 0) return '0 min';
     if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
@@ -284,6 +286,9 @@ export default function SpectacleDetailPage() {
     // Vérifier si le spectacle est "bientôt réservable"
     const isComingSoon = show?.status === 'draft' || (show?.status === 'published' && timeSlots.length === 0);
 
+    // Nombre max de participants par réservation (depuis le spectacle ou valeur par défaut)
+    const maxReservations = show?.maxReservationsPerBooking ?? DEFAULT_MAX_RESERVATIONS;
+
     // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
     const datesWithSlots = useMemo(() => {
         const year = currentMonth.getFullYear();
@@ -457,7 +462,7 @@ export default function SpectacleDetailPage() {
         setParticipantCount((prev) => {
             const newValue = prev + delta;
             if (newValue < 1) return 1;
-            if (newValue > MAX_RESERVATIONS_PER_BOOKING) return MAX_RESERVATIONS_PER_BOOKING;
+            if (newValue > maxReservations) return maxReservations;
             return newValue;
         });
     };
@@ -758,14 +763,14 @@ export default function SpectacleDetailPage() {
                         variant="outline"
                         size="icon"
                         onClick={() => handleParticipantChange(1)}
-                        disabled={participantCount >= MAX_RESERVATIONS_PER_BOOKING}
+                        disabled={participantCount >= maxReservations}
                         className="rounded-full h-10 w-10"
                     >
                         <Plus className="w-4 h-4" />
                     </Button>
                 </div>
                 <p className="text-sm text-muted-foreground text-center mt-4">
-                    Maximum {MAX_RESERVATIONS_PER_BOOKING} personnes par réservation
+                    Maximum {maxReservations} personne{maxReservations > 1 ? 's' : ''} par réservation
                 </p>
             </div>
 

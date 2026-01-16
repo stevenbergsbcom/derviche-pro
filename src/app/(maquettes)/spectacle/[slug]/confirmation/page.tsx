@@ -64,8 +64,9 @@ function transformShowToSpectacle(show: PublicShow): Spectacle {
 /**
  * Formater la durée en minutes
  */
-function formatDuration(minutes: number | null): string {
-  if (!minutes) return '1h';
+function formatDuration(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined) return 'Durée non précisée';
+  if (minutes === 0) return '0 min';
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
