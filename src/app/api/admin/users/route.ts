@@ -158,11 +158,19 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     const supabaseAdmin = createAdminClient();
 
     // 3. Vérifier si un compte supprimé existe avec cet email
-    const { data: existingProfile } = await supabaseAdmin
+    const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, email, deleted_at')
       .eq('email', email)
-      .single();
+      .maybeSingle();
+
+    if (profileError) {
+      logger.error('API /admin/users - Erreur vérification profil existant', { error: profileError.message });
+      return NextResponse.json(
+        { success: false, error: 'Erreur lors de la vérification de l\'email' },
+        { status: 500 }
+      );
+    }
 
     // Si un profil existe avec deleted_at, on réactive le compte
     if (existingProfile && existingProfile.deleted_at) {
@@ -173,11 +181,25 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
       const userId = existingProfile.id;
 
-      // Réactiver le profil
+      // 1. D'abord mettre à jour le mot de passe (opération la plus susceptible d'échouer)
+      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password,
+      });
+
+      if (passwordError) {
+        logger.error('API /admin/users - Erreur mise à jour mot de passe', { error: passwordError.message });
+        return NextResponse.json(
+          { success: false, error: 'Erreur lors de la mise à jour du mot de passe' },
+          { status: 500 }
+        );
+      }
+
+      // 2. Ensuite réactiver le profil (seulement si le mot de passe a été mis à jour)
       const { error: reactivateError } = await supabaseAdmin
         .from('profiles')
         .update({
           deleted_at: null,
+          disabled_at: null, // Réactiver aussi si le compte était désactivé
           first_name: first_name || null,
           last_name: last_name || null,
           phone: phone || null,
@@ -194,24 +216,32 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         );
       }
 
-      // Mettre à jour le mot de passe
-      const { error: passwordError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password,
-      });
-
-      if (passwordError) {
-        logger.warn('API /admin/users - Erreur mise à jour mot de passe', { error: passwordError.message });
-        // On continue malgré l'erreur
-      }
-
-      // Mettre à jour le rôle
+      // 3. Mettre à jour le rôle
       const { error: roleUpdateError } = await supabaseAdmin
         .from('user_roles')
         .update({ role })
         .eq('user_id', userId);
 
       if (roleUpdateError) {
-        logger.warn('API /admin/users - Erreur mise à jour rôle', { error: roleUpdateError.message });
+        logger.warn('API /admin/users - Update rôle échoué, tentative insert', { error: roleUpdateError.message });
+        
+        const { error: insertRoleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role,
+          });
+
+        if (insertRoleError) {
+          logger.error('API /admin/users - Erreur création rôle lors réactivation', { 
+            error: insertRoleError.message,
+            code: insertRoleError.code
+          });
+          return NextResponse.json(
+            { success: false, error: 'Erreur lors de l\'attribution du rôle' },
+            { status: 500 }
+          );
+        }
       }
 
       logger.info('API /admin/users - Compte réactivé avec succès', { userId, email, role });
@@ -278,7 +308,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     await sleep(500);
 
     // 6. Mettre à jour ou créer le profil (upsert pour être sûr)
-    const { error: profileError } = await supabaseAdmin
+    const { error: profileUpsertError } = await supabaseAdmin
       .from('profiles')
       .upsert({
         id: userId,
@@ -292,11 +322,11 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         ignoreDuplicates: false,
       });
 
-    if (profileError) {
+    if (profileUpsertError) {
       logger.error('API /admin/users - Erreur upsert profil', { 
-        error: profileError.message, 
-        code: profileError.code,
-        details: profileError.details 
+        error: profileUpsertError.message, 
+        code: profileUpsertError.code,
+        details: profileUpsertError.details 
       });
       // On continue malgré l'erreur (le compte est créé)
     } else {

@@ -32,6 +32,7 @@ import { useInternalUsers, type UpdateUserData, type CreateUserData } from '@/ho
 import {
     Tooltip,
     TooltipContent,
+    TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -295,7 +296,11 @@ export default function AdminUtilisateursPage() {
 
     /** Handler pour la mise à jour d'un utilisateur */
     const handleFormSubmit = async (formData: UserFormData, isEditing: boolean) => {
+        // Guard clause - ne devrait jamais arriver en conditions normales
         if (!isEditing || !editingUser) {
+            // Reset par sécurité en cas de race condition
+            setIsSubmitting(false);
+            setFormError('Erreur: utilisateur introuvable. Veuillez réessayer.');
             return;
         }
 
@@ -400,6 +405,7 @@ export default function AdminUtilisateursPage() {
     }
 
     return (
+        <TooltipProvider>
         <div className="space-y-6">
             {/* Header */}
             <AdminPageHeader
@@ -657,17 +663,33 @@ export default function AdminUtilisateursPage() {
                                             Modifier
                                         </Button>
                                         {/* Bouton Toggle Status - visible uniquement pour Super Admin */}
-                                        {currentUserRole === 'super-admin' && canToggleStatus(user) && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className={`flex-1 ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
-                                                onClick={() => void handleToggleStatus(user)}
-                                                disabled={isSubmitting}
-                                            >
-                                                <Power className="w-4 h-4 mr-2" />
-                                                {isDisabled ? 'Activer' : 'Désactiver'}
-                                            </Button>
+                                        {currentUserRole === 'super-admin' && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="flex-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={`w-full ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                                                            onClick={() => void handleToggleStatus(user)}
+                                                            disabled={!canToggleStatus(user) || isSubmitting}
+                                                        >
+                                                            <Power className="w-4 h-4 mr-2" />
+                                                            {isDisabled ? 'Activer' : 'Désactiver'}
+                                                        </Button>
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    {!canToggleStatus(user) 
+                                                        ? (user.role === 'super-admin' 
+                                                            ? 'Les Super Admins ne peuvent pas être désactivés' 
+                                                            : 'Action non autorisée')
+                                                        : isDisabled 
+                                                            ? 'Activer ce compte' 
+                                                            : 'Désactiver ce compte'
+                                                    }
+                                                </TooltipContent>
+                                            </Tooltip>
                                         )}
                                         {canDeleteUser(user) ? (
                                             <Button
@@ -732,5 +754,6 @@ export default function AdminUtilisateursPage() {
                 confirmDisabled={userToDelete ? !canDeleteUser(userToDelete) : false}
             />
         </div>
+        </TooltipProvider>
     );
 }

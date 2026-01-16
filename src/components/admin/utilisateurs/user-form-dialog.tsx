@@ -193,7 +193,7 @@ export function UserFormDialog({
             // Validation email
             if (!formData.email.trim()) {
                 errors.email = 'L\'email est requis';
-            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
                 errors.email = 'Format d\'email invalide';
             }
 
@@ -213,8 +213,12 @@ export function UserFormDialog({
             return;
         }
 
-        if (isCreating && onCreate) {
-            // Mode création
+        if (isCreating) {
+            // Mode création - onCreate doit être fourni
+            if (!onCreate) {
+                console.error('UserFormDialog: onCreate callback manquant en mode création');
+                return;
+            }
             await onCreate({
                 email: formData.email.trim().toLowerCase(),
                 password: formData.password,
@@ -225,7 +229,11 @@ export function UserFormDialog({
                 must_change_password: formData.must_change_password,
             });
         } else {
-            // Mode édition
+            // Mode édition - editingUser doit exister (vérification défensive)
+            if (!editingUser) {
+                console.error('UserFormDialog: editingUser manquant en mode édition');
+                return;
+            }
             await onSubmit({
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),

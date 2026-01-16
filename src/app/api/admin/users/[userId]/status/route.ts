@@ -85,7 +85,7 @@ export async function PATCH(
     const body = await request.json() as StatusRequest;
     const shouldDisable = body.disabled === true;
 
-    // 5. Vérifier que l'utilisateur cible existe et n'est pas Super Admin
+    // 5. Vérifier que l'utilisateur cible existe, n'est pas supprimé, et est un utilisateur interne
     const supabaseAdmin = createAdminClient();
     
     const { data: targetUser, error: fetchError } = await supabaseAdmin
@@ -98,22 +98,44 @@ export async function PATCH(
       `)
       .eq('id', userId)
       .is('deleted_at', null)
+      .in('user_roles.role', ['super-admin', 'admin', 'externe-dd'])
       .single();
 
     if (fetchError || !targetUser) {
-      logger.warn('API /admin/users/[userId]/status - Utilisateur non trouvé', { 
+      logger.warn('API /admin/users/[userId]/status - Utilisateur non trouvé ou non interne', { 
         userId, 
         error: fetchError?.message 
       });
       return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
+        { success: false, error: 'Utilisateur non trouvé ou non autorisé' },
         { status: 404 }
       );
     }
 
     // 6. Empêcher la DÉSACTIVATION d'un Super Admin (mais permettre la réactivation)
-    const targetRole = targetUser.user_roles as unknown as { role: string };
-    if (targetRole?.role === 'super-admin' && shouldDisable) {
+    // user_roles peut être un tableau ou un objet selon la config Supabase
+    const userRoles = targetUser.user_roles;
+    let targetRoleValue: string | undefined;
+    
+    if (Array.isArray(userRoles) && userRoles.length > 0) {
+      targetRoleValue = (userRoles[0] as { role: string }).role;
+    } else if (userRoles && typeof userRoles === 'object' && 'role' in userRoles) {
+      targetRoleValue = (userRoles as { role: string }).role;
+    }
+    
+    // Sécurité : si on ne peut pas déterminer le rôle, on refuse la désactivation
+    if (!targetRoleValue && shouldDisable) {
+      logger.error('API /admin/users/[userId]/status - Impossible de déterminer le rôle', { 
+        userId,
+        userRoles: JSON.stringify(userRoles)
+      });
+      return NextResponse.json(
+        { success: false, error: 'Impossible de vérifier le rôle de l\'utilisateur' },
+        { status: 500 }
+      );
+    }
+    
+    if (targetRoleValue === 'super-admin' && shouldDisable) {
       logger.warn('API /admin/users/[userId]/status - Tentative désactivation Super Admin', { 
         userId,
         email: targetUser.email 
