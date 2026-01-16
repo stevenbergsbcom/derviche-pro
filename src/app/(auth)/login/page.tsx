@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,7 +43,29 @@ const magicLinkSchema = z.object({
 type EmailPasswordForm = z.infer<typeof emailPasswordSchema>;
 type MagicLinkForm = z.infer<typeof magicLinkSchema>;
 
-export default function LoginPage() {
+// ============================================
+// Composant pour gérer les erreurs URL (nécessite Suspense)
+// ============================================
+function LoginErrorHandler() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error === 'account_disabled') {
+            toast.error('Votre compte a été désactivé. Contactez un administrateur.');
+            // Nettoyer l'URL
+            router.replace('/login');
+        }
+    }, [searchParams, router]);
+
+    return null;
+}
+
+// ============================================
+// Composant principal du formulaire
+// ============================================
+function LoginForm() {
     const router = useRouter();
     const [isLoadingEmailPassword, setIsLoadingEmailPassword] = useState(false);
     const [isLoadingMagicLink, setIsLoadingMagicLink] = useState(false);
@@ -80,17 +102,32 @@ export default function LoginPage() {
                 return;
             }
 
+            const userId = authData.user?.id;
+            if (!userId) {
+                toast.error('Une erreur est survenue lors de la connexion');
+                return;
+            }
+
+            // Vérifier si le compte est désactivé
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('disabled_at')
+                .eq('id', userId)
+                .single();
+
+            if (profile?.disabled_at) {
+                // Déconnecter immédiatement
+                await supabase.auth.signOut();
+                toast.error('Votre compte a été désactivé. Contactez un administrateur.');
+                return;
+            }
+
             toast.success('Connexion réussie !');
             
             // Récupérer le rôle et rediriger en conséquence
-            const userId = authData.user?.id;
-            if (userId) {
-                const role = await getUserRole(userId);
-                const redirectUrl = getRedirectUrlByRole(role);
-                router.push(redirectUrl);
-            } else {
-                router.push('/dashboard');
-            }
+            const role = await getUserRole(userId);
+            const redirectUrl = getRedirectUrlByRole(role);
+            router.push(redirectUrl);
         } catch (error) {
             logger.error('[Login] Erreur de connexion', error as Error);
             toast.error('Une erreur est survenue lors de la connexion');
@@ -281,3 +318,16 @@ export default function LoginPage() {
     );
 }
 
+// ============================================
+// Page exportée avec Suspense
+// ============================================
+export default function LoginPage() {
+    return (
+        <>
+            <Suspense fallback={null}>
+                <LoginErrorHandler />
+            </Suspense>
+            <LoginForm />
+        </>
+    );
+}

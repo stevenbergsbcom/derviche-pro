@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users } from 'lucide-react';
+import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users, Power } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { searchMatch } from '@/lib/utils';
@@ -26,7 +26,15 @@ import { createClient } from '@/lib/supabase/client';
 import type { InternalUser, InternalRole } from '@/types/database';
 
 // Hook Supabase
-import { useInternalUsers, type UpdateUserData } from '@/hooks/useInternalUsers';
+import { useInternalUsers, type UpdateUserData, type CreateUserData } from '@/hooks/useInternalUsers';
+
+// Tooltip pour les boutons désactivés
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // Composants admin réutilisables
 import {
@@ -40,6 +48,7 @@ import {
     UserViewDialog,
     UserFormDialog,
     type UserFormData,
+    type CreateUserFormData,
 } from '@/components/admin/utilisateurs';
 
 // ============================================
@@ -47,14 +56,14 @@ import {
 // ============================================
 
 /** Tous les rôles internes pour le filtre */
-const ALL_ROLES: Array<InternalRole | 'all'> = ['all', 'super-admin', 'admin', 'externe-dd'];
+const ALL_ROLES: Array<InternalRole | 'all'> = ['all', 'super-admin', 'admin', 'externe'];
 
 /** Labels des rôles pour le filtre */
 const ROLE_LABELS: Record<InternalRole | 'all', string> = {
     'all': 'Tous les rôles',
     'super-admin': 'Super Admin',
     'admin': 'Admin',
-    'externe-dd': 'Externe DD',
+    'externe': 'Externe',
 };
 
 // ============================================
@@ -70,7 +79,7 @@ function getRoleBadgeClass(role: InternalRole): string {
             return 'bg-purple-100 text-purple-800 border-purple-200';
         case 'admin':
             return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'externe-dd':
+        case 'externe':
             return 'bg-amber-100 text-amber-800 border-amber-200';
         default:
             return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -102,10 +111,11 @@ function translateRole(role: InternalRole): string {
 
 export default function AdminUtilisateursPage() {
     // Hook Supabase pour les données
-    const { users, isLoading, error, refresh, update, remove } = useInternalUsers();
+    const { users, isLoading, error, refresh, create, update, remove, toggleStatus } = useInternalUsers();
 
-    // ID de l'utilisateur connecté (pour empêcher l'auto-suppression)
+    // ID et rôle de l'utilisateur connecté
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [currentUserRole, setCurrentUserRole] = useState<InternalRole | null>(null);
 
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -120,13 +130,33 @@ export default function AdminUtilisateursPage() {
     const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
     const [viewingUser, setViewingUser] = useState<InternalUser | null>(null);
 
-    // Récupérer l'utilisateur connecté au montage
+    // Récupérer l'utilisateur connecté et son rôle au montage
     useEffect(() => {
         const fetchCurrentUser = async () => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setCurrentUserId(user.id);
+                
+                // Récupérer tous les rôles de l'utilisateur (peut en avoir plusieurs)
+                const { data: rolesData } = await supabase
+                    .from('user_roles')
+                    .select('role')
+                    .eq('user_id', user.id);
+                
+                if (rolesData && rolesData.length > 0) {
+                    // Priorité des rôles internes (du plus privilégié au moins privilégié)
+                    const rolePriority: InternalRole[] = ['super-admin', 'admin', 'externe'];
+                    const userRoles = rolesData.map(r => r.role);
+                    
+                    // Trouver le rôle interne avec la plus haute priorité
+                    for (const role of rolePriority) {
+                        if (userRoles.includes(role)) {
+                            setCurrentUserRole(role);
+                            break;
+                        }
+                    }
+                }
             }
         };
         void fetchCurrentUser();
@@ -160,16 +190,15 @@ export default function AdminUtilisateursPage() {
         return {
             'super-admin': users.filter((u) => u.role === 'super-admin').length,
             'admin': users.filter((u) => u.role === 'admin').length,
-            'externe-dd': users.filter((u) => u.role === 'externe-dd').length,
+            'externe': users.filter((u) => u.role === 'externe').length,
         };
     }, [users]);
 
     // === HANDLERS ===
 
     const handleCreate = () => {
-        // TODO: Implémenter la création de compte (nécessite API Route)
         setEditingUser(null);
-        setFormError('La création de compte sera disponible prochainement.');
+        setFormError(null);
         setIsFormDialogOpen(true);
     };
 
@@ -247,9 +276,40 @@ export default function AdminUtilisateursPage() {
         }
     };
 
+    /** Handler pour la création d'un utilisateur */
+    const handleCreateUser = async (formData: CreateUserFormData) => {
+        setIsSubmitting(true);
+        setFormError(null);
+
+        const createData: CreateUserData = {
+            email: formData.email,
+            password: formData.password,
+            first_name: formData.first_name || undefined,
+            last_name: formData.last_name || undefined,
+            phone: formData.phone || undefined,
+            role: formData.role,
+            must_change_password: formData.must_change_password,
+        };
+
+        const result = await create(createData);
+
+        if (result.success) {
+            setIsFormDialogOpen(false);
+            setEditingUser(null);
+        } else {
+            setFormError(result.error || 'Erreur lors de la création');
+        }
+
+        setIsSubmitting(false);
+    };
+
+    /** Handler pour la mise à jour d'un utilisateur */
     const handleFormSubmit = async (formData: UserFormData, isEditing: boolean) => {
+        // Guard clause - ne devrait jamais arriver en conditions normales
         if (!isEditing || !editingUser) {
-            // Création pas encore implémentée
+            // Reset par sécurité en cas de race condition
+            setIsSubmitting(false);
+            setFormError('Erreur: utilisateur introuvable. Veuillez réessayer.');
             return;
         }
 
@@ -287,6 +347,38 @@ export default function AdminUtilisateursPage() {
         return currentUserId !== user.id;
     };
 
+    /**
+     * Vérifie si l'utilisateur courant peut activer/désactiver un compte
+     * Seuls les Super Admins peuvent faire ça
+     * On ne peut pas désactiver un Super Admin (mais on peut le réactiver s'il était désactivé)
+     */
+    const canToggleStatus = (user: InternalUser): boolean => {
+        // Seul un Super Admin peut toggle
+        if (currentUserRole !== 'super-admin') return false;
+        // On ne peut pas se toggle soi-même
+        if (currentUserId === user.id) return false;
+        // On ne peut pas DÉSACTIVER un Super Admin (mais on peut le réactiver)
+        if (user.role === 'super-admin' && user.disabled_at === null) return false;
+        return true;
+    };
+
+    /**
+     * Handler pour activer/désactiver un utilisateur
+     */
+    const handleToggleStatus = async (user: InternalUser) => {
+        if (!canToggleStatus(user)) return;
+        
+        setIsSubmitting(true);
+        const newDisabledState = user.disabled_at === null;
+        const result = await toggleStatus(user.id, newDisabledState);
+        setIsSubmitting(false);
+        
+        if (!result.success) {
+            // TODO: Afficher un toast d'erreur
+            console.error('Erreur toggle status:', result.error);
+        }
+    };
+
     // État de chargement initial
     if (isLoading) {
         return (
@@ -322,6 +414,7 @@ export default function AdminUtilisateursPage() {
     }
 
     return (
+        <TooltipProvider>
         <div className="space-y-6">
             {/* Header */}
             <AdminPageHeader
@@ -342,7 +435,7 @@ export default function AdminUtilisateursPage() {
                 </Badge>
                 <Badge variant="outline" className="bg-amber-50">
                     <Users className="w-3 h-3 mr-1" />
-                    {roleCounts['externe-dd']} Externe DD
+                    {roleCounts['externe']} Externe
                 </Badge>
             </div>
 
@@ -401,8 +494,9 @@ export default function AdminUtilisateursPage() {
                         ) : (
                             filteredUsers.map((user) => {
                                 const isCurrentUser = currentUserId === user.id;
+                                const isDisabled = user.disabled_at !== null;
                                 return (
-                                    <TableRow key={user.id}>
+                                    <TableRow key={user.id} className={isDisabled ? 'opacity-60' : ''}>
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
                                                 <button
@@ -414,6 +508,11 @@ export default function AdminUtilisateursPage() {
                                                 {isCurrentUser && (
                                                     <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
                                                         Vous
+                                                    </Badge>
+                                                )}
+                                                {isDisabled && (
+                                                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                                        Inactif
                                                     </Badge>
                                                 )}
                                             </div>
@@ -447,6 +546,35 @@ export default function AdminUtilisateursPage() {
                                                     <Pencil className="w-4 h-4" />
                                                     <span className="sr-only">Modifier</span>
                                                 </Button>
+                                                {/* Bouton Toggle Status - visible uniquement pour Super Admin */}
+                                                {currentUserRole === 'super-admin' && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className={`h-8 w-8 ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                                                                    onClick={() => void handleToggleStatus(user)}
+                                                                    disabled={!canToggleStatus(user) || isSubmitting}
+                                                                >
+                                                                    <Power className="w-4 h-4" />
+                                                                    <span className="sr-only">{isDisabled ? 'Activer' : 'Désactiver'}</span>
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            {!canToggleStatus(user) 
+                                                                ? (user.role === 'super-admin' 
+                                                                    ? 'Les Super Admins ne peuvent pas être désactivés' 
+                                                                    : 'Action non autorisée')
+                                                                : isDisabled 
+                                                                    ? 'Activer ce compte' 
+                                                                    : 'Désactiver ce compte'
+                                                            }
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                )}
                                                 {canDeleteUser(user) ? (
                                                     <Button
                                                         variant="ghost"
@@ -493,12 +621,13 @@ export default function AdminUtilisateursPage() {
                 ) : (
                     filteredUsers.map((user) => {
                         const isCurrentUser = currentUserId === user.id;
+                        const isDisabled = user.disabled_at !== null;
                         return (
-                            <Card key={user.id}>
+                            <Card key={user.id} className={isDisabled ? 'opacity-60' : ''}>
                                 <CardContent className="p-4 space-y-3">
                                     <div className="flex items-start justify-between">
                                         <div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
                                                 <h3
                                                     className="font-semibold cursor-pointer hover:text-derviche hover:underline"
                                                     onClick={() => handleView(user)}
@@ -510,6 +639,11 @@ export default function AdminUtilisateursPage() {
                                                         Vous
                                                     </Badge>
                                                 )}
+                                                {isDisabled && (
+                                                    <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                                        Inactif
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <p className="text-sm text-muted-foreground">{user.email}</p>
                                         </div>
@@ -518,7 +652,7 @@ export default function AdminUtilisateursPage() {
                                             {translateRole(user.role)}
                                         </Badge>
                                     </div>
-                                    <div className="flex items-center gap-2 pt-2 border-t">
+                                    <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -537,6 +671,35 @@ export default function AdminUtilisateursPage() {
                                             <Pencil className="w-4 h-4 mr-2" />
                                             Modifier
                                         </Button>
+                                        {/* Bouton Toggle Status - visible uniquement pour Super Admin */}
+                                        {currentUserRole === 'super-admin' && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="flex-1">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className={`w-full ${isDisabled ? 'text-green-600 hover:text-green-700 hover:bg-green-50' : 'text-orange-600 hover:text-orange-700 hover:bg-orange-50'}`}
+                                                            onClick={() => void handleToggleStatus(user)}
+                                                            disabled={!canToggleStatus(user) || isSubmitting}
+                                                        >
+                                                            <Power className="w-4 h-4 mr-2" />
+                                                            {isDisabled ? 'Activer' : 'Désactiver'}
+                                                        </Button>
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    {!canToggleStatus(user) 
+                                                        ? (user.role === 'super-admin' 
+                                                            ? 'Les Super Admins ne peuvent pas être désactivés' 
+                                                            : 'Action non autorisée')
+                                                        : isDisabled 
+                                                            ? 'Activer ce compte' 
+                                                            : 'Désactiver ce compte'
+                                                    }
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        )}
                                         {canDeleteUser(user) ? (
                                             <Button
                                                 variant="ghost"
@@ -575,6 +738,7 @@ export default function AdminUtilisateursPage() {
                 onOpenChange={handleFormDialogChange}
                 editingUser={editingUser}
                 onSubmit={handleFormSubmit}
+                onCreate={handleCreateUser}
                 isSubmitting={isSubmitting}
                 error={formError}
             />
@@ -599,5 +763,6 @@ export default function AdminUtilisateursPage() {
                 confirmDisabled={userToDelete ? !canDeleteUser(userToDelete) : false}
             />
         </div>
+        </TooltipProvider>
     );
 }

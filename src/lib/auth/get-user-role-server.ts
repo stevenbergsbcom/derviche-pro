@@ -3,7 +3,7 @@ import type { UserRole } from '@/types/database';
 
 /**
  * Récupère le rôle principal d'un utilisateur (version serveur)
- * Priorité : super-admin > admin > externe-dd > company > professional
+ * Priorité : super-admin > admin > externe > company > professional
  */
 export async function getUserRoleServer(userId: string): Promise<UserRole | null> {
   const supabase = await createClient();
@@ -18,7 +18,7 @@ export async function getUserRoleServer(userId: string): Promise<UserRole | null
   }
 
   // Priorité des rôles (du plus privilégié au moins privilégié)
-  const rolePriority: UserRole[] = ['super-admin', 'admin', 'externe-dd', 'company', 'professional'];
+  const rolePriority: UserRole[] = ['super-admin', 'admin', 'externe', 'company', 'professional'];
 
   const userRoles = data.map((r: { role: string }) => r.role as UserRole);
 
@@ -40,7 +40,7 @@ export function getRedirectUrlByRole(role: UserRole | null): string {
     case 'super-admin':
     case 'admin':
       return '/admin/spectacles';
-    case 'externe-dd':
+    case 'externe':
       return '/checkin';
     case 'company':
       // TODO: Créer /compagnie/dashboard pour les compagnies

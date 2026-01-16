@@ -26,12 +26,12 @@ export interface UsersListResult {
 }
 
 /** Rôles internes pour filtrage */
-const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe-dd'];
+const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe'];
 
 /**
  * Vérifie si une valeur est un rôle interne valide
  */
-function isValidInternalRole(role: unknown): role is InternalRole {
+export function isValidInternalRole(role: unknown): role is InternalRole {
   return typeof role === 'string' && INTERNAL_ROLES.includes(role as InternalRole);
 }
 
@@ -60,6 +60,7 @@ export async function getInternalUsers(): Promise<UsersListResult> {
         phone,
         created_at,
         last_login_at,
+        disabled_at,
         user_roles!inner (
           role
         )
@@ -93,11 +94,11 @@ export async function getInternalUsers(): Promise<UsersListResult> {
       if (isValidInternalRole(extractedRole)) {
         role = extractedRole;
       } else {
-        logger.warn('internal-users.getInternalUsers - Rôle invalide ou non trouvé, fallback externe-dd', { 
+        logger.warn('internal-users.getInternalUsers - Rôle invalide ou non trouvé, fallback externe', { 
           profileId: profile.id,
           extractedRole 
         });
-        role = 'externe-dd';
+        role = 'externe';
       }
       
       return {
@@ -109,6 +110,7 @@ export async function getInternalUsers(): Promise<UsersListResult> {
         role,
         created_at: profile.created_at,
         last_login_at: profile.last_login_at,
+        disabled_at: profile.disabled_at,
       };
     });
 
@@ -140,6 +142,7 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
         phone,
         created_at,
         last_login_at,
+        disabled_at,
         user_roles!inner (
           role
         )
@@ -175,11 +178,11 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
     if (isValidInternalRole(extractedRole)) {
       role = extractedRole;
     } else {
-      logger.warn('internal-users.getInternalUserById - Rôle invalide ou non trouvé, fallback externe-dd', { 
+      logger.warn('internal-users.getInternalUserById - Rôle invalide ou non trouvé, fallback externe', { 
         userId,
         extractedRole 
       });
-      role = 'externe-dd';
+      role = 'externe';
     }
 
     const user: InternalUser = {
@@ -191,6 +194,7 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
       role,
       created_at: data.created_at,
       last_login_at: data.last_login_at,
+      disabled_at: data.disabled_at,
     };
 
     logger.info('internal-users.getInternalUserById - Succès', { userId });
@@ -339,7 +343,7 @@ export function translateRole(role: InternalRole): string {
   const translations: Record<InternalRole, string> = {
     'super-admin': 'Super Admin',
     'admin': 'Admin',
-    'externe-dd': 'Externe DD',
+    'externe': 'Externe',
   };
   return translations[role] || role;
 }

@@ -14,10 +14,10 @@
 // ============================================
 
 /** Rôles utilisateurs disponibles dans l'application */
-export type UserRole = 'super-admin' | 'admin' | 'professional' | 'company' | 'externe-dd';
+export type UserRole = 'super-admin' | 'admin' | 'professional' | 'company' | 'externe';
 
 /** Rôles internes (staff qui peut accueillir les spectacles) */
-export type InternalRole = 'super-admin' | 'admin' | 'externe-dd';
+export type InternalRole = 'super-admin' | 'admin' | 'externe';
 
 /** Statut de publication d'un spectacle */
 export type ShowStatus = 'draft' | 'published' | 'archived';
@@ -599,6 +599,7 @@ export interface InternalUser {
   role: InternalRole;
   created_at: string;
   last_login_at: string | null;
+  disabled_at: string | null; // NULL = actif, date = désactivé
 }
 
 // ============================================

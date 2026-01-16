@@ -18,8 +18,9 @@ const clientEnvSchema = z.object({
 
 // Schéma pour les variables d'environnement côté serveur
 const serverEnvSchema = z.object({
-    // Variables serveur optionnelles (ajouter selon les besoins)
-    // Exemple : SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, etc.
+    SUPABASE_SERVICE_ROLE_KEY: z
+        .string()
+        .min(1, 'SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations admin'),
 });
 
 // Type des variables client validées
@@ -53,7 +54,9 @@ function getClientEnv(): ClientEnv {
 // Fonction pour valider les variables serveur
 export function getServerEnv(): ServerEnv {
     try {
-        return serverEnvSchema.parse({});
+        return serverEnvSchema.parse({
+            SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+        });
     } catch (error) {
         if (error instanceof z.ZodError) {
             const missingVars = error.issues
@@ -77,4 +80,3 @@ export const {
     NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_APP_URL,
 } = env;
-

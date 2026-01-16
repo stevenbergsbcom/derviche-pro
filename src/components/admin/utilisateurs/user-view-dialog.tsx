@@ -44,7 +44,7 @@ function getRoleBadgeClass(role: InternalRole): string {
             return 'bg-purple-100 text-purple-800 border-purple-200';
         case 'admin':
             return 'bg-blue-100 text-blue-800 border-blue-200';
-        case 'externe-dd':
+        case 'externe':
             return 'bg-amber-100 text-amber-800 border-amber-200';
         default:
             return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -179,8 +179,8 @@ export function UserViewDialog({
                         </div>
                     </div>
 
-                    {/* TODO: Assignations spectacles pour externe-dd */}
-                    {user.role === 'externe-dd' && (
+                    {/* TODO: Assignations spectacles pour externe */}
+                    {user.role === 'externe' && (
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-2">
                                 Spectacles assignés
