@@ -39,6 +39,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Progress } from '@/components/ui/progress';
+import {
   Search,
   Loader2,
   AlertTriangle,
@@ -310,6 +317,135 @@ function renderTableCell(col: ReservationColumn, r: AdminReservation): React.Rea
     default:
       return '-';
   }
+}
+
+// ============================================
+// COMPOSANT ACTIONS AU SURVOL (DESKTOP)
+// ============================================
+
+interface RowHoverActionsProps {
+  reservation: AdminReservation;
+  onEdit: () => void;
+  onCheckin: () => void;
+  onCancel: () => void;
+}
+
+function RowHoverActions({ reservation, onEdit, onCheckin, onCancel }: RowHoverActionsProps) {
+  const isCancelled = reservation.status === 'cancelled';
+  
+  return (
+    <div className="relative w-8 h-8 group">
+      {/* Menu classique (visible par défaut, masqué au hover) */}
+      <div className="transition-opacity duration-150 group-hover:opacity-0 group-hover:pointer-events-none">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="h-8 w-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={onEdit} disabled={isCancelled}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Modifier
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onCheckin} disabled={isCancelled}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Check-in
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onCancel} disabled={isCancelled} className="text-destructive">
+              <Ban className="w-4 h-4 mr-2" />
+              Annuler
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      
+      {/* Icônes au survol (position absolue, visible uniquement au hover du groupe) */}
+      <TooltipProvider delayDuration={300}>
+        <div 
+          className="absolute top-0 left-0 flex items-center gap-0.5 bg-background/95 backdrop-blur-sm rounded-md shadow-sm border border-border/50 px-1 py-0.5 transition-all duration-150 opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 group-hover:pointer-events-auto"
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${
+                  isCancelled 
+                    ? 'opacity-40 cursor-not-allowed' 
+                    : 'hover:bg-derviche/10 hover:text-derviche'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isCancelled) onEdit();
+                }}
+                disabled={isCancelled}
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Modifier</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${
+                  isCancelled 
+                    ? 'opacity-40 cursor-not-allowed' 
+                    : 'hover:bg-green-100 hover:text-green-700'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isCancelled) onCheckin();
+                }}
+                disabled={isCancelled}
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Check-in</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${
+                  isCancelled 
+                    ? 'opacity-40 cursor-not-allowed' 
+                    : 'hover:bg-red-100 hover:text-red-700'
+                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!isCancelled) onCancel();
+                }}
+                disabled={isCancelled}
+              >
+                <Ban className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Annuler</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
+    </div>
+  );
 }
 
 // ============================================
@@ -1135,49 +1271,94 @@ export default function AdminReservationsPage() {
       />
 
       {/* Statistiques */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className="py-1 bg-card/80 border-muted-foreground/10">
-            <CardContent className="px-3 py-1.5">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Total</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Users className="w-4 h-4 text-derviche" />
-                <span className="text-xl md:text-2xl font-bold">{stats.total}</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="py-1 bg-card/80 border-muted-foreground/10">
-            <CardContent className="px-3 py-1.5">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Confirmées</p>
-              <div className="flex items-center gap-2 mt-1">
-                <CheckCircle className="w-4 h-4 text-green-600" />
-                <span className="text-xl md:text-2xl font-bold">{stats.confirmed}</span>
-                <span className="text-xs text-muted-foreground hidden sm:inline">({stats.totalPlaces} pl.)</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="py-1 bg-card/80 border-muted-foreground/10">
-            <CardContent className="px-3 py-1.5">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Présents</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <span className="text-xl md:text-2xl font-bold">
-                  {stats.presentLoved + stats.presentPress + stats.presentNeutral}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="py-1 bg-card/80 border-muted-foreground/10">
-            <CardContent className="px-3 py-1.5">
-              <p className="text-xs md:text-sm font-medium text-muted-foreground">Annulées</p>
-              <div className="flex items-center gap-2 mt-1">
-                <Ban className="w-4 h-4 text-red-600" />
-                <span className="text-xl md:text-2xl font-bold">{stats.cancelled}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {stats && (() => {
+        // Calculs des pourcentages
+        const confirmedPercent = stats.total > 0 ? Math.round((stats.confirmed / stats.total) * 100) : 0;
+        const totalPresents = stats.presentLoved + stats.presentPress + stats.presentNeutral;
+        const presentsPercent = stats.confirmed > 0 ? Math.round((totalPresents / stats.confirmed) * 100) : 0;
+        const cancelledPercent = stats.total > 0 ? Math.round((stats.cancelled / stats.total) * 100) : 0;
+        
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {/* Total */}
+            <Card className="py-1 bg-card/80 border-muted-foreground/10">
+              <CardContent className="px-3 py-2">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total réservations</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Users className="w-4 h-4 text-derviche" />
+                  <span className="text-xl md:text-2xl font-bold">{stats.total}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalPlaces} places réservées
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Confirmées */}
+            <Card className="py-1 bg-card/80 border-muted-foreground/10">
+              <CardContent className="px-3 py-2">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Confirmées</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-xl md:text-2xl font-bold">{stats.confirmed}</span>
+                  <span className="text-xs text-green-600 font-medium">{confirmedPercent}%</span>
+                </div>
+                <div className="mt-2">
+                  <Progress 
+                    value={confirmedPercent} 
+                    className="h-1.5 bg-green-100 [&>div]:bg-green-500" 
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.confirmed} / {stats.total}
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Présents */}
+            <Card className="py-1 bg-card/80 border-muted-foreground/10">
+              <CardContent className="px-3 py-2">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Présents (check-in)</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span className="text-xl md:text-2xl font-bold">{totalPresents}</span>
+                  <span className="text-xs text-blue-600 font-medium">{presentsPercent}%</span>
+                </div>
+                <div className="mt-2">
+                  <Progress 
+                    value={presentsPercent} 
+                    className="h-1.5 bg-blue-100 [&>div]:bg-blue-500" 
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {totalPresents} / {stats.confirmed} confirmées
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Annulées */}
+            <Card className="py-1 bg-card/80 border-muted-foreground/10">
+              <CardContent className="px-3 py-2">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Annulées</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <Ban className="w-4 h-4 text-red-600" />
+                  <span className="text-xl md:text-2xl font-bold">{stats.cancelled}</span>
+                  <span className="text-xs text-red-600 font-medium">{cancelledPercent}%</span>
+                </div>
+                <div className="mt-2">
+                  <Progress 
+                    value={cancelledPercent} 
+                    className="h-1.5 bg-red-100 [&>div]:bg-red-500" 
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Taux d&apos;annulation
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Barre d'actions */}
       <div className="space-y-3">
@@ -1403,6 +1584,7 @@ export default function AdminReservationsPage() {
                   <table className="w-full caption-bottom text-sm">
                     <thead className="[&_tr]:border-b bg-muted/80 border-b-2 border-border sticky top-0 z-10 shadow-sm">
                       <tr className="border-b transition-colors">
+                        <th className="h-10 px-2 w-10"></th>
                         {columns.map((col) => (
                           <th 
                             key={col} 
@@ -1413,7 +1595,6 @@ export default function AdminReservationsPage() {
                             {COLUMN_HEADERS[col]}
                           </th>
                         ))}
-                        <th className="h-10 px-2 w-10"></th>
                       </tr>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">
@@ -1427,39 +1608,19 @@ export default function AdminReservationsPage() {
                           }`}
                           onClick={() => r.status !== 'cancelled' && openEditDialog(r)}
                         >
+                          <td className="p-2 align-middle">
+                            <RowHoverActions
+                              reservation={r}
+                              onEdit={() => openEditDialog(r)}
+                              onCheckin={() => openCheckinDialog(r)}
+                              onCancel={() => openCancelDialog(r)}
+                            />
+                          </td>
                           {columns.map((col) => (
                             <td key={col} className="p-2 align-middle whitespace-nowrap">
                               {renderTableCell(col, r)}
                             </td>
                           ))}
-                          <td className="p-2 align-middle">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditDialog(r)} disabled={r.status === 'cancelled'}>
-                                  <Pencil className="w-4 h-4 mr-2" />
-                                  Modifier
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openCheckinDialog(r)} disabled={r.status === 'cancelled'}>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Check-in
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => openCancelDialog(r)} disabled={r.status === 'cancelled'} className="text-destructive">
-                                  <Ban className="w-4 h-4 mr-2" />
-                                  Annuler
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
