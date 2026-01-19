@@ -230,7 +230,22 @@ function renderTableCell(col: ReservationColumn, r: AdminReservation): React.Rea
         </div>
       ) : '-';
     case 'spectacle':
-      return <div className="font-medium max-w-[200px] truncate">{r.slot?.show?.title || '-'}</div>;
+      return r.slot ? (
+        <div className="max-w-[280px]">
+          <div className="font-semibold text-derviche truncate" title={r.slot.show?.title}>
+            {r.slot.show?.title || 'Spectacle inconnu'}
+          </div>
+          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+            <span>{formatDateFr(r.slot.date)} à {r.slot.time}</span>
+            {r.slot.venue && (
+              <>
+                <span className="text-muted-foreground/50">•</span>
+                <span className="truncate">{r.slot.venue.name}</span>
+              </>
+            )}
+          </div>
+        </div>
+      ) : '-';
     case 'venue':
       return <span className="text-sm">{r.slot?.venue?.name || '-'}</span>;
     case 'lastName':
@@ -1122,7 +1137,7 @@ export default function AdminReservationsPage() {
       {/* Statistiques */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <Card className="py-1">
+          <Card className="py-1 bg-card/80 border-muted-foreground/10">
             <CardContent className="px-3 py-1.5">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Total</p>
               <div className="flex items-center gap-2 mt-1">
@@ -1131,7 +1146,7 @@ export default function AdminReservationsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="py-1">
+          <Card className="py-1 bg-card/80 border-muted-foreground/10">
             <CardContent className="px-3 py-1.5">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Confirmées</p>
               <div className="flex items-center gap-2 mt-1">
@@ -1141,7 +1156,7 @@ export default function AdminReservationsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="py-1">
+          <Card className="py-1 bg-card/80 border-muted-foreground/10">
             <CardContent className="px-3 py-1.5">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Présents</p>
               <div className="flex items-center gap-2 mt-1">
@@ -1152,7 +1167,7 @@ export default function AdminReservationsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="py-1">
+          <Card className="py-1 bg-card/80 border-muted-foreground/10">
             <CardContent className="px-3 py-1.5">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Annulées</p>
               <div className="flex items-center gap-2 mt-1">
@@ -1381,12 +1396,12 @@ export default function AdminReservationsPage() {
           </div>
 
           {/* Vue Tableau (desktop) */}
-          <div className="hidden lg:block w-full overflow-x-auto">
-            <Card className="py-0 overflow-hidden">
+          <div className="hidden lg:block w-full">
+            <Card className="py-0">
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="max-h-[70vh] overflow-auto">
                   <table className="w-full caption-bottom text-sm">
-                    <thead className="[&_tr]:border-b bg-muted">
+                    <thead className="[&_tr]:border-b bg-muted/80 border-b-2 border-border sticky top-0 z-10 shadow-sm">
                       <tr className="border-b transition-colors">
                         {columns.map((col) => (
                           <th 
@@ -1405,10 +1420,10 @@ export default function AdminReservationsPage() {
                       {reservations.map((r, index) => (
                         <tr 
                           key={r.id} 
-                          className={`border-b transition-colors cursor-pointer hover:bg-muted/50 ${
+                          className={`border-b transition-colors cursor-pointer hover:bg-muted/70 ${
                             r.status === 'cancelled' ? 'opacity-60' : ''
                           } ${
-                            index % 2 === 1 ? 'bg-muted/30' : ''
+                            index % 2 === 1 ? 'bg-muted/50' : ''
                           }`}
                           onClick={() => r.status !== 'cancelled' && openEditDialog(r)}
                         >
