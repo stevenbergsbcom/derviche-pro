@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { AdminPageHeader } from '@/components/admin';
 import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   useReservationColumnsPreference,
   type ReservationColumn,
@@ -54,15 +55,17 @@ import {
   Newspaper,
   Meh,
   XCircle,
+  X,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Users,
   Calendar,
   CheckCircle,
   Ban,
   RefreshCw,
   Filter,
-  ChevronDown,
   MapPin,
   Mail,
   Phone,
@@ -320,6 +323,112 @@ function renderTableCell(col: ReservationColumn, r: AdminReservation): React.Rea
 }
 
 // ============================================
+// MAPPING COLONNES TRIABLES
+// ============================================
+
+/** Colonnes qui peuvent être triées et leur mapping vers les options de tri */
+type SortableColumn = 'date' | 'lastName' | 'createdAt';
+
+const SORTABLE_COLUMNS: Record<SortableColumn, { asc: SortOption; desc: SortOption }> = {
+  date: { asc: 'slot_date_asc', desc: 'slot_date_desc' },
+  lastName: { asc: 'name_asc', desc: 'name_desc' },
+  createdAt: { asc: 'created_at_asc', desc: 'created_at_desc' },
+};
+
+/** Vérifie si une colonne est triable */
+function isSortableColumn(col: ReservationColumn): col is SortableColumn {
+  return col in SORTABLE_COLUMNS;
+}
+
+/** Obtient l'état de tri actuel pour une colonne */
+function getColumnSortState(col: SortableColumn, currentSort: SortOption | undefined): 'asc' | 'desc' | null {
+  if (!currentSort) return null;
+  const mapping = SORTABLE_COLUMNS[col];
+  if (currentSort === mapping.asc) return 'asc';
+  if (currentSort === mapping.desc) return 'desc';
+  return null;
+}
+
+// ============================================
+// COMPOSANT SORTABLE HEADER
+// ============================================
+
+interface SortableHeaderProps {
+  column: ReservationColumn;
+  label: string;
+  currentSort: SortOption | undefined;
+  onSort: (sortOption: SortOption | undefined) => void;
+  className?: string;
+}
+
+/**
+ * Header de colonne cliquable pour le tri
+ * - 1er clic : tri ascendant
+ * - 2ème clic : tri descendant  
+ * - 3ème clic : retour au tri par défaut (date représentation ↑)
+ */
+function SortableHeader({ column, label, currentSort, onSort, className = '' }: SortableHeaderProps) {
+  if (!isSortableColumn(column)) {
+    // Colonne non triable - affichage simple
+    return (
+      <th className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${className}`}>
+        {label}
+      </th>
+    );
+  }
+
+  const sortState = getColumnSortState(column, currentSort);
+  const mapping = SORTABLE_COLUMNS[column];
+  
+  const handleClick = () => {
+    if (sortState === null) {
+      // Pas de tri sur cette colonne -> tri ascendant
+      onSort(mapping.asc);
+    } else if (sortState === 'asc') {
+      // Ascendant -> descendant
+      onSort(mapping.desc);
+    } else {
+      // Descendant -> retour au défaut (date représentation asc)
+      onSort('slot_date_asc');
+    }
+  };
+
+  // Déterminer l'attribut aria-sort
+  const ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : 'none';
+
+  return (
+    <th 
+      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${className}`}
+      aria-sort={ariaSort}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-flex items-center gap-1 hover:text-derviche transition-colors group"
+      >
+        {label}
+        <span className="inline-flex flex-col text-[10px] leading-none">
+          <ChevronUp 
+            className={`w-3 h-3 -mb-1 transition-colors ${
+              sortState === 'asc' 
+                ? 'text-derviche' 
+                : 'text-muted-foreground/40 group-hover:text-muted-foreground'
+            }`} 
+          />
+          <ChevronDown 
+            className={`w-3 h-3 transition-colors ${
+              sortState === 'desc' 
+                ? 'text-derviche' 
+                : 'text-muted-foreground/40 group-hover:text-muted-foreground'
+            }`} 
+          />
+        </span>
+      </button>
+    </th>
+  );
+}
+
+// ============================================
 // COMPOSANT ACTIONS AU SURVOL (DESKTOP)
 // ============================================
 
@@ -349,7 +458,7 @@ function RowHoverActions({ reservation, onEdit, onCheckin, onCancel }: RowHoverA
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={onEdit} disabled={isCancelled}>
+            <DropdownMenuItem onClick={onEdit}>
               <Pencil className="w-4 h-4 mr-2" />
               Modifier
             </DropdownMenuItem>
@@ -376,16 +485,11 @@ function RowHoverActions({ reservation, onEdit, onCheckin, onCancel }: RowHoverA
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-7 w-7 ${
-                  isCancelled 
-                    ? 'opacity-40 cursor-not-allowed' 
-                    : 'hover:bg-derviche/10 hover:text-derviche'
-                }`}
+                className="h-7 w-7 hover:bg-derviche/10 hover:text-derviche"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isCancelled) onEdit();
+                  onEdit();
                 }}
-                disabled={isCancelled}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
@@ -468,7 +572,7 @@ function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit, onCan
   return (
     <Card 
       className={`py-1 cursor-pointer hover:bg-muted/50 transition-colors ${isCancelled ? 'opacity-60' : ''}`}
-      onClick={() => !isCancelled && onEdit(reservation)}
+      onClick={() => onEdit(reservation)}
     >
       <CardContent className="px-3 py-1.5">
         {/* Header: Nom + Actions */}
@@ -509,7 +613,7 @@ function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit, onCan
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(reservation)} disabled={isCancelled}>
+              <DropdownMenuItem onClick={() => onEdit(reservation)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier
               </DropdownMenuItem>
@@ -738,6 +842,22 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
             {reservation.slot?.show?.title} — {reservation.slot?.date ? formatDateFr(reservation.slot.date) : ''} à {reservation.slot?.time}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Indicateur réservation annulée */}
+        {reservation.status === 'cancelled' && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+            <Ban className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium">Réservation annulée</p>
+              {reservation.cancelledAt && (
+                <p className="text-red-600">Annulée le {formatDateTimeFr(reservation.cancelledAt)}</p>
+              )}
+              {reservation.cancellationReason && (
+                <p className="mt-1 text-red-600/80">Motif : {reservation.cancellationReason}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Avertissement anomalie de données */}
         {reservation.hasDataAnomaly && (
@@ -985,15 +1105,17 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
         </div>}
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-          <Button 
-            variant="destructive" 
-            onClick={handleCancelReservation} 
-            disabled={isSaving} 
-            className="w-full sm:w-auto sm:mr-auto"
-          >
-            <Ban className="w-4 h-4 mr-2" />
-            Annuler la réservation
-          </Button>
+          {reservation.status !== 'cancelled' && (
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelReservation} 
+              disabled={isSaving} 
+              className="w-full sm:w-auto sm:mr-auto"
+            >
+              <Ban className="w-4 h-4 mr-2" />
+              Annuler la réservation
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="w-full sm:w-auto">
             Fermer
           </Button>
@@ -1043,8 +1165,17 @@ export default function AdminReservationsPage() {
     setPreference: setColumnsPreference,
   } = useReservationColumnsPreference();
 
-  // États locaux
+  // États locaux - Recherche avec debounce
   const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const [isSearching, setIsSearching] = useState(false);
+  const previousSearchRef = useRef<string | undefined>(undefined);
+  // Refs pour avoir toujours les dernières valeurs dans l'effet de recherche
+  // sans déclencher de re-render inutile
+  const filtersRef = useRef(filters);
+  const pageSizeRef = useRef(pageSize);
+  const loadReservationsRef = useRef(loadReservations);
+  
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -1068,6 +1199,58 @@ export default function AdminReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mettre à jour les refs à chaque changement
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
+  
+  useEffect(() => {
+    loadReservationsRef.current = loadReservations;
+  }, [loadReservations]);
+
+  // Effet de recherche automatique avec debounce
+  // Dépendance unique sur debouncedSearch pour éviter les re-exécutions inutiles
+  useEffect(() => {
+    // Éviter le double appel au chargement initial
+    if (previousSearchRef.current === undefined && debouncedSearch === '') {
+      previousSearchRef.current = '';
+      return;
+    }
+    
+    // Ne rien faire si la recherche n'a pas changé
+    if (previousSearchRef.current === debouncedSearch) {
+      return;
+    }
+    
+    previousSearchRef.current = debouncedSearch;
+    setIsSearching(true);
+    
+    // Appliquer le filtre de recherche en utilisant les refs pour avoir les valeurs à jour
+    const newFilters = { 
+      ...filtersRef.current, 
+      search: debouncedSearch.trim() || undefined 
+    };
+    
+    // Utiliser une fonction async pour gérer correctement la promesse
+    // Important: reset la pagination à la page 1 lors d'une nouvelle recherche
+    const doSearch = async () => {
+      try {
+        await loadReservationsRef.current(newFilters, { page: 1, pageSize: pageSizeRef.current });
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    void doSearch();
+  }, [debouncedSearch]);
+
+  // Détecter si un debounce est en cours (frappe en cours)
+  const isDebouncing = searchInput !== debouncedSearch;
+
   // Spectacles pour le filtre
   const showsOptions = useMemo(() => {
     return shows.filter(s => s.status === 'published');
@@ -1077,13 +1260,10 @@ export default function AdminReservationsPage() {
   // HANDLERS
   // ============================================
 
-  const handleSearch = () => {
-    setFilters({ ...filters, search: searchInput.trim() || undefined });
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
-  };
+  // Effacer la recherche
+  const handleClearSearch = useCallback(() => {
+    setSearchInput('');
+  }, []);
 
   const handleShowFilter = (showId: string) => {
     setFilters({ ...filters, showId: showId === 'all' ? undefined : showId });
@@ -1154,8 +1334,8 @@ export default function AdminReservationsPage() {
     setFilters({ period: 'upcoming', sortBy: 'slot_date_asc' });
   };
 
-  const handleSortChange = (sortBy: string) => {
-    setFilters({ ...filters, sortBy: sortBy as SortOption });
+  const handleSortChange = (sortBy: SortOption | string | undefined) => {
+    setFilters({ ...filters, sortBy: (sortBy || 'slot_date_asc') as SortOption });
   };
 
   const handleCheckin = async (status: CheckinStatus) => {
@@ -1364,20 +1544,39 @@ export default function AdminReservationsPage() {
       <div className="space-y-3">
         {/* Recherche + Actions */}
         <div className="flex flex-wrap gap-2">
-          <div className="flex gap-2 flex-1 min-w-[200px]">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              {/* Icône recherche ou spinner */}
+              {isSearching || isDebouncing ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-derviche animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              )}
               <Input
-                placeholder="Rechercher..."
+                placeholder="Rechercher par nom, email, téléphone, structure..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {/* Bouton effacer */}
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearSearch}
+                  title="Effacer la recherche"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
-            <Button onClick={handleSearch} variant="outline" size="icon">
-              <Search className="w-4 h-4" />
-            </Button>
+            {/* Compteur de résultats */}
+            {filters.search && !isLoading && (
+              <p className="text-xs text-muted-foreground mt-1 ml-1">
+                {total} résultat{total > 1 ? 's' : ''} pour « {filters.search} »
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={() => void loadReservations()}>
@@ -1586,14 +1785,14 @@ export default function AdminReservationsPage() {
                       <tr className="border-b transition-colors">
                         <th className="h-10 px-2 w-10"></th>
                         {columns.map((col) => (
-                          <th 
-                            key={col} 
-                            className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${
-                              col === 'numPlaces' ? 'text-center' : ''
-                            }`}
-                          >
-                            {COLUMN_HEADERS[col]}
-                          </th>
+                          <SortableHeader
+                            key={col}
+                            column={col}
+                            label={COLUMN_HEADERS[col]}
+                            currentSort={filters.sortBy as SortOption | undefined}
+                            onSort={handleSortChange}
+                            className={col === 'numPlaces' ? 'text-center' : ''}
+                          />
                         ))}
                       </tr>
                     </thead>
@@ -1606,7 +1805,7 @@ export default function AdminReservationsPage() {
                           } ${
                             index % 2 === 1 ? 'bg-muted/50' : ''
                           }`}
-                          onClick={() => r.status !== 'cancelled' && openEditDialog(r)}
+                          onClick={() => openEditDialog(r)}
                         >
                           <td className="p-2 align-middle">
                             <RowHoverActions
