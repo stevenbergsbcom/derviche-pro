@@ -23,7 +23,7 @@ export default function AdminLayout({
                 <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 {/* Contenu principal */}
-                <main className="flex-1 lg:ml-[260px] bg-muted min-h-screen">
+                <main className="flex-1 lg:ml-[260px] bg-muted min-h-screen overflow-x-hidden">
                     {/* Header mobile avec bouton hamburger */}
                     <div className="lg:hidden sticky top-0 z-30 bg-white border-b px-4 py-3 flex items-center gap-4">
                         <Button
@@ -39,7 +39,7 @@ export default function AdminLayout({
                     </div>
 
                     {/* Contenu */}
-                    <div className="p-4 lg:p-8">
+                    <div className="p-4 lg:p-8 max-w-full">
                         {children}
                     </div>
                 </main>
