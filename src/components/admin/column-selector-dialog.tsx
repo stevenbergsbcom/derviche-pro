@@ -148,6 +148,12 @@ export function ColumnSelectorDialog({
       setOrder((items) => {
         const oldIndex = items.indexOf(active.id as ReservationColumn);
         const newIndex = items.indexOf(over.id as ReservationColumn);
+        
+        // Validation: éviter les indices invalides (-1)
+        if (oldIndex === -1 || newIndex === -1) {
+          return items; // Retourner le tableau inchangé
+        }
+        
         return arrayMove(items, oldIndex, newIndex);
       });
     }

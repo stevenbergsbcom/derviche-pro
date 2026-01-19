@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { AdminPageHeader } from '@/components/admin';
 import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
@@ -87,6 +87,17 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'name_desc', label: 'Nom Z→A' },
 ];
 
+/**
+ * Formate une date en YYYY-MM-DD en utilisant la timezone locale
+ * Évite le problème de décalage UTC avec toISOString()
+ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dateTo?: string } {
   const today = new Date();
   
@@ -102,24 +113,24 @@ function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dateTo?: s
       sunday.setDate(monday.getDate() + 6);
       
       return {
-        dateFrom: monday.toISOString().split('T')[0],
-        dateTo: sunday.toISOString().split('T')[0],
+        dateFrom: formatLocalDate(monday),
+        dateTo: formatLocalDate(sunday),
       };
     }
     case 'this_month': {
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
       const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       return {
-        dateFrom: firstDay.toISOString().split('T')[0],
-        dateTo: lastDay.toISOString().split('T')[0],
+        dateFrom: formatLocalDate(firstDay),
+        dateTo: formatLocalDate(lastDay),
       };
     }
     case 'next_month': {
       const firstDay = new Date(today.getFullYear(), today.getMonth() + 1, 1);
       const lastDay = new Date(today.getFullYear(), today.getMonth() + 2, 0);
       return {
-        dateFrom: firstDay.toISOString().split('T')[0],
-        dateTo: lastDay.toISOString().split('T')[0],
+        dateFrom: formatLocalDate(firstDay),
+        dateTo: formatLocalDate(lastDay),
       };
     }
     default:
@@ -434,14 +445,27 @@ interface EditReservationDialogProps {
 }
 
 function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCancel, onGetSlots, isSaving }: EditReservationDialogProps) {
-  const [formData, setFormData] = useState<UpdateReservationData>({});
+  // Initialiser à null pour éviter la soumission avec données incomplètes
+  const [formData, setFormData] = useState<UpdateReservationData | null>(null);
   const [availableSlots, setAvailableSlots] = useState<Array<{ id: string; date: string; time: string; capacity: number; remainingCapacity: number; venue: { id: string; name: string; city: string } | null }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Le formulaire est prêt uniquement quand formData est peuplé
+  const isFormReady = formData !== null;
+
+  // Ref stable pour onGetSlots afin d'éviter les re-exécutions inutiles du useEffect principal
+  const onGetSlotsRef = useRef(onGetSlots);
+  useEffect(() => {
+    onGetSlotsRef.current = onGetSlots;
+  });
 
   // Reset form when reservation changes
   useEffect(() => {
     if (reservation && open) {
+      // Reset les erreurs de validation
+      setValidationErrors([]);
       setFormData({
         firstName: reservation.firstName,
         lastName: reservation.lastName,
@@ -463,11 +487,11 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
         checkinInternalNotes: reservation.checkinInternalNotes,
       });
 
-      // Charger les créneaux disponibles
+      // Charger les créneaux disponibles via la ref stable
       if (reservation.slot?.show?.id) {
         setLoadingSlots(true);
         setSlotsError(null);
-        onGetSlots(reservation.slot.show.id)
+        onGetSlotsRef.current(reservation.slot.show.id)
           .then(result => {
             if (result.success && result.data) {
               setAvailableSlots(result.data);
@@ -483,13 +507,54 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
           });
       }
     }
-  }, [reservation, open, onGetSlots]);
+  }, [reservation, open]); // onGetSlots retiré des dépendances grâce à la ref
 
   const handleChange = (field: keyof UpdateReservationData, value: string | number | null) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Si formData est null (pendant le chargement), ignorer les modifications
+    // Le formulaire est masqué pendant ce temps donc ce cas ne devrait pas arriver
+    if (!formData) return;
+    
+    setFormData({ ...formData, [field]: value });
+    // Effacer les erreurs de validation quand l'utilisateur modifie un champ
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+    }
+  };
+
+  // Validation côté client des champs requis
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
+    if (!formData) return ['Formulaire non initialisé'];
+    
+    if (!formData.firstName?.trim()) {
+      errors.push('Le prénom est requis');
+    }
+    if (!formData.lastName?.trim()) {
+      errors.push('Le nom est requis');
+    }
+    if (!formData.email?.trim()) {
+      errors.push('L\'email est requis');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.push('L\'email n\'est pas valide');
+    }
+    if (!formData.numPlaces || formData.numPlaces < 1) {
+      errors.push('Le nombre de places doit être au moins 1');
+    }
+    if (!formData.slotId) {
+      errors.push('Un créneau doit être sélectionné');
+    }
+    
+    return errors;
   };
 
   const handleSubmit = async () => {
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      toast.error('Veuillez corriger les erreurs avant de sauvegarder');
+      return;
+    }
+    if (!formData) return;
     await onSave(formData);
   };
 
@@ -500,10 +565,21 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
     }
   };
 
+  // Reset le formulaire quand le dialog se ferme
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setFormData(null);
+      setValidationErrors([]);
+      setAvailableSlots([]);
+      setSlotsError(null);
+    }
+    onOpenChange(open);
+  };
+
   if (!reservation) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Modifier la réservation</DialogTitle>
@@ -512,7 +588,41 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        {/* Avertissement anomalie de données */}
+        {reservation.hasDataAnomaly && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium">Anomalie de données détectée</p>
+              <p>Certains champs requis sont vides dans la base de données. Veuillez les compléter avant d&apos;enregistrer.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Erreurs de validation */}
+        {validationErrors.length > 0 && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium">Erreurs de validation</p>
+              <ul className="list-disc list-inside mt-1">
+                {validationErrors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement du formulaire */}
+        {!isFormReady && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-derviche" />
+            <span className="ml-2 text-sm text-muted-foreground">Chargement...</span>
+          </div>
+        )}
+
+        {isFormReady && <div className="space-y-6 py-4">
           {/* Section: Créneau et places */}
           <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
             <h4 className="font-medium flex items-center gap-2">
@@ -721,7 +831,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
               </div>
             </div>
           </div>
-        </div>
+        </div>}
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
           <Button 
@@ -1271,7 +1381,7 @@ export default function AdminReservationsPage() {
           </div>
 
           {/* Vue Tableau (desktop) */}
-          <div className="hidden lg:block w-full overflow-hidden">
+          <div className="hidden lg:block w-full overflow-x-auto">
             <Card className="py-0 overflow-hidden">
               <CardContent className="p-0">
                 <div className="overflow-x-auto">

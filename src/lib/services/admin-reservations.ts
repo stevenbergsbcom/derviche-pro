@@ -58,6 +58,9 @@ export interface AdminReservation {
   firstName: string;
   lastName: string;
   email: string;
+  
+  /** Flag indiquant une anomalie de données (champs requis null en BDD) */
+  hasDataAnomaly: boolean;
   phone: string | null;
   emailSecondary: string | null;
   phoneSecondary: string | null;
@@ -209,15 +212,31 @@ function transformReservation(
 ): AdminReservation {
   const slot = row.slots;
   
+  // Détection des anomalies de données (champs requis null)
+  const missingFields: string[] = [];
+  if (!row.guest_first_name) missingFields.push('firstName');
+  if (!row.guest_last_name) missingFields.push('lastName');
+  if (!row.guest_email) missingFields.push('email');
+  
+  const hasDataAnomaly = missingFields.length > 0;
+  
+  if (hasDataAnomaly) {
+    logger.warn('Réservation avec données manquantes détectée', {
+      reservationId: row.id,
+      missingFields,
+    });
+  }
+  
   return {
     id: row.id,
     slotId: row.slot_id,
     userId: row.user_id,
     
-    // Données guest
+    // Données guest (conversion null -> '' pour l'affichage)
     firstName: row.guest_first_name || '',
     lastName: row.guest_last_name || '',
     email: row.guest_email || '',
+    hasDataAnomaly,
     phone: row.guest_phone,
     emailSecondary: row.guest_email_secondary || null,
     phoneSecondary: row.guest_phone_secondary || null,
