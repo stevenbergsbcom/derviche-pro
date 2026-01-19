@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -17,150 +17,68 @@ import {
   Mail,
   ArrowRight,
   Home,
+  Loader2,
+  Drama,
 } from 'lucide-react';
 import type { ReservationConfirmation } from '@/types';
 import { formatDateFR, formatTimeFR } from '@/types';
-import {
-  mockShows,
-  mockRepresentations,
-  mockVenues,
-  type MockShow,
-  type MockRepresentation,
-} from '@/lib/mock-data';
+import { usePublicShow } from '@/hooks/usePublicShow';
+import { usePublicCatalog } from '@/hooks/usePublicCatalog';
+import type { PublicShow } from '@/lib/services/public-catalog';
 
 // ============================================
 // HELPERS
 // ============================================
 
 /**
- * Formater une date ISO en format français lisible
+ * Transformer un PublicShow en Spectacle pour le composant SpectacleCard
  */
-function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  const day = date.getDate();
-  const months = [
-    'jan.',
-    'fév.',
-    'mars',
-    'avr.',
-    'mai',
-    'juin',
-    'juil.',
-    'août',
-    'sept.',
-    'oct.',
-    'nov.',
-    'déc.',
-  ];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-}
-
-/**
- * Transformer un MockShow en Spectacle pour le composant SpectacleCard
- */
-function transformShowToSpectacle(show: MockShow, representations: MockRepresentation[]): Spectacle {
-  const showReps = representations.filter((rep) => rep.showId === show.id);
-
-  const sortedReps = [...showReps].sort((a, b) => {
-    const dateA = new Date(`${a.date}T${a.time}`);
-    const dateB = new Date(`${b.date}T${b.time}`);
-    return dateA.getTime() - dateB.getTime();
-  });
-
-  // Utiliser une comparaison de chaînes ISO pour éviter les problèmes de timezone
-  const todayISO = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
-
-  const futureReps = sortedReps.filter((rep) => {
-    return rep.date >= todayISO; // Comparaison de chaînes ISO
-  });
-
-  const nextRep = futureReps[0];
-
-  const availableSlots = futureReps.filter((rep) => {
-    if (rep.capacity === null) return true;
-    return rep.booked < rep.capacity;
-  }).length;
-
+function transformShowToSpectacle(show: PublicShow): Spectacle {
+  // Déterminer le statut
   let status: SpectacleStatus = 'available';
+
   if (show.status === 'draft') {
     status = 'coming_soon';
-  } else if (show.status === 'archived' || (futureReps.length === 0 && showReps.length > 0)) {
+  } else if (show.status === 'archived') {
     status = 'closed';
-  } else if (availableSlots === 0 && futureReps.length > 0) {
+  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
     status = 'closed';
-  }
-
-  let venue = 'Lieu à définir';
-  if (status !== 'coming_soon') {
-    venue = nextRep
-      ? mockVenues.find((v) => v.id === nextRep.venueId)?.name || nextRep.venueName
-      : sortedReps[0]
-        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)?.name || sortedReps[0].venueName
-        : 'Lieu à définir';
-  }
-
-  let nextDate = '';
-  if (status === 'available' && nextRep) {
-    nextDate = formatDateFr(nextRep.date);
+  } else if (show.slots.length === 0) {
+    status = 'coming_soon';
   }
 
   return {
-    id: parseInt(show.id.replace('show-', '')) || 0,
+    id: 0, // Legacy - on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
-    venue: venue,
-    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
+    venue: show.nextVenue || 'Lieu à définir',
+    image: show.imageUrl || '',
     slug: show.slug,
     genre: show.categories[0] || 'Spectacle',
-    nextDate: nextDate,
-    remainingSlots: availableSlots,
-    status: status,
+    nextDate: status === 'available' ? (show.nextDate || '') : '',
+    remainingSlots: show.availableSlotsCount,
+    status,
   };
 }
 
 /**
- * Récupérer les données d'un spectacle par son slug
+ * Formater la durée en minutes
  */
-function getShowDataBySlug(slug: string) {
-  const show = mockShows.find((s) => s.slug === slug);
-  if (!show) {
-    return {
-      title: 'Spectacle',
-      slug: 'spectacle',
-      companyName: 'Compagnie',
-      imageUrl: '/images/spectacles/placeholder.jpg',
-      duration: '1h',
-      venueName: 'Théâtre',
-      venueAddress: 'Avignon',
-    };
-  }
-
-  // Trouver la première représentation pour le lieu
-  const firstRep = mockRepresentations.find((rep) => rep.showId === show.id);
-  const venue = firstRep
-    ? mockVenues.find((v) => v.id === firstRep.venueId)
-    : null;
-
-  return {
-    title: show.title,
-    slug: show.slug,
-    companyName: show.companyName,
-    imageUrl: show.imageUrl || '/images/spectacles/placeholder.jpg',
-    duration: show.duration ? `${show.duration} min` : '1h',
-    venueName: venue?.name || firstRep?.venueName || 'Théâtre',
-    venueAddress: venue
-      ? `${venue.address || ''}, ${venue.postalCode || ''} ${venue.city}`
-      : 'Avignon',
-  };
+function formatDuration(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined) return 'Durée non précisée';
+  if (minutes === 0) return '0 min';
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h${mins.toString().padStart(2, '0')}`;
 }
 
 // ============================================
-// COMPOSANT PRINCIPAL
+// COMPOSANT INTERNE (avec useSearchParams)
 // ============================================
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const slug = params?.slug as string;
@@ -168,22 +86,36 @@ export default function ConfirmationPage() {
   // État pour éviter les erreurs d'hydratation
   const [isMounted, setIsMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<ReservationConfirmation | null>(null);
+  const [imageError, setImageError] = useState(false);
+
+  // Charger les données du spectacle depuis Supabase
+  const { show, isLoading: showLoading, error: showError } = usePublicShow(slug);
+
+  // Charger le catalogue pour les suggestions
+  const { shows: allShows, isLoading: catalogLoading } = usePublicCatalog();
 
   // Générer les suggestions (autres spectacles disponibles, excluant le spectacle actuel)
   const suggestions = useMemo(() => {
-    return mockShows
-      .filter((show) => show.slug !== slug && show.status === 'published')
+    return allShows
+      .filter((s) => s.slug !== slug && s.status === 'published')
+      .filter((s) => s.status !== 'archived')
       .slice(0, 3)
-      .map((show) => transformShowToSpectacle(show, mockRepresentations));
-  }, [slug]);
+      .map(transformShowToSpectacle);
+  }, [allShows, slug]);
 
   // Fix d'hydratation
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Reset image error quand le spectacle change
   useEffect(() => {
-    if (!isMounted) return;
+    setImageError(false);
+  }, [slug]);
+
+  // Construire la confirmation quand les données sont prêtes
+  useEffect(() => {
+    if (!isMounted || !show) return;
 
     // Récupérer les données de la réservation depuis les query params
     const reservationId = searchParams.get('id') || 'a7f3k9b2-1234-5678-9abc-def012345678';
@@ -193,18 +125,21 @@ export default function ConfirmationPage() {
     const guestName = searchParams.get('name') || 'Jean Dupont';
     const guestEmail = searchParams.get('email') || 'jean.dupont@theatre.fr';
 
-    // Données du spectacle selon le slug
-    const showData = getShowDataBySlug(slug);
+    // Trouver le slot correspondant pour le lieu (matcher date ET heure)
+    const matchingSlot = show.slots.find(slot => slot.date === slotDate && slot.time === slotTime);
+    const venueName = matchingSlot?.venueName || show.nextVenue || 'Théâtre';
+    const venueCity = matchingSlot?.venueCity || '';
+    const venueAddress = venueCity ? `${venueName}, ${venueCity}` : venueName;
 
     const mockConfirmation: ReservationConfirmation = {
       code: `DD-${reservationId.replace(/-/g, '').substring(0, 6).toUpperCase()}`,
       reservationId,
       show: {
-        title: showData.title,
-        slug: showData.slug,
-        companyName: showData.companyName,
-        imageUrl: showData.imageUrl,
-        duration: showData.duration,
+        title: show.title,
+        slug: show.slug,
+        companyName: show.companyName,
+        imageUrl: show.imageUrl || '',
+        duration: formatDuration(show.durationMinutes),
       },
       slot: {
         date: slotDate,
@@ -213,9 +148,9 @@ export default function ConfirmationPage() {
         formattedTime: formatTimeFR(slotTime),
       },
       venue: {
-        name: showData.venueName,
-        address: showData.venueAddress,
-        city: 'Avignon',
+        name: venueName,
+        address: venueAddress,
+        city: venueCity || 'France',
       },
       numPlaces,
       guestFullName: guestName,
@@ -224,7 +159,7 @@ export default function ConfirmationPage() {
     };
 
     setConfirmation(mockConfirmation);
-  }, [slug, searchParams, isMounted]);
+  }, [slug, searchParams, isMounted, show]);
 
   // Attendre que le composant soit monté
   if (!isMounted) {
@@ -239,14 +174,42 @@ export default function ConfirmationPage() {
     );
   }
 
-  // Chargement
-  if (!confirmation) {
+  // Erreur de chargement du spectacle
+  if (showError) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Chargement...</div>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <div className="max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-foreground mb-4">Confirmation enregistrée</h1>
+            <p className="text-muted-foreground mb-6">
+              Votre réservation a bien été enregistrée mais nous n&apos;avons pas pu charger les détails du spectacle.
+            </p>
+            <Button asChild>
+              <Link href="/catalogue">Retour au catalogue</Link>
+            </Button>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
+
+  // Chargement
+  if (showLoading || !confirmation) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-derviche mx-auto mb-4" />
+          <p className="text-muted-foreground">Chargement de la confirmation...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const hasImage = confirmation.show.imageUrl && !imageError;
 
   return (
     <div className="min-h-screen bg-background">
@@ -277,13 +240,18 @@ export default function ConfirmationPage() {
             <CardContent className="p-0">
               {/* En-tête avec image du spectacle */}
               <div className="relative h-40 md:h-48 bg-derviche">
-                {confirmation.show.imageUrl && (
+                {hasImage && confirmation.show.imageUrl ? (
                   <Image
                     src={confirmation.show.imageUrl}
                     alt={confirmation.show.title}
                     fill
                     className="object-cover opacity-30"
+                    onError={() => setImageError(true)}
                   />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Drama className="w-16 h-16 text-white/30" />
+                  </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-derviche-dark/80 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -314,9 +282,9 @@ export default function ConfirmationPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">{confirmation.venue.name}</p>
-                    <p className="text-muted-foreground">
-                      {confirmation.venue.address}, {confirmation.venue.city}
-                    </p>
+                    {confirmation.venue.address !== confirmation.venue.name && (
+                      <p className="text-muted-foreground">{confirmation.venue.address}</p>
+                    )}
                   </div>
                 </div>
 
@@ -379,7 +347,7 @@ export default function ConfirmationPage() {
         </div>
 
         {/* Suggestions de spectacles */}
-        {suggestions.length > 0 && (
+        {!catalogLoading && suggestions.length > 0 && (
           <div className="max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl md:text-2xl font-bold text-derviche-dark">
@@ -395,7 +363,7 @@ export default function ConfirmationPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {suggestions.map((spectacle) => (
-                <SpectacleCard key={spectacle.id} spectacle={spectacle} />
+                <SpectacleCard key={spectacle.slug} spectacle={spectacle} />
               ))}
             </div>
           </div>
@@ -404,7 +372,7 @@ export default function ConfirmationPage() {
         {/* Bouton retour accueil */}
         <div className="max-w-3xl mx-auto mt-12 text-center">
           <Button asChild variant="outline" size="lg">
-            <Link href="/accueil">
+            <Link href="/">
               <Home className="w-4 h-4 mr-2" />
               Retour à l&apos;accueil
             </Link>
@@ -414,5 +382,28 @@ export default function ConfirmationPage() {
 
       <Footer />
     </div>
+  );
+}
+
+// ============================================
+// COMPOSANT PRINCIPAL (avec Suspense)
+// ============================================
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background">
+          <Header />
+          <div className="container mx-auto px-4 py-24 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-derviche mx-auto mb-4" />
+            <p className="text-muted-foreground">Chargement...</p>
+          </div>
+          <Footer />
+        </div>
+      }
+    >
+      <ConfirmationContent />
+    </Suspense>
   );
 }

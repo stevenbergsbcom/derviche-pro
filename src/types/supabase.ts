@@ -873,6 +873,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_public_reservation: {
+        Args: {
+          p_address?: string
+          p_city?: string
+          p_comment?: string
+          p_email: string
+          p_email_secondary?: string
+          p_first_name: string
+          p_function?: string
+          p_last_name: string
+          p_num_places: number
+          p_organization?: string
+          p_phone?: string
+          p_phone_secondary?: string
+          p_postal_code?: string
+          p_slot_id: string
+        }
+        Returns: string
+      }
       externe_can_checkin: { Args: { p_slot_id: string }; Returns: boolean }
       externe_can_update_profile: {
         Args: { p_profile_id: string }

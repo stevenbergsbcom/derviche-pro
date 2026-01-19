@@ -34,141 +34,101 @@ import {
     UserPlus,
     Minus,
     Plus,
+    Loader2,
+    AlertTriangle,
+    Drama,
 } from 'lucide-react';
-import {
-    mockShows,
-    mockRepresentations,
-    mockVenues,
-    type MockShow,
-    type MockRepresentation,
-} from '@/lib/mock-data';
+import { usePublicShow } from '@/hooks/usePublicShow';
+import type { PublicSlot } from '@/lib/services/public-catalog';
+import { createReservation } from '@/lib/services/reservations';
 
-// Types
+// ============================================
+// TYPES
+// ============================================
+
+/** TimeSlot interne avec date en objet Date (pour le calendrier) */
 interface TimeSlot {
     id: string;
     date: Date;
-    time: string;
-    remainingCapacity: number;
-    totalCapacity: number;
+    time: string; // Format "11h00"
+    /** null = illimité */
+    remainingCapacity: number | null;
+    /** null = illimité */
+    totalCapacity: number | null;
     venueId: string;
     venueName: string;
-}
-
-interface SpectacleData {
-    id: string;
-    title: string;
-    slug: string;
-    company: string;
-    description: string;
-    duration: string;
-    genre: string;
-    pricing: string;
-    image: string;
-    venue: {
-        name: string;
-        address: string;
-    };
-    period: string;
-    slots: TimeSlot[];
-    status: 'available' | 'coming_soon' | 'closed';
+    venueCity: string;
 }
 
 type Step = 'calendar' | 'time' | 'participants' | 'form';
 
-const MAX_RESERVATIONS_PER_BOOKING = 3;
+/** Valeur par défaut si le spectacle n'a pas de max défini */
+const DEFAULT_MAX_RESERVATIONS = 3;
 
 // ============================================
 // HELPERS
 // ============================================
 
 /**
- * Transformer un MockShow + ses représentations en SpectacleData pour cette page
+ * Convertir un PublicSlot en TimeSlot pour le calendrier
  */
-function transformToSpectacleData(show: MockShow, representations: MockRepresentation[]): SpectacleData {
-    // Filtrer les représentations de ce spectacle
-    const showReps = representations.filter((rep) => rep.showId === show.id);
+function convertToTimeSlot(slot: PublicSlot): TimeSlot {
+    // Parser la date ISO en objet Date local
+    const [year, month, day] = slot.date.split('-').map(Number);
+    const dateObj = new Date(year, month - 1, day); // month est 0-indexed
 
-    // Trier par date croissante
-    const sortedReps = [...showReps].sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
-        return dateA.getTime() - dateB.getTime();
-    });
-
-    // Convertir en TimeSlots
-    const slots: TimeSlot[] = sortedReps.map((rep) => {
-        const [year, month, day] = rep.date.split('-').map(Number);
-        return {
-            id: rep.id,
-            date: new Date(year, month - 1, day), // month est 0-indexed en JS
-            time: rep.time.replace(':', 'h'), // "11:00" → "11h00"
-            remainingCapacity: rep.capacity !== null ? rep.capacity - rep.booked : 999,
-            totalCapacity: rep.capacity !== null ? rep.capacity : 999,
-            venueId: rep.venueId,
-            venueName: rep.venueName,
-        };
-    });
-
-    // Trouver le premier lieu (pour l'affichage par défaut)
-    const firstVenue = sortedReps[0]
-        ? mockVenues.find((v) => v.id === sortedReps[0].venueId)
-        : null;
-
-    // Déterminer le statut
-    let status: 'available' | 'coming_soon' | 'closed' = 'available';
-    if (show.status === 'draft') {
-        status = 'coming_soon';
-    } else if (show.status === 'archived') {
-        status = 'closed';
-    }
-
-    // Construire la période à partir des dates
-    let period = show.period || 'Dates à venir';
-    if (sortedReps.length > 0 && status !== 'coming_soon') {
-        // Parser manuellement pour éviter les problèmes de timezone
-        const [firstYear, firstMonth, firstDay] = sortedReps[0].date.split('-').map(Number);
-        const [lastYear, lastMonth, lastDay] = sortedReps[sortedReps.length - 1].date.split('-').map(Number);
-        const firstDate = new Date(firstYear, firstMonth - 1, firstDay);
-        const lastDate = new Date(lastYear, lastMonth - 1, lastDay);
-        const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-        period = `Du ${formatDate(firstDate)} au ${formatDate(lastDate)}`;
-    }
-
-    // Déterminer le pricing
-    let pricing = 'Gratuit';
-    if (show.priceType === 'paid_on_site') {
-        pricing = 'Payant sur place';
-    }
+    // Convertir l'heure "11:00" → "11h00"
+    const time = slot.time.replace(':', 'h');
 
     return {
-        id: show.id,
-        title: show.title,
-        slug: show.slug,
-        company: show.companyName,
-        description: show.description || show.shortDescription || 'Description du spectacle.',
-        duration: show.duration ? `${show.duration} min` : '1h',
-        genre: show.categories[0] || 'Spectacle',
-        pricing,
-        image: show.imageUrl || '/images/spectacles/placeholder.jpg',
-        venue: {
-            name: firstVenue?.name || 'Lieu à définir',
-            address: firstVenue
-                ? `${firstVenue.address || ''}, ${firstVenue.postalCode || ''} ${firstVenue.city}`
-                : 'Adresse à confirmer',
-        },
-        period,
-        slots,
-        status,
+        id: slot.id,
+        date: dateObj,
+        time,
+        remainingCapacity: slot.remainingCapacity,
+        totalCapacity: slot.capacity,
+        venueId: slot.venueId,
+        venueName: slot.venueName,
+        venueCity: slot.venueCity,
     };
 }
 
 /**
- * Récupérer les données d'un spectacle par son slug
+ * Formater la durée en minutes en texte lisible
  */
-function getSpectacleBySlug(slug: string): SpectacleData | null {
-    const show = mockShows.find((s) => s.slug === slug);
-    if (!show) return null;
-    return transformToSpectacleData(show, mockRepresentations);
+function formatDuration(minutes: number | null | undefined): string {
+    if (minutes === null || minutes === undefined) return 'Durée non précisée';
+    if (minutes === 0) return '0 min';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h${mins.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Construire la période à partir des slots
+ */
+function buildPeriod(slots: TimeSlot[]): string {
+    if (slots.length === 0) return 'Dates à venir';
+
+    const firstSlot = slots[0];
+    const lastSlot = slots[slots.length - 1];
+
+    const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+
+    if (slots.length === 1) {
+        return `Le ${formatDate(firstSlot.date)}`;
+    }
+
+    return `Du ${formatDate(firstSlot.date)} au ${formatDate(lastSlot.date)}`;
+}
+
+/**
+ * Construire l'adresse du lieu
+ */
+function buildVenueAddress(slot: TimeSlot | undefined): string {
+    if (!slot) return 'Adresse à confirmer';
+    return `${slot.venueName}, ${slot.venueCity}`;
 }
 
 // Fonction pour obtenir le premier jour du mois
@@ -209,6 +169,29 @@ function isSameDay(date1: Date, date2: Date): boolean {
     );
 }
 
+/**
+ * Créer une clé de date cohérente pour le Set (format: YYYY-M-D)
+ * Utilise un format simple mais cohérent entre création et lookup
+ */
+function createDateKey(date: Date): string {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+// ============================================
+// COMPOSANT PLACEHOLDER IMAGE
+// ============================================
+
+function ImagePlaceholder({ title }: { title: string }) {
+    return (
+        <div className="absolute inset-0 bg-gradient-to-br from-derviche/20 to-derviche/40 flex flex-col items-center justify-center p-4">
+            <Drama className="w-16 h-16 text-muted-foreground/50 mb-2" />
+            <p className="text-derviche-dark/80 text-sm font-medium text-center line-clamp-2">
+                {title}
+            </p>
+        </div>
+    );
+}
+
 // ============================================
 // COMPOSANT PAGE
 // ============================================
@@ -220,21 +203,25 @@ export default function SpectacleDetailPage() {
 
     // État pour éviter les erreurs d'hydratation
     const [isMounted, setIsMounted] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
-    // Récupérer les données du spectacle selon le slug
-    const spectacleData = useMemo(() => {
-        return getSpectacleBySlug(slug);
-    }, [slug]);
+    // Hook Supabase pour charger le spectacle
+    const { show, isLoading, notFound, error, refresh } = usePublicShow(slug);
+
+    // Convertir les slots Supabase en TimeSlots pour le calendrier
+    const timeSlots = useMemo(() => {
+        if (!show) return [];
+        return show.slots.map(convertToTimeSlot);
+    }, [show]);
 
     // Calculer le mois initial basé sur le premier slot disponible
     const initialMonth = useMemo(() => {
-        if (!spectacleData || spectacleData.slots.length === 0) {
+        if (timeSlots.length === 0) {
             return new Date(); // Mois actuel par défaut
         }
-        // Prendre le mois du premier slot
-        const firstSlot = spectacleData.slots[0];
+        const firstSlot = timeSlots[0];
         return new Date(firstSlot.date.getFullYear(), firstSlot.date.getMonth(), 1);
-    }, [spectacleData]);
+    }, [timeSlots]);
 
     // États
     const [currentStep, setCurrentStep] = useState<Step>('calendar');
@@ -261,20 +248,33 @@ export default function SpectacleDetailPage() {
         comment: '',
     });
 
+    // États de soumission
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+
     // Fix d'hydratation
     useEffect(() => {
         setIsMounted(true);
     }, []);
 
+    // Reset du mois courant quand les données changent
+    useEffect(() => {
+        if (timeSlots.length > 0) {
+            const firstSlot = timeSlots[0];
+            setCurrentMonth(new Date(firstSlot.date.getFullYear(), firstSlot.date.getMonth(), 1));
+        }
+    }, [timeSlots]);
+
     // Reset des états quand le slug change (navigation entre spectacles)
     useEffect(() => {
         setCurrentStep('calendar');
-        setCurrentMonth(initialMonth);
         setSelectedDate(null);
         setSelectedSlot(null);
         setParticipantCount(1);
         setShowAuthModal(false);
         setShowFullDescription(false);
+        setImageError(false);
+        setSubmitError(null);
         setFormData({
             lastName: '',
             firstName: '',
@@ -289,36 +289,38 @@ export default function SpectacleDetailPage() {
             function: '',
             comment: '',
         });
-    }, [slug, initialMonth]);
+    }, [slug]);
 
     // Vérifier si le spectacle est "bientôt réservable"
-    const isComingSoon = spectacleData?.status === 'coming_soon';
+    const isComingSoon = show?.status === 'draft' || (show?.status === 'published' && timeSlots.length === 0);
+
+    // Nombre max de participants par réservation (depuis le spectacle ou valeur par défaut)
+    const maxReservations = show?.maxReservationsPerBooking ?? DEFAULT_MAX_RESERVATIONS;
 
     // Trouver les dates avec créneaux DISPONIBLES pour le mois courant
     const datesWithSlots = useMemo(() => {
-        if (!spectacleData) return new Set<string>();
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
-        const slotsInMonth = spectacleData.slots.filter((slot) => {
+        const slotsInMonth = timeSlots.filter((slot) => {
+            const hasCapacity = slot.remainingCapacity === null || slot.remainingCapacity > 0;
             return slot.date.getFullYear() === year &&
                 slot.date.getMonth() === month &&
-                slot.remainingCapacity > 0; // Seulement les créneaux disponibles
+                hasCapacity;
         });
 
         const dates = new Set<string>();
         slotsInMonth.forEach((slot) => {
-            const dateKey = `${slot.date.getFullYear()}-${slot.date.getMonth()}-${slot.date.getDate()}`;
-            dates.add(dateKey);
+            dates.add(createDateKey(slot.date));
         });
 
         return dates;
-    }, [currentMonth, spectacleData]);
+    }, [currentMonth, timeSlots]);
 
     // Créneaux pour la date sélectionnée
     const slotsForSelectedDate = useMemo(() => {
-        if (!selectedDate || !spectacleData) return [];
-        return spectacleData.slots.filter((slot) => isSameDay(slot.date, selectedDate));
-    }, [selectedDate, spectacleData]);
+        if (!selectedDate) return [];
+        return timeSlots.filter((slot) => isSameDay(slot.date, selectedDate));
+    }, [selectedDate, timeSlots]);
 
     // Générer la grille du calendrier
     const calendarDays = useMemo(() => {
@@ -327,16 +329,14 @@ export default function SpectacleDetailPage() {
         const firstDay = getFirstDayOfMonth(year, month);
         const lastDay = getLastDayOfMonth(year, month);
         const daysInMonth = lastDay.getDate();
-        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Lundi = 0
+        const startingDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
 
         const days: (Date | null)[] = [];
 
-        // Jours vides au début
         for (let i = 0; i < startingDayOfWeek; i++) {
             days.push(null);
         }
 
-        // Jours du mois
         for (let day = 1; day <= daysInMonth; day++) {
             days.push(new Date(year, month, day));
         }
@@ -344,8 +344,52 @@ export default function SpectacleDetailPage() {
         return days;
     }, [currentMonth]);
 
+    // Attendre que le composant soit monté
+    if (!isMounted) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-12 text-center">
+                    <div className="animate-pulse text-muted-foreground">Chargement...</div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Affichage pendant le chargement
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-24 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-derviche mx-auto mb-4" />
+                    <p className="text-muted-foreground">Chargement du spectacle...</p>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
+    // Affichage en cas d'erreur
+    if (error) {
+        return (
+            <div className="min-h-screen bg-background">
+                <Header />
+                <div className="container mx-auto px-4 py-24 text-center">
+                    <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+                    <p className="text-destructive mb-4">Erreur : {error}</p>
+                    <Button onClick={() => void refresh()} variant="outline">
+                        Réessayer
+                    </Button>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
+
     // Si spectacle non trouvé
-    if (!spectacleData) {
+    if (notFound || !show) {
         return (
             <div className="min-h-screen bg-background">
                 <Header />
@@ -361,18 +405,14 @@ export default function SpectacleDetailPage() {
         );
     }
 
-    // Attendre que le composant soit monté
-    if (!isMounted) {
-        return (
-            <div className="min-h-screen bg-background">
-                <Header />
-                <div className="container mx-auto px-4 py-12 text-center">
-                    <div className="animate-pulse text-muted-foreground">Chargement...</div>
-                </div>
-                <Footer />
-            </div>
-        );
-    }
+    // Données calculées pour l'affichage
+    const duration = formatDuration(show.durationMinutes);
+    const period = buildPeriod(timeSlots);
+    const description = show.longDescription || show.shortDescription || 'Description du spectacle.';
+    const firstSlot = timeSlots[0];
+    const venueName = firstSlot?.venueName || 'Lieu à définir';
+    const venueAddress = buildVenueAddress(firstSlot);
+    const hasImage = show.imageUrl && !imageError;
 
     // Navigation mois
     const goToPreviousMonth = () => {
@@ -388,8 +428,7 @@ export default function SpectacleDetailPage() {
     // Vérifier si une date a des créneaux
     const hasSlots = (date: Date | null): boolean => {
         if (!date) return false;
-        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        return datesWithSlots.has(dateKey);
+        return datesWithSlots.has(createDateKey(date));
     };
 
     // Gérer le clic sur un jour
@@ -429,38 +468,75 @@ export default function SpectacleDetailPage() {
         setParticipantCount((prev) => {
             const newValue = prev + delta;
             if (newValue < 1) return 1;
-            if (newValue > MAX_RESERVATIONS_PER_BOOKING) return MAX_RESERVATIONS_PER_BOOKING;
+            if (newValue > maxReservations) return maxReservations;
             return newValue;
         });
     };
 
     // Gérer la soumission du formulaire
-    const handleFormSubmit = (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!selectedSlot || !selectedDate) return;
 
-        // Générer un ID mock pour la réservation
-        const mockReservationId = crypto.randomUUID();
+        // Éviter les doubles soumissions
+        if (isSubmitting) return;
 
-        // Formater la date pour l'URL (YYYY-MM-DD)
-        const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+        setIsSubmitting(true);
+        setSubmitError(null);
 
-        // Formater l'heure pour l'URL (HH:MM) - convertir "11h00" en "11:00"
-        const timeStr = selectedSlot.time.replace('h', ':');
+        try {
+            // Appeler le service de création de réservation
+            const result = await createReservation({
+                slotId: selectedSlot.id,
+                numPlaces: participantCount,
+                formData: {
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    emailSecondary: formData.emailSecondary || undefined,
+                    phone: formData.phone,
+                    phoneSecondary: formData.phoneSecondary || undefined,
+                    address: formData.address || undefined,
+                    postalCode: formData.postalCode || undefined,
+                    city: formData.city || undefined,
+                    organization: formData.organization || undefined,
+                    function: formData.function || undefined,
+                    comment: formData.comment || undefined,
+                },
+                // userId: null pour l'instant (guest)
+            });
 
-        // Construire l'URL de confirmation avec les données
-        const confirmationUrl = `/spectacle/${slug}/confirmation?` + new URLSearchParams({
-            id: mockReservationId,
-            places: String(participantCount),
-            date: dateStr,
-            time: timeStr,
-            name: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email,
-        }).toString();
+            if (!result.success || !result.data) {
+                setSubmitError(result.error || 'Une erreur est survenue.');
+                setIsSubmitting(false);
+                return;
+            }
 
-        // Rediriger vers la page de confirmation
-        router.push(confirmationUrl);
+            // Formater la date pour l'URL (YYYY-MM-DD)
+            const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
+
+            // Formater l'heure pour l'URL (HH:MM) - convertir "11h00" en "11:00"
+            const timeStr = selectedSlot.time.replace('h', ':');
+
+            // Construire l'URL de confirmation avec les données
+            const confirmationUrl = `/spectacle/${slug}/confirmation?` + new URLSearchParams({
+                id: result.data.reservationId,
+                places: String(participantCount),
+                date: dateStr,
+                time: timeStr,
+                name: `${formData.firstName} ${formData.lastName}`,
+                email: formData.email,
+            }).toString();
+
+            // Rediriger vers la page de confirmation
+            router.push(confirmationUrl);
+
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erreur inattendue';
+            setSubmitError(message);
+            setIsSubmitting(false);
+        }
     };
 
     // Déterminer l'étape active pour le fil d'Ariane
@@ -499,7 +575,7 @@ export default function SpectacleDetailPage() {
     const renderCalendarStep = () => (
         <>
             <h2 className="text-xl font-bold text-derviche-dark mb-6">
-                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l&apos;heure'}
+                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l’heure'}
             </h2>
 
             {/* Message si spectacle bientôt réservable */}
@@ -602,7 +678,9 @@ export default function SpectacleDetailPage() {
     // Rendu de l'étape time
     const renderTimeStep = () => {
         // Filtrer uniquement les créneaux avec places disponibles
-        const availableSlots = slotsForSelectedDate.filter((slot) => slot.remainingCapacity > 0);
+        const availableSlots = slotsForSelectedDate.filter((slot) => {
+            return slot.remainingCapacity === null || slot.remainingCapacity > 0;
+        });
 
         return (
             <>
@@ -691,14 +769,14 @@ export default function SpectacleDetailPage() {
                         variant="outline"
                         size="icon"
                         onClick={() => handleParticipantChange(1)}
-                        disabled={participantCount >= MAX_RESERVATIONS_PER_BOOKING}
+                        disabled={participantCount >= maxReservations}
                         className="rounded-full h-10 w-10"
                     >
                         <Plus className="w-4 h-4" />
                     </Button>
                 </div>
                 <p className="text-sm text-muted-foreground text-center mt-4">
-                    Maximum {MAX_RESERVATIONS_PER_BOOKING} personnes par réservation
+                    Maximum {maxReservations} personne{maxReservations > 1 ? 's' : ''} par réservation
                 </p>
             </div>
 
@@ -868,11 +946,29 @@ export default function SpectacleDetailPage() {
                     />
                 </div>
 
+                {/* Affichage de l'erreur si présente */}
+                {submitError && (
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                            <p className="text-sm text-destructive">{submitError}</p>
+                        </div>
+                    </div>
+                )}
+
                 <Button
                     type="submit"
-                    className="w-full bg-derviche hover:bg-derviche-dark text-white"
+                    disabled={isSubmitting}
+                    className="w-full bg-derviche hover:bg-derviche-dark text-white disabled:opacity-50"
                 >
-                    Confirmer ma réservation
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Réservation en cours...
+                        </>
+                    ) : (
+                        'Confirmer ma réservation'
+                    )}
                 </Button>
             </form>
         </>
@@ -906,18 +1002,23 @@ export default function SpectacleDetailPage() {
                                 <div className="lg:border-r border-border">
                                     {/* Bandeau image du spectacle */}
                                     <div className="relative w-full aspect-video">
-                                        <Image
-                                            src={spectacleData.image}
-                                            alt={spectacleData.title}
-                                            fill
-                                            className="object-cover"
-                                            priority
-                                        />
+                                        {hasImage ? (
+                                            <Image
+                                                src={show.imageUrl!}
+                                                alt={show.title}
+                                                fill
+                                                className="object-cover"
+                                                priority
+                                                onError={() => setImageError(true)}
+                                            />
+                                        ) : (
+                                            <ImagePlaceholder title={show.title} />
+                                        )}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                         <div className="absolute bottom-4 left-4 right-4">
                                             <p className="text-white/80 text-sm mb-1">Derviche Diffusion</p>
                                             <h1 className="text-2xl md:text-3xl font-bold text-white">
-                                                {spectacleData.title}
+                                                {show.title}
                                             </h1>
                                         </div>
                                     </div>
@@ -927,7 +1028,7 @@ export default function SpectacleDetailPage() {
                                         {/* Durée */}
                                         <div className="flex items-center gap-2 text-muted-foreground">
                                             <Clock className="w-4 h-4" />
-                                            <span className="text-sm">{spectacleData.duration}</span>
+                                            <span className="text-sm">{duration}</span>
                                         </div>
 
                                         {/* Lieu */}
@@ -935,10 +1036,10 @@ export default function SpectacleDetailPage() {
                                             <MapPin className="w-4 h-4 text-derviche mt-0.5 shrink-0" />
                                             <div>
                                                 <p className="font-semibold text-sm text-derviche-dark">
-                                                    {spectacleData.venue.name}
+                                                    {venueName}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground">
-                                                    {spectacleData.venue.address}
+                                                    {venueAddress}
                                                 </p>
                                             </div>
                                         </div>
@@ -946,19 +1047,19 @@ export default function SpectacleDetailPage() {
                                         {/* Compagnie */}
                                         <div>
                                             <p className="text-sm font-medium text-derviche">Compagnie</p>
-                                            <p className="text-sm text-foreground">{spectacleData.company}</p>
+                                            <p className="text-sm text-foreground">{show.companyName}</p>
                                         </div>
 
                                         {/* Période */}
                                         <div>
                                             <p className="text-sm font-medium text-derviche">Période</p>
-                                            <p className="text-sm text-foreground">{spectacleData.period}</p>
+                                            <p className="text-sm text-foreground">{period}</p>
                                         </div>
 
                                         {/* Description avec "Lire la suite" */}
                                         <div className="pt-4 border-t border-border">
                                             <SafeHtml
-                                                html={spectacleData.description}
+                                                html={description}
                                                 className={`text-sm text-muted-foreground leading-relaxed ${!showFullDescription ? 'line-clamp-3 [&_p]:m-0' : ''}`}
                                                 disableProse={!showFullDescription}
                                             />

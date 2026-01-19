@@ -158,8 +158,9 @@ export function UserFormDialog({
         
         // Effacer l'erreur de validation pour ce champ
         if (validationErrors[field]) {
-            const { [field]: _, ...rest } = validationErrors;
-            setValidationErrors(rest);
+            const newErrors = { ...validationErrors };
+            delete newErrors[field];
+            setValidationErrors(newErrors);
         }
     };
 

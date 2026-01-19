@@ -31,8 +31,43 @@ import {
     AlertTriangle,
     Loader2,
 } from 'lucide-react';
-import type { MockRepresentation, MockVenue, MockUser } from '@/lib/mock-data';
-import type { SlotHostedBy } from '@/types/database';
+import type { SlotHostedBy, UserRole } from '@/types/database';
+
+// ============================================
+// TYPES LOCAUX (compatibilité composants)
+// ============================================
+
+/** Représentation pour les composants */
+interface MockRepresentation {
+  id: string;
+  showId: string;
+  showTitle: string;
+  companyName: string;
+  date: string;
+  time: string;
+  venueId: string;
+  venueName: string;
+  capacity: number | null;
+  booked: number;
+  hostedBy: SlotHostedBy;
+  hostedById: string | null;
+}
+
+/** Lieu pour les composants */
+interface MockVenue {
+  id: string;
+  name: string;
+  city: string;
+}
+
+/** Utilisateur pour les composants */
+interface MockUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+}
 
 // Type pour les données de génération de série
 export interface GenerateSeriesData {
