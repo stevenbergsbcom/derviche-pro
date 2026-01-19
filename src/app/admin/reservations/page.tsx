@@ -11,6 +11,7 @@ import {
   type ReservationColumnsPreference,
 } from '@/hooks/useUserPreferences';
 import { ColumnSelectorDialog } from '@/components/admin/column-selector-dialog';
+import { ExportDialog, type ExportOptions } from '@/components/admin/export-dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1149,7 +1150,7 @@ export default function AdminReservationsPage() {
     checkin,
     update,
     cancel,
-    exportToCSV,
+    exportWithOptions,
     getSlots,
     setPage,
     setPageSize,
@@ -1185,6 +1186,7 @@ export default function AdminReservationsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   
   // États filtres de date
   const [datePreset, setDatePreset] = useState<DatePreset | null>(null);
@@ -1376,26 +1378,11 @@ export default function AdminReservationsPage() {
     }
   };
 
-  const handleExport = async () => {
-    // Afficher un avertissement si des filtres sont actifs
-    // Note: period 'upcoming' est le défaut, donc on le compte comme filtre si différent
-    const hasFilters = filters.showId || filters.slotId || filters.status || filters.checkinStatus || filters.search || filters.dateFrom || filters.dateTo || (filters.period && filters.period !== 'upcoming');
-    
-    if (hasFilters) {
-      const confirmed = window.confirm(
-        'Des filtres sont actifs. L\'export contiendra uniquement les réservations correspondant aux filtres actuels.\n\nContinuer ?'
-      );
-      if (!confirmed) return;
-    } else {
-      const confirmed = window.confirm(
-        'Aucun filtre actif. L\'export contiendra TOUTES les réservations.\n\nContinuer ?'
-      );
-      if (!confirmed) return;
-    }
-
+  const handleExportWithOptions = async (options: ExportOptions): Promise<{ success: boolean; error?: string }> => {
     setIsExporting(true);
-    await exportToCSV();
+    const result = await exportWithOptions(options);
     setIsExporting(false);
+    return result;
   };
 
   const handleSaveColumns = async (newPreference: ReservationColumnsPreference): Promise<{ success: boolean; error?: string }> => {
@@ -1585,9 +1572,9 @@ export default function AdminReservationsPage() {
             <Button variant="outline" size="icon" onClick={() => setColumnsDialogOpen(true)} title="Colonnes">
               <Settings2 className="w-4 h-4" />
             </Button>
-            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-              {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              <span className="hidden sm:inline ml-2">Export CSV</span>
+            <Button variant="outline" onClick={() => setExportDialogOpen(true)} disabled={isExporting || reservations.length === 0}>
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline ml-2">Export</span>
             </Button>
           </div>
         </div>
@@ -1960,6 +1947,17 @@ export default function AdminReservationsPage() {
         onCancel={openCancelDialog}
         onGetSlots={getSlots}
         isSaving={isProcessing}
+      />
+
+      {/* Dialog Export */}
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        reservations={reservations}
+        filters={filters}
+        visibleColumns={visibleColumns}
+        onExport={handleExportWithOptions}
+        isExporting={isExporting}
       />
     </div>
   );
