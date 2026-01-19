@@ -458,7 +458,7 @@ function RowHoverActions({ reservation, onEdit, onCheckin, onCancel }: RowHoverA
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={onEdit} disabled={isCancelled}>
+            <DropdownMenuItem onClick={onEdit}>
               <Pencil className="w-4 h-4 mr-2" />
               Modifier
             </DropdownMenuItem>
@@ -485,16 +485,11 @@ function RowHoverActions({ reservation, onEdit, onCheckin, onCancel }: RowHoverA
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-7 w-7 ${
-                  isCancelled 
-                    ? 'opacity-40 cursor-not-allowed' 
-                    : 'hover:bg-derviche/10 hover:text-derviche'
-                }`}
+                className="h-7 w-7 hover:bg-derviche/10 hover:text-derviche"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isCancelled) onEdit();
+                  onEdit();
                 }}
-                disabled={isCancelled}
               >
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
@@ -577,7 +572,7 @@ function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit, onCan
   return (
     <Card 
       className={`py-1 cursor-pointer hover:bg-muted/50 transition-colors ${isCancelled ? 'opacity-60' : ''}`}
-      onClick={() => !isCancelled && onEdit(reservation)}
+      onClick={() => onEdit(reservation)}
     >
       <CardContent className="px-3 py-1.5">
         {/* Header: Nom + Actions */}
@@ -618,7 +613,7 @@ function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit, onCan
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(reservation)} disabled={isCancelled}>
+              <DropdownMenuItem onClick={() => onEdit(reservation)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier
               </DropdownMenuItem>
@@ -847,6 +842,22 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
             {reservation.slot?.show?.title} — {reservation.slot?.date ? formatDateFr(reservation.slot.date) : ''} à {reservation.slot?.time}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Indicateur réservation annulée */}
+        {reservation.status === 'cancelled' && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-800">
+            <Ban className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium">Réservation annulée</p>
+              {reservation.cancelledAt && (
+                <p className="text-red-600">Annulée le {formatDateTimeFr(reservation.cancelledAt)}</p>
+              )}
+              {reservation.cancellationReason && (
+                <p className="mt-1 text-red-600/80">Motif : {reservation.cancellationReason}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Avertissement anomalie de données */}
         {reservation.hasDataAnomaly && (
@@ -1094,15 +1105,17 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
         </div>}
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
-          <Button 
-            variant="destructive" 
-            onClick={handleCancelReservation} 
-            disabled={isSaving} 
-            className="w-full sm:w-auto sm:mr-auto"
-          >
-            <Ban className="w-4 h-4 mr-2" />
-            Annuler la réservation
-          </Button>
+          {reservation.status !== 'cancelled' && (
+            <Button 
+              variant="destructive" 
+              onClick={handleCancelReservation} 
+              disabled={isSaving} 
+              className="w-full sm:w-auto sm:mr-auto"
+            >
+              <Ban className="w-4 h-4 mr-2" />
+              Annuler la réservation
+            </Button>
+          )}
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving} className="w-full sm:w-auto">
             Fermer
           </Button>
@@ -1157,6 +1170,11 @@ export default function AdminReservationsPage() {
   const debouncedSearch = useDebounce(searchInput, 300);
   const [isSearching, setIsSearching] = useState(false);
   const previousSearchRef = useRef<string | undefined>(undefined);
+  // Refs pour avoir toujours les dernières valeurs dans l'effet de recherche
+  // sans déclencher de re-render inutile
+  const filtersRef = useRef(filters);
+  const pageSizeRef = useRef(pageSize);
+  const loadReservationsRef = useRef(loadReservations);
   
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
@@ -1181,7 +1199,21 @@ export default function AdminReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mettre à jour les refs à chaque changement
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  
+  useEffect(() => {
+    pageSizeRef.current = pageSize;
+  }, [pageSize]);
+  
+  useEffect(() => {
+    loadReservationsRef.current = loadReservations;
+  }, [loadReservations]);
+
   // Effet de recherche automatique avec debounce
+  // Dépendance unique sur debouncedSearch pour éviter les re-exécutions inutiles
   useEffect(() => {
     // Éviter le double appel au chargement initial
     if (previousSearchRef.current === undefined && debouncedSearch === '') {
@@ -1197,23 +1229,23 @@ export default function AdminReservationsPage() {
     previousSearchRef.current = debouncedSearch;
     setIsSearching(true);
     
-    // Appliquer le filtre de recherche
+    // Appliquer le filtre de recherche en utilisant les refs pour avoir les valeurs à jour
     const newFilters = { 
-      ...filters, 
+      ...filtersRef.current, 
       search: debouncedSearch.trim() || undefined 
     };
     
     // Utiliser une fonction async pour gérer correctement la promesse
+    // Important: reset la pagination à la page 1 lors d'une nouvelle recherche
     const doSearch = async () => {
       try {
-        await loadReservations(newFilters);
+        await loadReservationsRef.current(newFilters, { page: 1, pageSize: pageSizeRef.current });
       } finally {
         setIsSearching(false);
       }
     };
     
     void doSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearch]);
 
   // Détecter si un debounce est en cours (frappe en cours)
@@ -1773,7 +1805,7 @@ export default function AdminReservationsPage() {
                           } ${
                             index % 2 === 1 ? 'bg-muted/50' : ''
                           }`}
-                          onClick={() => r.status !== 'cancelled' && openEditDialog(r)}
+                          onClick={() => openEditDialog(r)}
                         >
                           <td className="p-2 align-middle">
                             <RowHoverActions
