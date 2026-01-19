@@ -1,6 +1,10 @@
 import { AdminBar } from '@/components/admin/admin-bar';
 
-export default function MaquettesLayout({
+/**
+ * Layout pour les pages publiques (catalogue, spectacles, réservation)
+ * Accessible sans authentification
+ */
+export default function PublicLayout({
     children,
 }: {
     children: React.ReactNode;

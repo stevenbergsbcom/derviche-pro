@@ -36,11 +36,43 @@ import {
     Loader2,
 } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
-import {
-    type MockRepresentation,
-    type MockVenue,
-    type MockUser,
-} from '@/lib/mock-data';
+import type { UserRole, SlotHostedBy } from '@/types/database';
+
+// ============================================
+// TYPES LOCAUX (compatibilité composants)
+// ============================================
+
+/** Représentation pour les composants */
+interface MockRepresentation {
+  id: string;
+  showId: string;
+  showTitle: string;
+  companyName: string;
+  date: string;
+  time: string;
+  venueId: string;
+  venueName: string;
+  capacity: number | null;
+  booked: number;
+  hostedBy: SlotHostedBy;
+  hostedById: string | null;
+}
+
+/** Lieu pour les composants */
+interface MockVenue {
+  id: string;
+  name: string;
+  city: string;
+}
+
+/** Utilisateur pour les composants */
+interface MockUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: UserRole;
+}
 
 // Hook pour les utilisateurs internes (remplace mockDervisheUsers)
 import { useInternalUsers } from '@/hooks/useInternalUsers';

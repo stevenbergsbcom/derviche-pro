@@ -61,6 +61,7 @@ export function usePublicCatalog(): UsePublicCatalogReturn {
 
       if (catalogResult.error) {
         setError(catalogResult.error);
+        setShows([]); // Vider les données obsolètes en cas d'erreur
       } else {
         setShows(catalogResult.data);
       }
@@ -76,6 +77,8 @@ export function usePublicCatalog(): UsePublicCatalogReturn {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur inconnue';
       setError(message);
+      setShows([]); // Vider les données obsolètes en cas d'erreur
+      setVenues([]); // Vider aussi les lieux
       setHasLoaded(true); // Important: marquer comme chargé même en cas d'erreur
     } finally {
       setIsLoading(false);

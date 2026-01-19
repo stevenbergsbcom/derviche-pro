@@ -82,7 +82,8 @@ function generateReservationCode(reservationId: string): string {
 export async function createReservation(
   data: CreateReservationData
 ): Promise<CreateReservationResult> {
-  const { slotId, numPlaces, formData, userId } = data;
+  const { slotId, numPlaces, formData } = data;
+  // Note: userId sera utilisé plus tard pour lier la réservation à un utilisateur connecté
 
   logger.info('[reservations] Création réservation', { 
     slotId, 

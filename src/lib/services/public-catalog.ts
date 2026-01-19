@@ -207,12 +207,9 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      // Calculer booked : pour capacité illimitée, utiliser la différence brute
-      // Pour capacité limitée, calculer normalement
-      const isUnlimited = slot.capacity >= UNLIMITED_CAPACITY;
-      const booked = isUnlimited 
-        ? Math.max(0, UNLIMITED_CAPACITY - slot.remaining_capacity)
-        : Math.max(0, slot.capacity - slot.remaining_capacity);
+      // Calculer booked : capacity - remaining_capacity fonctionne dans tous les cas
+      // Car le trigger initialise remaining_capacity = capacity à la création
+      const booked = Math.max(0, slot.capacity - slot.remaining_capacity);
 
       const publicSlot: PublicSlot = {
         id: slot.id,
@@ -385,11 +382,9 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      // Calculer booked : pour capacité illimitée, utiliser la différence brute
-      const isUnlimited = slot.capacity >= UNLIMITED_CAPACITY;
-      const booked = isUnlimited 
-        ? Math.max(0, UNLIMITED_CAPACITY - slot.remaining_capacity)
-        : Math.max(0, slot.capacity - slot.remaining_capacity);
+      // Calculer booked : capacity - remaining_capacity fonctionne dans tous les cas
+      // Car le trigger initialise remaining_capacity = capacity à la création
+      const booked = Math.max(0, slot.capacity - slot.remaining_capacity);
 
       return {
         id: slot.id,

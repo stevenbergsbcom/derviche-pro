@@ -169,6 +169,14 @@ function isSameDay(date1: Date, date2: Date): boolean {
     );
 }
 
+/**
+ * Créer une clé de date cohérente pour le Set (format: YYYY-M-D)
+ * Utilise un format simple mais cohérent entre création et lookup
+ */
+function createDateKey(date: Date): string {
+    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
 // ============================================
 // COMPOSANT PLACEHOLDER IMAGE
 // ============================================
@@ -302,8 +310,7 @@ export default function SpectacleDetailPage() {
 
         const dates = new Set<string>();
         slotsInMonth.forEach((slot) => {
-            const dateKey = `${slot.date.getFullYear()}-${slot.date.getMonth()}-${slot.date.getDate()}`;
-            dates.add(dateKey);
+            dates.add(createDateKey(slot.date));
         });
 
         return dates;
@@ -421,8 +428,7 @@ export default function SpectacleDetailPage() {
     // Vérifier si une date a des créneaux
     const hasSlots = (date: Date | null): boolean => {
         if (!date) return false;
-        const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-        return datesWithSlots.has(dateKey);
+        return datesWithSlots.has(createDateKey(date));
     };
 
     // Gérer le clic sur un jour
@@ -569,7 +575,7 @@ export default function SpectacleDetailPage() {
     const renderCalendarStep = () => (
         <>
             <h2 className="text-xl font-bold text-derviche-dark mb-6">
-                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l&apos;heure'}
+                {isComingSoon ? 'Réservations bientôt disponibles' : 'Sélectionnez la date et l’heure'}
             </h2>
 
             {/* Message si spectacle bientôt réservable */}
