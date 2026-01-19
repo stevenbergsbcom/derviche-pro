@@ -344,8 +344,8 @@ function downloadCSV(content: string, filename: string): void {
  * Télécharge un fichier Excel
  */
 function downloadExcel(content: Uint8Array, filename: string): void {
-  // Utiliser directement le Uint8Array - pas besoin de copie
-  const blob = new Blob([content], {
+  // Utiliser Uint8Array.from() pour créer une copie compatible avec Blob
+  const blob = new Blob([Uint8Array.from(content) as BlobPart], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
   const link = document.createElement('a');
