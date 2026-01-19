@@ -22,6 +22,24 @@ export type { UseTargetAudiencesReturn } from './useTargetAudiences';
 export { useInternalUsers, formatUserName, formatUserNameShort, translateRole } from './useInternalUsers';
 export type { UseInternalUsersReturn, CreateUserData, UpdateUserData, OperationResult } from './useInternalUsers';
 
+export { useRepresentations } from './useRepresentations';
+export type { UseRepresentationsReturn } from './useRepresentations';
+
+export { useAdminReservations } from './useAdminReservations';
+export type { UseAdminReservationsReturn } from './useAdminReservations';
+
+export { 
+  useUserPreference, 
+  useReservationColumnsPreference,
+  RESERVATION_COLUMNS_CONFIG,
+  DEFAULT_VISIBLE_COLUMNS,
+} from './useUserPreferences';
+export type { 
+  UseUserPreferenceReturn, 
+  ReservationColumn,
+  ReservationColumnsPreference,
+} from './useUserPreferences';
+
 // Hooks Supabase - Public
 export { usePublicCatalog } from './usePublicCatalog';
 export type { UsePublicCatalogReturn } from './usePublicCatalog';
