@@ -285,8 +285,8 @@ export function ExportDialog({
     return generateExportFilename(filters, format, period, undefined);
   }, [filters, format, period]);
 
-  // Déterminer si des filtres de la page sont actifs
-  const hasActivePageFilters = !!(filters.showId || filters.status || filters.search || filters.dateFrom || filters.dateTo || filters.period);
+  // Déterminer si des filtres de la page sont actifs (period 'upcoming' est le défaut, on l'exclut)
+  const hasActivePageFilters = !!(filters.showId || filters.status || filters.search || filters.dateFrom || filters.dateTo || (filters.period && filters.period !== 'upcoming'));
 
   // Handler export
   const handleExport = async () => {
