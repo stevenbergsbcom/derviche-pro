@@ -229,7 +229,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 <div className="p-4 border-t border-derviche/30">
                     {/* Bouton Voir le site */}
                     <Link
-                        href="/accueil"
+                        href="/"
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={onClose}

@@ -34,7 +34,7 @@ export function Header() {
         {/* Logo + Navigation Desktop */}
         <div className="flex items-center gap-8">
           {/* Logo */}
-          <Link href="/accueil" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <Image
               src="/images/logos/logo-derviche-bleu.png"
               alt="Derviche Diffusion"

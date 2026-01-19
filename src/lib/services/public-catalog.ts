@@ -99,6 +99,23 @@ function convertCapacity(capacity: number): number | null {
 }
 
 /**
+ * Calcule le nombre de places réservées pour un slot
+ * 
+ * Fonctionne pour tous les types de slots (limités et illimités) car:
+ * - Le trigger SQL initialise toujours remaining_capacity = capacity à la création
+ * - Pour un slot illimité: capacity=999999, remaining_capacity=999999
+ * - Après N réservations: remaining_capacity = 999999 - N
+ * - Donc booked = 999999 - (999999 - N) = N ✓
+ * 
+ * @param capacity Capacité totale du slot (brute, depuis la BDD)
+ * @param remainingCapacity Places restantes (brute, depuis la BDD)
+ * @returns Nombre de places réservées (toujours >= 0)
+ */
+function calculateBooked(capacity: number, remainingCapacity: number): number {
+  return Math.max(0, capacity - remainingCapacity);
+}
+
+/**
  * Formate une date ISO en format français lisible
  * @param dateStr Date au format YYYY-MM-DD
  * @returns Date formatée (ex: "15 jan. 2026")
@@ -207,9 +224,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      // Calculer booked : capacity - remaining_capacity fonctionne dans tous les cas
-      // Car le trigger initialise remaining_capacity = capacity à la création
-      const booked = Math.max(0, slot.capacity - slot.remaining_capacity);
+      const booked = calculateBooked(slot.capacity, slot.remaining_capacity);
 
       const publicSlot: PublicSlot = {
         id: slot.id,
@@ -382,9 +397,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       const venueData = slot.venues as { id: string; name: string; city: string } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
-      // Calculer booked : capacity - remaining_capacity fonctionne dans tous les cas
-      // Car le trigger initialise remaining_capacity = capacity à la création
-      const booked = Math.max(0, slot.capacity - slot.remaining_capacity);
+      const booked = calculateBooked(slot.capacity, slot.remaining_capacity);
 
       return {
         id: slot.id,

@@ -372,7 +372,7 @@ function ConfirmationContent() {
         {/* Bouton retour accueil */}
         <div className="max-w-3xl mx-auto mt-12 text-center">
           <Button asChild variant="outline" size="lg">
-            <Link href="/accueil">
+            <Link href="/">
               <Home className="w-4 h-4 mr-2" />
               Retour à l&apos;accueil
             </Link>
