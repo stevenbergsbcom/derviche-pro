@@ -112,7 +112,11 @@ function formatDateShort(dateStr: string): string {
   });
 }
 
-/** Obtient la valeur d'affichage d'une cellule pour l'aperçu */
+/** 
+ * Obtient la valeur d'affichage d'une cellule pour l'aperçu.
+ * Note: Les valeurs sont tronquées pour l'affichage dans le dialog.
+ * L'export réel dans useAdminReservations.ts contient les valeurs complètes.
+ */
 function getCellValue(col: ReservationColumn, r: AdminReservation): string {
   switch (col) {
     case 'date':
@@ -139,21 +143,34 @@ function getCellValue(col: ReservationColumn, r: AdminReservation): string {
       return r.function || '-';
     case 'afcNumber':
       return r.afcNumber || '-';
-    case 'address':
-      return r.address?.substring(0, 20) || '-';
+    case 'address': {
+      // Même format que l'export: adresse + CP + ville
+      const parts = [r.address, r.postalCode, r.city].filter(Boolean);
+      const fullAddress = parts.length > 0 ? parts.join(' ') : '-';
+      return fullAddress.substring(0, 25) + (fullAddress.length > 25 ? '...' : '');
+    }
     case 'numPlaces':
       return String(r.numPlaces);
-    case 'status':
-      return r.status === 'confirmed' ? 'Conf.' : r.status === 'cancelled' ? 'Ann.' : 'N/S';
-    case 'checkinStatus':
-      if (!r.checkinStatus) return '-';
-      const checkinMap: Record<string, string> = {
-        present_loved: '❤️',
-        present_press: '📰',
-        present_neutral: '😐',
-        absent: '❌',
+    case 'status': {
+      // Même format que l'export
+      const statusMap: Record<string, string> = {
+        confirmed: 'Confirmée',
+        cancelled: 'Annulée',
+        no_show: 'No-show',
       };
-      return checkinMap[r.checkinStatus] || '-';
+      return statusMap[r.status] || r.status;
+    }
+    case 'checkinStatus': {
+      if (!r.checkinStatus) return '-';
+      // Même format que l'export (texte, pas emojis)
+      const checkinMap: Record<string, string> = {
+        present_loved: 'A aimé',
+        present_press: 'Presse',
+        present_neutral: 'Neutre',
+        absent: 'Absent',
+      };
+      return checkinMap[r.checkinStatus] || r.checkinStatus;
+    }
     case 'specialRequests':
       return r.specialRequests?.substring(0, 15) || '-';
     case 'checkinNotes':
@@ -209,7 +226,11 @@ export function ExportDialog({
 }: ExportDialogProps) {
   // État local
   const [format, setFormat] = useState<ExportFormat>('xlsx');
-  const [period, setPeriod] = useState<ExportPeriod>('all');
+  // Initialiser avec la période de la page si elle existe
+  const [period, setPeriod] = useState<ExportPeriod>(
+    filters.period === 'upcoming' ? 'upcoming' : 
+    filters.period === 'past' ? 'past' : 'all'
+  );
   const [selectedColumns, setSelectedColumns] = useState<ReservationColumn[]>(visibleColumns);
 
   // Reset quand le dialog s'ouvre
@@ -217,7 +238,11 @@ export function ExportDialog({
     if (newOpen) {
       setSelectedColumns(visibleColumns);
       setFormat('xlsx');
-      setPeriod('all');
+      // Réinitialiser avec la période de la page
+      setPeriod(
+        filters.period === 'upcoming' ? 'upcoming' : 
+        filters.period === 'past' ? 'past' : 'all'
+      );
     }
     onOpenChange(newOpen);
   };
@@ -254,14 +279,14 @@ export function ExportDialog({
     return DEFAULT_COLUMNS_ORDER.filter((col) => selectedColumns.includes(col));
   }, [selectedColumns]);
 
-  // Nom de fichier prévu
+  // Nom de fichier prévu (sans titre spectacle car on n'a que les données paginées)
+  // Le vrai nom avec le titre sera généré dans le hook lors de l'export
   const filename = useMemo(() => {
-    const showTitle = filters.showId ? reservations[0]?.slot?.show?.title : undefined;
-    return generateExportFilename(filters, format, period, showTitle);
-  }, [filters, format, period, reservations]);
+    return generateExportFilename(filters, format, period, undefined);
+  }, [filters, format, period]);
 
-  // Déterminer si des filtres de la page sont actifs (hors période car on la gère ici)
-  const hasActivePageFilters = !!(filters.showId || filters.status || filters.search || filters.dateFrom || filters.dateTo);
+  // Déterminer si des filtres de la page sont actifs
+  const hasActivePageFilters = !!(filters.showId || filters.status || filters.search || filters.dateFrom || filters.dateTo || filters.period);
 
   // Handler export
   const handleExport = async () => {

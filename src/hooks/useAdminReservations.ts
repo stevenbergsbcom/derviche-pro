@@ -242,7 +242,8 @@ function getCellValue(col: ReservationColumn, r: AdminReservation): string {
     case 'checkinInternalNotes':
       return r.checkinInternalNotes || '-';
     case 'createdAt':
-      return formatDateExport(r.createdAt);
+      // createdAt est un datetime complet, extraire juste la date
+      return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
     default:
       return '-';
   }
@@ -343,12 +344,9 @@ function downloadCSV(content: string, filename: string): void {
  * Télécharge un fichier Excel
  */
 function downloadExcel(content: Uint8Array, filename: string): void {
-  // Convertir en ArrayBuffer pour compatibilité TypeScript strict
-  const arrayBuffer = content.buffer.slice(
-    content.byteOffset,
-    content.byteOffset + content.byteLength
-  ) as ArrayBuffer;
-  const blob = new Blob([arrayBuffer], {
+  // Créer une copie du Uint8Array pour compatibilité TypeScript avec Blob
+  const uint8Copy = new Uint8Array(content);
+  const blob = new Blob([uint8Copy], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
   const link = document.createElement('a');
