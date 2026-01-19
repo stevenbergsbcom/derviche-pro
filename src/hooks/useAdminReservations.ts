@@ -169,12 +169,12 @@ function reservationsToCSV(reservations: AdminReservation[]): string {
     'Motif annulation',
   ];
 
-  // Fonction pour échapper les valeurs CSV
+  // Fonction pour échapper les valeurs CSV (délimiteur: point-virgule)
   const escapeCSV = (value: string | null | undefined): string => {
     if (value === null || value === undefined) return '';
     const str = String(value);
-    // Si contient virgule, guillemet ou saut de ligne, entourer de guillemets
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    // Si contient point-virgule, virgule, guillemet ou saut de ligne, entourer de guillemets
+    if (str.includes(';') || str.includes(',') || str.includes('"') || str.includes('\n')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
