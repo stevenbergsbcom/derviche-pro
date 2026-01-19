@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   getUserPreference,
   setUserPreference,
@@ -48,6 +48,14 @@ export function useUserPreference<T>(
   const [value, setValueState] = useState<T>(defaultValue);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Ref pour éviter le problème de closure stale dans setValue
+  const valueRef = useRef<T>(defaultValue);
+  
+  // Garder la ref synchronisée avec la valeur
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   // Charger la préférence au montage
   const loadPreference = useCallback(async () => {
@@ -75,8 +83,10 @@ export function useUserPreference<T>(
   const setValue = useCallback(async (
     newValue: T
   ): Promise<{ success: boolean; error?: string }> => {
+    // Capturer la valeur précédente depuis la ref (pas de stale closure)
+    const previousValue = valueRef.current;
+    
     // Mise à jour optimiste
-    const previousValue = value;
     setValueState(newValue);
 
     const result = await setUserPreference<T>(key, newValue);
@@ -88,7 +98,7 @@ export function useUserPreference<T>(
     }
 
     return { success: true };
-  }, [key, value]);
+  }, [key]);
 
   // Rafraîchir depuis Supabase
   const refresh = useCallback(async () => {

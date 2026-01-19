@@ -36,7 +36,8 @@ export {
 } from './useUserPreferences';
 export type { 
   UseUserPreferenceReturn, 
-  ReservationColumn 
+  ReservationColumn,
+  ReservationColumnsPreference,
 } from './useUserPreferences';
 
 // Hooks Supabase - Public

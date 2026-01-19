@@ -382,8 +382,8 @@ export async function getAdminReservations(
     }
 
     if (filters.search) {
-      const searchTerm = `%${filters.search}%`;
-      query = query.or(`guest_email.ilike.${searchTerm},guest_first_name.ilike.${searchTerm},guest_last_name.ilike.${searchTerm}`);
+      const searchTerm = filters.search.replace(/'/g, "''"); // Escape single quotes
+      query = query.or(`guest_email.ilike.%${searchTerm}%,guest_first_name.ilike.%${searchTerm}%,guest_last_name.ilike.%${searchTerm}%`);
     }
 
     // Tri (défaut: date représentation croissante)
@@ -532,13 +532,13 @@ export async function getAllReservationsForExport(
     }
 
     if (filters.search) {
-      const searchTerm = `%${filters.search}%`;
-      query = query.or(`guest_email.ilike.${searchTerm},guest_first_name.ilike.${searchTerm},guest_last_name.ilike.${searchTerm}`);
+      const searchTerm = filters.search.replace(/'/g, "''"); // Escape single quotes
+      query = query.or(`guest_email.ilike.%${searchTerm}%,guest_first_name.ilike.%${searchTerm}%,guest_last_name.ilike.%${searchTerm}%`);
     }
 
     // Tri par date de représentation puis nom
     query = query
-      .order('slots(date)', { ascending: true })
+      .order('date', { referencedTable: 'slots', ascending: true })
       .order('guest_last_name', { ascending: true });
 
     const { data, error } = await query;

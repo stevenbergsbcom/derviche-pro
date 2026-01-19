@@ -31,6 +31,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { GripVertical, Loader2 } from 'lucide-react';
 import {
   RESERVATION_COLUMNS_CONFIG,
+  DEFAULT_COLUMNS_ORDER,
+  DEFAULT_VISIBLE_COLUMNS,
   type ReservationColumn,
   type ReservationColumnsPreference,
 } from '@/hooks/useUserPreferences';
@@ -165,17 +167,8 @@ export function ColumnSelectorDialog({
 
   // Réinitialiser à l'ordre par défaut
   const handleReset = () => {
-    const defaultOrder: ReservationColumn[] = [
-      'date', 'spectacle', 'venue', 'lastName', 'firstName', 'email', 'phone',
-      'emailSecondary', 'phoneSecondary', 'organization', 'function', 'afcNumber',
-      'address', 'numPlaces', 'status', 'checkinStatus', 'specialRequests',
-      'checkinNotes', 'checkinVenueNotes', 'checkinInternalNotes', 'createdAt',
-    ];
-    const defaultVisible: ReservationColumn[] = [
-      'date', 'spectacle', 'lastName', 'firstName', 'email', 'numPlaces', 'status', 'checkinStatus',
-    ];
-    setOrder(defaultOrder);
-    setVisible(defaultVisible);
+    setOrder(DEFAULT_COLUMNS_ORDER);
+    setVisible(DEFAULT_VISIBLE_COLUMNS);
   };
 
   // Nombre de colonnes visibles

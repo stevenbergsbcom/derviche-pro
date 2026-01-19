@@ -81,6 +81,10 @@ BEGIN
     SELECT capacity, remaining_capacity INTO v_old_slot_capacity, v_old_slot_remaining
     FROM slots WHERE id = v_current_slot_id;
 
+    IF NOT FOUND THEN
+      RETURN json_build_object('success', false, 'error', 'Créneau actuel non trouvé');
+    END IF;
+
     v_capacity_change := v_new_num_places - v_current_num_places;
 
     -- Vérifier si assez de places (sauf si illimité = 999999)
@@ -91,16 +95,22 @@ BEGIN
       );
     END IF;
 
-    -- Mettre à jour la capacité du slot
-    UPDATE slots 
-    SET remaining_capacity = remaining_capacity - v_capacity_change
-    WHERE id = v_current_slot_id;
+    -- Mettre à jour la capacité du slot (seulement si pas illimité)
+    IF v_old_slot_capacity < 999999 THEN
+      UPDATE slots 
+      SET remaining_capacity = remaining_capacity - v_capacity_change
+      WHERE id = v_current_slot_id;
+    END IF;
 
   -- Cas 2: Changement de créneau
   ELSIF v_new_slot_id != v_current_slot_id THEN
     -- Récupérer les infos de l'ancien slot
     SELECT capacity, remaining_capacity INTO v_old_slot_capacity, v_old_slot_remaining
     FROM slots WHERE id = v_current_slot_id;
+
+    IF NOT FOUND THEN
+      RETURN json_build_object('success', false, 'error', 'Créneau actuel non trouvé');
+    END IF;
 
     -- Récupérer les infos du nouveau slot
     SELECT capacity, remaining_capacity INTO v_new_slot_capacity, v_new_slot_remaining
@@ -118,42 +128,111 @@ BEGIN
       );
     END IF;
 
-    -- Libérer les places sur l'ancien slot
-    UPDATE slots 
-    SET remaining_capacity = remaining_capacity + v_current_num_places
-    WHERE id = v_current_slot_id;
+    -- Libérer les places sur l'ancien slot (seulement si pas illimité)
+    IF v_old_slot_capacity < 999999 THEN
+      UPDATE slots 
+      SET remaining_capacity = remaining_capacity + v_current_num_places
+      WHERE id = v_current_slot_id;
+    END IF;
 
-    -- Réserver les places sur le nouveau slot
-    UPDATE slots 
-    SET remaining_capacity = remaining_capacity - v_new_num_places
-    WHERE id = v_new_slot_id;
+    -- Réserver les places sur le nouveau slot (seulement si pas illimité)
+    IF v_new_slot_capacity < 999999 THEN
+      UPDATE slots 
+      SET remaining_capacity = remaining_capacity - v_new_num_places
+      WHERE id = v_new_slot_id;
+    END IF;
   END IF;
 
   -- ============================================
   -- 3. Mettre à jour la réservation
   -- ============================================
+  -- Convention: NULL = ne pas modifier, '' = effacer, 'valeur' = mettre à jour
   UPDATE reservations SET
-    -- Données guest (ne mettre à jour que si fourni)
-    guest_first_name = COALESCE(p_first_name, guest_first_name),
-    guest_last_name = COALESCE(p_last_name, guest_last_name),
-    guest_email = COALESCE(p_email, guest_email),
-    guest_phone = COALESCE(p_phone, guest_phone),
-    guest_email_secondary = COALESCE(p_email_secondary, guest_email_secondary),
-    guest_phone_secondary = COALESCE(p_phone_secondary, guest_phone_secondary),
-    guest_address = COALESCE(p_address, guest_address),
-    guest_postal_code = COALESCE(p_postal_code, guest_postal_code),
-    guest_city = COALESCE(p_city, guest_city),
-    guest_structure = COALESCE(p_organization, guest_structure),
-    guest_function = COALESCE(p_function, guest_function),
-    guest_afc_number = COALESCE(p_afc_number, guest_afc_number),
+    -- Données guest (gère NULL = ne pas changer, '' = effacer)
+    guest_first_name = CASE 
+      WHEN p_first_name IS NULL THEN guest_first_name 
+      WHEN p_first_name = '' THEN NULL 
+      ELSE p_first_name 
+    END,
+    guest_last_name = CASE 
+      WHEN p_last_name IS NULL THEN guest_last_name 
+      WHEN p_last_name = '' THEN NULL 
+      ELSE p_last_name 
+    END,
+    guest_email = CASE 
+      WHEN p_email IS NULL THEN guest_email 
+      WHEN p_email = '' THEN NULL 
+      ELSE p_email 
+    END,
+    guest_phone = CASE 
+      WHEN p_phone IS NULL THEN guest_phone 
+      WHEN p_phone = '' THEN NULL 
+      ELSE p_phone 
+    END,
+    guest_email_secondary = CASE 
+      WHEN p_email_secondary IS NULL THEN guest_email_secondary 
+      WHEN p_email_secondary = '' THEN NULL 
+      ELSE p_email_secondary 
+    END,
+    guest_phone_secondary = CASE 
+      WHEN p_phone_secondary IS NULL THEN guest_phone_secondary 
+      WHEN p_phone_secondary = '' THEN NULL 
+      ELSE p_phone_secondary 
+    END,
+    guest_address = CASE 
+      WHEN p_address IS NULL THEN guest_address 
+      WHEN p_address = '' THEN NULL 
+      ELSE p_address 
+    END,
+    guest_postal_code = CASE 
+      WHEN p_postal_code IS NULL THEN guest_postal_code 
+      WHEN p_postal_code = '' THEN NULL 
+      ELSE p_postal_code 
+    END,
+    guest_city = CASE 
+      WHEN p_city IS NULL THEN guest_city 
+      WHEN p_city = '' THEN NULL 
+      ELSE p_city 
+    END,
+    guest_structure = CASE 
+      WHEN p_organization IS NULL THEN guest_structure 
+      WHEN p_organization = '' THEN NULL 
+      ELSE p_organization 
+    END,
+    guest_function = CASE 
+      WHEN p_function IS NULL THEN guest_function 
+      WHEN p_function = '' THEN NULL 
+      ELSE p_function 
+    END,
+    guest_afc_number = CASE 
+      WHEN p_afc_number IS NULL THEN guest_afc_number 
+      WHEN p_afc_number = '' THEN NULL 
+      ELSE p_afc_number 
+    END,
     -- Réservation
     slot_id = v_new_slot_id,
     num_places = v_new_num_places,
-    special_requests = COALESCE(p_special_requests, special_requests),
+    special_requests = CASE 
+      WHEN p_special_requests IS NULL THEN special_requests 
+      WHEN p_special_requests = '' THEN NULL 
+      ELSE p_special_requests 
+    END,
     -- Notes
-    checkin_comment = COALESCE(p_checkin_comment, checkin_comment),
-    checkin_venue_notes = COALESCE(p_checkin_venue_notes, checkin_venue_notes),
-    checkin_internal_notes = COALESCE(p_checkin_internal_notes, checkin_internal_notes),
+    checkin_comment = CASE 
+      WHEN p_checkin_comment IS NULL THEN checkin_comment 
+      WHEN p_checkin_comment = '' THEN NULL 
+      ELSE p_checkin_comment 
+    END,
+    checkin_venue_notes = CASE 
+      WHEN p_checkin_venue_notes IS NULL THEN checkin_venue_notes 
+      WHEN p_checkin_venue_notes = '' THEN NULL 
+      ELSE p_checkin_venue_notes 
+    END,
+    checkin_internal_notes = CASE 
+      WHEN p_checkin_internal_notes IS NULL THEN checkin_internal_notes 
+      WHEN p_checkin_internal_notes = '' THEN NULL 
+      ELSE p_checkin_internal_notes 
+    END,
     -- Timestamp
     updated_at = NOW()
   WHERE id = p_reservation_id;

@@ -6,17 +6,15 @@ import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
 import {
   useReservationColumnsPreference,
-  RESERVATION_COLUMNS_CONFIG,
   type ReservationColumn,
   type ReservationColumnsPreference,
 } from '@/hooks/useUserPreferences';
 import { ColumnSelectorDialog } from '@/components/admin/column-selector-dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -24,14 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -96,10 +86,6 @@ const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'name_asc', label: 'Nom A→Z' },
   { value: 'name_desc', label: 'Nom Z→A' },
 ];
-
-function getTodayDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
 
 function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dateTo?: string } {
   const today = new Date();
@@ -255,9 +241,8 @@ function renderTableCell(col: ReservationColumn, r: AdminReservation): React.Rea
     case 'afcNumber':
       return <span className="text-sm">{r.afcNumber || '-'}</span>;
     case 'address': {
-      const fullAddress = r.address 
-        ? `${r.address}${r.postalCode || r.city ? `, ${r.postalCode || ''} ${r.city || ''}`.trim() : ''}`
-        : '';
+      const postalCity = [r.postalCode, r.city].filter(Boolean).join(' ');
+      const fullAddress = [r.address, postalCity].filter(Boolean).join(', ').trim();
       return (
         <span className="text-sm max-w-[200px] truncate block" title={fullAddress}>
           {fullAddress || '-'}
@@ -452,6 +437,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
   const [formData, setFormData] = useState<UpdateReservationData>({});
   const [availableSlots, setAvailableSlots] = useState<Array<{ id: string; date: string; time: string; capacity: number; remainingCapacity: number; venue: { id: string; name: string; city: string } | null }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
 
   // Reset form when reservation changes
   useEffect(() => {
@@ -480,12 +466,21 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
       // Charger les créneaux disponibles
       if (reservation.slot?.show?.id) {
         setLoadingSlots(true);
-        onGetSlots(reservation.slot.show.id).then(result => {
-          if (result.success && result.data) {
-            setAvailableSlots(result.data);
-          }
-          setLoadingSlots(false);
-        });
+        setSlotsError(null);
+        onGetSlots(reservation.slot.show.id)
+          .then(result => {
+            if (result.success && result.data) {
+              setAvailableSlots(result.data);
+            } else if (result.error) {
+              setSlotsError(result.error);
+            }
+          })
+          .catch((err: Error) => {
+            setSlotsError(err.message || 'Erreur lors du chargement des créneaux');
+          })
+          .finally(() => {
+            setLoadingSlots(false);
+          });
       }
     }
   }, [reservation, open, onGetSlots]);
@@ -531,6 +526,11 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Chargement...
+                  </div>
+                ) : slotsError ? (
+                  <div className="flex items-center gap-2 text-sm text-destructive">
+                    <AlertTriangle className="w-4 h-4" />
+                    {slotsError}
                   </div>
                 ) : (
                   <Select
@@ -605,7 +605,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Input
                   type="tel"
                   value={formData.phone || ''}
-                  onChange={(e) => handleChange('phone', e.target.value || null)}
+                  onChange={(e) => handleChange('phone', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -613,7 +613,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Input
                   type="email"
                   value={formData.emailSecondary || ''}
-                  onChange={(e) => handleChange('emailSecondary', e.target.value || null)}
+                  onChange={(e) => handleChange('emailSecondary', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -621,7 +621,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Input
                   type="tel"
                   value={formData.phoneSecondary || ''}
-                  onChange={(e) => handleChange('phoneSecondary', e.target.value || null)}
+                  onChange={(e) => handleChange('phoneSecondary', e.target.value)}
                 />
               </div>
             </div>
@@ -635,21 +635,21 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Structure / Organisation</Label>
                 <Input
                   value={formData.organization || ''}
-                  onChange={(e) => handleChange('organization', e.target.value || null)}
+                  onChange={(e) => handleChange('organization', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Fonction</Label>
                 <Input
                   value={formData.function || ''}
-                  onChange={(e) => handleChange('function', e.target.value || null)}
+                  onChange={(e) => handleChange('function', e.target.value)}
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Numéro AFC</Label>
                 <Input
                   value={formData.afcNumber || ''}
-                  onChange={(e) => handleChange('afcNumber', e.target.value || null)}
+                  onChange={(e) => handleChange('afcNumber', e.target.value)}
                 />
               </div>
             </div>
@@ -663,21 +663,21 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Adresse</Label>
                 <Input
                   value={formData.address || ''}
-                  onChange={(e) => handleChange('address', e.target.value || null)}
+                  onChange={(e) => handleChange('address', e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Code postal</Label>
                 <Input
                   value={formData.postalCode || ''}
-                  onChange={(e) => handleChange('postalCode', e.target.value || null)}
+                  onChange={(e) => handleChange('postalCode', e.target.value)}
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Ville</Label>
                 <Input
                   value={formData.city || ''}
-                  onChange={(e) => handleChange('city', e.target.value || null)}
+                  onChange={(e) => handleChange('city', e.target.value)}
                 />
               </div>
             </div>
@@ -691,7 +691,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Demandes spéciales</Label>
                 <Textarea
                   value={formData.specialRequests || ''}
-                  onChange={(e) => handleChange('specialRequests', e.target.value || null)}
+                  onChange={(e) => handleChange('specialRequests', e.target.value)}
                   rows={2}
                 />
               </div>
@@ -699,7 +699,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Notes check-in</Label>
                 <Textarea
                   value={formData.checkinComment || ''}
-                  onChange={(e) => handleChange('checkinComment', e.target.value || null)}
+                  onChange={(e) => handleChange('checkinComment', e.target.value)}
                   rows={2}
                 />
               </div>
@@ -707,7 +707,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Notes lieu</Label>
                 <Textarea
                   value={formData.checkinVenueNotes || ''}
-                  onChange={(e) => handleChange('checkinVenueNotes', e.target.value || null)}
+                  onChange={(e) => handleChange('checkinVenueNotes', e.target.value)}
                   rows={2}
                 />
               </div>
@@ -715,7 +715,7 @@ function EditReservationDialog({ open, onOpenChange, reservation, onSave, onCanc
                 <Label>Notes internes</Label>
                 <Textarea
                   value={formData.checkinInternalNotes || ''}
-                  onChange={(e) => handleChange('checkinInternalNotes', e.target.value || null)}
+                  onChange={(e) => handleChange('checkinInternalNotes', e.target.value)}
                   rows={2}
                 />
               </div>
@@ -937,7 +937,8 @@ export default function AdminReservationsPage() {
 
   const handleExport = async () => {
     // Afficher un avertissement si des filtres sont actifs
-    const hasFilters = filters.showId || filters.status || filters.search || filters.dateFrom || filters.dateTo;
+    // Note: period 'upcoming' est le défaut, donc on le compte comme filtre si différent
+    const hasFilters = filters.showId || filters.slotId || filters.status || filters.checkinStatus || filters.search || filters.dateFrom || filters.dateTo || (filters.period && filters.period !== 'upcoming');
     
     if (hasFilters) {
       const confirmed = window.confirm(
