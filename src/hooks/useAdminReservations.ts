@@ -7,7 +7,7 @@
  * - Modification complète
  * - Check-in
  * - Annulation
- * - Export CSV
+ * - Export CSV et Excel avec colonnes personnalisées
  * - Statistiques
  */
 
@@ -15,6 +15,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
 import {
   getAdminReservations,
   getAdminReservationById,
@@ -33,6 +34,8 @@ import {
   type ReservationStats,
 } from '@/lib/services/admin-reservations';
 import { logger } from '@/lib/logger';
+import type { ReservationColumn } from '@/hooks/useUserPreferences';
+import { generateExportFilename, type ExportOptions } from '@/components/admin/export-dialog';
 
 // ============================================
 // TYPES
@@ -98,8 +101,11 @@ export interface UseAdminReservationsReturn {
     reason?: string
   ) => Promise<{ success: boolean; data?: AdminReservation; error?: string }>;
 
-  /** Exporter en CSV (applique les filtres actuels) */
+  /** @deprecated Utiliser exportWithOptions à la place */
   exportToCSV: () => Promise<{ success: boolean; error?: string }>;
+
+  /** Exporter avec options (format et colonnes personnalisées) */
+  exportWithOptions: (options: ExportOptions) => Promise<{ success: boolean; error?: string }>;
 
   /** Récupérer les slots disponibles pour un spectacle */
   getSlots: (showId: string) => Promise<{
@@ -129,48 +135,131 @@ export interface UseAdminReservationsReturn {
 }
 
 // ============================================
-// HELPERS EXPORT CSV
+// HELPERS EXPORT
 // ============================================
 
+/** Labels des colonnes pour l'export */
+const EXPORT_COLUMN_LABELS: Record<ReservationColumn, string> = {
+  date: 'Date représentation',
+  spectacle: 'Spectacle',
+  venue: 'Lieu',
+  firstName: 'Prénom',
+  lastName: 'Nom',
+  email: 'Email',
+  phone: 'Téléphone',
+  emailSecondary: 'Email secondaire',
+  phoneSecondary: 'Tél. secondaire',
+  organization: 'Structure',
+  function: 'Fonction',
+  afcNumber: 'N° AFC',
+  address: 'Adresse complète',
+  numPlaces: 'Nb places',
+  status: 'Statut',
+  checkinStatus: 'Check-in',
+  specialRequests: 'Demandes spéciales',
+  checkinNotes: 'Notes check-in',
+  checkinVenueNotes: 'Notes lieu',
+  checkinInternalNotes: 'Notes internes',
+  createdAt: 'Créé le',
+};
+
+/** Traduit le statut réservation */
+function translateStatus(status: string): string {
+  const map: Record<string, string> = {
+    confirmed: 'Confirmée',
+    cancelled: 'Annulée',
+    no_show: 'No-show',
+  };
+  return map[status] || status;
+}
+
+/** Traduit le statut check-in */
+function translateCheckin(status: string | null): string {
+  if (!status) return '-';
+  const map: Record<string, string> = {
+    present_loved: 'A aimé',
+    present_press: 'Presse',
+    present_neutral: 'Neutre',
+    absent: 'Absent',
+  };
+  return map[status] || status;
+}
+
+/** Formate une date courte pour l'export */
+function formatDateExport(dateStr: string | null): string {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr + 'T12:00:00');
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+/** Obtient la valeur d'une colonne pour l'export */
+function getCellValue(col: ReservationColumn, r: AdminReservation): string {
+  switch (col) {
+    case 'date':
+      return r.slot?.date ? formatDateExport(r.slot.date) : '-';
+    case 'spectacle':
+      return r.slot?.show?.title || '-';
+    case 'venue':
+      return r.slot?.venue?.name || '-';
+    case 'firstName':
+      return r.firstName || '-';
+    case 'lastName':
+      return r.lastName || '-';
+    case 'email':
+      return r.email || '-';
+    case 'phone':
+      return r.phone || '-';
+    case 'emailSecondary':
+      return r.emailSecondary || '-';
+    case 'phoneSecondary':
+      return r.phoneSecondary || '-';
+    case 'organization':
+      return r.organization || '-';
+    case 'function':
+      return r.function || '-';
+    case 'afcNumber':
+      return r.afcNumber || '-';
+    case 'address': {
+      const parts = [r.address, r.postalCode, r.city].filter(Boolean);
+      return parts.length > 0 ? parts.join(' ') : '-';
+    }
+    case 'numPlaces':
+      return String(r.numPlaces);
+    case 'status':
+      return translateStatus(r.status);
+    case 'checkinStatus':
+      return translateCheckin(r.checkinStatus);
+    case 'specialRequests':
+      return r.specialRequests || '-';
+    case 'checkinNotes':
+      return r.checkinComment || '-';
+    case 'checkinVenueNotes':
+      return r.checkinVenueNotes || '-';
+    case 'checkinInternalNotes':
+      return r.checkinInternalNotes || '-';
+    case 'createdAt':
+      return formatDateExport(r.createdAt);
+    default:
+      return '-';
+  }
+}
+
 /**
- * Convertit les réservations en CSV
+ * Convertit les réservations en CSV avec colonnes personnalisées
  */
-function reservationsToCSV(reservations: AdminReservation[]): string {
-  // En-têtes
-  const headers = [
-    'Date représentation',
-    'Heure',
-    'Spectacle',
-    'Compagnie',
-    'Lieu',
-    'Ville lieu',
-    'Prénom',
-    'Nom',
-    'Email',
-    'Téléphone',
-    'Email secondaire',
-    'Tél. secondaire',
-    'Structure',
-    'Fonction',
-    'N° AFC',
-    'Adresse',
-    'Code postal',
-    'Ville',
-    'Nb places',
-    'Statut',
-    'Check-in',
-    'Demandes spéciales',
-    'Notes check-in',
-    'Notes lieu',
-    'Notes internes',
-    'Créé le',
-    'Modifié le',
-    'Annulé le',
-    'Motif annulation',
-  ];
+function reservationsToCSV(
+  reservations: AdminReservation[],
+  columns: ReservationColumn[]
+): string {
+  // En-têtes basés sur les colonnes sélectionnées
+  const headers = columns.map((col) => EXPORT_COLUMN_LABELS[col]);
 
   // Fonction pour échapper les valeurs CSV (délimiteur: point-virgule)
-  const escapeCSV = (value: string | null | undefined): string => {
+  const escapeCSV = (value: string): string => {
     if (value === null || value === undefined) return '';
     const str = String(value);
     // Si contient point-virgule, virgule, guillemet ou saut de ligne, entourer de guillemets
@@ -180,76 +269,57 @@ function reservationsToCSV(reservations: AdminReservation[]): string {
     return str;
   };
 
-  // Traduire les statuts
-  const translateStatus = (status: string): string => {
-    const map: Record<string, string> = {
-      'confirmed': 'Confirmée',
-      'cancelled': 'Annulée',
-      'no_show': 'No-show',
-    };
-    return map[status] || status;
-  };
-
-  const translateCheckin = (status: string | null): string => {
-    if (!status) return '';
-    const map: Record<string, string> = {
-      'present_loved': 'Présent - A aimé',
-      'present_press': 'Présent - Presse',
-      'present_neutral': 'Présent - Neutre',
-      'absent': 'Absent',
-    };
-    return map[status] || status;
-  };
-
-  // Formater les dates
-  const formatDate = (dateStr: string | null): string => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('fr-FR');
-  };
-
-  const formatDateTime = (dateStr: string | null): string => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleString('fr-FR');
-  };
-
   // Lignes de données
-  const rows = reservations.map(r => [
-    escapeCSV(r.slot?.date ? formatDate(r.slot.date) : ''),
-    escapeCSV(r.slot?.time || ''),
-    escapeCSV(r.slot?.show?.title || ''),
-    escapeCSV(r.slot?.show?.company?.name || ''),
-    escapeCSV(r.slot?.venue?.name || ''),
-    escapeCSV(r.slot?.venue?.city || ''),
-    escapeCSV(r.firstName),
-    escapeCSV(r.lastName),
-    escapeCSV(r.email),
-    escapeCSV(r.phone),
-    escapeCSV(r.emailSecondary),
-    escapeCSV(r.phoneSecondary),
-    escapeCSV(r.organization),
-    escapeCSV(r.function),
-    escapeCSV(r.afcNumber),
-    escapeCSV(r.address),
-    escapeCSV(r.postalCode),
-    escapeCSV(r.city),
-    String(r.numPlaces),
-    escapeCSV(translateStatus(r.status)),
-    escapeCSV(translateCheckin(r.checkinStatus)),
-    escapeCSV(r.specialRequests),
-    escapeCSV(r.checkinComment),
-    escapeCSV(r.checkinVenueNotes),
-    escapeCSV(r.checkinInternalNotes),
-    escapeCSV(formatDateTime(r.createdAt)),
-    escapeCSV(formatDateTime(r.updatedAt)),
-    escapeCSV(r.cancelledAt ? formatDateTime(r.cancelledAt) : ''),
-    escapeCSV(r.cancellationReason),
-  ]);
+  const rows = reservations.map((r) =>
+    columns.map((col) => escapeCSV(getCellValue(col, r)))
+  );
 
   // Assembler le CSV avec BOM pour Excel
   const BOM = '\uFEFF';
-  return BOM + [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
+  return BOM + [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\n');
+}
+
+/**
+ * Convertit les réservations en Excel avec colonnes personnalisées
+ */
+function reservationsToExcel(
+  reservations: AdminReservation[],
+  columns: ReservationColumn[]
+): Uint8Array {
+  // En-têtes basés sur les colonnes sélectionnées
+  const headers = columns.map((col) => EXPORT_COLUMN_LABELS[col]);
+
+  // Données
+  const data = reservations.map((r) =>
+    columns.map((col) => getCellValue(col, r))
+  );
+
+  // Créer le workbook
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+  // Ajuster la largeur des colonnes
+  const colWidths = columns.map((col, index) => {
+    // Largeur basée sur le header + marge
+    const headerLen = EXPORT_COLUMN_LABELS[col].length;
+    // Trouver la largeur max des données
+    const maxDataLen = Math.max(
+      ...data.map((row) => {
+        const cellValue = row[index];
+        return cellValue ? String(cellValue).length : 0;
+      }),
+      0
+    );
+    return { wch: Math.min(Math.max(headerLen, maxDataLen) + 2, 50) };
+  });
+  ws['!cols'] = colWidths;
+
+  // Ajouter la feuille
+  XLSX.utils.book_append_sheet(wb, ws, 'Réservations');
+
+  // Générer le fichier
+  const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  return new Uint8Array(excelBuffer);
 }
 
 /**
@@ -259,7 +329,7 @@ function downloadCSV(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', filename);
   link.style.visibility = 'hidden';
@@ -268,6 +338,50 @@ function downloadCSV(content: string, filename: string): void {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Télécharge un fichier Excel
+ */
+function downloadExcel(content: Uint8Array, filename: string): void {
+  // Convertir en ArrayBuffer pour compatibilité TypeScript strict
+  const arrayBuffer = content.buffer.slice(
+    content.byteOffset,
+    content.byteOffset + content.byteLength
+  ) as ArrayBuffer;
+  const blob = new Blob([arrayBuffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// ============================================
+// COLONNES PAR DÉFAUT POUR L'EXPORT LEGACY
+// ============================================
+
+const LEGACY_EXPORT_COLUMNS: ReservationColumn[] = [
+  'date',
+  'spectacle',
+  'venue',
+  'lastName',
+  'firstName',
+  'email',
+  'phone',
+  'organization',
+  'function',
+  'numPlaces',
+  'status',
+  'checkinStatus',
+  'createdAt',
+];
 
 // ============================================
 // HOOK
@@ -292,232 +406,294 @@ export function useAdminReservations(
   // ============================================
   // LOAD RESERVATIONS
   // ============================================
-  const loadReservations = useCallback(async (
-    newFilters?: AdminReservationFilters,
-    pagination?: PaginationOptions
-  ): Promise<{ success: boolean; error?: string }> => {
-    const requestId = Date.now().toString();
-    loadingRef.current = requestId;
+  const loadReservations = useCallback(
+    async (
+      newFilters?: AdminReservationFilters,
+      pagination?: PaginationOptions
+    ): Promise<{ success: boolean; error?: string }> => {
+      const requestId = Date.now().toString();
+      loadingRef.current = requestId;
 
-    const activeFilters = newFilters ?? filters;
-    const activePagination = pagination ?? { page, pageSize };
+      const activeFilters = newFilters ?? filters;
+      const activePagination = pagination ?? { page, pageSize };
 
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
 
-    const result = await getAdminReservations(activeFilters, activePagination);
+      const result = await getAdminReservations(activeFilters, activePagination);
 
-    // Vérifier que la requête est toujours d'actualité
-    if (loadingRef.current !== requestId) {
-      return { success: false, error: 'Requête annulée' };
-    }
+      // Vérifier que la requête est toujours d'actualité
+      if (loadingRef.current !== requestId) {
+        return { success: false, error: 'Requête annulée' };
+      }
 
-    setIsLoading(false);
-    loadingRef.current = null;
+      setIsLoading(false);
+      loadingRef.current = null;
 
-    if (result.error) {
-      setError(result.error);
-      logger.error('useAdminReservations - Erreur chargement', { error: result.error });
-      toast.error('Erreur lors du chargement des réservations');
-      return { success: false, error: result.error };
-    }
+      if (result.error) {
+        setError(result.error);
+        logger.error('useAdminReservations - Erreur chargement', {
+          error: result.error,
+        });
+        toast.error('Erreur lors du chargement des réservations');
+        return { success: false, error: result.error };
+      }
 
-    setReservations(result.data);
-    setTotal(result.total);
-    setPageState(result.page);
-    setTotalPages(result.totalPages);
+      setReservations(result.data);
+      setTotal(result.total);
+      setPageState(result.page);
+      setTotalPages(result.totalPages);
 
-    if (newFilters) {
-      setFiltersState(newFilters);
-    }
+      if (newFilters) {
+        setFiltersState(newFilters);
+      }
 
-    return { success: true };
-  }, [filters, page, pageSize]);
+      return { success: true };
+    },
+    [filters, page, pageSize]
+  );
 
   // ============================================
   // LOAD SINGLE RESERVATION
   // ============================================
-  const loadReservation = useCallback(async (
-    id: string
-  ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
-    const result = await getAdminReservationById(id);
+  const loadReservation = useCallback(
+    async (
+      id: string
+    ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
+      const result = await getAdminReservationById(id);
 
-    if (result.error || !result.data) {
-      logger.error('useAdminReservations - Erreur chargement réservation', { id, error: result.error });
-      return { success: false, error: result.error || 'Réservation non trouvée' };
-    }
+      if (result.error || !result.data) {
+        logger.error('useAdminReservations - Erreur chargement réservation', {
+          id,
+          error: result.error,
+        });
+        return {
+          success: false,
+          error: result.error || 'Réservation non trouvée',
+        };
+      }
 
-    return { success: true, data: result.data };
-  }, []);
+      return { success: true, data: result.data };
+    },
+    []
+  );
 
   // ============================================
   // LOAD BY SLOT
   // ============================================
-  const loadBySlot = useCallback(async (
-    slotId: string
-  ): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    setError(null);
+  const loadBySlot = useCallback(
+    async (slotId: string): Promise<{ success: boolean; error?: string }> => {
+      setIsLoading(true);
+      setError(null);
 
-    const result = await getReservationsBySlot(slotId);
+      const result = await getReservationsBySlot(slotId);
 
-    setIsLoading(false);
+      setIsLoading(false);
 
-    if (result.error) {
-      setError(result.error);
-      toast.error('Erreur lors du chargement des réservations');
-      return { success: false, error: result.error };
-    }
+      if (result.error) {
+        setError(result.error);
+        toast.error('Erreur lors du chargement des réservations');
+        return { success: false, error: result.error };
+      }
 
-    setReservations(result.data);
-    setTotal(result.data.length);
-    setTotalPages(1);
+      setReservations(result.data);
+      setTotal(result.data.length);
+      setTotalPages(1);
 
-    return { success: true };
-  }, []);
+      return { success: true };
+    },
+    []
+  );
 
   // ============================================
   // LOAD STATS
   // ============================================
-  const loadStats = useCallback(async (
-    statFilters?: { showId?: string; slotId?: string }
-  ): Promise<{ success: boolean; error?: string }> => {
-    const result = await getReservationStats(statFilters || {});
+  const loadStats = useCallback(
+    async (
+      statFilters?: { showId?: string; slotId?: string }
+    ): Promise<{ success: boolean; error?: string }> => {
+      const result = await getReservationStats(statFilters || {});
 
-    if (result.error || !result.data) {
-      logger.error('useAdminReservations - Erreur chargement stats', { error: result.error });
-      return { success: false, error: result.error || 'Erreur lors du chargement' };
-    }
+      if (result.error || !result.data) {
+        logger.error('useAdminReservations - Erreur chargement stats', {
+          error: result.error,
+        });
+        return {
+          success: false,
+          error: result.error || 'Erreur lors du chargement',
+        };
+      }
 
-    setStats(result.data);
-    return { success: true };
-  }, []);
+      setStats(result.data);
+      return { success: true };
+    },
+    []
+  );
 
   // ============================================
   // CHECKIN
   // ============================================
-  const checkin = useCallback(async (
-    id: string,
-    data: CheckinUpdateData
-  ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
-    const result = await updateReservationCheckin(id, data);
+  const checkin = useCallback(
+    async (
+      id: string,
+      data: CheckinUpdateData
+    ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
+      const result = await updateReservationCheckin(id, data);
 
-    if (result.error || !result.data) {
-      logger.error('useAdminReservations - Erreur checkin', { id, error: result.error });
-      toast.error('Erreur lors de la mise à jour du check-in');
-      return { success: false, error: result.error || 'Erreur de mise à jour' };
-    }
+      if (result.error || !result.data) {
+        logger.error('useAdminReservations - Erreur checkin', {
+          id,
+          error: result.error,
+        });
+        toast.error('Erreur lors de la mise à jour du check-in');
+        return { success: false, error: result.error || 'Erreur de mise à jour' };
+      }
 
-    // Mettre à jour la liste locale
-    setReservations(prev => 
-      prev.map(r => r.id === id ? result.data! : r)
-    );
+      // Mettre à jour la liste locale
+      setReservations((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
 
-    // Message toast selon le statut
-    const statusLabels: Record<string, string> = {
-      'present_loved': '❤️ Présent - A aimé',
-      'present_press': '📰 Présent - Presse',
-      'present_neutral': '😐 Présent - Neutre',
-      'absent': '❌ Absent',
-    };
-    const statusLabel = statusLabels[data.checkinStatus] || data.checkinStatus;
-    toast.success(`Check-in : ${statusLabel}`);
+      // Message toast selon le statut
+      const statusLabels: Record<string, string> = {
+        present_loved: '❤️ Présent - A aimé',
+        present_press: '📰 Présent - Presse',
+        present_neutral: '😐 Présent - Neutre',
+        absent: '❌ Absent',
+      };
+      const statusLabel = statusLabels[data.checkinStatus] || data.checkinStatus;
+      toast.success(`Check-in : ${statusLabel}`);
 
-    return { success: true, data: result.data };
-  }, []);
+      return { success: true, data: result.data };
+    },
+    []
+  );
 
   // ============================================
   // UPDATE (modification complète)
   // ============================================
-  const update = useCallback(async (
-    id: string,
-    data: UpdateReservationData
-  ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
-    const result = await updateReservation(id, data);
+  const update = useCallback(
+    async (
+      id: string,
+      data: UpdateReservationData
+    ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
+      const result = await updateReservation(id, data);
 
-    if (result.error || !result.data) {
-      logger.error('useAdminReservations - Erreur modification', { id, error: result.error });
-      toast.error(result.error || 'Erreur lors de la modification');
-      return { success: false, error: result.error || 'Erreur de modification' };
-    }
+      if (result.error || !result.data) {
+        logger.error('useAdminReservations - Erreur modification', {
+          id,
+          error: result.error,
+        });
+        toast.error(result.error || 'Erreur lors de la modification');
+        return { success: false, error: result.error || 'Erreur de modification' };
+      }
 
-    // Mettre à jour la liste locale
-    setReservations(prev => 
-      prev.map(r => r.id === id ? result.data! : r)
-    );
+      // Mettre à jour la liste locale
+      setReservations((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
 
-    toast.success('Réservation modifiée avec succès');
-    return { success: true, data: result.data };
-  }, []);
+      toast.success('Réservation modifiée avec succès');
+      return { success: true, data: result.data };
+    },
+    []
+  );
 
   // ============================================
   // CANCEL
   // ============================================
-  const cancel = useCallback(async (
-    id: string,
-    reason?: string
-  ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
-    const result = await cancelReservation(id, reason);
+  const cancel = useCallback(
+    async (
+      id: string,
+      reason?: string
+    ): Promise<{ success: boolean; data?: AdminReservation; error?: string }> => {
+      const result = await cancelReservation(id, reason);
 
-    if (result.error || !result.data) {
-      logger.error('useAdminReservations - Erreur annulation', { id, error: result.error });
-      toast.error('Erreur lors de l\'annulation');
-      return { success: false, error: result.error || 'Erreur d\'annulation' };
-    }
+      if (result.error || !result.data) {
+        logger.error('useAdminReservations - Erreur annulation', {
+          id,
+          error: result.error,
+        });
+        toast.error("Erreur lors de l'annulation");
+        return { success: false, error: result.error || "Erreur d'annulation" };
+      }
 
-    // Mettre à jour la liste locale
-    setReservations(prev => 
-      prev.map(r => r.id === id ? result.data! : r)
-    );
+      // Mettre à jour la liste locale
+      setReservations((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
 
-    toast.success('Réservation annulée');
-    return { success: true, data: result.data };
-  }, []);
+      toast.success('Réservation annulée');
+      return { success: true, data: result.data };
+    },
+    []
+  );
 
   // ============================================
-  // EXPORT CSV
+  // EXPORT AVEC OPTIONS (CSV ou Excel + colonnes + période)
+  // ============================================
+  const exportWithOptions = useCallback(
+    async (options: ExportOptions): Promise<{ success: boolean; error?: string }> => {
+      const { format, columns, period } = options;
+
+      if (columns.length === 0) {
+        toast.error('Veuillez sélectionner au moins une colonne');
+        return { success: false, error: 'Aucune colonne sélectionnée' };
+      }
+
+      toast.info('Préparation de l\'export...');
+
+      // Combiner les filtres de la page avec la période choisie dans le dialog
+      const exportFilters: AdminReservationFilters = {
+        ...filters,
+        // La période du dialog écrase celle de la page
+        period: period === 'all' ? undefined : period,
+      };
+
+      const result = await getAllReservationsForExport(exportFilters);
+
+      if (result.error) {
+        logger.error('useAdminReservations - Erreur export', { error: result.error });
+        toast.error("Erreur lors de l'export");
+        return { success: false, error: result.error };
+      }
+
+      if (result.data.length === 0) {
+        toast.warning('Aucune réservation à exporter');
+        return { success: false, error: 'Aucune donnée' };
+      }
+
+      // Générer le nom du fichier
+      const showTitle = filters.showId && result.data.length > 0
+        ? result.data[0]?.slot?.show?.title
+        : undefined;
+      const filename = generateExportFilename(exportFilters, format, period, showTitle);
+
+      try {
+        if (format === 'xlsx') {
+          // Export Excel
+          const excelData = reservationsToExcel(result.data, columns);
+          downloadExcel(excelData, filename);
+        } else {
+          // Export CSV
+          const csv = reservationsToCSV(result.data, columns);
+          downloadCSV(csv, filename);
+        }
+
+        toast.success(
+          `${result.data.length} réservation${result.data.length > 1 ? 's' : ''} exportée${result.data.length > 1 ? 's' : ''} (${format.toUpperCase()})`
+        );
+        return { success: true };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erreur inconnue';
+        logger.error('useAdminReservations - Erreur génération fichier', { message });
+        toast.error('Erreur lors de la génération du fichier');
+        return { success: false, error: message };
+      }
+    },
+    [filters]
+  );
+
+  // ============================================
+  // EXPORT CSV (LEGACY - pour compatibilité)
   // ============================================
   const exportToCSV = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
-    toast.info('Préparation de l\'export...');
-
-    const result = await getAllReservationsForExport(filters);
-
-    if (result.error) {
-      logger.error('useAdminReservations - Erreur export', { error: result.error });
-      toast.error('Erreur lors de l\'export');
-      return { success: false, error: result.error };
-    }
-
-    if (result.data.length === 0) {
-      toast.warning('Aucune réservation à exporter');
-      return { success: false, error: 'Aucune donnée' };
-    }
-
-    // Générer le CSV
-    const csv = reservationsToCSV(result.data);
-
-    // Générer le nom du fichier
-    const date = new Date().toISOString().split('T')[0];
-    let filename = `reservations_${date}`;
-    
-    // Ajouter le contexte si filtré
-    if (filters.showId) {
-      const show = result.data[0]?.slot?.show?.title;
-      if (show) {
-        // Nettoyer le titre pour le nom de fichier
-        const cleanTitle = show.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30);
-        filename = `reservations_${cleanTitle}_${date}`;
-      }
-    }
-
-    filename += '.csv';
-
-    // Télécharger
-    downloadCSV(csv, filename);
-
-    toast.success(`${result.data.length} réservation(s) exportée(s)`);
-    return { success: true };
-  }, [filters]);
+    return exportWithOptions({ format: 'csv', columns: LEGACY_EXPORT_COLUMNS, period: 'all' });
+  }, [exportWithOptions]);
 
   // ============================================
   // GET SLOTS FOR SHOW
@@ -535,22 +711,31 @@ export function useAdminReservations(
   // ============================================
   // PAGINATION & FILTERS
   // ============================================
-  const setPage = useCallback((newPage: number) => {
-    setPageState(newPage);
-    void loadReservations(filters, { page: newPage, pageSize });
-  }, [filters, pageSize, loadReservations]);
+  const setPage = useCallback(
+    (newPage: number) => {
+      setPageState(newPage);
+      void loadReservations(filters, { page: newPage, pageSize });
+    },
+    [filters, pageSize, loadReservations]
+  );
 
-  const setPageSize = useCallback((newPageSize: number) => {
-    setPageSizeState(newPageSize);
-    setPageState(1); // Revenir à la page 1 quand on change le nombre par page
-    void loadReservations(filters, { page: 1, pageSize: newPageSize });
-  }, [filters, loadReservations]);
+  const setPageSize = useCallback(
+    (newPageSize: number) => {
+      setPageSizeState(newPageSize);
+      setPageState(1); // Revenir à la page 1 quand on change le nombre par page
+      void loadReservations(filters, { page: 1, pageSize: newPageSize });
+    },
+    [filters, loadReservations]
+  );
 
-  const setFilters = useCallback((newFilters: AdminReservationFilters) => {
-    setFiltersState(newFilters);
-    setPageState(1);
-    void loadReservations(newFilters, { page: 1, pageSize });
-  }, [pageSize, loadReservations]);
+  const setFilters = useCallback(
+    (newFilters: AdminReservationFilters) => {
+      setFiltersState(newFilters);
+      setPageState(1);
+      void loadReservations(newFilters, { page: 1, pageSize });
+    },
+    [pageSize, loadReservations]
+  );
 
   const resetFilters = useCallback(() => {
     setFiltersState({});
@@ -576,6 +761,7 @@ export function useAdminReservations(
     update,
     cancel,
     exportToCSV,
+    exportWithOptions,
     getSlots,
     setPage,
     setPageSize,
