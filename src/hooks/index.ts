@@ -46,3 +46,7 @@ export type { UsePublicCatalogReturn } from './usePublicCatalog';
 
 export { usePublicShow } from './usePublicShow';
 export type { UsePublicShowReturn } from './usePublicShow';
+
+// Hooks Utilitaires
+export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
+export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';

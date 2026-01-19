@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { AdminPageHeader } from '@/components/admin';
 import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   useReservationColumnsPreference,
   type ReservationColumn,
@@ -54,15 +55,17 @@ import {
   Newspaper,
   Meh,
   XCircle,
+  X,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Users,
   Calendar,
   CheckCircle,
   Ban,
   RefreshCw,
   Filter,
-  ChevronDown,
   MapPin,
   Mail,
   Phone,
@@ -317,6 +320,112 @@ function renderTableCell(col: ReservationColumn, r: AdminReservation): React.Rea
     default:
       return '-';
   }
+}
+
+// ============================================
+// MAPPING COLONNES TRIABLES
+// ============================================
+
+/** Colonnes qui peuvent être triées et leur mapping vers les options de tri */
+type SortableColumn = 'date' | 'lastName' | 'createdAt';
+
+const SORTABLE_COLUMNS: Record<SortableColumn, { asc: SortOption; desc: SortOption }> = {
+  date: { asc: 'slot_date_asc', desc: 'slot_date_desc' },
+  lastName: { asc: 'name_asc', desc: 'name_desc' },
+  createdAt: { asc: 'created_at_asc', desc: 'created_at_desc' },
+};
+
+/** Vérifie si une colonne est triable */
+function isSortableColumn(col: ReservationColumn): col is SortableColumn {
+  return col in SORTABLE_COLUMNS;
+}
+
+/** Obtient l'état de tri actuel pour une colonne */
+function getColumnSortState(col: SortableColumn, currentSort: SortOption | undefined): 'asc' | 'desc' | null {
+  if (!currentSort) return null;
+  const mapping = SORTABLE_COLUMNS[col];
+  if (currentSort === mapping.asc) return 'asc';
+  if (currentSort === mapping.desc) return 'desc';
+  return null;
+}
+
+// ============================================
+// COMPOSANT SORTABLE HEADER
+// ============================================
+
+interface SortableHeaderProps {
+  column: ReservationColumn;
+  label: string;
+  currentSort: SortOption | undefined;
+  onSort: (sortOption: SortOption | undefined) => void;
+  className?: string;
+}
+
+/**
+ * Header de colonne cliquable pour le tri
+ * - 1er clic : tri ascendant
+ * - 2ème clic : tri descendant  
+ * - 3ème clic : retour au tri par défaut (date représentation ↑)
+ */
+function SortableHeader({ column, label, currentSort, onSort, className = '' }: SortableHeaderProps) {
+  if (!isSortableColumn(column)) {
+    // Colonne non triable - affichage simple
+    return (
+      <th className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${className}`}>
+        {label}
+      </th>
+    );
+  }
+
+  const sortState = getColumnSortState(column, currentSort);
+  const mapping = SORTABLE_COLUMNS[column];
+  
+  const handleClick = () => {
+    if (sortState === null) {
+      // Pas de tri sur cette colonne -> tri ascendant
+      onSort(mapping.asc);
+    } else if (sortState === 'asc') {
+      // Ascendant -> descendant
+      onSort(mapping.desc);
+    } else {
+      // Descendant -> retour au défaut (date représentation asc)
+      onSort('slot_date_asc');
+    }
+  };
+
+  // Déterminer l'attribut aria-sort
+  const ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : 'none';
+
+  return (
+    <th 
+      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${className}`}
+      aria-sort={ariaSort}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        className="inline-flex items-center gap-1 hover:text-derviche transition-colors group"
+      >
+        {label}
+        <span className="inline-flex flex-col text-[10px] leading-none">
+          <ChevronUp 
+            className={`w-3 h-3 -mb-1 transition-colors ${
+              sortState === 'asc' 
+                ? 'text-derviche' 
+                : 'text-muted-foreground/40 group-hover:text-muted-foreground'
+            }`} 
+          />
+          <ChevronDown 
+            className={`w-3 h-3 transition-colors ${
+              sortState === 'desc' 
+                ? 'text-derviche' 
+                : 'text-muted-foreground/40 group-hover:text-muted-foreground'
+            }`} 
+          />
+        </span>
+      </button>
+    </th>
+  );
 }
 
 // ============================================
@@ -1043,8 +1152,12 @@ export default function AdminReservationsPage() {
     setPreference: setColumnsPreference,
   } = useReservationColumnsPreference();
 
-  // États locaux
+  // États locaux - Recherche avec debounce
   const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const [isSearching, setIsSearching] = useState(false);
+  const previousSearchRef = useRef<string | undefined>(undefined);
+  
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -1068,6 +1181,44 @@ export default function AdminReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Effet de recherche automatique avec debounce
+  useEffect(() => {
+    // Éviter le double appel au chargement initial
+    if (previousSearchRef.current === undefined && debouncedSearch === '') {
+      previousSearchRef.current = '';
+      return;
+    }
+    
+    // Ne rien faire si la recherche n'a pas changé
+    if (previousSearchRef.current === debouncedSearch) {
+      return;
+    }
+    
+    previousSearchRef.current = debouncedSearch;
+    setIsSearching(true);
+    
+    // Appliquer le filtre de recherche
+    const newFilters = { 
+      ...filters, 
+      search: debouncedSearch.trim() || undefined 
+    };
+    
+    // Utiliser une fonction async pour gérer correctement la promesse
+    const doSearch = async () => {
+      try {
+        await loadReservations(newFilters);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+    
+    void doSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
+  // Détecter si un debounce est en cours (frappe en cours)
+  const isDebouncing = searchInput !== debouncedSearch;
+
   // Spectacles pour le filtre
   const showsOptions = useMemo(() => {
     return shows.filter(s => s.status === 'published');
@@ -1077,13 +1228,10 @@ export default function AdminReservationsPage() {
   // HANDLERS
   // ============================================
 
-  const handleSearch = () => {
-    setFilters({ ...filters, search: searchInput.trim() || undefined });
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
-  };
+  // Effacer la recherche
+  const handleClearSearch = useCallback(() => {
+    setSearchInput('');
+  }, []);
 
   const handleShowFilter = (showId: string) => {
     setFilters({ ...filters, showId: showId === 'all' ? undefined : showId });
@@ -1154,8 +1302,8 @@ export default function AdminReservationsPage() {
     setFilters({ period: 'upcoming', sortBy: 'slot_date_asc' });
   };
 
-  const handleSortChange = (sortBy: string) => {
-    setFilters({ ...filters, sortBy: sortBy as SortOption });
+  const handleSortChange = (sortBy: SortOption | string | undefined) => {
+    setFilters({ ...filters, sortBy: (sortBy || 'slot_date_asc') as SortOption });
   };
 
   const handleCheckin = async (status: CheckinStatus) => {
@@ -1364,20 +1512,39 @@ export default function AdminReservationsPage() {
       <div className="space-y-3">
         {/* Recherche + Actions */}
         <div className="flex flex-wrap gap-2">
-          <div className="flex gap-2 flex-1 min-w-[200px]">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              {/* Icône recherche ou spinner */}
+              {isSearching || isDebouncing ? (
+                <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-derviche animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              )}
               <Input
-                placeholder="Rechercher..."
+                placeholder="Rechercher par nom, email, téléphone, structure..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={handleSearchKeyDown}
-                className="pl-10"
+                className="pl-10 pr-10"
               />
+              {/* Bouton effacer */}
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                  onClick={handleClearSearch}
+                  title="Effacer la recherche"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
-            <Button onClick={handleSearch} variant="outline" size="icon">
-              <Search className="w-4 h-4" />
-            </Button>
+            {/* Compteur de résultats */}
+            {filters.search && !isLoading && (
+              <p className="text-xs text-muted-foreground mt-1 ml-1">
+                {total} résultat{total > 1 ? 's' : ''} pour « {filters.search} »
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="icon" onClick={() => void loadReservations()}>
@@ -1586,14 +1753,14 @@ export default function AdminReservationsPage() {
                       <tr className="border-b transition-colors">
                         <th className="h-10 px-2 w-10"></th>
                         {columns.map((col) => (
-                          <th 
-                            key={col} 
-                            className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap ${
-                              col === 'numPlaces' ? 'text-center' : ''
-                            }`}
-                          >
-                            {COLUMN_HEADERS[col]}
-                          </th>
+                          <SortableHeader
+                            key={col}
+                            column={col}
+                            label={COLUMN_HEADERS[col]}
+                            currentSort={filters.sortBy as SortOption | undefined}
+                            onSort={handleSortChange}
+                            className={col === 'numPlaces' ? 'text-center' : ''}
+                          />
                         ))}
                       </tr>
                     </thead>
