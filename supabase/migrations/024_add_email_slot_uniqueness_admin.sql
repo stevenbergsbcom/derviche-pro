@@ -6,6 +6,7 @@
 -- Règle métier R-RESA-04: Un email ne peut avoir qu'une seule
 -- réservation active par créneau (les annulées ne bloquent pas)
 -- Applique la même règle pour les créations admin
+-- Ajout des paramètres checkin pour l'admin
 -- ============================================
 
 -- Supprimer TOUTES les versions de la fonction pour éviter les conflits
@@ -39,7 +40,11 @@ CREATE OR REPLACE FUNCTION public.create_admin_reservation(
   p_organization TEXT DEFAULT NULL,
   p_function TEXT DEFAULT NULL,
   p_afc_number TEXT DEFAULT NULL,
-  p_comment TEXT DEFAULT NULL
+  p_comment TEXT DEFAULT NULL,
+  -- Paramètres checkin (admin uniquement)
+  p_checkin_comment TEXT DEFAULT NULL,
+  p_checkin_venue_notes TEXT DEFAULT NULL,
+  p_checkin_internal_notes TEXT DEFAULT NULL
 )
 RETURNS JSON
 LANGUAGE plpgsql
@@ -136,7 +141,11 @@ BEGIN
     guest_postal_code,
     guest_city,
     -- Commentaire
-    special_requests
+    special_requests,
+    -- Notes checkin (admin)
+    checkin_comment,
+    checkin_venue_notes,
+    checkin_internal_notes
   ) VALUES (
     p_slot_id,
     p_num_places,
@@ -146,10 +155,10 @@ BEGIN
     -- Données guest
     p_first_name,
     p_last_name,
-    v_normalized_email, -- Email normalisé
+    v_normalized_email,
     NULLIF(p_phone, ''),
     NULLIF(p_function, ''),
-    NULLIF(p_organization, ''), -- organization → guest_structure
+    NULLIF(p_organization, ''),
     NULLIF(p_afc_number, ''),
     NULLIF(p_email_secondary, ''),
     NULLIF(p_phone_secondary, ''),
@@ -157,7 +166,11 @@ BEGIN
     NULLIF(p_postal_code, ''),
     NULLIF(p_city, ''),
     -- Commentaire
-    NULLIF(p_comment, '')
+    NULLIF(p_comment, ''),
+    -- Notes checkin (admin)
+    NULLIF(p_checkin_comment, ''),
+    NULLIF(p_checkin_venue_notes, ''),
+    NULLIF(p_checkin_internal_notes, '')
   )
   RETURNING id INTO v_reservation_id;
 
@@ -178,4 +191,4 @@ $$;
 
 -- Commentaire mis à jour
 COMMENT ON FUNCTION public.create_admin_reservation IS 
-  'Crée une réservation depuis le back-office admin avec vérification unicité email/slot (R-RESA-04). Requiert un rôle admin.';
+  'Crée une réservation depuis le back-office admin avec vérification unicité email/slot (R-RESA-04), notes checkin. Requiert un rôle admin.';
