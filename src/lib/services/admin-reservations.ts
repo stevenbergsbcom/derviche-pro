@@ -957,3 +957,86 @@ export async function getAvailableSlotsForShow(showId: string): Promise<{
     return { data: [], error: message };
   }
 }
+
+// ============================================
+// CRÉATION DE RÉSERVATION ADMIN
+// ============================================
+
+/** Données pour créer une réservation depuis l'admin */
+export interface CreateAdminReservationData {
+  slotId: string;
+  numPlaces: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string | null;
+  emailSecondary?: string | null;
+  phoneSecondary?: string | null;
+  address?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  organization?: string | null;
+  function?: string | null;
+  afcNumber?: string | null;
+  // Notes
+  comment?: string | null;
+  checkinComment?: string | null;
+  checkinVenueNotes?: string | null;
+  checkinInternalNotes?: string | null;
+}
+
+/**
+ * Crée une nouvelle réservation depuis l'interface admin
+ * Utilise la RPC create_admin_reservation pour traçabilité
+ */
+export async function createAdminReservation(
+  data: CreateAdminReservationData
+): Promise<{ success: boolean; reservationId?: string; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    // Appel à la fonction RPC sécurisée
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error: rpcError } = await (supabase.rpc as any)('create_admin_reservation', {
+      p_slot_id: data.slotId,
+      p_num_places: data.numPlaces,
+      p_first_name: data.firstName.trim(),
+      p_last_name: data.lastName.trim(),
+      p_email: data.email.trim().toLowerCase(),
+      p_phone: data.phone?.trim() || null,
+      p_email_secondary: data.emailSecondary?.trim() || null,
+      p_phone_secondary: data.phoneSecondary?.trim() || null,
+      p_address: data.address?.trim() || null,
+      p_postal_code: data.postalCode?.trim() || null,
+      p_city: data.city?.trim() || null,
+      p_organization: data.organization?.trim() || null,
+      p_function: data.function?.trim() || null,
+      p_afc_number: data.afcNumber?.trim() || null,
+      p_comment: data.comment?.trim() || null,
+      p_checkin_comment: data.checkinComment?.trim() || null,
+      p_checkin_venue_notes: data.checkinVenueNotes?.trim() || null,
+      p_checkin_internal_notes: data.checkinInternalNotes?.trim() || null,
+    });
+
+    if (rpcError) {
+      logger.error('Erreur RPC create_admin_reservation', { error: rpcError.message });
+      return { success: false, error: rpcError.message };
+    }
+
+    // Vérifier le résultat de la RPC
+    const rpcResult = result as { success: boolean; error?: string; reservation_id?: string };
+    
+    if (!rpcResult.success) {
+      logger.error('RPC create_admin_reservation échec', { error: rpcResult.error });
+      return { success: false, error: rpcResult.error || 'Erreur lors de la création' };
+    }
+
+    logger.info('Réservation admin créée', { reservationId: rpcResult.reservation_id });
+    return { success: true, reservationId: rpcResult.reservation_id };
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception createAdminReservation', { message });
+    return { success: false, error: message };
+  }
+}
