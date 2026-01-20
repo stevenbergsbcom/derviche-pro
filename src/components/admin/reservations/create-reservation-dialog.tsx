@@ -57,6 +57,7 @@ interface ShowOption {
   id: string;
   title: string;
   status: string;
+  max_reservations_per_booking: number;
 }
 
 interface CreateReservationDialogProps {
@@ -106,6 +107,7 @@ export function CreateReservationDialog({
   // États du formulaire
   const [formData, setFormData] = useState<CreateAdminReservationData>(INITIAL_FORM_DATA);
   const [selectedShowId, setSelectedShowId] = useState<string>('');
+  const [maxPlaces, setMaxPlaces] = useState<number>(10); // Limite par défaut
   const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
@@ -126,6 +128,7 @@ export function CreateReservationDialog({
     if (open) {
       setFormData(INITIAL_FORM_DATA);
       setSelectedShowId('');
+      setMaxPlaces(10);
       setAvailableSlots([]);
       setSlotsError(null);
       setValidationErrors([]);
@@ -163,6 +166,15 @@ export function CreateReservationDialog({
 
   const handleShowChange = (showId: string) => {
     setSelectedShowId(showId);
+    // Récupérer la limite de places du spectacle sélectionné
+    const selectedShow = publishedShows.find(s => s.id === showId);
+    if (selectedShow) {
+      setMaxPlaces(selectedShow.max_reservations_per_booking);
+      // Réinitialiser le nombre de places si nécessaire
+      if (formData.numPlaces > selectedShow.max_reservations_per_booking) {
+        setFormData(prev => ({ ...prev, numPlaces: selectedShow.max_reservations_per_booking }));
+      }
+    }
     void loadSlots(showId);
   };
 
@@ -197,9 +209,11 @@ export function CreateReservationDialog({
     }
     if (!formData.numPlaces || formData.numPlaces < 1) {
       errors.push('Le nombre de places doit être au moins 1');
+    } else if (formData.numPlaces > maxPlaces) {
+      errors.push(`Le nombre de places ne peut pas dépasser ${maxPlaces}`);
     }
 
-    // Vérifier la capacité disponible
+    // Vérifier la capacité disponible du créneau
     const selectedSlot = availableSlots.find(s => s.id === formData.slotId);
     if (selectedSlot && selectedSlot.capacity < 999999) {
       if (formData.numPlaces > selectedSlot.remainingCapacity) {
@@ -347,11 +361,11 @@ export function CreateReservationDialog({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Nombre de places *</Label>
+                  <Label>Nombre de places * (max: {maxPlaces})</Label>
                   <Input
                     type="number"
                     min={1}
-                    max={10}
+                    max={maxPlaces}
                     value={formData.numPlaces}
                     onChange={(e) => handleChange('numPlaces', parseInt(e.target.value) || 1)}
                     disabled={!formData.slotId}

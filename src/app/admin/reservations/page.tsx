@@ -288,7 +288,14 @@ export default function AdminReservationsPage() {
   const handleCreate = async (data: CreateAdminReservationData) => {
     const result = await createAdminReservation(data);
     if (result.success) {
-      void loadReservations();
+      // Réinitialiser les filtres pour afficher la nouvelle réservation
+      setSearchInput('');
+      setDateFrom('');
+      setDateTo('');
+      setDatePreset(null);
+      const resetFilters = { period: 'all' as PeriodPreset, sortBy: 'created_at_desc' as SortOption };
+      setFilters(resetFilters);
+      void loadReservations(resetFilters);
       void loadStats();
     }
     return result;
