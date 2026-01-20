@@ -51,7 +51,7 @@ function transformShowToSpectacle(show: PublicShow): Spectacle {
     id: 0, // Legacy - on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
-    venue: show.nextVenue || 'Lieu à définir',
+    venues: show.venues.map((v) => v.name),
     image: show.imageUrl || '',
     slug: show.slug,
     genre: show.categories[0] || 'Spectacle',

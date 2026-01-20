@@ -27,6 +27,13 @@ const UNLIMITED_CAPACITY = 999999;
 // TYPES
 // ============================================
 
+/** Lieu public simplifié */
+export interface PublicVenue {
+  id: string;
+  name: string;
+  city: string;
+}
+
 /** Représentation publique (slot) avec infos lieu */
 export interface PublicSlot {
   id: string;
@@ -63,6 +70,8 @@ export interface PublicShow {
   categories: string[];
   /** Publics cibles */
   targetAudiences: string[];
+  /** Lieux distincts où se joue le spectacle */
+  venues: PublicVenue[];
   /** Représentations futures */
   slots: PublicSlot[];
   /** Nombre total de créneaux avec places disponibles */
@@ -130,6 +139,28 @@ function formatDateFr(dateStr: string): string {
   const month = months[date.getMonth()];
   const year = date.getFullYear();
   return `${day} ${month} ${year}`;
+}
+
+/**
+ * Extrait les lieux distincts d'une liste de slots
+ * @param slots Liste des slots publics
+ * @returns Liste des lieux uniques triés par nom
+ */
+function extractDistinctVenues(slots: PublicSlot[]): PublicVenue[] {
+  const venueMap = new Map<string, PublicVenue>();
+  
+  slots.forEach(slot => {
+    if (slot.venueId && !venueMap.has(slot.venueId)) {
+      venueMap.set(slot.venueId, {
+        id: slot.venueId,
+        name: slot.venueName,
+        city: slot.venueCity,
+      });
+    }
+  });
+  
+  // Trier par nom de lieu
+  return Array.from(venueMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ============================================
@@ -300,6 +331,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         maxReservationsPerBooking: show.max_reservations_per_booking,
         categories: categoriesByShow[show.id] || [],
         targetAudiences: audiencesByShow[show.id] || [],
+        venues: extractDistinctVenues(showSlots),
         slots: showSlots,
         availableSlotsCount: availableSlots.length,
         nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
@@ -445,6 +477,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       maxReservationsPerBooking: show.max_reservations_per_booking,
       categories,
       targetAudiences: audiences,
+      venues: extractDistinctVenues(publicSlots),
       slots: publicSlots,
       availableSlotsCount: availableSlots.length,
       nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
