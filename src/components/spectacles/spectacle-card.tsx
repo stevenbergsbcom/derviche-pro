@@ -13,7 +13,7 @@ export interface Spectacle {
   id: number;
   title: string;
   company: string;
-  venue: string;
+  venues: string[]; // Liste des noms de lieux
   image: string;
   slug: string;
   genre: string;
@@ -123,10 +123,14 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
           {spectacle.company}
         </p>
 
-        {/* Lieu - En italique avec icône */}
+        {/* Lieu(x) - En italique avec icône */}
         <p className="text-sm text-muted-foreground italic mb-4 line-clamp-1 flex items-center gap-1">
           <MapPin className="w-3 h-3 shrink-0" />
-          {spectacle.venue}
+          {spectacle.venues.length === 0
+            ? 'Lieu à définir'
+            : spectacle.venues.length === 1
+              ? spectacle.venues[0]
+              : `${spectacle.venues.length} lieux`}
         </p>
 
         {/* Bouton - pousse vers le bas avec mt-auto */}

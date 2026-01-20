@@ -71,7 +71,7 @@ function transformShowToSpectacle(show: PublicShow): Spectacle {
     id: 0, // Legacy - on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
-    venue: show.nextVenue || 'Lieu à définir',
+    venues: show.venues.map((v) => v.name),
     image: show.imageUrl || '/images/spectacles/placeholder.jpg',
     slug: show.slug,
     genre: show.categories[0] || 'Spectacle',
@@ -179,8 +179,8 @@ export default function CataloguePage() {
         }
       }
 
-      // Filtre par lieu
-      if (lieuFilter !== 'Tous' && spectacle.venue !== lieuFilter) {
+      // Filtre par lieu (vérifie si le lieu est dans la liste des lieux du spectacle)
+      if (lieuFilter !== 'Tous' && !spectacle.venues.includes(lieuFilter)) {
         return false;
       }
 

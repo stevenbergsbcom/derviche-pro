@@ -123,14 +123,6 @@ function buildPeriod(slots: TimeSlot[]): string {
     return `Du ${formatDate(firstSlot.date)} au ${formatDate(lastSlot.date)}`;
 }
 
-/**
- * Construire l'adresse du lieu
- */
-function buildVenueAddress(slot: TimeSlot | undefined): string {
-    if (!slot) return 'Adresse à confirmer';
-    return `${slot.venueName}, ${slot.venueCity}`;
-}
-
 // Fonction pour obtenir le premier jour du mois
 function getFirstDayOfMonth(year: number, month: number): Date {
     return new Date(year, month, 1);
@@ -409,9 +401,6 @@ export default function SpectacleDetailPage() {
     const duration = formatDuration(show.durationMinutes);
     const period = buildPeriod(timeSlots);
     const description = show.longDescription || show.shortDescription || 'Description du spectacle.';
-    const firstSlot = timeSlots[0];
-    const venueName = firstSlot?.venueName || 'Lieu à définir';
-    const venueAddress = buildVenueAddress(firstSlot);
     const hasImage = show.imageUrl && !imageError;
 
     // Navigation mois
@@ -705,9 +694,10 @@ export default function SpectacleDetailPage() {
                                         key={slot.id}
                                         variant="outline"
                                         onClick={() => handleSlotSelect(slot)}
-                                        className="hover:bg-derviche hover:text-white hover:border-derviche"
+                                        className="h-auto py-3 flex flex-col items-center hover:bg-derviche hover:text-white hover:border-derviche"
                                     >
-                                        <span className="font-medium">{slot.time}</span>
+                                        <span className="font-semibold text-base">{slot.time}</span>
+                                        <span className="text-xs opacity-70 mt-0.5">{slot.venueName}</span>
                                     </Button>
                                 ))}
                             </div>
@@ -1031,16 +1021,35 @@ export default function SpectacleDetailPage() {
                                             <span className="text-sm">{duration}</span>
                                         </div>
 
-                                        {/* Lieu */}
+                                        {/* Lieu(x) */}
                                         <div className="flex items-start gap-2">
                                             <MapPin className="w-4 h-4 text-derviche mt-0.5 shrink-0" />
                                             <div>
-                                                <p className="font-semibold text-sm text-derviche-dark">
-                                                    {venueName}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    {venueAddress}
-                                                </p>
+                                                {show.venues.length === 0 ? (
+                                                    <p className="font-semibold text-sm text-derviche-dark">Lieu à définir</p>
+                                                ) : show.venues.length === 1 ? (
+                                                    <>
+                                                        <p className="font-semibold text-sm text-derviche-dark">
+                                                            {show.venues[0].name}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            {show.venues[0].city}
+                                                        </p>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p className="font-semibold text-sm text-derviche-dark mb-1">
+                                                            {show.venues.length} lieux
+                                                        </p>
+                                                        <ul className="text-sm text-muted-foreground space-y-0.5">
+                                                            {show.venues.map((venue) => (
+                                                                <li key={venue.id}>
+                                                                    • {venue.name}, {venue.city}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
