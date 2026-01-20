@@ -1027,6 +1027,16 @@ export async function createAdminReservation(
     const rpcResult = result as { success: boolean; error?: string; reservation_id?: string };
     
     if (!rpcResult.success) {
+      // Détecter l'erreur de doublon email/slot (R-RESA-04)
+      if (rpcResult.error?.includes('DUPLICATE_EMAIL_SLOT:')) {
+        const email = rpcResult.error.split('DUPLICATE_EMAIL_SLOT:')[1]?.trim() || data.email;
+        logger.warn('[admin-reservations] Doublon email/slot détecté', { slotId: data.slotId, email });
+        return {
+          success: false,
+          error: `Une réservation existe déjà pour ce créneau avec l'adresse ${email}. Annulez d'abord l'existante si nécessaire.`,
+        };
+      }
+
       logger.error('RPC create_admin_reservation échec', { error: rpcResult.error });
       return { success: false, error: rpcResult.error || 'Erreur lors de la création' };
     }

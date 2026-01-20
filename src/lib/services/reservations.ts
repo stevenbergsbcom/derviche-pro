@@ -152,10 +152,28 @@ export async function createReservation(
         p_comment: formData.comment?.trim() || undefined,
       });
 
-    if (rpcError || !reservationId) {
+    if (rpcError) {
+      // Détecter l'erreur de doublon email/slot (R-RESA-04)
+      if (rpcError.message?.includes('DUPLICATE_EMAIL_SLOT:')) {
+        const email = rpcError.message.split('DUPLICATE_EMAIL_SLOT:')[1]?.trim() || formData.email;
+        logger.warn('[reservations] Doublon email/slot détecté', { slotId, email });
+        return {
+          success: false,
+          error: `Vous avez déjà une réservation pour ce créneau avec l'adresse ${email}. Si vous souhaitez modifier votre réservation, veuillez nous contacter.`,
+        };
+      }
+
       logger.error('[reservations] Erreur création réservation via RPC', { 
         error: rpcError 
       });
+      return {
+        success: false,
+        error: 'Une erreur est survenue lors de la création de votre réservation. Veuillez réessayer.',
+      };
+    }
+
+    if (!reservationId) {
+      logger.error('[reservations] Pas d\'ID retourné par la RPC');
       return {
         success: false,
         error: 'Une erreur est survenue lors de la création de votre réservation. Veuillez réessayer.',
