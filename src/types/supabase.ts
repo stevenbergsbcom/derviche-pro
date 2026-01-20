@@ -233,6 +233,7 @@ export type Database = {
           checkin_status: string | null
           checkin_venue_notes: string | null
           created_at: string
+          created_by_user_id: string | null
           google_calendar_event_id: string | null
           guest_address: string | null
           guest_afc_number: string | null
@@ -249,6 +250,7 @@ export type Database = {
           id: string
           num_places: number
           slot_id: string
+          source: Database["public"]["Enums"]["reservation_source"]
           special_requests: string | null
           status: string
           updated_at: string
@@ -264,6 +266,7 @@ export type Database = {
           checkin_status?: string | null
           checkin_venue_notes?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           google_calendar_event_id?: string | null
           guest_address?: string | null
           guest_afc_number?: string | null
@@ -280,6 +283,7 @@ export type Database = {
           id?: string
           num_places: number
           slot_id: string
+          source?: Database["public"]["Enums"]["reservation_source"]
           special_requests?: string | null
           status?: string
           updated_at?: string
@@ -295,6 +299,7 @@ export type Database = {
           checkin_status?: string | null
           checkin_venue_notes?: string | null
           created_at?: string
+          created_by_user_id?: string | null
           google_calendar_event_id?: string | null
           guest_address?: string | null
           guest_afc_number?: string | null
@@ -311,6 +316,7 @@ export type Database = {
           id?: string
           num_places?: number
           slot_id?: string
+          source?: Database["public"]["Enums"]["reservation_source"]
           special_requests?: string | null
           status?: string
           updated_at?: string
@@ -320,6 +326,13 @@ export type Database = {
           {
             foreignKeyName: "reservations_checkin_by_fkey"
             columns: ["checkin_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservations_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -727,6 +740,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          preference_key: string
+          preference_value: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          preference_key: string
+          preference_value: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          preference_key?: string
+          preference_value?: Json
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -873,6 +921,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_admin_reservation: {
+        Args: {
+          p_address?: string
+          p_afc_number?: string
+          p_city?: string
+          p_comment?: string
+          p_email: string
+          p_email_secondary?: string
+          p_first_name: string
+          p_function?: string
+          p_last_name: string
+          p_num_places: number
+          p_organization?: string
+          p_phone?: string
+          p_phone_secondary?: string
+          p_postal_code?: string
+          p_slot_id: string
+        }
+        Returns: Json
+      }
       create_public_reservation: {
         Args: {
           p_address?: string
@@ -919,9 +987,33 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_reservation_safe: {
+        Args: {
+          p_address?: string
+          p_afc_number?: string
+          p_checkin_comment?: string
+          p_checkin_internal_notes?: string
+          p_checkin_venue_notes?: string
+          p_city?: string
+          p_email?: string
+          p_email_secondary?: string
+          p_first_name?: string
+          p_function?: string
+          p_last_name?: string
+          p_num_places?: number
+          p_organization?: string
+          p_phone?: string
+          p_phone_secondary?: string
+          p_postal_code?: string
+          p_reservation_id: string
+          p_slot_id?: string
+          p_special_requests?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
-      [_ in never]: never
+      reservation_source: "public" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1048,6 +1140,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      reservation_source: ["public", "admin"],
+    },
   },
 } as const

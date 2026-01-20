@@ -34,6 +34,9 @@ export type ReservationStatus = 'confirmed' | 'cancelled' | 'no_show';
 /** Statut de présence lors du check-in */
 export type CheckinStatus = 'present_loved' | 'present_press' | 'present_neutral' | 'absent';
 
+/** Source de création d'une réservation */
+export type ReservationSource = 'public' | 'admin';
+
 // ============================================
 // TABLE : companies
 // ============================================
@@ -480,6 +483,9 @@ export interface ReservationRow {
   // Champs annulation
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  // Champs source
+  source: ReservationSource;
+  created_by_user_id: string | null;
   // Champs système
   created_at: string;
   updated_at: string;
@@ -506,6 +512,9 @@ export interface ReservationInsert {
   num_places: number;
   status?: ReservationStatus;
   special_requests?: string | null;
+  // Champs source (optionnels, défaut: 'public')
+  source?: ReservationSource;
+  created_by_user_id?: string | null;
 }
 
 /** Données pour mettre à jour une réservation */

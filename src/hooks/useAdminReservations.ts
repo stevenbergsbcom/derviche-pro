@@ -26,12 +26,14 @@ import {
   getReservationsBySlot,
   getAllReservationsForExport,
   getAvailableSlotsForShow,
+  createAdminReservation,
   type AdminReservation,
   type AdminReservationFilters,
   type PaginationOptions,
   type CheckinUpdateData,
   type UpdateReservationData,
   type ReservationStats,
+  type CreateAdminReservationData,
 } from '@/lib/services/admin-reservations';
 import { logger } from '@/lib/logger';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
@@ -100,6 +102,11 @@ export interface UseAdminReservationsReturn {
     id: string,
     reason?: string
   ) => Promise<{ success: boolean; data?: AdminReservation; error?: string }>;
+
+  /** Créer une nouvelle réservation (admin) */
+  create: (
+    data: CreateAdminReservationData
+  ) => Promise<{ success: boolean; reservationId?: string; error?: string }>;
 
   /** @deprecated Utiliser exportWithOptions à la place */
   exportToCSV: () => Promise<{ success: boolean; error?: string }>;
@@ -621,6 +628,34 @@ export function useAdminReservations(
   );
 
   // ============================================
+  // CREATE (nouvelle réservation admin)
+  // ============================================
+  const create = useCallback(
+    async (
+      data: CreateAdminReservationData
+    ): Promise<{ success: boolean; reservationId?: string; error?: string }> => {
+      const result = await createAdminReservation(data);
+
+      if (!result.success) {
+        logger.error('useAdminReservations - Erreur création', {
+          error: result.error,
+        });
+        toast.error(result.error || 'Erreur lors de la création');
+        return { success: false, error: result.error };
+      }
+
+      toast.success('Réservation créée avec succès');
+      
+      // Recharger les réservations pour afficher la nouvelle
+      void loadReservations(filters, { page, pageSize });
+      void loadStats();
+
+      return { success: true, reservationId: result.reservationId };
+    },
+    [filters, page, pageSize, loadReservations, loadStats]
+  );
+
+  // ============================================
   // EXPORT AVEC OPTIONS (CSV ou Excel + colonnes + période)
   // ============================================
   const exportWithOptions = useCallback(
@@ -757,6 +792,7 @@ export function useAdminReservations(
     checkin,
     update,
     cancel,
+    create,
     exportToCSV,
     exportWithOptions,
     getSlots,
