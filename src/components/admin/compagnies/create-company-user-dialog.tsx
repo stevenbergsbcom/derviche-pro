@@ -21,7 +21,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Eye, EyeOff, RefreshCw, Copy, Check, Loader2 } from 'lucide-react';
 import { generatePassword, getPasswordStrength } from '@/lib/utils/password-generator';
-import { useInternalUsers } from '@/hooks/useInternalUsers';
+import { logger } from '@/lib/logger';
 
 // ============================================
 // TYPES
@@ -40,6 +40,13 @@ export interface CreateCompanyUserDialogProps {
     onSuccess: () => void;
 }
 
+interface CreateUserApiResponse {
+    success: boolean;
+    error?: string;
+    user?: { id: string; email: string };
+    reactivated?: boolean;
+}
+
 // ============================================
 // COMPOSANT
 // ============================================
@@ -51,9 +58,6 @@ export function CreateCompanyUserDialog({
     companyName,
     onSuccess,
 }: CreateCompanyUserDialogProps) {
-    // Hook pour créer l'utilisateur
-    const { create } = useInternalUsers();
-
     // États du formulaire
     const [email, setEmail] = useState('');
     const [firstName, setFirstName] = useState('');
@@ -114,6 +118,59 @@ export function CreateCompanyUserDialog({
         onOpenChange(false);
     }, [resetForm, onOpenChange]);
 
+    // Créer l'utilisateur via l'API
+    const createCompanyUser = useCallback(async () => {
+        try {
+            logger.info('CreateCompanyUserDialog - Création utilisateur company', { 
+                email: email.trim().toLowerCase(), 
+                companyId 
+            });
+
+            const response = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    password,
+                    first_name: firstName.trim() || undefined,
+                    last_name: lastName.trim() || undefined,
+                    phone: phone.trim() || undefined,
+                    role: 'company',
+                    company_id: companyId,
+                    must_change_password: mustChangePassword,
+                }),
+            });
+
+            if (!response.ok) {
+                const result = await response.json() as CreateUserApiResponse;
+                const errorMessage = result.error || `Erreur HTTP ${response.status}`;
+                logger.error('CreateCompanyUserDialog - Erreur HTTP', { status: response.status, error: errorMessage });
+                return { success: false, error: errorMessage };
+            }
+
+            const result = await response.json() as CreateUserApiResponse;
+
+            if (!result.success) {
+                logger.error('CreateCompanyUserDialog - Erreur API', { error: result.error });
+                return { success: false, error: result.error || 'Erreur lors de la création' };
+            }
+
+            if (result.reactivated) {
+                logger.info('CreateCompanyUserDialog - Compte réactivé', { user: result.user });
+            } else {
+                logger.info('CreateCompanyUserDialog - Création réussie', { user: result.user });
+            }
+
+            return { success: true };
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Erreur inconnue';
+            logger.error('CreateCompanyUserDialog - Exception', { error: message });
+            return { success: false, error: message };
+        }
+    }, [email, password, firstName, lastName, phone, companyId, mustChangePassword]);
+
     // Soumettre le formulaire
     const handleSubmit = useCallback(async () => {
         // Validation basique
@@ -130,16 +187,7 @@ export function CreateCompanyUserDialog({
         setIsSubmitting(true);
         setError(null);
 
-        const result = await create({
-            email: email.trim().toLowerCase(),
-            password,
-            first_name: firstName.trim() || undefined,
-            last_name: lastName.trim() || undefined,
-            phone: phone.trim() || undefined,
-            role: 'company',
-            company_id: companyId,
-            must_change_password: mustChangePassword,
-        });
+        const result = await createCompanyUser();
 
         setIsSubmitting(false);
 
@@ -149,7 +197,7 @@ export function CreateCompanyUserDialog({
         } else {
             setError(result.error || 'Erreur lors de la création');
         }
-    }, [email, password, firstName, lastName, phone, companyId, mustChangePassword, create, onSuccess, handleClose]);
+    }, [email, createCompanyUser, onSuccess, handleClose]);
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
