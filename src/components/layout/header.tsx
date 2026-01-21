@@ -1,32 +1,103 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { Menu, X, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { User as SupabaseUser, AuthChangeEvent, Session } from '@supabase/supabase-js';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import type { UserRole } from '@/types/database';
+
+/**
+ * Retourne l'URL de "Mon compte" selon le rôle
+ */
+function getAccountUrl(role: UserRole | null): string {
+  switch (role) {
+    case 'super-admin':
+    case 'admin':
+      return '/admin/mon-compte';
+    case 'externe':
+      return '/checkin';
+    case 'company':
+      return '/company/mon-compte';
+    case 'professional':
+    default:
+      return '/mon-compte';
+  }
+}
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Fonction pour charger le rôle utilisateur
+  const loadUserRole = useCallback(async (userId: string) => {
+    try {
+      const supabase = createClient();
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      
+      if (roles && roles.length > 0) {
+        // Priorité des rôles
+        const rolePriority: UserRole[] = ['super-admin', 'admin', 'externe', 'company', 'professional'];
+        const userRoles = roles.map(r => r.role as UserRole);
+        
+        for (const role of rolePriority) {
+          if (userRoles.includes(role)) {
+            setUserRole(role);
+            return;
+          }
+        }
+      }
+      setUserRole(null);
+    } catch {
+      setUserRole(null);
+    }
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
 
-    // Écouter les changements d'authentification (inclut l'état initial)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+    // Récupérer la session initiale
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
+      
+      if (session?.user?.id) {
+        await loadUserRole(session.user.id);
+      }
+      
       setIsLoading(false);
-    });
+    };
+
+    void initSession();
+
+    // Écouter les changements d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session: Session | null) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user?.id) {
+          // Charger le rôle en arrière-plan (ne pas bloquer)
+          void loadUserRole(session.user.id);
+        } else {
+          setUserRole(null);
+        }
+      }
+    );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadUserRole]);
+
+  const accountUrl = getAccountUrl(userRole);
 
   return (
     <header className="border-b bg-white sticky top-0 z-50">
@@ -71,7 +142,7 @@ export function Header() {
             // Utilisateur connecté
             <>
               <Link
-                href="/dashboard"
+                href={accountUrl}
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
               >
                 <User className="w-4 h-4" />
@@ -133,7 +204,7 @@ export function Header() {
               // Utilisateur connecté - Mobile
               <>
                 <Link
-                  href="/dashboard"
+                  href={accountUrl}
                   className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
                   onClick={() => setMobileMenuOpen(false)}
                 >

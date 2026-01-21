@@ -40,6 +40,8 @@ export interface UseCompaniesReturn {
   remove: (id: string) => Promise<{ success: boolean; error?: string }>;
   /** Vérifier si une compagnie est utilisée */
   checkUsage: (id: string) => Promise<{ used: boolean; count: number; error: string | null }>;
+  /** Mettre à jour le statut has_user d'une compagnie localement */
+  setCompanyHasUser: (companyId: string, hasUser: boolean) => void;
 }
 
 // ============================================
@@ -82,10 +84,11 @@ export function useCompanies(): UseCompaniesReturn {
     }
 
     if (result.data) {
-      // Ajouter la nouvelle compagnie à la liste avec shows_count = 0
+      // Ajouter la nouvelle compagnie à la liste avec shows_count = 0 et has_user = false
       const newCompanyWithCount: CompanyWithShowsCount = {
         ...result.data,
         shows_count: 0,
+        has_user: false,
       };
       
       setCompanies((prev) => 
@@ -106,11 +109,12 @@ export function useCompanies(): UseCompaniesReturn {
     }
 
     if (result.data) {
-      // Trouver le shows_count existant avant de mettre à jour
+      // Trouver les données existantes avant de mettre à jour
       const existingCompany = companies.find(c => c.id === id);
       const updatedCompanyWithCount: CompanyWithShowsCount = {
         ...result.data,
         shows_count: existingCompany?.shows_count ?? 0,
+        has_user: existingCompany?.has_user ?? false,
       };
       
       // Mettre à jour la compagnie dans la liste
@@ -150,6 +154,13 @@ export function useCompanies(): UseCompaniesReturn {
     return { used: result.used, count: result.count, error: null };
   }, []);
 
+  // Mettre à jour le statut has_user localement (après création d'un accès)
+  const setCompanyHasUser = useCallback((companyId: string, hasUser: boolean) => {
+    setCompanies((prev) =>
+      prev.map((c) => c.id === companyId ? { ...c, has_user: hasUser } : c)
+    );
+  }, []);
+
   return {
     companies,
     isLoading,
@@ -159,5 +170,6 @@ export function useCompanies(): UseCompaniesReturn {
     update,
     remove,
     checkUsage,
+    setCompanyHasUser,
   };
 }

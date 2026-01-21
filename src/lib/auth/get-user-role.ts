@@ -43,8 +43,7 @@ export function getRedirectUrlByRole(role: UserRole | null): string {
     case 'externe':
       return '/checkin';
     case 'company':
-      // TODO: Créer /compagnie/dashboard pour les compagnies
-      return '/dashboard';
+      return '/company';
     case 'professional':
     default:
       return '/dashboard';

@@ -1,9 +1,10 @@
 /**
- * API Route - Création d'utilisateurs internes
+ * API Route - Création d'utilisateurs internes et compagnies
  * POST /api/admin/users
  * 
- * Crée un nouvel utilisateur interne (super-admin, admin, externe)
- * avec son profil et son rôle.
+ * Crée un nouvel utilisateur géré par les admins :
+ * - Internes : super-admin, admin, externe
+ * - Compagnies : company (avec company_id obligatoire)
  * 
  * Si l'email existe déjà avec un compte supprimé (soft delete),
  * le compte est réactivé automatiquement.
@@ -12,9 +13,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
-import { isValidInternalRole } from '@/lib/services/internal-users';
+import { isValidManagedRole } from '@/lib/services/internal-users';
 import { logger } from '@/lib/logger';
-import type { InternalRole } from '@/types/database';
+import type { ManagedRole } from '@/lib/services/internal-users';
 
 // ============================================
 // TYPES
@@ -26,7 +27,8 @@ interface CreateUserRequest {
   first_name?: string;
   last_name?: string;
   phone?: string;
-  role: InternalRole;
+  role: ManagedRole;
+  company_id?: string; // Obligatoire si role = 'company'
   must_change_password?: boolean;
 }
 
@@ -86,9 +88,18 @@ function validateRequest(data: unknown): { valid: true; data: CreateUserRequest 
     return { valid: false, error: 'Le mot de passe doit contenir au moins un chiffre' };
   }
 
-  // Rôle requis et valide
-  if (!body.role || typeof body.role !== 'string' || !isValidInternalRole(body.role)) {
-    return { valid: false, error: 'Rôle invalide. Valeurs acceptées: super-admin, admin, externe' };
+  // Rôle requis et valide (inclut maintenant 'company')
+  if (!body.role || typeof body.role !== 'string' || !isValidManagedRole(body.role)) {
+    return { valid: false, error: 'Rôle invalide. Valeurs acceptées: super-admin, admin, externe, company' };
+  }
+
+  const role = body.role as ManagedRole;
+
+  // company_id obligatoire si role = 'company'
+  if (role === 'company') {
+    if (!body.company_id || typeof body.company_id !== 'string') {
+      return { valid: false, error: 'Le company_id est obligatoire pour le rôle compagnie' };
+    }
   }
 
   return {
@@ -99,7 +110,8 @@ function validateRequest(data: unknown): { valid: true; data: CreateUserRequest 
       first_name: typeof body.first_name === 'string' ? body.first_name.trim() || undefined : undefined,
       last_name: typeof body.last_name === 'string' ? body.last_name.trim() || undefined : undefined,
       phone: typeof body.phone === 'string' ? body.phone.trim() || undefined : undefined,
-      role: body.role as InternalRole,
+      role,
+      company_id: typeof body.company_id === 'string' ? body.company_id.trim() || undefined : undefined,
       must_change_password: body.must_change_password === true,
     },
   };
@@ -153,11 +165,51 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       );
     }
 
-    const { email, password, first_name, last_name, phone, role, must_change_password } = validation.data;
+    const { email, password, first_name, last_name, phone, role, company_id, must_change_password } = validation.data;
 
     const supabaseAdmin = createAdminClient();
 
-    // 3. Vérifier si un compte supprimé existe avec cet email
+    // 3. Si role = 'company', vérifier que la compagnie existe et n'a pas déjà d'utilisateur
+    if (role === 'company' && company_id) {
+      // Vérifier que la compagnie existe
+      const { data: companyData, error: companyError } = await supabaseAdmin
+        .from('companies')
+        .select('id, name')
+        .eq('id', company_id)
+        .is('deleted_at', null)
+        .single();
+
+      if (companyError || !companyData) {
+        logger.warn('API /admin/users - Compagnie non trouvée', { company_id });
+        return NextResponse.json(
+          { success: false, error: 'Compagnie non trouvée' },
+          { status: 400 }
+        );
+      }
+
+      // Vérifier qu'aucun utilisateur company n'est déjà associé à cette compagnie
+      const { data: existingCompanyUser } = await supabaseAdmin
+        .from('profiles')
+        .select('id, email')
+        .eq('company_id', company_id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (existingCompanyUser) {
+        logger.warn('API /admin/users - Compagnie a déjà un utilisateur', { 
+          company_id, 
+          existingUserId: existingCompanyUser.id 
+        });
+        return NextResponse.json(
+          { success: false, error: `Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})` },
+          { status: 400 }
+        );
+      }
+
+      logger.info('API /admin/users - Compagnie validée', { company_id, companyName: companyData.name });
+    }
+
+    // 4. Vérifier si un compte supprimé existe avec cet email
     const { data: existingProfile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, email, deleted_at')
@@ -203,6 +255,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
           first_name: first_name || null,
           last_name: last_name || null,
           phone: phone || null,
+          company_id: company_id || null, // Associer la compagnie si fournie
           must_change_password: must_change_password ?? false,
           updated_at: new Date().toISOString(),
         })
@@ -244,7 +297,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         }
       }
 
-      logger.info('API /admin/users - Compte réactivé avec succès', { userId, email, role });
+      logger.info('API /admin/users - Compte réactivé avec succès', { userId, email, role, company_id });
 
       return NextResponse.json({
         success: true,
@@ -265,7 +318,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       );
     }
 
-    // 4. Créer l'utilisateur avec le client admin
+    // 5. Créer l'utilisateur avec le client admin
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -302,10 +355,10 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     const userId = newUser.user.id;
     logger.info('API /admin/users - Utilisateur auth créé', { userId, email });
 
-    // 5. Attendre que le trigger Supabase crée le profil
+    // 6. Attendre que le trigger Supabase crée le profil
     await sleep(500);
 
-    // 6. Mettre à jour ou créer le profil (upsert pour être sûr)
+    // 7. Mettre à jour ou créer le profil (upsert pour être sûr)
     const { error: profileUpsertError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -314,6 +367,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         first_name: first_name || null,
         last_name: last_name || null,
         phone: phone || null,
+        company_id: company_id || null, // Associer la compagnie si fournie
         must_change_password: must_change_password ?? false,
       }, {
         onConflict: 'id',
@@ -334,9 +388,9 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       );
     }
     
-    logger.info('API /admin/users - Profil créé/mis à jour', { userId });
+    logger.info('API /admin/users - Profil créé/mis à jour', { userId, company_id });
 
-    // 7. Mettre à jour le rôle (le trigger a peut-être créé un rôle par défaut)
+    // 8. Mettre à jour le rôle (le trigger a peut-être créé un rôle par défaut)
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
       .update({ role })
@@ -367,7 +421,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     }
 
     logger.info('API /admin/users - Rôle créé', { userId, role });
-    logger.info('API /admin/users - Succès complet', { userId, email, role });
+    logger.info('API /admin/users - Succès complet', { userId, email, role, company_id });
 
     return NextResponse.json({
       success: true,

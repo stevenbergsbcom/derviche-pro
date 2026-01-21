@@ -13,9 +13,11 @@ import { logger } from '@/lib/logger';
 // TYPES
 // ============================================
 
-/** Compagnie avec le compteur de spectacles */
+/** Compagnie avec le compteur de spectacles et statut accès */
 export interface CompanyWithShowsCount extends CompanyRow {
   shows_count: number;
+  /** La compagnie a-t-elle un utilisateur configuré ? */
+  has_user: boolean;
 }
 
 /** Résultat d'une opération sur une company */
@@ -69,8 +71,8 @@ export async function getCompanies(): Promise<CompaniesResult> {
 
 /**
  * Récupère toutes les compagnies avec le nombre de spectacles actifs associés
+ * et le statut de l'accès utilisateur
  * Triées par nom
- * Utilise deux requêtes pour filtrer correctement les spectacles supprimés
  */
 export async function getCompaniesWithShowsCount(): Promise<CompaniesWithCountResult> {
   try {
@@ -92,32 +94,50 @@ export async function getCompaniesWithShowsCount(): Promise<CompaniesWithCountRe
       return { data: [], error: null };
     }
 
+    const companyIds = companies.map(c => c.id);
+
     // Requête 2: Compter les spectacles ACTIFS (non supprimés) par compagnie
     const { data: showsData, error: showsError } = await supabase
       .from('shows')
       .select('company_id')
       .is('deleted_at', null)
-      .in('company_id', companies.map(c => c.id));
+      .in('company_id', companyIds);
 
     if (showsError) {
       logger.error('Erreur comptage shows', showsError);
-      // En cas d'erreur, on retourne les compagnies avec count = 0
-      return { 
-        data: companies.map(c => ({ ...c, shows_count: 0 })), 
-        error: null 
-      };
+    }
+
+    // Requête 3: Récupérer les utilisateurs company (non supprimés)
+    const { data: usersData, error: usersError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .is('deleted_at', null)
+      .not('company_id', 'is', null)
+      .in('company_id', companyIds);
+
+    if (usersError) {
+      logger.error('Erreur récupération users company', usersError);
     }
 
     // Agréger les counts par company_id
-    const countMap: Record<string, number> = {};
+    const showsCountMap: Record<string, number> = {};
     (showsData || []).forEach(show => {
-      countMap[show.company_id] = (countMap[show.company_id] || 0) + 1;
+      showsCountMap[show.company_id] = (showsCountMap[show.company_id] || 0) + 1;
+    });
+
+    // Set des company_id qui ont un utilisateur
+    const companiesWithUser = new Set<string>();
+    (usersData || []).forEach(user => {
+      if (user.company_id) {
+        companiesWithUser.add(user.company_id);
+      }
     });
 
     // Fusionner les données
     const companiesWithCount: CompanyWithShowsCount[] = companies.map(company => ({
       ...company,
-      shows_count: countMap[company.id] || 0,
+      shows_count: showsCountMap[company.id] || 0,
+      has_user: companiesWithUser.has(company.id),
     }));
 
     return { data: companiesWithCount, error: null };
