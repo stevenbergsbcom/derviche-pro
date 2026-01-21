@@ -17,9 +17,9 @@ function getAccountUrl(role: UserRole | null): string {
   switch (role) {
     case 'super-admin':
     case 'admin':
-      return '/admin/mon-compte';
     case 'externe':
-      return '/checkin';
+      // Tous les utilisateurs internes utilisent /mon-compte
+      return '/mon-compte';
     case 'company':
       return '/company/mon-compte';
     case 'professional':
