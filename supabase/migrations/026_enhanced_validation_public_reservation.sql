@@ -70,15 +70,15 @@ BEGIN
   END IF;
 
   -- ============================================
-  -- 2. VALIDATION: Format email
+  -- 2. VALIDATION: Format email (TRIM avant validation)
   -- ============================================
-  IF NOT p_email ~* v_email_regex THEN
+  IF NOT TRIM(p_email) ~* v_email_regex THEN
     RAISE EXCEPTION 'Format d''email invalide';
   END IF;
   
   -- Validation email secondaire si fourni
   IF p_email_secondary IS NOT NULL AND TRIM(p_email_secondary) != '' THEN
-    IF NOT p_email_secondary ~* v_email_regex THEN
+    IF NOT TRIM(p_email_secondary) ~* v_email_regex THEN
       RAISE EXCEPTION 'Format d''email secondaire invalide';
     END IF;
   END IF;

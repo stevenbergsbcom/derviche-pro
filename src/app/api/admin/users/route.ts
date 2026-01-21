@@ -290,10 +290,8 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         errorMessage = 'Cet email est déjà utilisé';
       } else if (createError?.message?.includes('invalid') && createError?.message?.includes('email')) {
         errorMessage = 'Format d\'email invalide';
-      } else if (createError?.message) {
-        // Afficher le message original pour le debug
-        errorMessage = `Erreur: ${createError.message}`;
       }
+      // Note: On ne renvoie plus createError.message au client pour des raisons de sécurité
       
       return NextResponse.json(
         { success: false, error: errorMessage },

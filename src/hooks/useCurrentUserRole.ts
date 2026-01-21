@@ -23,10 +23,15 @@ interface UseCurrentUserRoleReturn {
   isLoading: boolean;
   /** Erreur éventuelle */
   error: string | null;
-  /** L'utilisateur a-t-il un rôle admin (super-admin, admin, externe) ? */
+  /** 
+   * L'utilisateur a-t-il un rôle admin (super-admin, admin, externe) ?
+   * SÉCURITÉ: Retourne true si authentifié + erreur fetch rôle (fail-secure)
+   */
   isAdminRole: boolean;
   /** L'utilisateur est-il connecté ? */
   isAuthenticated: boolean;
+  /** Erreur lors du fetch du rôle (utile pour afficher un message) */
+  hasRoleFetchError: boolean;
   /** Rafraîchir les données */
   refresh: () => Promise<void>;
 }
@@ -40,10 +45,12 @@ export function useCurrentUserRole(): UseCurrentUserRoleReturn {
   const [role, setRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasRoleFetchError, setHasRoleFetchError] = useState(false);
 
   const fetchUserRole = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setHasRoleFetchError(false);
 
     try {
       const supabase = createClient();
@@ -81,10 +88,12 @@ export function useCurrentUserRole(): UseCurrentUserRoleReturn {
       if (roleError) {
         // Pas de rôle trouvé = peut-être un utilisateur sans rôle assigné
         if (roleError.code === 'PGRST116') {
-          // No rows returned
+          // No rows returned - pas une erreur, juste pas de rôle
           setRole(null);
         } else {
+          // Vraie erreur de fetch
           setError(roleError.message);
+          setHasRoleFetchError(true);
         }
         setIsLoading(false);
         return;
@@ -94,6 +103,10 @@ export function useCurrentUserRole(): UseCurrentUserRoleReturn {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur inconnue';
       setError(message);
+      // SÉCURITÉ: Marquer comme erreur de fetch
+      // Note: On ne peut pas savoir ici si l'utilisateur est connecté car l'erreur
+      // peut survenir avant ou après le fetch auth. Le flag sera utilisé avec user dans le return.
+      setHasRoleFetchError(true);
     } finally {
       setIsLoading(false);
     }
@@ -128,8 +141,11 @@ export function useCurrentUserRole(): UseCurrentUserRoleReturn {
     role,
     isLoading,
     error,
-    isAdminRole: role !== null && ADMIN_ROLES.includes(role),
+    // SÉCURITÉ (fail-secure): Si authentifié + erreur fetch rôle, on considère comme admin
+    // Cela bloque l'accès au formulaire public par précaution
+    isAdminRole: (role !== null && ADMIN_ROLES.includes(role)) || (user !== null && hasRoleFetchError),
     isAuthenticated: user !== null,
+    hasRoleFetchError,
     refresh: fetchUserRole,
   };
 }
