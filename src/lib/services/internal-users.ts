@@ -1,8 +1,10 @@
 /**
- * Service pour la gestion des utilisateurs internes (staff)
+ * Service pour la gestion des utilisateurs internes et compagnies (staff + company)
  * Derviche Diffusion - Plateforme de réservation professionnelle
  *
- * Gère les opérations CRUD pour les utilisateurs internes (super-admin, admin, externe-dd)
+ * Gère les opérations CRUD pour les utilisateurs gérés par les admins :
+ * - Internes : super-admin, admin, externe
+ * - Compagnies : company (avec company_id obligatoire)
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -13,26 +15,66 @@ import type { InternalUser, InternalRole } from '@/types/database';
 // TYPES
 // ============================================
 
+/** Rôles gérés par les admins (internes + company) */
+export type ManagedRole = InternalRole | 'company';
+
+/** Utilisateur géré (interne ou company) */
+export interface ManagedUser {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  role: ManagedRole;
+  company_id: string | null;
+  company_name: string | null; // Pour affichage
+  created_at: string;
+  last_login_at: string | null;
+  disabled_at: string | null;
+}
+
 /** Résultat d'une opération sur un utilisateur */
 export interface UserResult {
   data: InternalUser | null;
   error: string | null;
 }
 
-/** Résultat d'une liste d'utilisateurs */
+/** Résultat d'une opération sur un utilisateur géré */
+export interface ManagedUserResult {
+  data: ManagedUser | null;
+  error: string | null;
+}
+
+/** Résultat d'une liste d'utilisateurs internes */
 export interface UsersListResult {
   data: InternalUser[];
   error: string | null;
 }
 
-/** Rôles internes pour filtrage */
+/** Résultat d'une liste d'utilisateurs gérés */
+export interface ManagedUsersListResult {
+  data: ManagedUser[];
+  error: string | null;
+}
+
+/** Rôles internes pour filtrage (sans company) */
 const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe'];
 
+/** Tous les rôles gérés par les admins */
+const MANAGED_ROLES: ManagedRole[] = ['super-admin', 'admin', 'externe', 'company'];
+
 /**
- * Vérifie si une valeur est un rôle interne valide
+ * Vérifie si une valeur est un rôle interne valide (sans company)
  */
 export function isValidInternalRole(role: unknown): role is InternalRole {
   return typeof role === 'string' && INTERNAL_ROLES.includes(role as InternalRole);
+}
+
+/**
+ * Vérifie si une valeur est un rôle géré valide (avec company)
+ */
+export function isValidManagedRole(role: unknown): role is ManagedRole {
+  return typeof role === 'string' && MANAGED_ROLES.includes(role as ManagedRole);
 }
 
 // ============================================
@@ -40,8 +82,10 @@ export function isValidInternalRole(role: unknown): role is InternalRole {
 // ============================================
 
 /**
- * Récupère tous les utilisateurs internes (super-admin, admin, externe-dd)
+ * Récupère tous les utilisateurs internes (super-admin, admin, externe)
  * avec jointure sur user_roles
+ * 
+ * @deprecated Utiliser getManagedUsers() pour inclure les compagnies
  */
 export async function getInternalUsers(): Promise<UsersListResult> {
   try {
@@ -119,6 +163,99 @@ export async function getInternalUsers(): Promise<UsersListResult> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('internal-users.getInternalUsers - Exception', { error: message });
+    return { data: [], error: message };
+  }
+}
+
+/**
+ * Récupère tous les utilisateurs gérés (internes + company)
+ * avec jointure sur user_roles et companies
+ */
+export async function getManagedUsers(): Promise<ManagedUsersListResult> {
+  try {
+    logger.info('internal-users.getManagedUsers - Chargement des utilisateurs gérés');
+
+    const supabase = createClient();
+
+    // Récupérer les profils avec leurs rôles et compagnie via jointure
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        email,
+        first_name,
+        last_name,
+        phone,
+        company_id,
+        created_at,
+        last_login_at,
+        disabled_at,
+        user_roles!inner (
+          role
+        ),
+        companies (
+          name
+        )
+      `)
+      .is('deleted_at', null)
+      .in('user_roles.role', MANAGED_ROLES)
+      .order('last_name', { ascending: true });
+
+    if (error) {
+      logger.error('internal-users.getManagedUsers - Erreur Supabase', { error });
+      return { data: [], error: error.message };
+    }
+
+    // Transformer les données
+    const users: ManagedUser[] = (data || []).map((profile) => {
+      // Extraire le rôle
+      const userRoles = profile.user_roles;
+      let extractedRole: unknown;
+      
+      if (Array.isArray(userRoles) && userRoles.length > 0) {
+        extractedRole = (userRoles[0] as { role?: unknown })?.role;
+      } else if (userRoles && typeof userRoles === 'object' && !Array.isArray(userRoles)) {
+        extractedRole = (userRoles as { role?: unknown }).role;
+      }
+      
+      let role: ManagedRole;
+      if (isValidManagedRole(extractedRole)) {
+        role = extractedRole;
+      } else {
+        logger.warn('internal-users.getManagedUsers - Rôle invalide, fallback externe', { 
+          profileId: profile.id,
+          extractedRole 
+        });
+        role = 'externe';
+      }
+
+      // Extraire le nom de la compagnie
+      const companies = profile.companies;
+      let companyName: string | null = null;
+      if (companies && typeof companies === 'object' && !Array.isArray(companies)) {
+        companyName = (companies as { name?: string }).name || null;
+      }
+      
+      return {
+        id: profile.id,
+        email: profile.email,
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        phone: profile.phone,
+        role,
+        company_id: profile.company_id,
+        company_name: companyName,
+        created_at: profile.created_at,
+        last_login_at: profile.last_login_at,
+        disabled_at: profile.disabled_at,
+      };
+    });
+
+    logger.info('internal-users.getManagedUsers - Succès', { count: users.length });
+    return { data: users, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('internal-users.getManagedUsers - Exception', { error: message });
     return { data: [], error: message };
   }
 }
@@ -202,6 +339,80 @@ export async function getInternalUserById(userId: string): Promise<UserResult> {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('internal-users.getInternalUserById - Exception', { error: message });
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Récupère l'utilisateur company associé à une compagnie
+ * Retourne null si aucun utilisateur n'est associé
+ */
+export async function getCompanyUser(companyId: string): Promise<ManagedUserResult> {
+  try {
+    logger.info('internal-users.getCompanyUser - Chargement', { companyId });
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        email,
+        first_name,
+        last_name,
+        phone,
+        company_id,
+        created_at,
+        last_login_at,
+        disabled_at,
+        user_roles!inner (
+          role
+        ),
+        companies (
+          name
+        )
+      `)
+      .eq('company_id', companyId)
+      .eq('user_roles.role', 'company')
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) {
+      logger.error('internal-users.getCompanyUser - Erreur Supabase', { error });
+      return { data: null, error: error.message };
+    }
+
+    if (!data) {
+      logger.info('internal-users.getCompanyUser - Aucun utilisateur trouvé', { companyId });
+      return { data: null, error: null };
+    }
+
+    // Extraire le nom de la compagnie
+    const companies = data.companies;
+    let companyName: string | null = null;
+    if (companies && typeof companies === 'object' && !Array.isArray(companies)) {
+      companyName = (companies as { name?: string }).name || null;
+    }
+
+    const user: ManagedUser = {
+      id: data.id,
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      phone: data.phone,
+      role: 'company',
+      company_id: data.company_id,
+      company_name: companyName,
+      created_at: data.created_at,
+      last_login_at: data.last_login_at,
+      disabled_at: data.disabled_at,
+    };
+
+    logger.info('internal-users.getCompanyUser - Succès', { companyId, userId: user.id });
+    return { data: user, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('internal-users.getCompanyUser - Exception', { error: message });
     return { data: null, error: message };
   }
 }
@@ -313,7 +524,7 @@ export async function isInternalUser(userId: string): Promise<boolean> {
 /**
  * Formate le nom complet d'un utilisateur
  */
-export function formatUserName(user: InternalUser): string {
+export function formatUserName(user: InternalUser | ManagedUser): string {
   if (user.first_name && user.last_name) {
     return `${user.first_name} ${user.last_name}`;
   }
@@ -329,7 +540,7 @@ export function formatUserName(user: InternalUser): string {
 /**
  * Formate le nom abrégé d'un utilisateur (Prénom N.)
  */
-export function formatUserNameShort(user: InternalUser): string {
+export function formatUserNameShort(user: InternalUser | ManagedUser): string {
   if (user.first_name && user.last_name) {
     return `${user.first_name} ${user.last_name.charAt(0)}.`;
   }
@@ -339,11 +550,12 @@ export function formatUserNameShort(user: InternalUser): string {
 /**
  * Traduit un rôle en français
  */
-export function translateRole(role: InternalRole): string {
-  const translations: Record<InternalRole, string> = {
+export function translateRole(role: InternalRole | ManagedRole): string {
+  const translations: Record<ManagedRole, string> = {
     'super-admin': 'Super Admin',
     'admin': 'Admin',
     'externe': 'Externe',
+    'company': 'Compagnie',
   };
   return translations[role] || role;
 }

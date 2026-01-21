@@ -50,6 +50,9 @@ export type { UsePublicShowReturn } from './usePublicShow';
 export { useCurrentUserRole } from './useCurrentUserRole';
 export type { UserRole } from './useCurrentUserRole';
 
+// Hooks Supabase - Company (interface compagnie)
+export { useCompanyDashboard } from './useCompanyDashboard';
+
 // Hooks Utilitaires
 export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
 export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';

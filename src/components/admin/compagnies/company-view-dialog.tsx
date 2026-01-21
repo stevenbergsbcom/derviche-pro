@@ -10,8 +10,25 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Phone, User, Theater, ArrowRight, Globe } from 'lucide-react';
+import { 
+    MapPin, 
+    Mail, 
+    Phone, 
+    User, 
+    Theater, 
+    ArrowRight, 
+    Globe, 
+    KeyRound,
+    UserPlus,
+    CheckCircle,
+    XCircle
+} from 'lucide-react';
 import type { CompanyRow } from '@/types/database';
+import type { ManagedUser } from '@/lib/services/internal-users';
+
+// ============================================
+// TYPES
+// ============================================
 
 // La vue accepte CompanyRow ou tout type qui l'étend (comme CompanyWithShowsCount)
 export interface CompanyViewDialogProps {
@@ -27,7 +44,19 @@ export interface CompanyViewDialogProps {
     showsCount: number;
     /** Callback pour voir les spectacles */
     onViewShows: () => void;
+    /** Utilisateur lié à la compagnie (null si aucun) */
+    companyUser?: ManagedUser | null;
+    /** Chargement de l'utilisateur en cours */
+    isLoadingUser?: boolean;
+    /** Callback pour créer un accès utilisateur */
+    onCreateUser?: () => void;
+    /** Callback pour assigner un utilisateur existant */
+    onAssignUser?: () => void;
 }
+
+// ============================================
+// COMPOSANT
+// ============================================
 
 /**
  * Modale de visualisation d'une compagnie
@@ -39,6 +68,10 @@ export function CompanyViewDialog({
     onDelete,
     showsCount,
     onViewShows,
+    companyUser,
+    isLoadingUser = false,
+    onCreateUser,
+    onAssignUser,
 }: CompanyViewDialogProps) {
     if (!company) return null;
 
@@ -85,6 +118,91 @@ export function CompanyViewDialog({
                         </div>
                     </div>
 
+                    {/* Accès utilisateur plateforme */}
+                    <div>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                            <KeyRound className="w-4 h-4" />
+                            Accès plateforme
+                        </h4>
+                        
+                        {isLoadingUser ? (
+                            <p className="text-sm text-muted-foreground animate-pulse">
+                                Chargement...
+                            </p>
+                        ) : companyUser ? (
+                            /* Utilisateur existant */
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle className="w-4 h-4 text-green-600" />
+                                    <span className="text-sm font-medium text-green-800">
+                                        Compte actif
+                                    </span>
+                                    {companyUser.disabled_at && (
+                                        <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                                            Désactivé
+                                        </Badge>
+                                    )}
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                    {(companyUser.first_name || companyUser.last_name) && (
+                                        <p className="flex items-center gap-2">
+                                            <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                            {[companyUser.first_name, companyUser.last_name].filter(Boolean).join(' ')}
+                                        </p>
+                                    )}
+                                    <p className="flex items-center gap-2">
+                                        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-green-700">{companyUser.email}</span>
+                                    </p>
+                                    {companyUser.phone && (
+                                        <p className="flex items-center gap-2">
+                                            <Phone className="w-3.5 h-3.5 text-muted-foreground" />
+                                            {companyUser.phone}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            /* Pas d'utilisateur */
+                            <div className="p-3 bg-muted/50 border border-dashed rounded-lg">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <XCircle className="w-4 h-4 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Aucun accès configuré
+                                    </span>
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                    {onCreateUser && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onCreateUser}
+                                            className="flex-1"
+                                        >
+                                            <UserPlus className="w-4 h-4 mr-2" />
+                                            Créer un accès
+                                        </Button>
+                                    )}
+                                    {onAssignUser && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onAssignUser}
+                                            className="flex-1"
+                                        >
+                                            <User className="w-4 h-4 mr-2" />
+                                            Assigner un existant
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                        
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Cet accès permet à la compagnie de consulter ses réservations sur la plateforme.
+                        </p>
+                    </div>
+
                     {/* Description */}
                     {company.description && (
                         <div>
@@ -111,9 +229,14 @@ export function CompanyViewDialog({
                         </div>
                     )}
 
-                    {/* Contact */}
+                    {/* Contact métier */}
                     <div>
-                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">Contact</h4>
+                        <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+                            Contact métier
+                        </h4>
+                        <p className="text-xs text-muted-foreground mb-2">
+                            Contact pour l&apos;organisation des spectacles (différent de l&apos;accès plateforme)
+                        </p>
                         <div className="space-y-2">
                             {company.contact_name && (
                                 <p className="flex items-center gap-2 text-sm">

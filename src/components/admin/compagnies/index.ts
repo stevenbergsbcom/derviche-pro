@@ -4,3 +4,9 @@ export type { CompanyFormDialogProps, CompanyFormData } from './company-form-dia
 
 export { CompanyViewDialog } from './company-view-dialog';
 export type { CompanyViewDialogProps } from './company-view-dialog';
+
+export { CreateCompanyUserDialog } from './create-company-user-dialog';
+export type { CreateCompanyUserDialogProps } from './create-company-user-dialog';
+
+export { AssignCompanyUserDialog } from './assign-company-user-dialog';
+export type { AssignCompanyUserDialogProps } from './assign-company-user-dialog';

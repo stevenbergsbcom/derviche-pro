@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Eye, EyeOff, RefreshCw, Copy, Check } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, RefreshCw, Copy, Check, Building2, Loader2 } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -22,13 +22,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import type { InternalUser, InternalRole } from '@/types/database';
-import { translateRole } from '@/lib/services/internal-users';
+import type { InternalUser } from '@/types/database';
+import { translateRole, type ManagedRole, type ManagedUser } from '@/lib/services/internal-users';
 import { 
     generatePassword, 
     validatePassword, 
     getPasswordStrength 
 } from '@/lib/utils/password-generator';
+import { getCompanies } from '@/lib/services/companies';
+import type { CompanyRow } from '@/types/database';
 
 // ============================================
 // TYPES
@@ -39,7 +41,8 @@ export interface UserFormData {
     first_name: string;
     last_name: string;
     phone: string;
-    role: InternalRole;
+    role: ManagedRole;
+    company_id?: string; // Requis si role = 'company'
 }
 
 /** Données du formulaire utilisateur (création) */
@@ -55,7 +58,7 @@ export interface UserFormDialogProps {
     /** Callback quand la modale se ferme */
     onOpenChange: (open: boolean) => void;
     /** Utilisateur en cours d'édition (null = mode création) */
-    editingUser: InternalUser | null;
+    editingUser: InternalUser | ManagedUser | null;
     /** Callback à la soumission du formulaire (édition) */
     onSubmit: (data: UserFormData, isEditing: boolean) => Promise<void> | void;
     /** Callback à la création d'un utilisateur */
@@ -70,8 +73,8 @@ export interface UserFormDialogProps {
 // CONSTANTES
 // ============================================
 
-/** Rôles internes disponibles */
-const INTERNAL_ROLES: InternalRole[] = ['super-admin', 'admin', 'externe'];
+/** Tous les rôles gérés */
+const MANAGED_ROLES: ManagedRole[] = ['super-admin', 'admin', 'externe', 'company'];
 
 /** Valeurs par défaut du formulaire (édition) */
 const defaultFormData: UserFormData = {
@@ -79,6 +82,7 @@ const defaultFormData: UserFormData = {
     last_name: '',
     phone: '',
     role: 'externe',
+    company_id: undefined,
 };
 
 /** Valeurs par défaut du formulaire (création) */
@@ -90,11 +94,40 @@ const defaultCreateFormData: CreateUserFormData = {
 };
 
 // ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Vérifie si un utilisateur est un ManagedUser (a company_id)
+ */
+function isManagedUser(user: InternalUser | ManagedUser): user is ManagedUser {
+    return 'company_id' in user;
+}
+
+/**
+ * Description du rôle
+ */
+function getRoleDescription(role: ManagedRole): string {
+    switch (role) {
+        case 'super-admin':
+            return 'Accès complet à toutes les fonctionnalités.';
+        case 'admin':
+            return 'Gestion des spectacles, réservations et check-in.';
+        case 'externe':
+            return 'Accueil et check-in sur les spectacles assignés.';
+        case 'company':
+            return 'Accès aux statistiques de la compagnie associée.';
+        default:
+            return '';
+    }
+}
+
+// ============================================
 // COMPOSANT
 // ============================================
 
 /**
- * Modale de création/édition d'un utilisateur interne
+ * Modale de création/édition d'un utilisateur (interne ou compagnie)
  */
 export function UserFormDialog({
     open,
@@ -114,6 +147,25 @@ export function UserFormDialog({
     const [copied, setCopied] = useState(false);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
+    // Liste des compagnies (pour le rôle company)
+    const [companies, setCompanies] = useState<CompanyRow[]>([]);
+    const [isLoadingCompanies, setIsLoadingCompanies] = useState(false);
+
+    // Charger les compagnies quand le rôle devient 'company'
+    useEffect(() => {
+        if (open && formData.role === 'company' && companies.length === 0) {
+            const loadCompanies = async () => {
+                setIsLoadingCompanies(true);
+                const result = await getCompanies();
+                if (!result.error) {
+                    setCompanies(result.data);
+                }
+                setIsLoadingCompanies(false);
+            };
+            void loadCompanies();
+        }
+    }, [open, formData.role, companies.length]);
+
     // Initialiser le formulaire quand on ouvre la modale
     useEffect(() => {
         if (open) {
@@ -122,6 +174,7 @@ export function UserFormDialog({
             
             if (editingUser) {
                 // Mode édition
+                const companyId = isManagedUser(editingUser) ? editingUser.company_id : undefined;
                 setFormData({
                     first_name: editingUser.first_name || '',
                     last_name: editingUser.last_name || '',
@@ -130,6 +183,7 @@ export function UserFormDialog({
                     email: editingUser.email,
                     password: '',
                     must_change_password: false,
+                    company_id: companyId || undefined,
                 });
             } else {
                 // Mode création - générer un mot de passe par défaut
@@ -153,7 +207,7 @@ export function UserFormDialog({
         onOpenChange(false);
     };
 
-    const handleFieldChange = (field: keyof CreateUserFormData, value: string | boolean) => {
+    const handleFieldChange = (field: keyof CreateUserFormData, value: string | boolean | undefined) => {
         setFormData({ ...formData, [field]: value });
         
         // Effacer l'erreur de validation pour ce champ
@@ -165,8 +219,24 @@ export function UserFormDialog({
     };
 
     const handleRoleChange = (value: string) => {
-        if (INTERNAL_ROLES.includes(value as InternalRole)) {
-            setFormData({ ...formData, role: value as InternalRole });
+        if (MANAGED_ROLES.includes(value as ManagedRole)) {
+            const newRole = value as ManagedRole;
+            setFormData({ 
+                ...formData, 
+                role: newRole,
+                // Réinitialiser company_id si on change vers un autre rôle
+                company_id: newRole === 'company' ? formData.company_id : undefined,
+            });
+        }
+    };
+
+    const handleCompanyChange = (value: string) => {
+        setFormData({ ...formData, company_id: value });
+        // Effacer l'erreur de validation pour company_id
+        if (validationErrors.company_id) {
+            const newErrors = { ...validationErrors };
+            delete newErrors.company_id;
+            setValidationErrors(newErrors);
         }
     };
 
@@ -191,8 +261,13 @@ export function UserFormDialog({
         const errors: Record<string, string> = {};
 
         // Validation commune (création et édition)
-        if (!INTERNAL_ROLES.includes(formData.role)) {
+        if (!MANAGED_ROLES.includes(formData.role)) {
             errors.role = 'Veuillez sélectionner un rôle valide';
+        }
+
+        // Validation company_id pour le rôle company
+        if (formData.role === 'company' && !formData.company_id) {
+            errors.company_id = 'Veuillez sélectionner une compagnie';
         }
 
         if (isCreating) {
@@ -233,6 +308,7 @@ export function UserFormDialog({
                 phone: formData.phone.trim(),
                 role: formData.role,
                 must_change_password: formData.must_change_password,
+                company_id: formData.role === 'company' ? formData.company_id : undefined,
             });
         } else {
             // Mode édition - editingUser doit exister (vérification défensive)
@@ -245,6 +321,7 @@ export function UserFormDialog({
                 last_name: formData.last_name.trim(),
                 phone: formData.phone.trim(),
                 role: formData.role,
+                company_id: formData.role === 'company' ? formData.company_id : undefined,
             }, true);
         }
     };
@@ -257,8 +334,19 @@ export function UserFormDialog({
 
     // Validation du formulaire
     const isValid = isCreating
-        ? isEmailValid && formData.password && validatePassword(formData.password).valid && INTERNAL_ROLES.includes(formData.role)
-        : INTERNAL_ROLES.includes(formData.role);
+        ? isEmailValid 
+            && formData.password 
+            && validatePassword(formData.password).valid 
+            && MANAGED_ROLES.includes(formData.role)
+            && (formData.role !== 'company' || !!formData.company_id)
+        : MANAGED_ROLES.includes(formData.role)
+            && (formData.role !== 'company' || !!formData.company_id);
+
+    // En mode édition d'un utilisateur company, on ne peut pas changer le rôle ni la compagnie
+    const isEditingCompanyUser = !isCreating && editingUser?.role === 'company';
+    
+    // En mode édition, on peut changer vers le rôle company (mais pas depuis company)
+    const canSelectCompany = formData.role === 'company' && (isCreating || !isEditingCompanyUser);
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
@@ -274,7 +362,7 @@ export function UserFormDialog({
                     </DialogTitle>
                     <DialogDescription>
                         {isCreating
-                            ? 'Créez un nouveau compte utilisateur interne.'
+                            ? 'Créez un nouveau compte utilisateur.'
                             : `Modifiez les informations de ${editingUser?.email}`}
                     </DialogDescription>
                 </DialogHeader>
@@ -485,25 +573,80 @@ export function UserFormDialog({
                         <Select
                             value={formData.role}
                             onValueChange={handleRoleChange}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isEditingCompanyUser}
                         >
                             <SelectTrigger id="role">
                                 <SelectValue placeholder="Sélectionner un rôle" />
                             </SelectTrigger>
                             <SelectContent>
-                                {INTERNAL_ROLES.map((role) => (
+                                {MANAGED_ROLES.map((role) => (
                                     <SelectItem key={role} value={role}>
+                                        {role === 'company' && <Building2 className="w-3 h-3 inline mr-1" />}
                                         {translateRole(role)}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                            {formData.role === 'super-admin' && 'Accès complet à toutes les fonctionnalités.'}
-                            {formData.role === 'admin' && 'Gestion des spectacles, réservations et check-in.'}
-                            {formData.role === 'externe' && 'Accueil et check-in sur les spectacles assignés.'}
+                            {getRoleDescription(formData.role)}
                         </p>
+                        {isEditingCompanyUser && (
+                            <p className="text-xs text-amber-600">
+                                Le rôle d&apos;un utilisateur compagnie ne peut pas être changé.
+                            </p>
+                        )}
                     </div>
+
+                    {/* Sélection de compagnie (si rôle = company) */}
+                    {formData.role === 'company' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="company_id">
+                                Compagnie associée <span className="text-destructive">*</span>
+                            </Label>
+                            {isLoadingCompanies ? (
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Chargement des compagnies...
+                                </div>
+                            ) : (
+                                <Select
+                                    value={formData.company_id || ''}
+                                    onValueChange={handleCompanyChange}
+                                    disabled={isSubmitting || !canSelectCompany}
+                                >
+                                    <SelectTrigger 
+                                        id="company_id"
+                                        className={validationErrors.company_id ? 'border-destructive' : ''}
+                                    >
+                                        <SelectValue placeholder="Sélectionner une compagnie" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {companies.map((company) => (
+                                            <SelectItem key={company.id} value={company.id}>
+                                                <div className="flex items-center gap-2">
+                                                    <Building2 className="w-3 h-3 text-muted-foreground" />
+                                                    {company.name}
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            {validationErrors.company_id && (
+                                <p className="text-sm text-destructive">{validationErrors.company_id}</p>
+                            )}
+                            {!isCreating && isEditingCompanyUser && (
+                                <p className="text-xs text-muted-foreground">
+                                    La compagnie associée ne peut pas être changée.
+                                </p>
+                            )}
+                            {!isCreating && !isEditingCompanyUser && (
+                                <p className="text-xs text-amber-600">
+                                    Attention : changer le rôle vers &quot;Compagnie&quot; donnera accès aux statistiques de cette compagnie.
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 <DialogFooter className="border-t pt-4 mt-4 flex flex-col sm:flex-row gap-2">

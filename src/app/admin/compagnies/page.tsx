@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +12,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2, Eye, Theater, AlertCircle, RefreshCw } from 'lucide-react';
+import { Pencil, Trash2, Eye, Theater, AlertCircle, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { searchMatch } from '@/lib/utils';
+import { getCompanyUser } from '@/lib/services/internal-users';
 import type { CompanyInsert } from '@/types/database';
 import type { CompanyWithShowsCount } from '@/lib/services/companies';
+import type { ManagedUser } from '@/lib/services/internal-users';
 
 // Hook Supabase
 import { useCompanies } from '@/hooks/useCompanies';
@@ -33,14 +35,16 @@ import {
 import {
     CompanyFormDialog,
     CompanyViewDialog,
+    CreateCompanyUserDialog,
+    AssignCompanyUserDialog,
     type CompanyFormData,
 } from '@/components/admin/compagnies';
 
 export default function AdminCompagniesPage() {
     const router = useRouter();
 
-    // Hook Supabase pour les données (inclut shows_count)
-    const { companies, isLoading, error, refresh, create, update, remove, checkUsage } = useCompanies();
+    // Hook Supabase pour les données (inclut shows_count et has_user)
+    const { companies, isLoading, error, refresh, create, update, remove, checkUsage, setCompanyHasUser } = useCompanies();
 
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,6 +61,32 @@ export default function AdminCompagniesPage() {
     const [companyToDelete, setCompanyToDelete] = useState<CompanyWithShowsCount | null>(null);
     const [viewingCompany, setViewingCompany] = useState<CompanyWithShowsCount | null>(null);
     const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
+
+    // États pour l'utilisateur compagnie
+    const [companyUser, setCompanyUser] = useState<ManagedUser | null>(null);
+    const [isLoadingUser, setIsLoadingUser] = useState(false);
+    const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+    const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false);
+
+    // Charger l'utilisateur lié quand on visualise une compagnie
+    const loadCompanyUser = useCallback(async (companyId: string) => {
+        setIsLoadingUser(true);
+        setCompanyUser(null);
+        
+        const result = await getCompanyUser(companyId);
+        
+        setCompanyUser(result.data);
+        setIsLoadingUser(false);
+    }, []);
+
+    // Effet pour charger l'utilisateur quand viewingCompany change
+    useEffect(() => {
+        if (viewingCompany) {
+            void loadCompanyUser(viewingCompany.id);
+        } else {
+            setCompanyUser(null);
+        }
+    }, [viewingCompany, loadCompanyUser]);
 
     // Naviguer vers les spectacles filtrés par compagnie
     const handleViewShows = (companyName: string) => {
@@ -182,6 +212,26 @@ export default function AdminCompagniesPage() {
         setIsSubmitting(false);
     };
 
+    // Handler pour ouvrir le dialogue de création d'utilisateur
+    const handleCreateUser = () => {
+        setIsCreateUserDialogOpen(true);
+    };
+
+    // Handler pour ouvrir le dialogue d'assignation d'utilisateur existant
+    const handleAssignUser = () => {
+        setIsAssignUserDialogOpen(true);
+    };
+
+    // Handler après création réussie de l'utilisateur
+    const handleUserCreated = () => {
+        // Recharger l'utilisateur de la compagnie en cours de visualisation
+        if (viewingCompany) {
+            void loadCompanyUser(viewingCompany.id);
+            // Mettre à jour le statut has_user dans la liste
+            setCompanyHasUser(viewingCompany.id, true);
+        }
+    };
+
     // État de chargement initial
     if (isLoading) {
         return (
@@ -239,7 +289,7 @@ export default function AdminCompagniesPage() {
             />
 
             {/* Tableau desktop */}
-            <div className="hidden lg:block rounded-md border bg-white">
+            <div className="hidden lg:block rounded-md border bg-white overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -247,13 +297,14 @@ export default function AdminCompagniesPage() {
                             <TableHead>Ville</TableHead>
                             <TableHead>Contact</TableHead>
                             <TableHead>Spectacles</TableHead>
+                            <TableHead>Accès</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredCompanies.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                                     {searchQuery ? 'Aucune compagnie trouvée' : 'Aucune compagnie enregistrée'}
                                 </TableCell>
                             </TableRow>
@@ -280,6 +331,25 @@ export default function AdminCompagniesPage() {
                                             <Theater className="w-3 h-3 mr-1" />
                                             {company.shows_count} spectacle{company.shows_count > 1 ? 's' : ''}
                                         </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {company.has_user ? (
+                                            <Badge 
+                                                variant="outline" 
+                                                className="bg-green-50 text-green-700 border-green-200"
+                                            >
+                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                Configuré
+                                            </Badge>
+                                        ) : (
+                                            <Badge 
+                                                variant="outline" 
+                                                className="text-muted-foreground"
+                                            >
+                                                <XCircle className="w-3 h-3 mr-1" />
+                                                Non configuré
+                                            </Badge>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex items-center justify-end gap-2">
@@ -343,13 +413,32 @@ export default function AdminCompagniesPage() {
                                             <p className="text-sm text-muted-foreground">{company.city}</p>
                                         )}
                                     </div>
-                                    <Badge
-                                        className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
-                                        onClick={() => handleViewShows(company.name)}
-                                    >
-                                        <Theater className="w-3 h-3 mr-1" />
-                                        {company.shows_count}
-                                    </Badge>
+                                    <div className="flex flex-col items-end gap-1">
+                                        <Badge
+                                            className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
+                                            onClick={() => handleViewShows(company.name)}
+                                        >
+                                            <Theater className="w-3 h-3 mr-1" />
+                                            {company.shows_count}
+                                        </Badge>
+                                        {company.has_user ? (
+                                            <Badge 
+                                                variant="outline" 
+                                                className="bg-green-50 text-green-700 border-green-200 text-xs"
+                                            >
+                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                Accès
+                                            </Badge>
+                                        ) : (
+                                            <Badge 
+                                                variant="outline" 
+                                                className="text-muted-foreground text-xs"
+                                            >
+                                                <XCircle className="w-3 h-3 mr-1" />
+                                                Pas d&apos;accès
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
                                 {company.contact_name && (
                                     <p className="text-sm text-muted-foreground">
@@ -399,7 +488,33 @@ export default function AdminCompagniesPage() {
                 onDelete={() => void handleViewToDelete()}
                 showsCount={viewingCompany?.shows_count ?? 0}
                 onViewShows={() => viewingCompany && handleViewShows(viewingCompany.name)}
+                companyUser={companyUser}
+                isLoadingUser={isLoadingUser}
+                onCreateUser={handleCreateUser}
+                onAssignUser={handleAssignUser}
             />
+
+            {/* Dialogue de création d'accès utilisateur */}
+            {viewingCompany && (
+                <CreateCompanyUserDialog
+                    open={isCreateUserDialogOpen}
+                    onOpenChange={setIsCreateUserDialogOpen}
+                    companyId={viewingCompany.id}
+                    companyName={viewingCompany.name}
+                    onSuccess={handleUserCreated}
+                />
+            )}
+
+            {/* Dialogue d'assignation d'utilisateur existant */}
+            {viewingCompany && (
+                <AssignCompanyUserDialog
+                    open={isAssignUserDialogOpen}
+                    onOpenChange={setIsAssignUserDialogOpen}
+                    companyId={viewingCompany.id}
+                    companyName={viewingCompany.name}
+                    onSuccess={handleUserCreated}
+                />
+            )}
 
             <DeleteConfirmDialog
                 open={!!companyToDelete}

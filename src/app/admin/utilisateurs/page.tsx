@@ -18,15 +18,21 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users, Power } from 'lucide-react';
+import { Pencil, Trash2, Eye, Shield, AlertCircle, RefreshCw, Users, Power, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { searchMatch } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { InternalUser, InternalRole } from '@/types/database';
+import type { InternalRole } from '@/types/database';
 
-// Hook Supabase
-import { useInternalUsers, type UpdateUserData, type CreateUserData } from '@/hooks/useInternalUsers';
+// Hook Supabase pour les utilisateurs gérés (internes + company)
+import { 
+    useManagedUsers, 
+    type ManagedUser, 
+    type ManagedRole,
+    type CreateManagedUserData,
+    type UpdateManagedUserData,
+} from '@/hooks/useManagedUsers';
 
 // Tooltip pour les boutons désactivés
 import {
@@ -55,15 +61,16 @@ import {
 // CONSTANTES
 // ============================================
 
-/** Tous les rôles internes pour le filtre */
-const ALL_ROLES: Array<InternalRole | 'all'> = ['all', 'super-admin', 'admin', 'externe'];
+/** Tous les rôles gérés pour le filtre */
+const ALL_ROLES: Array<ManagedRole | 'all'> = ['all', 'super-admin', 'admin', 'externe', 'company'];
 
 /** Labels des rôles pour le filtre */
-const ROLE_LABELS: Record<InternalRole | 'all', string> = {
+const ROLE_LABELS: Record<ManagedRole | 'all', string> = {
     'all': 'Tous les rôles',
     'super-admin': 'Super Admin',
     'admin': 'Admin',
     'externe': 'Externe',
+    'company': 'Compagnie',
 };
 
 // ============================================
@@ -73,7 +80,7 @@ const ROLE_LABELS: Record<InternalRole | 'all', string> = {
 /**
  * Retourne la couleur du badge selon le rôle
  */
-function getRoleBadgeClass(role: InternalRole): string {
+function getRoleBadgeClass(role: ManagedRole): string {
     switch (role) {
         case 'super-admin':
             return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -81,6 +88,8 @@ function getRoleBadgeClass(role: InternalRole): string {
             return 'bg-blue-100 text-blue-800 border-blue-200';
         case 'externe':
             return 'bg-amber-100 text-amber-800 border-amber-200';
+        case 'company':
+            return 'bg-teal-100 text-teal-800 border-teal-200';
         default:
             return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -89,7 +98,7 @@ function getRoleBadgeClass(role: InternalRole): string {
 /**
  * Formate le nom complet ou retourne l'email
  */
-function formatDisplayName(user: InternalUser): string {
+function formatDisplayName(user: ManagedUser): string {
     if (user.first_name && user.last_name) {
         return `${user.first_name} ${user.last_name}`;
     }
@@ -101,7 +110,7 @@ function formatDisplayName(user: InternalUser): string {
 /**
  * Traduit un rôle en français
  */
-function translateRole(role: InternalRole): string {
+function translateRoleLabel(role: ManagedRole): string {
     return ROLE_LABELS[role] || role;
 }
 
@@ -110,8 +119,8 @@ function translateRole(role: InternalRole): string {
 // ============================================
 
 export default function AdminUtilisateursPage() {
-    // Hook Supabase pour les données
-    const { users, isLoading, error, refresh, create, update, remove, toggleStatus } = useInternalUsers();
+    // Hook Supabase pour les données (internes + company)
+    const { users, isLoading, error, refresh, create, update, remove, toggleStatus } = useManagedUsers();
 
     // ID et rôle de l'utilisateur connecté
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -119,16 +128,16 @@ export default function AdminUtilisateursPage() {
 
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [roleFilter, setRoleFilter] = useState<InternalRole | 'all'>('all');
+    const [roleFilter, setRoleFilter] = useState<ManagedRole | 'all'>('all');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formError, setFormError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
 
     // États des modales
     const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
-    const [editingUser, setEditingUser] = useState<InternalUser | null>(null);
-    const [userToDelete, setUserToDelete] = useState<InternalUser | null>(null);
-    const [viewingUser, setViewingUser] = useState<InternalUser | null>(null);
+    const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
+    const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
+    const [viewingUser, setViewingUser] = useState<ManagedUser | null>(null);
 
     // Récupérer l'utilisateur connecté et son rôle au montage
     useEffect(() => {
@@ -171,14 +180,15 @@ export default function AdminUtilisateursPage() {
             result = result.filter((user) => user.role === roleFilter);
         }
 
-        // Filtre par recherche (nom, prénom, email)
+        // Filtre par recherche (nom, prénom, email, nom compagnie)
         if (searchQuery.trim()) {
             const query = searchQuery.trim();
             result = result.filter(
                 (user) =>
                     searchMatch(user.email, query) ||
                     searchMatch(user.first_name || '', query) ||
-                    searchMatch(user.last_name || '', query)
+                    searchMatch(user.last_name || '', query) ||
+                    searchMatch(user.company_name || '', query)
             );
         }
 
@@ -191,6 +201,7 @@ export default function AdminUtilisateursPage() {
             'super-admin': users.filter((u) => u.role === 'super-admin').length,
             'admin': users.filter((u) => u.role === 'admin').length,
             'externe': users.filter((u) => u.role === 'externe').length,
+            'company': users.filter((u) => u.role === 'company').length,
         };
     }, [users]);
 
@@ -202,17 +213,17 @@ export default function AdminUtilisateursPage() {
         setIsFormDialogOpen(true);
     };
 
-    const handleEdit = (user: InternalUser) => {
+    const handleEdit = (user: ManagedUser) => {
         setEditingUser(user);
         setFormError(null);
         setIsFormDialogOpen(true);
     };
 
-    const handleView = (user: InternalUser) => {
+    const handleView = (user: ManagedUser) => {
         setViewingUser(user);
     };
 
-    const handleDeleteClick = (user: InternalUser) => {
+    const handleDeleteClick = (user: ManagedUser) => {
         // Empêcher l'auto-suppression
         if (currentUserId && user.id === currentUserId) {
             setDeleteError('Vous ne pouvez pas supprimer votre propre compte.');
@@ -281,7 +292,7 @@ export default function AdminUtilisateursPage() {
         setIsSubmitting(true);
         setFormError(null);
 
-        const createData: CreateUserData = {
+        const createData: CreateManagedUserData = {
             email: formData.email,
             password: formData.password,
             first_name: formData.first_name || undefined,
@@ -289,6 +300,7 @@ export default function AdminUtilisateursPage() {
             phone: formData.phone || undefined,
             role: formData.role,
             must_change_password: formData.must_change_password,
+            company_id: formData.company_id,
         };
 
         const result = await create(createData);
@@ -317,14 +329,14 @@ export default function AdminUtilisateursPage() {
         setFormError(null);
 
         // Préparer les données pour l'update
-        const updateData: UpdateUserData = {
+        const updateData: UpdateManagedUserData = {
             first_name: formData.first_name || null,
             last_name: formData.last_name || null,
             phone: formData.phone || null,
         };
 
-        // Ajouter le rôle seulement s'il a changé
-        if (formData.role !== editingUser.role) {
+        // Ajouter le rôle seulement s'il a changé (et pas pour les utilisateurs company)
+        if (formData.role !== editingUser.role && editingUser.role !== 'company') {
             updateData.role = formData.role;
         }
 
@@ -343,7 +355,7 @@ export default function AdminUtilisateursPage() {
     /**
      * Vérifie si un utilisateur peut être supprimé
      */
-    const canDeleteUser = (user: InternalUser): boolean => {
+    const canDeleteUser = (user: ManagedUser): boolean => {
         return currentUserId !== user.id;
     };
 
@@ -352,7 +364,7 @@ export default function AdminUtilisateursPage() {
      * Seuls les Super Admins peuvent faire ça
      * On ne peut pas désactiver un Super Admin (mais on peut le réactiver s'il était désactivé)
      */
-    const canToggleStatus = (user: InternalUser): boolean => {
+    const canToggleStatus = (user: ManagedUser): boolean => {
         // Seul un Super Admin peut toggle
         if (currentUserRole !== 'super-admin') return false;
         // On ne peut pas se toggle soi-même
@@ -365,7 +377,7 @@ export default function AdminUtilisateursPage() {
     /**
      * Handler pour activer/désactiver un utilisateur
      */
-    const handleToggleStatus = async (user: InternalUser) => {
+    const handleToggleStatus = async (user: ManagedUser) => {
         if (!canToggleStatus(user)) return;
         
         setIsSubmitting(true);
@@ -437,6 +449,10 @@ export default function AdminUtilisateursPage() {
                     <Users className="w-3 h-3 mr-1" />
                     {roleCounts['externe']} Externe
                 </Badge>
+                <Badge variant="outline" className="bg-teal-50">
+                    <Building2 className="w-3 h-3 mr-1" />
+                    {roleCounts['company']} Compagnie
+                </Badge>
             </div>
 
             {/* Filtres */}
@@ -445,12 +461,12 @@ export default function AdminUtilisateursPage() {
                     <SearchInput
                         value={searchQuery}
                         onChange={setSearchQuery}
-                        placeholder="Rechercher par nom ou email..."
+                        placeholder="Rechercher par nom, email ou compagnie..."
                     />
                 </div>
                 <Select
                     value={roleFilter}
-                    onValueChange={(value) => setRoleFilter(value as InternalRole | 'all')}
+                    onValueChange={(value) => setRoleFilter(value as ManagedRole | 'all')}
                 >
                     <SelectTrigger className="w-full sm:w-[200px]">
                         <SelectValue placeholder="Filtrer par rôle" />
@@ -472,20 +488,21 @@ export default function AdminUtilisateursPage() {
             </p>
 
             {/* Tableau desktop */}
-            <div className="hidden lg:block rounded-md border bg-white">
+            <div className="hidden lg:block rounded-md border bg-white overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead>Nom</TableHead>
                             <TableHead>Email</TableHead>
                             <TableHead>Rôle</TableHead>
+                            <TableHead>Compagnie</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredUsers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                                     {searchQuery || roleFilter !== 'all'
                                         ? 'Aucun utilisateur trouvé'
                                         : 'Aucun utilisateur enregistré'}
@@ -522,9 +539,20 @@ export default function AdminUtilisateursPage() {
                                         </TableCell>
                                         <TableCell>
                                             <Badge className={getRoleBadgeClass(user.role)}>
-                                                <Shield className="w-3 h-3 mr-1" />
-                                                {translateRole(user.role)}
+                                                {user.role === 'company' ? (
+                                                    <Building2 className="w-3 h-3 mr-1" />
+                                                ) : (
+                                                    <Shield className="w-3 h-3 mr-1" />
+                                                )}
+                                                {translateRoleLabel(user.role)}
                                             </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.company_name ? (
+                                                <span className="text-sm">{user.company_name}</span>
+                                            ) : (
+                                                <span className="text-muted-foreground">-</span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-2">
@@ -646,10 +674,20 @@ export default function AdminUtilisateursPage() {
                                                 )}
                                             </div>
                                             <p className="text-sm text-muted-foreground">{user.email}</p>
+                                            {user.company_name && (
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    <Building2 className="w-3 h-3 inline mr-1" />
+                                                    {user.company_name}
+                                                </p>
+                                            )}
                                         </div>
                                         <Badge className={getRoleBadgeClass(user.role)}>
-                                            <Shield className="w-3 h-3 mr-1" />
-                                            {translateRole(user.role)}
+                                            {user.role === 'company' ? (
+                                                <Building2 className="w-3 h-3 mr-1" />
+                                            ) : (
+                                                <Shield className="w-3 h-3 mr-1" />
+                                            )}
+                                            {translateRoleLabel(user.role)}
                                         </Badge>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2 border-t flex-wrap">

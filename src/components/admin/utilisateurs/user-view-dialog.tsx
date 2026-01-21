@@ -10,9 +10,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, User, Shield, Calendar, Clock } from 'lucide-react';
-import type { InternalUser, InternalRole } from '@/types/database';
-import { translateRole } from '@/lib/services/internal-users';
+import { Mail, Phone, User, Shield, Calendar, Clock, Building2 } from 'lucide-react';
+import { translateRole, type ManagedUser, type ManagedRole } from '@/lib/services/internal-users';
 
 // ============================================
 // TYPES
@@ -20,7 +19,7 @@ import { translateRole } from '@/lib/services/internal-users';
 
 export interface UserViewDialogProps {
     /** Utilisateur à afficher (null = modale fermée) */
-    user: InternalUser | null;
+    user: ManagedUser | null;
     /** Callback pour fermer la modale */
     onClose: () => void;
     /** Callback pour passer en mode édition */
@@ -38,7 +37,7 @@ export interface UserViewDialogProps {
 /**
  * Retourne la couleur du badge selon le rôle
  */
-function getRoleBadgeClass(role: InternalRole): string {
+function getRoleBadgeClass(role: ManagedRole): string {
     switch (role) {
         case 'super-admin':
             return 'bg-purple-100 text-purple-800 border-purple-200';
@@ -46,6 +45,8 @@ function getRoleBadgeClass(role: InternalRole): string {
             return 'bg-blue-100 text-blue-800 border-blue-200';
         case 'externe':
             return 'bg-amber-100 text-amber-800 border-amber-200';
+        case 'company':
+            return 'bg-teal-100 text-teal-800 border-teal-200';
         default:
             return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -70,7 +71,7 @@ function formatDate(dateString: string | null): string {
 /**
  * Formate le nom complet
  */
-function formatFullName(user: InternalUser): string {
+function formatFullName(user: ManagedUser): string {
     if (user.first_name && user.last_name) {
         return `${user.first_name} ${user.last_name}`;
     }
@@ -84,7 +85,7 @@ function formatFullName(user: InternalUser): string {
 // ============================================
 
 /**
- * Modale de visualisation d'un utilisateur interne
+ * Modale de visualisation d'un utilisateur (interne ou company)
  */
 export function UserViewDialog({
     user,
@@ -97,12 +98,14 @@ export function UserViewDialog({
 
     const fullName = formatFullName(user);
     const hasName = user.first_name || user.last_name;
+    const isCompanyUser = user.role === 'company';
+    const isDisabled = user.disabled_at !== null;
 
     return (
         <Dialog open={!!user} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="text-xl flex items-center gap-2">
+                    <DialogTitle className="text-xl flex items-center gap-2 flex-wrap">
                         <User className="w-5 h-5" />
                         {hasName ? fullName : user.email}
                         {!canDelete && (
@@ -110,10 +113,19 @@ export function UserViewDialog({
                                 Vous
                             </Badge>
                         )}
+                        {isDisabled && (
+                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                Inactif
+                            </Badge>
+                        )}
                     </DialogTitle>
                     <DialogDescription className="flex items-center gap-2">
                         <Badge className={getRoleBadgeClass(user.role)}>
-                            <Shield className="w-3 h-3 mr-1" />
+                            {isCompanyUser ? (
+                                <Building2 className="w-3 h-3 mr-1" />
+                            ) : (
+                                <Shield className="w-3 h-3 mr-1" />
+                            )}
                             {translateRole(user.role)}
                         </Badge>
                     </DialogDescription>
@@ -160,6 +172,28 @@ export function UserViewDialog({
                         </div>
                     </div>
 
+                    {/* Compagnie associée (pour les utilisateurs company) */}
+                    {isCompanyUser && (
+                        <div>
+                            <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+                                Compagnie associée
+                            </h4>
+                            <div className="space-y-2">
+                                {user.company_name ? (
+                                    <p className="flex items-center gap-2 text-sm">
+                                        <Building2 className="w-4 h-4 text-muted-foreground" />
+                                        <span className="font-medium">{user.company_name}</span>
+                                    </p>
+                                ) : (
+                                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Building2 className="w-4 h-4" />
+                                        <span className="italic">Aucune compagnie associée</span>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Dates */}
                     <div>
                         <h4 className="text-sm font-semibold text-muted-foreground mb-2">
@@ -176,10 +210,17 @@ export function UserViewDialog({
                                 <span className="text-muted-foreground">Dernière connexion :</span>
                                 {formatDate(user.last_login_at)}
                             </p>
+                            {isDisabled && user.disabled_at && (
+                                <p className="flex items-center gap-2 text-sm text-red-600">
+                                    <Clock className="w-4 h-4" />
+                                    <span>Désactivé le :</span>
+                                    {formatDate(user.disabled_at)}
+                                </p>
+                            )}
                         </div>
                     </div>
 
-                    {/* TODO: Assignations spectacles pour externe */}
+                    {/* Assignations spectacles pour externe */}
                     {user.role === 'externe' && (
                         <div>
                             <h4 className="text-sm font-semibold text-muted-foreground mb-2">

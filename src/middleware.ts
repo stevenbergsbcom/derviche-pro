@@ -2,6 +2,22 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env';
 
+// ============================================
+// TYPES
+// ============================================
+
+type UserRole = 'super-admin' | 'admin' | 'externe' | 'professional' | 'company';
+
+// Rôles autorisés pour l'interface admin
+const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin', 'externe'];
+
+// Rôles autorisés pour l'interface compagnie
+const COMPANY_ROLES: UserRole[] = ['company'];
+
+// ============================================
+// MIDDLEWARE
+// ============================================
+
 export async function middleware(request: NextRequest) {
     const response = NextResponse.next({
         request: {
@@ -103,6 +119,50 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
+    // ============================================
+    // PROTECTION PAR RÔLE
+    // ============================================
+
+    // Routes nécessitant une vérification de rôle
+    const isAdminRoute = pathname.startsWith('/admin');
+    const isCompanyRoute = pathname.startsWith('/company');
+
+    // Si c'est une route protégée par rôle et que l'utilisateur est connecté
+    if (user && (isAdminRoute || isCompanyRoute)) {
+        // Récupérer le rôle de l'utilisateur
+        const { data: roleData, error: roleError } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+
+        // SÉCURITÉ (fail-secure) : Si erreur lors de la récupération du rôle, bloquer l'accès
+        if (roleError || !roleData) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/';
+            url.searchParams.set('error', 'role_not_found');
+            return NextResponse.redirect(url);
+        }
+
+        const userRole = roleData.role as UserRole;
+
+        // Vérification pour les routes /admin/*
+        if (isAdminRoute && !ADMIN_ROLES.includes(userRole)) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/';
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
+
+        // Vérification pour les routes /company/*
+        if (isCompanyRoute && !COMPANY_ROLES.includes(userRole)) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/';
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
+    }
+
     return response;
 }
 
@@ -118,4 +178,3 @@ export const config = {
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };
-

@@ -110,6 +110,7 @@ export interface ProfileRow {
   gdpr_consent_date: string | null;
   gdpr_data_retention_accepted: boolean;
   last_login_at: string | null;
+  disabled_at: string | null; // NULL = actif, date = désactivé temporairement
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

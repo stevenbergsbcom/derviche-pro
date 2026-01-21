@@ -17,3 +17,6 @@ export * from './user-preferences';
 // Services Public
 export * from './public-catalog';
 export * from './reservations';
+
+// Services Company (interface compagnie)
+export * from './company-dashboard';
