@@ -19,6 +19,7 @@ import type {
   CheckinStatus 
 } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { buildSearchOrClause } from '@/lib/utils';
 
 // ============================================
 // TYPES
@@ -401,8 +402,13 @@ export async function getAdminReservations(
     }
 
     if (filters.search) {
-      const searchTerm = filters.search.replace(/'/g, "''"); // Escape single quotes
-      query = query.or(`guest_email.ilike.%${searchTerm}%,guest_first_name.ilike.%${searchTerm}%,guest_last_name.ilike.%${searchTerm}%`);
+      const searchClause = buildSearchOrClause(
+        filters.search,
+        ['guest_email', 'guest_first_name', 'guest_last_name']
+      );
+      if (searchClause) {
+        query = query.or(searchClause);
+      }
     }
 
     // Tri (défaut: date représentation croissante)
@@ -551,8 +557,13 @@ export async function getAllReservationsForExport(
     }
 
     if (filters.search) {
-      const searchTerm = filters.search.replace(/'/g, "''"); // Escape single quotes
-      query = query.or(`guest_email.ilike.%${searchTerm}%,guest_first_name.ilike.%${searchTerm}%,guest_last_name.ilike.%${searchTerm}%`);
+      const searchClause = buildSearchOrClause(
+        filters.search,
+        ['guest_email', 'guest_first_name', 'guest_last_name']
+      );
+      if (searchClause) {
+        query = query.or(searchClause);
+      }
     }
 
     // Tri par date de représentation puis nom

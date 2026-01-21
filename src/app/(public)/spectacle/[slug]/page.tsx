@@ -37,8 +37,10 @@ import {
     Loader2,
     AlertTriangle,
     Drama,
+    ShieldAlert,
 } from 'lucide-react';
 import { usePublicShow } from '@/hooks/usePublicShow';
+import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import type { PublicSlot } from '@/lib/services/public-catalog';
 import { createReservation } from '@/lib/services/reservations';
 
@@ -199,6 +201,9 @@ export default function SpectacleDetailPage() {
 
     // Hook Supabase pour charger le spectacle
     const { show, isLoading, notFound, error, refresh } = usePublicShow(slug);
+
+    // Hook pour détecter si l'utilisateur est un admin
+    const { isAdminRole, isLoading: isRoleLoading } = useCurrentUserRole();
 
     // Convertir les slots Supabase en TimeSlots pour le calendrier
     const timeSlots = useMemo(() => {
@@ -435,6 +440,10 @@ export default function SpectacleDetailPage() {
 
     // Gérer la sélection d'un créneau
     const handleSlotSelect = (slot: TimeSlot) => {
+        // Bloquer si l'utilisateur est un admin
+        if (isAdminRole) {
+            return; // Les admins ne peuvent pas réserver côté public
+        }
         setSelectedSlot(slot);
         setCurrentStep('participants');
     };
@@ -536,6 +545,36 @@ export default function SpectacleDetailPage() {
     };
 
     const activeStepNumber = getActiveStepNumber();
+
+    // Rendu du bandeau d'alerte pour les admins
+    const renderAdminBlockBanner = () => {
+        if (!isAdminRole || isRoleLoading) return null;
+
+        return (
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                    <div className="text-sm">
+                        <p className="font-semibold text-destructive mb-1">
+                            Accès réservé aux professionnels
+                        </p>
+                        <p className="text-muted-foreground mb-3">
+                            Vous êtes connecté en tant qu&apos;administrateur. Pour effectuer une réservation, veuillez utiliser l&apos;interface d&apos;administration.
+                        </p>
+                        <Button
+                            asChild
+                            size="sm"
+                            className="bg-derviche hover:bg-derviche-dark text-white"
+                        >
+                            <Link href="/admin/reservations">
+                                Aller à l&apos;administration →
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // Rendu du fil d'Ariane
     const renderStepsIndicator = () => (
@@ -688,19 +727,33 @@ export default function SpectacleDetailPage() {
                                 Aucun créneau disponible pour cette date.
                             </p>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {availableSlots.map((slot) => (
-                                    <Button
-                                        key={slot.id}
-                                        variant="outline"
-                                        onClick={() => handleSlotSelect(slot)}
-                                        className="h-auto py-3 flex flex-col items-center hover:bg-derviche hover:text-white hover:border-derviche"
-                                    >
-                                        <span className="font-semibold text-base">{slot.time}</span>
-                                        <span className="text-xs opacity-70 mt-0.5">{slot.venueName}</span>
-                                    </Button>
-                                ))}
-                            </div>
+                            <>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {availableSlots.map((slot) => (
+                                        <Button
+                                            key={slot.id}
+                                            variant="outline"
+                                            onClick={() => handleSlotSelect(slot)}
+                                            disabled={isAdminRole}
+                                            className={`h-auto py-3 flex flex-col items-center ${
+                                                isAdminRole
+                                                    ? 'opacity-60 cursor-not-allowed'
+                                                    : 'hover:bg-derviche hover:text-white hover:border-derviche'
+                                            }`}
+                                        >
+                                            <span className="font-semibold text-base">{slot.time}</span>
+                                            <span className="text-xs opacity-70 mt-0.5">{slot.venueName}</span>
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {/* Message pour les admins */}
+                                {isAdminRole && (
+                                    <p className="text-sm text-muted-foreground text-center mt-4 italic">
+                                        Consultation uniquement &mdash; réservation via l&apos;admin
+                                    </p>
+                                )}
+                            </>
                         )}
                     </>
                 )}
@@ -1094,6 +1147,9 @@ export default function SpectacleDetailPage() {
 
                                 {/* Colonne droite - Étapes (1/2) */}
                                 <div className="p-6 md:p-8">
+                                    {/* Bandeau d'alerte pour les admins */}
+                                    {renderAdminBlockBanner()}
+
                                     {/* Fil d'Ariane */}
                                     {renderStepsIndicator()}
 

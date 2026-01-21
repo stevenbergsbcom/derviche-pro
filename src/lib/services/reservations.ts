@@ -239,6 +239,8 @@ export async function getReservationById(
 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    return { data: null, error: message };
+    logger.error('[reservations] Exception lecture réservation', { error: message });
+    // SÉCURITÉ: Ne pas exposer les détails techniques
+    return { data: null, error: 'Impossible de récupérer la réservation.' };
   }
 }
