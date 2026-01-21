@@ -149,7 +149,13 @@ export default function MonComptePage() {
     const handleChangePassword = async () => {
         setPasswordError(null);
 
-        // Validation
+        // Validation du mot de passe actuel
+        if (!passwordData.currentPassword) {
+            setPasswordError('Le mot de passe actuel est requis');
+            return;
+        }
+
+        // Validation du nouveau mot de passe
         if (!passwordData.newPassword) {
             setPasswordError('Le nouveau mot de passe est requis');
             return;
@@ -175,15 +181,43 @@ export default function MonComptePage() {
             return;
         }
 
+        // Vérifier que le nouveau mot de passe est différent de l'actuel
+        if (passwordData.newPassword === passwordData.currentPassword) {
+            setPasswordError('Le nouveau mot de passe doit être différent de l\'actuel');
+            return;
+        }
+
         setIsChangingPassword(true);
         try {
             const supabase = createClient();
-            const { error } = await supabase.auth.updateUser({
+
+            // Étape 1: Vérifier le mot de passe actuel via l'API serveur
+            // On utilise une API dédiée pour éviter d'affecter la session courante
+            const verifyResponse = await fetch('/api/auth/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: passwordData.currentPassword }),
+            });
+
+            const verifyResult = await verifyResponse.json() as { success: boolean; valid?: boolean; error?: string };
+
+            if (!verifyResult.success) {
+                setPasswordError(verifyResult.error || 'Erreur de vérification');
+                return;
+            }
+
+            if (!verifyResult.valid) {
+                setPasswordError('Le mot de passe actuel est incorrect');
+                return;
+            }
+
+            // Étape 2: Mettre à jour le mot de passe
+            const { error: updateError } = await supabase.auth.updateUser({
                 password: passwordData.newPassword,
             });
 
-            if (error) {
-                setPasswordError(error.message);
+            if (updateError) {
+                setPasswordError(updateError.message);
                 return;
             }
 
@@ -413,6 +447,19 @@ export default function MonComptePage() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
+                            <Label htmlFor="currentPassword">Mot de passe actuel</Label>
+                            <Input
+                                id="currentPassword"
+                                type="password"
+                                value={passwordData.currentPassword}
+                                onChange={(e) =>
+                                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                                }
+                                disabled={isChangingPassword}
+                                autoComplete="current-password"
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="newPassword">Nouveau mot de passe</Label>
                             <Input
                                 id="newPassword"
@@ -422,6 +469,7 @@ export default function MonComptePage() {
                                     setPasswordData({ ...passwordData, newPassword: e.target.value })
                                 }
                                 disabled={isChangingPassword}
+                                autoComplete="new-password"
                             />
                             <p className="text-xs text-muted-foreground">
                                 Minimum 10 caractères avec majuscules, minuscules et chiffres
@@ -437,6 +485,7 @@ export default function MonComptePage() {
                                     setPasswordData({ ...passwordData, confirmPassword: e.target.value })
                                 }
                                 disabled={isChangingPassword}
+                                autoComplete="new-password"
                             />
                         </div>
                         {passwordError && (

@@ -107,16 +107,38 @@ export async function getCompaniesWithShowsCount(): Promise<CompaniesWithCountRe
       logger.error('Erreur comptage shows', showsError);
     }
 
-    // Requête 3: Récupérer les utilisateurs company (non supprimés)
-    const { data: usersData, error: usersError } = await supabase
-      .from('profiles')
-      .select('company_id')
-      .is('deleted_at', null)
-      .not('company_id', 'is', null)
-      .in('company_id', companyIds);
+    // Requête 3: Récupérer les utilisateurs avec rôle 'company' (non supprimés)
+    // Important: On joint user_roles pour ne compter que les vrais utilisateurs company
+    // et éviter de compter les admins ou externes qui auraient un company_id assigné
+    
+    // Étape 3a: Récupérer les user_ids qui ont le rôle 'company'
+    const { data: companyRoleUsers, error: rolesError } = await supabase
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'company');
 
-    if (usersError) {
-      logger.error('Erreur récupération users company', usersError);
+    if (rolesError) {
+      logger.error('Erreur récupération rôles company', rolesError);
+    }
+
+    const companyUserIds = (companyRoleUsers || []).map(u => u.user_id);
+
+    // Étape 3b: Récupérer les profils avec company_id parmi ceux qui ont le rôle 'company'
+    let usersData: { company_id: string | null }[] = [];
+
+    if (companyUserIds.length > 0) {
+      const { data, error: usersError } = await supabase
+        .from('profiles')
+        .select('company_id')
+        .is('deleted_at', null)
+        .not('company_id', 'is', null)
+        .in('id', companyUserIds)
+        .in('company_id', companyIds);
+      
+      if (usersError) {
+        logger.error('Erreur récupération users company', usersError);
+      }
+      usersData = data || [];
     }
 
     // Agréger les counts par company_id

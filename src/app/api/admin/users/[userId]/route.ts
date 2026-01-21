@@ -27,6 +27,7 @@ interface UpdateUserBody {
   last_name?: string | null;
   phone?: string | null;
   role?: string;
+  company_id?: string | null; // Requis si role = 'company'
 }
 
 /** Rôles gérés */
@@ -244,10 +245,127 @@ export async function PATCH(
       );
     }
 
-    // 5. Mettre à jour le rôle si nécessaire (et si pas company)
-    if (newRole && newRole !== currentRole && currentRole !== 'company') {
+    // 5. Gérer le changement de rôle
+    const { company_id: newCompanyId } = body;
+
+    // Interdire le changement de rôle si l'utilisateur est déjà 'company'
+    if (newRole && newRole !== currentRole && currentRole === 'company') {
+      logger.warn('API /admin/users/[userId] PATCH - Changement rôle company interdit', { userId });
+      return NextResponse.json(
+        { success: false, error: 'Le rôle d\'un utilisateur compagnie ne peut pas être changé' },
+        { status: 400 }
+      );
+    }
+
+    // Si le nouveau rôle est 'company', vérifier company_id
+    if (newRole === 'company') {
+      if (!newCompanyId) {
+        logger.warn('API /admin/users/[userId] PATCH - company_id manquant', { userId });
+        return NextResponse.json(
+          { success: false, error: 'company_id est requis pour le rôle compagnie' },
+          { status: 400 }
+        );
+      }
+
+      // Vérifier que la compagnie existe
+      const { data: companyData, error: companyError } = await supabaseAdmin
+        .from('companies')
+        .select('id, name')
+        .eq('id', newCompanyId)
+        .is('deleted_at', null)
+        .single();
+
+      if (companyError || !companyData) {
+        logger.warn('API /admin/users/[userId] PATCH - Compagnie non trouvée', { userId, newCompanyId });
+        return NextResponse.json(
+          { success: false, error: 'Compagnie non trouvée' },
+          { status: 400 }
+        );
+      }
+
+      // Vérifier qu'aucun autre utilisateur 'company' n'est déjà associé à cette compagnie
+      // (On exclut l'utilisateur actuel de la vérification)
+      const { data: companyRoleUsers } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'company');
+
+      const companyUserIds = (companyRoleUsers || [])
+        .map(u => u.user_id)
+        .filter(id => id !== userId); // Exclure l'utilisateur actuel
+
+      if (companyUserIds.length > 0) {
+        const { data: existingCompanyUser } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email')
+          .eq('company_id', newCompanyId)
+          .is('deleted_at', null)
+          .in('id', companyUserIds)
+          .maybeSingle();
+
+        if (existingCompanyUser) {
+          logger.warn('API /admin/users/[userId] PATCH - Compagnie a déjà un utilisateur', { 
+            userId, 
+            newCompanyId,
+            existingUserId: existingCompanyUser.id 
+          });
+          return NextResponse.json(
+            { success: false, error: `Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})` },
+            { status: 400 }
+          );
+        }
+      }
+
+      // Mettre à jour company_id dans le profil
+      const { error: companyUpdateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          company_id: newCompanyId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (companyUpdateError) {
+        logger.error('API /admin/users/[userId] PATCH - Erreur mise à jour company_id', { 
+          userId, 
+          error: companyUpdateError.message 
+        });
+        return NextResponse.json(
+          { success: false, error: 'Erreur lors de l\'association à la compagnie' },
+          { status: 500 }
+        );
+      }
+
+      logger.info('API /admin/users/[userId] PATCH - company_id mis à jour', { userId, newCompanyId, companyName: companyData.name });
+    }
+
+    // Si on change vers un rôle interne, supprimer company_id
+    if (newRole && INTERNAL_ROLES.includes(newRole) && currentRole === 'company') {
+      // Ce cas ne devrait pas arriver car on bloque le changement depuis 'company'
+      // Mais par sécurité...
+    } else if (newRole && INTERNAL_ROLES.includes(newRole) && newRole !== currentRole) {
+      // Changement entre rôles internes - supprimer company_id si présent
+      const { error: clearCompanyError } = await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          company_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (clearCompanyError) {
+        logger.warn('API /admin/users/[userId] PATCH - Erreur suppression company_id', { 
+          userId, 
+          error: clearCompanyError.message 
+        });
+        // On continue quand même, ce n'est pas critique
+      }
+    }
+
+    // Mettre à jour le rôle si nécessaire
+    if (newRole && newRole !== currentRole) {
       // Valider le nouveau rôle
-      if (!INTERNAL_ROLES.includes(newRole)) {
+      if (!MANAGED_ROLES.includes(newRole)) {
         logger.warn('API /admin/users/[userId] PATCH - Rôle invalide', { userId, newRole });
         return NextResponse.json(
           { success: false, error: 'Rôle invalide' },

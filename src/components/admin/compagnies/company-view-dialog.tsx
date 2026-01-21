@@ -50,6 +50,8 @@ export interface CompanyViewDialogProps {
     isLoadingUser?: boolean;
     /** Callback pour créer un accès utilisateur */
     onCreateUser?: () => void;
+    /** Callback pour assigner un utilisateur existant */
+    onAssignUser?: () => void;
 }
 
 // ============================================
@@ -69,6 +71,7 @@ export function CompanyViewDialog({
     companyUser,
     isLoadingUser = false,
     onCreateUser,
+    onAssignUser,
 }: CompanyViewDialogProps) {
     if (!company) return null;
 
@@ -168,17 +171,30 @@ export function CompanyViewDialog({
                                         Aucun accès configuré
                                     </span>
                                 </div>
-                                {onCreateUser && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={onCreateUser}
-                                        className="w-full mt-2"
-                                    >
-                                        <UserPlus className="w-4 h-4 mr-2" />
-                                        Créer un accès
-                                    </Button>
-                                )}
+                                <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                                    {onCreateUser && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onCreateUser}
+                                            className="flex-1"
+                                        >
+                                            <UserPlus className="w-4 h-4 mr-2" />
+                                            Créer un accès
+                                        </Button>
+                                    )}
+                                    {onAssignUser && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={onAssignUser}
+                                            className="flex-1"
+                                        >
+                                            <User className="w-4 h-4 mr-2" />
+                                            Assigner un existant
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         )}
                         

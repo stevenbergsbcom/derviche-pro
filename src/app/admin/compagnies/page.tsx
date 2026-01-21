@@ -36,6 +36,7 @@ import {
     CompanyFormDialog,
     CompanyViewDialog,
     CreateCompanyUserDialog,
+    AssignCompanyUserDialog,
     type CompanyFormData,
 } from '@/components/admin/compagnies';
 
@@ -65,6 +66,7 @@ export default function AdminCompagniesPage() {
     const [companyUser, setCompanyUser] = useState<ManagedUser | null>(null);
     const [isLoadingUser, setIsLoadingUser] = useState(false);
     const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+    const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false);
 
     // Charger l'utilisateur lié quand on visualise une compagnie
     const loadCompanyUser = useCallback(async (companyId: string) => {
@@ -213,6 +215,11 @@ export default function AdminCompagniesPage() {
     // Handler pour ouvrir le dialogue de création d'utilisateur
     const handleCreateUser = () => {
         setIsCreateUserDialogOpen(true);
+    };
+
+    // Handler pour ouvrir le dialogue d'assignation d'utilisateur existant
+    const handleAssignUser = () => {
+        setIsAssignUserDialogOpen(true);
     };
 
     // Handler après création réussie de l'utilisateur
@@ -484,6 +491,7 @@ export default function AdminCompagniesPage() {
                 companyUser={companyUser}
                 isLoadingUser={isLoadingUser}
                 onCreateUser={handleCreateUser}
+                onAssignUser={handleAssignUser}
             />
 
             {/* Dialogue de création d'accès utilisateur */}
@@ -491,6 +499,17 @@ export default function AdminCompagniesPage() {
                 <CreateCompanyUserDialog
                     open={isCreateUserDialogOpen}
                     onOpenChange={setIsCreateUserDialogOpen}
+                    companyId={viewingCompany.id}
+                    companyName={viewingCompany.name}
+                    onSuccess={handleUserCreated}
+                />
+            )}
+
+            {/* Dialogue d'assignation d'utilisateur existant */}
+            {viewingCompany && (
+                <AssignCompanyUserDialog
+                    open={isAssignUserDialogOpen}
+                    onOpenChange={setIsAssignUserDialogOpen}
                     companyId={viewingCompany.id}
                     companyName={viewingCompany.name}
                     onSuccess={handleUserCreated}

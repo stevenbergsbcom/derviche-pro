@@ -109,26 +109,27 @@ export function useCompanies(): UseCompaniesReturn {
     }
 
     if (result.data) {
-      // Trouver les données existantes avant de mettre à jour
-      const existingCompany = companies.find(c => c.id === id);
-      const updatedCompanyWithCount: CompanyWithShowsCount = {
-        ...result.data,
-        shows_count: existingCompany?.shows_count ?? 0,
-        has_user: existingCompany?.has_user ?? false,
-      };
+      let updatedCompanyWithCount: CompanyWithShowsCount | null = null;
       
-      // Mettre à jour la compagnie dans la liste
-      setCompanies((prev) =>
-        prev
-          .map((c) => c.id === id ? updatedCompanyWithCount : c)
-          .sort((a, b) => a.name.localeCompare(b.name))
-      );
+      // Mettre à jour la compagnie dans la liste en préservant les données calculées
+      setCompanies((prev) => {
+        const existingCompany = prev.find(c => c.id === id);
+        updatedCompanyWithCount = {
+          ...result.data!,
+          shows_count: existingCompany?.shows_count ?? 0,
+          has_user: existingCompany?.has_user ?? false,
+        };
+        
+        return prev
+          .map((c) => c.id === id ? updatedCompanyWithCount! : c)
+          .sort((a, b) => a.name.localeCompare(b.name));
+      });
       
-      return { success: true, data: updatedCompanyWithCount };
+      return { success: true, data: updatedCompanyWithCount! };
     }
 
     return { success: false, error: 'Erreur inconnue lors de la mise à jour' };
-  }, [companies]);
+  }, []);
 
   // Supprimer une compagnie
   const remove = useCallback(async (id: string) => {

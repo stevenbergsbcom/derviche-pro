@@ -187,13 +187,32 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         );
       }
 
-      // Vérifier qu'aucun utilisateur company n'est déjà associé à cette compagnie
-      const { data: existingCompanyUser } = await supabaseAdmin
-        .from('profiles')
-        .select('id, email')
-        .eq('company_id', company_id)
-        .is('deleted_at', null)
-        .maybeSingle();
+      // Vérifier qu'aucun utilisateur avec rôle 'company' n'est déjà associé à cette compagnie
+      // Important: On filtre sur le rôle pour éviter de compter les admins/externes
+      // qui auraient un company_id assigné pour d'autres raisons
+      
+      // Étape 1: Récupérer les user_ids qui ont le rôle 'company'
+      const { data: companyRoleUsers } = await supabaseAdmin
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'company');
+
+      const companyUserIds = (companyRoleUsers || []).map(u => u.user_id);
+
+      // Étape 2: Vérifier si un de ces utilisateurs est associé à cette compagnie
+      let existingCompanyUser: { id: string; email: string } | null = null;
+
+      if (companyUserIds.length > 0) {
+        const { data } = await supabaseAdmin
+          .from('profiles')
+          .select('id, email')
+          .eq('company_id', company_id)
+          .is('deleted_at', null)
+          .in('id', companyUserIds)
+          .maybeSingle();
+        
+        existingCompanyUser = data;
+      }
 
       if (existingCompanyUser) {
         logger.warn('API /admin/users - Compagnie a déjà un utilisateur', { 

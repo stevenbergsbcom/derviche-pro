@@ -42,6 +42,7 @@ export interface UserFormData {
     last_name: string;
     phone: string;
     role: ManagedRole;
+    company_id?: string; // Requis si role = 'company'
 }
 
 /** Données du formulaire utilisateur (création) */
@@ -49,7 +50,6 @@ export interface CreateUserFormData extends UserFormData {
     email: string;
     password: string;
     must_change_password: boolean;
-    company_id?: string;
 }
 
 export interface UserFormDialogProps {
@@ -82,6 +82,7 @@ const defaultFormData: UserFormData = {
     last_name: '',
     phone: '',
     role: 'externe',
+    company_id: undefined,
 };
 
 /** Valeurs par défaut du formulaire (création) */
@@ -90,7 +91,6 @@ const defaultCreateFormData: CreateUserFormData = {
     email: '',
     password: '',
     must_change_password: true,
-    company_id: undefined,
 };
 
 // ============================================
@@ -321,6 +321,7 @@ export function UserFormDialog({
                 last_name: formData.last_name.trim(),
                 phone: formData.phone.trim(),
                 role: formData.role,
+                company_id: formData.role === 'company' ? formData.company_id : undefined,
             }, true);
         }
     };
@@ -341,8 +342,11 @@ export function UserFormDialog({
         : MANAGED_ROLES.includes(formData.role)
             && (formData.role !== 'company' || !!formData.company_id);
 
-    // En mode édition d'un utilisateur company, on ne peut pas changer le rôle
+    // En mode édition d'un utilisateur company, on ne peut pas changer le rôle ni la compagnie
     const isEditingCompanyUser = !isCreating && editingUser?.role === 'company';
+    
+    // En mode édition, on peut changer vers le rôle company (mais pas depuis company)
+    const canSelectCompany = formData.role === 'company' && (isCreating || !isEditingCompanyUser);
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {
@@ -608,7 +612,7 @@ export function UserFormDialog({
                                 <Select
                                     value={formData.company_id || ''}
                                     onValueChange={handleCompanyChange}
-                                    disabled={isSubmitting || !isCreating}
+                                    disabled={isSubmitting || !canSelectCompany}
                                 >
                                     <SelectTrigger 
                                         id="company_id"
@@ -631,9 +635,14 @@ export function UserFormDialog({
                             {validationErrors.company_id && (
                                 <p className="text-sm text-destructive">{validationErrors.company_id}</p>
                             )}
-                            {!isCreating && (
+                            {!isCreating && isEditingCompanyUser && (
                                 <p className="text-xs text-muted-foreground">
                                     La compagnie associée ne peut pas être changée.
+                                </p>
+                            )}
+                            {!isCreating && !isEditingCompanyUser && (
+                                <p className="text-xs text-amber-600">
+                                    Attention : changer le rôle vers &quot;Compagnie&quot; donnera accès aux statistiques de cette compagnie.
                                 </p>
                             )}
                         </div>
