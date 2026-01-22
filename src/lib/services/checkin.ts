@@ -80,6 +80,27 @@ export interface CheckinSlotsResult {
   error: string | null;
 }
 
+/** Réservation pour le check-in */
+export interface CheckinReservation {
+  id: string;
+  guestFirstName: string | null;
+  guestLastName: string | null;
+  guestEmail: string | null;
+  guestStructure: string | null;
+  numPlaces: number;
+  status: 'confirmed' | 'cancelled' | 'no_show';
+  checkinStatus: import('@/types/database').CheckinStatus | null;
+  checkinComment: string | null;
+  specialRequests: string | null;
+  createdAt: string;
+}
+
+/** Résultat de la récupération des réservations */
+export interface CheckinReservationsResult {
+  data: CheckinReservation[];
+  error: string | null;
+}
+
 /** Rôles avec accès complet (admin) */
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
 
@@ -462,6 +483,82 @@ export async function getAccessibleSlots(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('checkin.getAccessibleSlots - Exception', { error: message });
+    return { data: [], error: message };
+  }
+}
+
+/**
+ * Récupère les réservations d'un slot
+ * Triées par ordre alphabétique (nom de famille, puis prénom)
+ */
+export async function getSlotReservations(
+  slotId: string,
+  userId: string,
+  role: UserRole,
+  companyId: string | null
+): Promise<CheckinReservationsResult> {
+  try {
+    logger.info('checkin.getSlotReservations - Début', { slotId, userId, role });
+
+    // Vérifier l'accès au slot
+    const hasAccess = await canAccessSlot(slotId, userId, role, companyId);
+    if (!hasAccess) {
+      logger.warn('checkin.getSlotReservations - Accès refusé', { slotId, userId });
+      return { data: [], error: 'Accès non autorisé à cette représentation' };
+    }
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from('reservations')
+      .select(`
+        id,
+        guest_first_name,
+        guest_last_name,
+        guest_email,
+        guest_structure,
+        num_places,
+        status,
+        checkin_status,
+        checkin_comment,
+        special_requests,
+        created_at
+      `)
+      .eq('slot_id', slotId)
+      .order('guest_last_name', { ascending: true, nullsFirst: false })
+      .order('guest_first_name', { ascending: true, nullsFirst: false });
+
+    if (error) {
+      logger.error('checkin.getSlotReservations - Erreur Supabase', { error });
+      return { data: [], error: error.message };
+    }
+
+    if (!data || data.length === 0) {
+      logger.info('checkin.getSlotReservations - Aucune réservation');
+      return { data: [], error: null };
+    }
+
+    // Transformer les données
+    const reservations: CheckinReservation[] = data.map((r) => ({
+      id: r.id,
+      guestFirstName: r.guest_first_name,
+      guestLastName: r.guest_last_name,
+      guestEmail: r.guest_email,
+      guestStructure: r.guest_structure,
+      numPlaces: r.num_places,
+      status: r.status as 'confirmed' | 'cancelled' | 'no_show',
+      checkinStatus: r.checkin_status as import('@/types/database').CheckinStatus | null,
+      checkinComment: r.checkin_comment,
+      specialRequests: r.special_requests,
+      createdAt: r.created_at,
+    }));
+
+    logger.info('checkin.getSlotReservations - Succès', { count: reservations.length });
+    return { data: reservations, error: null };
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('checkin.getSlotReservations - Exception', { error: message });
     return { data: [], error: message };
   }
 }

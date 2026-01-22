@@ -8,6 +8,7 @@
 
 'use client';
 
+import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCheckinAccess } from '@/hooks';
@@ -33,11 +34,11 @@ import {
 /** Card skeleton pour le chargement */
 function ShowCardSkeleton() {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden py-0">
       <CardContent className="p-0">
-        <div className="flex gap-3 p-3">
-          <Skeleton className="w-20 h-20 rounded-lg shrink-0" />
-          <div className="flex-1 space-y-2">
+        <div className="flex gap-3 pr-3">
+          <Skeleton className="w-24 h-28 rounded-l-xl shrink-0" />
+          <div className="flex-1 space-y-2 py-2">
             <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-4 w-2/3" />
@@ -73,19 +74,19 @@ function ShowCard({ show, onClick }: ShowCardProps) {
 
   return (
     <Card 
-      className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+      className="overflow-hidden py-0 cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
       onClick={onClick}
     >
       <CardContent className="p-0">
-        <div className="flex gap-3 p-3">
-          {/* Image */}
-          <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted shrink-0 relative">
+        <div className="flex gap-3 pr-3">
+          {/* Image - prend toute la hauteur */}
+          <div className="w-24 rounded-l-xl overflow-hidden bg-muted shrink-0 relative self-stretch">
             {show.imageUrl ? (
               <Image
                 src={show.imageUrl}
                 alt={show.title}
                 fill
-                sizes="80px"
+                sizes="96px"
                 className="object-cover"
               />
             ) : (
@@ -96,10 +97,10 @@ function ShowCard({ show, onClick }: ShowCardProps) {
           </div>
 
           {/* Infos */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 py-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="font-semibold text-sm leading-tight line-clamp-2">
+                <h3 className="font-semibold text-base leading-tight">
                   {show.title}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -202,16 +203,18 @@ export default function AccueilPage() {
   } = useCheckinAccess();
 
   // Handler navigation vers spectacle
-  const handleShowClick = (showSlug: string) => {
+  const handleShowClick = useCallback((showSlug: string) => {
     router.push(`/accueil/${showSlug}`);
-  };
+  }, [router]);
 
   // Séparer les spectacles avec représentation aujourd'hui
-  const todayShows = shows.filter(
-    (show) => show.nextSlot && isSlotToday(show.nextSlot.date)
+  const todayShows = useMemo(() => 
+    shows.filter((show) => show.nextSlot && isSlotToday(show.nextSlot.date)),
+    [shows]
   );
-  const upcomingShows = shows.filter(
-    (show) => !show.nextSlot || !isSlotToday(show.nextSlot.date)
+  const upcomingShows = useMemo(() => 
+    shows.filter((show) => !show.nextSlot || !isSlotToday(show.nextSlot.date)),
+    [shows]
   );
 
   return (
