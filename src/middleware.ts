@@ -84,7 +84,6 @@ export async function middleware(request: NextRequest) {
     const publicRoutePrefixes = [
         '/auth/callback',
         // Routes maquettes (temporaires)
-        '/accueil',
         '/catalogue',
         '/spectacle',
         '/pro-dashboard',
