@@ -260,14 +260,7 @@ export async function getAccessibleShows(
       // Valider et filtrer les slots
       const rawSlots = Array.isArray(show.slots) ? show.slots : [];
       const validSlots = rawSlots
-        .filter((slot): slot is {
-          id: string;
-          date: string;
-          time: string;
-          hosted_by: string;
-          hosted_by_id: string | null;
-          venues: { id: string; name: string } | null;
-        } => isValidRawSlot(slot))
+        .filter(isValidRawSlot)
         .sort((a, b) => {
           const dateA = new Date(`${a.date}T${a.time}`);
           const dateB = new Date(`${b.date}T${b.time}`);
