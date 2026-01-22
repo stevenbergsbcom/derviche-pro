@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Scripts utilitaires Node.js
+    "scripts/**",
   ]),
   // Désactiver la règle trop stricte concernant setState dans useEffect
   // Ces patterns sont valides pour : initialisation au montage, chargement async, réaction aux props
