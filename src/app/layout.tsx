@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
@@ -21,6 +21,16 @@ export const metadata: Metadata = {
     shortcut: '/favicon.png',
     apple: '/favicon.png',
   },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Derviche Accueil',
+  },
+  formatDetection: {
+    telephone: true,
+    email: true,
+  },
   openGraph: {
     title: 'Derviche Diffusion - Réservation Professionnelle',
     description: 'Plateforme de réservation professionnelle pour spectacles vivants.',
@@ -28,6 +38,14 @@ export const metadata: Metadata = {
     locale: 'fr_FR',
     type: 'website',
   },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#1e3a5f',
 };
 
 export default function RootLayout({

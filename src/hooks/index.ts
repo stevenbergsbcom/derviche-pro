@@ -53,6 +53,10 @@ export type { UserRole } from './useCurrentUserRole';
 // Hooks Supabase - Company (interface compagnie)
 export { useCompanyDashboard } from './useCompanyDashboard';
 
+// Hooks Supabase - Accueil (check-in)
+export { useCheckinAccess } from './useCheckinAccess';
+export type { UseCheckinAccessReturn } from './useCheckinAccess';
+
 // Hooks Utilitaires
 export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
 export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';
