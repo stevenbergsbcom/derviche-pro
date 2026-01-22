@@ -26,7 +26,7 @@ export type ShowStatus = 'draft' | 'published' | 'archived';
 export type ShowPriceType = 'free' | 'paid_on_site';
 
 /** Qui assure l'accueil sur un créneau */
-export type SlotHostedBy = 'derviche' | 'company';
+export type SlotHostedBy = 'derviche' | 'company' | 'externe';
 
 /** Statut d'une réservation */
 export type ReservationStatus = 'confirmed' | 'cancelled' | 'no_show';
