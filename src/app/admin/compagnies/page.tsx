@@ -65,6 +65,7 @@ export default function AdminCompagniesPage() {
     // États pour l'utilisateur compagnie
     const [companyUser, setCompanyUser] = useState<ManagedUser | null>(null);
     const [isLoadingUser, setIsLoadingUser] = useState(false);
+    const [isProcessingUser, setIsProcessingUser] = useState(false);
     const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
     const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false);
 
@@ -229,6 +230,75 @@ export default function AdminCompagniesPage() {
             void loadCompanyUser(viewingCompany.id);
             // Mettre à jour le statut has_user dans la liste
             setCompanyHasUser(viewingCompany.id, true);
+        }
+    };
+
+    // Handler pour changer l'utilisateur associé (dissocie l'ancien puis ouvre le dialog)
+    const handleChangeUser = async () => {
+        if (!companyUser || !viewingCompany) return;
+
+        setIsProcessingUser(true);
+
+        try {
+            // D'abord dissocier l'utilisateur actuel
+            const response = await fetch(`/api/admin/users/${companyUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: null }),
+            });
+
+            const result = await response.json() as { success: boolean; error?: string };
+
+            if (!result.success) {
+                console.error('Erreur lors de la dissociation:', result.error);
+                return;
+            }
+
+            // Mettre à jour l'état local
+            setCompanyUser(null);
+            setCompanyHasUser(viewingCompany.id, false);
+
+            // Ouvrir le dialog d'assignation pour choisir le nouvel utilisateur
+            setIsAssignUserDialogOpen(true);
+        } catch (error) {
+            console.error('Erreur lors du changement d\'utilisateur:', error);
+        } finally {
+            setIsProcessingUser(false);
+        }
+    };
+
+    // Handler pour dissocier l'utilisateur sans en assigner un nouveau
+    const handleUnlinkUser = async () => {
+        if (!companyUser || !viewingCompany) return;
+
+        // Demander confirmation
+        if (!window.confirm(`Êtes-vous sûr de vouloir retirer l'accès de ${companyUser.email} à cette compagnie ?`)) {
+            return;
+        }
+
+        setIsProcessingUser(true);
+
+        try {
+            const response = await fetch(`/api/admin/users/${companyUser.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ company_id: null }),
+            });
+
+            const result = await response.json() as { success: boolean; error?: string };
+
+            if (!result.success) {
+                console.error('Erreur lors de la dissociation:', result.error);
+                return;
+            }
+
+            // Mettre à jour l'état local
+            setCompanyUser(null);
+            setCompanyHasUser(viewingCompany.id, false);
+        } catch (error) {
+            console.error('Erreur lors de la dissociation:', error);
+        } finally {
+            setIsProcessingUser(false);
         }
     };
 
@@ -492,6 +562,9 @@ export default function AdminCompagniesPage() {
                 isLoadingUser={isLoadingUser}
                 onCreateUser={handleCreateUser}
                 onAssignUser={handleAssignUser}
+                onChangeUser={() => void handleChangeUser()}
+                onUnlinkUser={() => void handleUnlinkUser()}
+                isProcessing={isProcessingUser}
             />
 
             {/* Dialogue de création d'accès utilisateur */}
