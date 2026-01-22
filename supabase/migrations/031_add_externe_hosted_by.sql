@@ -1,7 +1,7 @@
 -- ============================================
 -- Migration 031: Add 'externe' to hosted_by enum
 -- Derviche Diffusion - Module Accueil (Check-in)
--- Date: 2025-01-22
+-- Date: 2026-01-22
 -- ============================================
 -- 
 -- Contexte:

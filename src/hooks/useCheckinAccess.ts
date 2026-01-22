@@ -81,8 +81,8 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
   const mountedRef = useRef(true);
   const currentShowSlugRef = useRef<string | null>(null);
 
-  // Déterminer si admin
-  const isAdmin = role === 'super-admin' || role === 'admin';
+  // Déterminer si admin (avec vérification explicite de null)
+  const isAdmin = role !== null && (role === 'super-admin' || role === 'admin');
 
   // Charger les infos compagnie si nécessaire
   useEffect(() => {

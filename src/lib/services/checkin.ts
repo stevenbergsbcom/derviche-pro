@@ -16,6 +16,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
+import type { SlotHostedBy } from '@/types/database';
 
 // ============================================
 // TYPES
@@ -49,7 +50,7 @@ export interface CheckinSlot {
   time: string;
   capacity: number;
   remainingCapacity: number;
-  hostedBy: 'derviche' | 'company' | 'externe';
+  hostedBy: SlotHostedBy;
   hostedById: string | null;
   venue: {
     id: string;
@@ -81,6 +82,88 @@ export interface CheckinSlotsResult {
 
 /** Rôles avec accès complet (admin) */
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
+
+/** Valeurs valides pour hosted_by */
+const VALID_HOSTED_BY: SlotHostedBy[] = ['derviche', 'company', 'externe'];
+
+// ============================================
+// TYPE GUARDS
+// ============================================
+
+/**
+ * Vérifie si une valeur est une compagnie valide
+ */
+function isValidCompany(data: unknown): data is { id: string; name: string } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'name' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { name: unknown }).name === 'string'
+  );
+}
+
+/**
+ * Vérifie si une valeur est un venue valide
+ */
+function isValidVenue(data: unknown): data is { id: string; name: string; city?: string } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'name' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { name: unknown }).name === 'string'
+  );
+}
+
+/**
+ * Vérifie si une valeur est un show valide
+ */
+function isValidShow(data: unknown): data is { id: string; slug: string; title: string } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'slug' in data &&
+    'title' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { slug: unknown }).slug === 'string' &&
+    typeof (data as { title: unknown }).title === 'string'
+  );
+}
+
+/**
+ * Vérifie si une valeur est un hosted_by valide
+ */
+function isValidHostedBy(value: unknown): value is SlotHostedBy {
+  return typeof value === 'string' && VALID_HOSTED_BY.includes(value as SlotHostedBy);
+}
+
+/**
+ * Vérifie si une valeur est un slot brut valide
+ */
+function isValidRawSlot(data: unknown): data is {
+  id: string;
+  date: string;
+  time: string;
+  hosted_by: string;
+  hosted_by_id: string | null;
+  venues: unknown;
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'date' in data &&
+    'time' in data &&
+    'hosted_by' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { date: unknown }).date === 'string' &&
+    typeof (data as { time: unknown }).time === 'string'
+  );
+}
 
 // ============================================
 // FONCTIONS PRINCIPALES
@@ -167,39 +250,34 @@ export async function getAccessibleShows(
     const showsMap = new Map<string, CheckinShow>();
 
     for (const show of data) {
-      // Extraire les données de la compagnie
-      const company = show.companies as unknown as { id: string; name: string };
+      // Valider et extraire les données de la compagnie
+      if (!isValidCompany(show.companies)) {
+        logger.warn('checkin.getAccessibleShows - Compagnie invalide', { showId: show.id });
+        continue;
+      }
+      const company = show.companies;
       
-      // Filtrer et trier les slots
-      const slots = (show.slots as unknown as Array<{
-        id: string;
-        date: string;
-        time: string;
-        hosted_by: string;
-        hosted_by_id: string | null;
-        venues: { id: string; name: string } | null;
-      }>).filter(slot => {
-        // Pour externe, on a déjà filtré dans la query
-        // Pour company, vérifier hosted_by
-        if (role === 'company') {
-          return slot.hosted_by === 'company';
-        }
-        // Pour externe, vérifier hosted_by_id (double check)
-        if (role === 'externe') {
-          return slot.hosted_by_id === userId;
-        }
-        // Admin : tous les slots
-        return true;
-      }).sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
-        return dateA.getTime() - dateB.getTime();
-      });
+      // Valider et filtrer les slots
+      const rawSlots = Array.isArray(show.slots) ? show.slots : [];
+      const validSlots = rawSlots
+        .filter((slot): slot is {
+          id: string;
+          date: string;
+          time: string;
+          hosted_by: string;
+          hosted_by_id: string | null;
+          venues: { id: string; name: string } | null;
+        } => isValidRawSlot(slot))
+        .sort((a, b) => {
+          const dateA = new Date(`${a.date}T${a.time}`);
+          const dateB = new Date(`${b.date}T${b.time}`);
+          return dateA.getTime() - dateB.getTime();
+        });
 
-      if (slots.length === 0) continue;
+      if (validSlots.length === 0) continue;
 
       // Trouver le prochain slot
-      const nextSlot = slots[0];
+      const nextSlot = validSlots[0];
 
       // Créer ou mettre à jour l'entrée
       const existing = showsMap.get(show.id);
@@ -213,12 +291,12 @@ export async function getAccessibleShows(
             id: company.id,
             name: company.name,
           },
-          upcomingSlotsCount: slots.length,
+          upcomingSlotsCount: validSlots.length,
           nextSlot: nextSlot ? {
             id: nextSlot.id,
             date: nextSlot.date,
             time: nextSlot.time,
-            venueName: nextSlot.venues?.name || 'Lieu inconnu',
+            venueName: isValidVenue(nextSlot.venues) ? nextSlot.venues.name : 'Lieu inconnu',
           } : null,
         });
       }
@@ -330,41 +408,51 @@ export async function getAccessibleSlots(
       return { data: [], error: null };
     }
 
-    // Transformer les données
-    const slots: CheckinSlot[] = data.map(slot => {
-      const venue = slot.venues as unknown as { id: string; name: string; city: string } | null;
-      const show = slot.shows as unknown as { id: string; slug: string; title: string };
-      const reservations = slot.reservations as unknown as Array<{
-        id: string;
-        status: string;
-        checkin_status: string | null;
-      }>;
+    // Transformer les données avec validation
+    const slots: CheckinSlot[] = [];
+
+    for (const slot of data) {
+      // Valider le venue
+      const venue = isValidVenue(slot.venues) 
+        ? { id: slot.venues.id, name: slot.venues.name, city: (slot.venues as { city?: string }).city || '' }
+        : { id: '', name: 'Lieu inconnu', city: '' };
+
+      // Valider le show
+      if (!isValidShow(slot.shows)) {
+        logger.warn('checkin.getAccessibleSlots - Show invalide dans slot', { slotId: slot.id });
+        continue;
+      }
+      const show = slot.shows;
+
+      // Valider hosted_by avec fallback sécurisé
+      const hostedBy: SlotHostedBy = isValidHostedBy(slot.hosted_by) 
+        ? slot.hosted_by 
+        : 'derviche';
 
       // Compter les réservations
-      const confirmedCount = reservations.filter(r => r.status === 'confirmed').length;
-      const checkedInCount = reservations.filter(r => 
-        r.status === 'confirmed' && 
-        r.checkin_status && 
-        r.checkin_status !== 'absent'
+      const reservations = Array.isArray(slot.reservations) ? slot.reservations : [];
+      const confirmedCount = reservations.filter(
+        (r): r is { id: string; status: string; checkin_status: string | null } => 
+          typeof r === 'object' && r !== null && (r as { status?: unknown }).status === 'confirmed'
+      ).length;
+      const checkedInCount = reservations.filter(
+        (r): r is { id: string; status: string; checkin_status: string | null } => 
+          typeof r === 'object' && 
+          r !== null && 
+          (r as { status?: unknown }).status === 'confirmed' && 
+          (r as { checkin_status?: unknown }).checkin_status !== null &&
+          (r as { checkin_status?: unknown }).checkin_status !== 'absent'
       ).length;
 
-      return {
+      slots.push({
         id: slot.id,
         date: slot.date,
         time: slot.time,
         capacity: slot.capacity,
         remainingCapacity: slot.remaining_capacity,
-        hostedBy: slot.hosted_by as 'derviche' | 'company' | 'externe',
+        hostedBy,
         hostedById: slot.hosted_by_id,
-        venue: venue ? {
-          id: venue.id,
-          name: venue.name,
-          city: venue.city,
-        } : {
-          id: '',
-          name: 'Lieu inconnu',
-          city: '',
-        },
+        venue,
         show: {
           id: show.id,
           slug: show.slug,
@@ -372,8 +460,8 @@ export async function getAccessibleSlots(
         },
         confirmedCount,
         checkedInCount,
-      };
-    });
+      });
+    }
 
     logger.info('checkin.getAccessibleSlots - Succès', { count: slots.length });
     return { data: slots, error: null };
@@ -415,6 +503,7 @@ export async function canAccessSlot(
       .single();
 
     if (error || !data) {
+      logger.warn('checkin.canAccessSlot - Slot non trouvé', { slotId, error });
       return false;
     }
 
@@ -430,12 +519,17 @@ export async function canAccessSlot(
 
     // Company : doit être hosted_by = 'company' et même compagnie
     if (role === 'company') {
-      const show = data.shows as unknown as { company_id: string };
+      const show = data.shows as unknown as { company_id: string } | null;
+      if (!show || typeof show.company_id !== 'string') {
+        logger.warn('checkin.canAccessSlot - Show invalide', { slotId });
+        return false;
+      }
       return data.hosted_by === 'company' && show.company_id === companyId;
     }
 
     return false;
-  } catch {
+  } catch (err) {
+    logger.error('checkin.canAccessSlot - Exception', { slotId, error: err });
     return false;
   }
 }
