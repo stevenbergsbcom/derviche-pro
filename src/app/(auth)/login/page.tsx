@@ -67,9 +67,13 @@ function LoginErrorHandler() {
 // ============================================
 function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLoadingEmailPassword, setIsLoadingEmailPassword] = useState(false);
     const [isLoadingMagicLink, setIsLoadingMagicLink] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+
+    // Récupérer l'URL de redirection depuis les paramètres
+    const nextUrl = searchParams.get('next');
 
     const emailPasswordForm = useForm<EmailPasswordForm>({
         resolver: zodResolver(emailPasswordSchema),
@@ -124,10 +128,14 @@ function LoginForm() {
 
             toast.success('Connexion réussie !');
             
-            // Récupérer le rôle et rediriger en conséquence
-            const role = await getUserRole(userId);
-            const redirectUrl = getRedirectUrlByRole(role);
-            router.push(redirectUrl);
+            // Rediriger vers l'URL demandée ou selon le rôle
+            if (nextUrl) {
+                router.push(nextUrl);
+            } else {
+                const role = await getUserRole(userId);
+                const redirectUrl = getRedirectUrlByRole(role);
+                router.push(redirectUrl);
+            }
         } catch (error) {
             logger.error('[Login] Erreur de connexion', error as Error);
             toast.error('Une erreur est survenue lors de la connexion');
@@ -141,10 +149,17 @@ function LoginForm() {
 
         try {
             const supabase = createClient();
+            
+            // Construire l'URL de callback avec le paramètre next si présent
+            const callbackUrl = new URL('/auth/callback', window.location.origin);
+            if (nextUrl) {
+                callbackUrl.searchParams.set('next', nextUrl);
+            }
+            
             const { error } = await supabase.auth.signInWithOtp({
                 email: data.email,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    emailRedirectTo: callbackUrl.toString(),
                 },
             });
 
@@ -323,11 +338,13 @@ function LoginForm() {
 // ============================================
 export default function LoginPage() {
     return (
-        <>
-            <Suspense fallback={null}>
-                <LoginErrorHandler />
-            </Suspense>
+        <Suspense fallback={
+            <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+        }>
+            <LoginErrorHandler />
             <LoginForm />
-        </>
+        </Suspense>
     );
 }
