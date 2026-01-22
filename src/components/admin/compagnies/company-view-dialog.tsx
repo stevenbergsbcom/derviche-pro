@@ -21,7 +21,9 @@ import {
     KeyRound,
     UserPlus,
     CheckCircle,
-    XCircle
+    XCircle,
+    UserMinus,
+    RefreshCw,
 } from 'lucide-react';
 import type { CompanyRow } from '@/types/database';
 import type { ManagedUser } from '@/lib/services/internal-users';
@@ -52,6 +54,12 @@ export interface CompanyViewDialogProps {
     onCreateUser?: () => void;
     /** Callback pour assigner un utilisateur existant */
     onAssignUser?: () => void;
+    /** Callback pour changer l'utilisateur associé (ouvre la modale d'assignation) */
+    onChangeUser?: () => void;
+    /** Callback pour dissocier l'utilisateur (retirer l'accès sans le supprimer) */
+    onUnlinkUser?: () => void;
+    /** Indique si une action est en cours (dissociation, etc.) */
+    isProcessing?: boolean;
 }
 
 // ============================================
@@ -72,6 +80,9 @@ export function CompanyViewDialog({
     isLoadingUser = false,
     onCreateUser,
     onAssignUser,
+    onChangeUser,
+    onUnlinkUser,
+    isProcessing = false,
 }: CompanyViewDialogProps) {
     if (!company) return null;
 
@@ -131,7 +142,7 @@ export function CompanyViewDialog({
                             </p>
                         ) : companyUser ? (
                             /* Utilisateur existant */
-                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                            <div className="p-3 bg-green-50 border border-green-200 rounded-lg space-y-3">
                                 <div className="flex items-center gap-2">
                                     <CheckCircle className="w-4 h-4 text-green-600" />
                                     <span className="text-sm font-medium text-green-800">
@@ -161,6 +172,36 @@ export function CompanyViewDialog({
                                         </p>
                                     )}
                                 </div>
+                                
+                                {/* Actions sur l'utilisateur existant */}
+                                {(onChangeUser || onUnlinkUser) && (
+                                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-green-200">
+                                        {onChangeUser && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={onChangeUser}
+                                                disabled={isProcessing}
+                                                className="flex-1 text-xs"
+                                            >
+                                                <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                                Changer
+                                            </Button>
+                                        )}
+                                        {onUnlinkUser && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={onUnlinkUser}
+                                                disabled={isProcessing}
+                                                className="flex-1 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
+                                            >
+                                                <UserMinus className="w-3.5 h-3.5 mr-1.5" />
+                                                Dissocier
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* Pas d'utilisateur */

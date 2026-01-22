@@ -8,3 +8,6 @@
 export { CompanySidebar } from './company-sidebar';
 export { CompanyStatsCards } from './company-stats-cards';
 export { CompanyUpcomingSlots } from './company-upcoming-slots';
+
+// Composants réservations
+export * from './reservations';

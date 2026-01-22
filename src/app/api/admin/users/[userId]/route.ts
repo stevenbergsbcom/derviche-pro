@@ -245,7 +245,7 @@ export async function PATCH(
       );
     }
 
-    // 5. Gérer le changement de rôle
+    // 5. Gérer le changement de rôle et/ou company_id
     const { company_id: newCompanyId } = body;
 
     // Interdire le changement de rôle si l'utilisateur est déjà 'company'
@@ -255,6 +255,40 @@ export async function PATCH(
         { success: false, error: 'Le rôle d\'un utilisateur compagnie ne peut pas être changé' },
         { status: 400 }
       );
+    }
+
+    // 5.1 Dissociation : company_id explicitement à null sur un utilisateur 'company'
+    if (newCompanyId === null && currentRole === 'company' && !newRole) {
+      logger.info('API /admin/users/[userId] PATCH - Tentative dissociation', { 
+        userId, 
+        currentRole,
+        newCompanyId 
+      });
+
+      const { error: unlinkError } = await supabaseAdmin
+        .from('profiles')
+        .update({ 
+          company_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      if (unlinkError) {
+        logger.error('API /admin/users/[userId] PATCH - Erreur dissociation company_id', { 
+          userId, 
+          errorCode: unlinkError.code,
+          errorMessage: unlinkError.message,
+          errorDetails: unlinkError.details,
+          errorHint: unlinkError.hint,
+        });
+        return NextResponse.json(
+          { success: false, error: `Erreur lors de la dissociation: ${unlinkError.message}` },
+          { status: 500 }
+        );
+      }
+
+      logger.info('API /admin/users/[userId] PATCH - Utilisateur dissocié de sa compagnie', { userId });
+      return NextResponse.json({ success: true });
     }
 
     // Si le nouveau rôle est 'company', vérifier company_id

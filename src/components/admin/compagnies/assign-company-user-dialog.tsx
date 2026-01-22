@@ -23,9 +23,19 @@ import {
 } from '@/components/ui/table';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import { translateRole } from '@/lib/services/internal-users';
 import { searchMatch } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+
+/** Traduit le rôle en français (inclut 'company') */
+function translateRoleLocal(role: string): string {
+    const translations: Record<string, string> = {
+        'super-admin': 'Super Admin',
+        'admin': 'Admin',
+        'externe': 'Externe DD',
+        'company': 'Compagnie (dissocié)',
+    };
+    return translations[role] || role;
+}
 
 // ============================================
 // TYPES
@@ -61,7 +71,7 @@ export interface AssignCompanyUserDialogProps {
  * 
  * Affiche la liste des utilisateurs qui peuvent être assignés :
  * - Utilisateurs avec rôle interne (super-admin, admin, externe)
- * - Exclut les utilisateurs déjà 'company'
+ * - Utilisateurs 'company' dissociés (sans company_id)
  */
 export function AssignCompanyUserDialog({
     open,
@@ -86,28 +96,56 @@ export function AssignCompanyUserDialog({
         try {
             const supabase = createClient();
 
-            // Récupérer les utilisateurs avec leurs rôles (sauf 'company' et 'professional')
-            const { data, error: fetchError } = await supabase
+            // 1. Récupérer les utilisateurs internes (super-admin, admin, externe)
+            const { data: internalUsers, error: internalError } = await supabase
                 .from('profiles')
                 .select(`
                     id,
                     email,
                     first_name,
                     last_name,
+                    company_id,
                     user_roles!inner (role)
                 `)
                 .is('deleted_at', null)
                 .in('user_roles.role', ['super-admin', 'admin', 'externe'])
                 .order('email');
 
-            if (fetchError) {
-                logger.error('[AssignCompanyUserDialog] Erreur chargement', fetchError);
+            if (internalError) {
+                logger.error('[AssignCompanyUserDialog] Erreur chargement internes', internalError);
                 setError('Erreur lors du chargement des utilisateurs');
                 return;
             }
 
+            // 2. Récupérer les utilisateurs 'company' SANS company_id (dissociés)
+            const { data: unlinkedCompanyUsers, error: companyError } = await supabase
+                .from('profiles')
+                .select(`
+                    id,
+                    email,
+                    first_name,
+                    last_name,
+                    company_id,
+                    user_roles!inner (role)
+                `)
+                .is('deleted_at', null)
+                .is('company_id', null)
+                .eq('user_roles.role', 'company')
+                .order('email');
+
+            if (companyError) {
+                logger.error('[AssignCompanyUserDialog] Erreur chargement company dissociés', companyError);
+                // On continue avec les utilisateurs internes quand même
+            }
+
+            // Combiner les deux listes
+            const allProfiles = [
+                ...(internalUsers || []),
+                ...(unlinkedCompanyUsers || []),
+            ];
+
             // Transformer les données
-            const assignableUsers: AssignableUser[] = (data || []).map(profile => {
+            const assignableUsers: AssignableUser[] = allProfiles.map(profile => {
                 // Extraire le rôle
                 let role = 'externe';
                 const userRoles = profile.user_roles;
@@ -125,6 +163,9 @@ export function AssignCompanyUserDialog({
                     role,
                 };
             });
+
+            // Trier par email
+            assignableUsers.sort((a, b) => a.email.localeCompare(b.email));
 
             setUsers(assignableUsers);
         } catch (err) {
@@ -282,8 +323,13 @@ export function AssignCompanyUserDialog({
                                                     }
                                                 </TableCell>
                                                 <TableCell>
-                                                    <span className="text-xs px-2 py-1 rounded-full bg-muted">
-                                                        {translateRole(user.role as 'super-admin' | 'admin' | 'externe')}
+                                                    <span className={cn(
+                                                        "text-xs px-2 py-1 rounded-full",
+                                                        user.role === 'company' 
+                                                            ? "bg-orange-100 text-orange-700" 
+                                                            : "bg-muted"
+                                                    )}>
+                                                        {translateRoleLocal(user.role)}
                                                     </span>
                                                 </TableCell>
                                             </TableRow>
@@ -299,7 +345,11 @@ export function AssignCompanyUserDialog({
                         <Alert>
                             <AlertDescription>
                                 <strong>{selectedUser.email}</strong> deviendra utilisateur de la compagnie <strong>{companyName}</strong>.
-                                Son rôle passera de &quot;{translateRole(selectedUser.role as 'super-admin' | 'admin' | 'externe')}&quot; à &quot;Compagnie&quot;.
+                                {selectedUser.role === 'company' ? (
+                                    <> Il sera ré-associé à cette compagnie.</>
+                                ) : (
+                                    <> Son rôle passera de &quot;{translateRoleLocal(selectedUser.role)}&quot; à &quot;Compagnie&quot;.</>
+                                )}
                             </AlertDescription>
                         </Alert>
                     )}
