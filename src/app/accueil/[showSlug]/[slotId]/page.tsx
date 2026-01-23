@@ -26,6 +26,7 @@ import {
   ReservationRowSkeleton,
   EmptyReservations,
   CheckinDrawer,
+  AddReservationDrawer,
   type ReservationRowData,
 } from '@/components/accueil';
 import { Button } from '@/components/ui/button';
@@ -236,6 +237,9 @@ export default function SlotReservationsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<ReservationRowData | null>(null);
 
+  // State pour le drawer d'ajout de réservation
+  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+
   // Ref pour éviter les doubles appels
   const loadedRef = useRef(false);
 
@@ -395,8 +399,14 @@ export default function SlotReservationsPage() {
         guestLastName: reservation.guestLastName,
         guestStructure: reservation.guestStructure,
         guestEmail: reservation.guestEmail,
+        guestPhone: reservation.guestPhone,
+        guestFunction: reservation.guestFunction,
         numPlaces: reservation.numPlaces,
         checkinStatus: reservation.checkinStatus,
+        checkinComment: reservation.checkinComment,
+        checkinVenueNotes: reservation.checkinVenueNotes,
+        checkinInternalNotes: reservation.checkinInternalNotes,
+        specialRequests: reservation.specialRequests,
         status: reservation.status,
       };
       setSelectedReservation(rowData);
@@ -411,7 +421,13 @@ export default function SlotReservationsPage() {
       setReservations((prev) =>
         prev.map((r) =>
           r.id === updatedReservation.id
-            ? { ...r, checkinStatus: updatedReservation.checkinStatus }
+            ? { 
+                ...r, 
+                checkinStatus: updatedReservation.checkinStatus,
+                checkinComment: updatedReservation.checkinComment ?? r.checkinComment,
+                checkinVenueNotes: updatedReservation.checkinVenueNotes ?? r.checkinVenueNotes,
+                checkinInternalNotes: updatedReservation.checkinInternalNotes ?? r.checkinInternalNotes,
+              }
             : r
         )
       );
@@ -419,12 +435,18 @@ export default function SlotReservationsPage() {
     []
   );
 
-  // Handler bouton ajouter (désactivé pour l'instant)
+  // Handler bouton ajouter - ouvre le drawer d'ajout
   const handleAddReservation = useCallback(() => {
-    toast.info('Fonctionnalité à venir', {
-      description: 'L\'ajout de réservation sera disponible prochainement',
-    });
+    setAddDrawerOpen(true);
   }, []);
+
+  // Handler succès ajout réservation - rafraîchit la liste
+  const handleAddSuccess = useCallback(() => {
+    // Recharger les données après ajout
+    loadedRef.current = false;
+    void loadData();
+    toast.success('Réservation ajoutée');
+  }, [loadData]);
 
   return (
     <div className="flex flex-col min-h-full">
@@ -515,7 +537,6 @@ export default function SlotReservationsPage() {
             variant="default"
             size="sm"
             onClick={handleAddReservation}
-            disabled
             className="flex-1 bg-gold hover:bg-gold/90 text-derviche-dark"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -539,6 +560,14 @@ export default function SlotReservationsPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={handleCheckinSuccess}
+      />
+
+      {/* Drawer d'ajout de réservation */}
+      <AddReservationDrawer
+        slotId={slotId}
+        open={addDrawerOpen}
+        onOpenChange={setAddDrawerOpen}
+        onSuccess={handleAddSuccess}
       />
     </div>
   );

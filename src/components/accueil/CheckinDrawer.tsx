@@ -4,7 +4,7 @@
  * 
  * Permet de marquer le statut de présence d'un invité
  * avec 4 options : Présent, Coup de cœur, Presse, Absent
- * + commentaire optionnel
+ * + commentaire, notes venue, notes internes (admin only)
  */
 
 'use client';
@@ -24,6 +24,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { 
   Check, 
   Heart, 
@@ -32,8 +38,14 @@ import {
   Users, 
   Building2, 
   Mail,
-  Loader2,
+  Phone,
+  Briefcase,
   MessageSquare,
+  MapPin,
+  Lock,
+  Loader2,
+  ChevronDown,
+  AlertCircle,
 } from 'lucide-react';
 import { updateCheckinStatus } from '@/lib/services/checkin';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
@@ -132,19 +144,24 @@ export function CheckinDrawer({
   onOpenChange,
   onSuccess,
 }: CheckinDrawerProps) {
-  const { userId, role, companyId, isLoading: accessLoading } = useCheckinAccess();
+  const { userId, role, companyId, isAdmin, isLoading: accessLoading } = useCheckinAccess();
   
   // États locaux
   const [selectedStatus, setSelectedStatus] = useState<CheckinStatus | null>(null);
   const [comment, setComment] = useState('');
+  const [venueNotes, setVenueNotes] = useState('');
+  const [internalNotes, setInternalNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Réinitialiser quand la réservation change
   useEffect(() => {
     if (reservation) {
       setSelectedStatus(reservation.checkinStatus);
-      // Le commentaire n'est pas dans ReservationRowData, on le reset
-      setComment('');
+      setComment(reservation.checkinComment || '');
+      setVenueNotes(reservation.checkinVenueNotes || '');
+      setInternalNotes(reservation.checkinInternalNotes || '');
+      setDetailsOpen(false);
     }
   }, [reservation]);
 
@@ -162,6 +179,8 @@ export function CheckinDrawer({
         reservationId: reservation.id,
         status: selectedStatus,
         comment: comment.trim() || null,
+        venueNotes: venueNotes.trim() || null,
+        internalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
         userId,
         role,
         companyId,
@@ -180,6 +199,9 @@ export function CheckinDrawer({
       onSuccess({
         ...reservation,
         checkinStatus: result.data.checkinStatus,
+        checkinComment: result.data.checkinComment,
+        checkinVenueNotes: result.data.checkinVenueNotes,
+        checkinInternalNotes: result.data.checkinInternalNotes,
       });
 
       // Fermer le drawer
@@ -191,13 +213,17 @@ export function CheckinDrawer({
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, selectedStatus, comment, userId, role, companyId, onSuccess, onOpenChange]);
+  }, [reservation, selectedStatus, comment, venueNotes, internalNotes, isAdmin, userId, role, companyId, onSuccess, onOpenChange]);
 
   // Si pas de réservation, ne rien afficher
   if (!reservation) return null;
 
   const fullName = getFullName(reservation.guestFirstName, reservation.guestLastName);
-  const hasChanges = selectedStatus !== reservation.checkinStatus;
+  const hasChanges = 
+    selectedStatus !== reservation.checkinStatus ||
+    comment !== (reservation.checkinComment || '') ||
+    venueNotes !== (reservation.checkinVenueNotes || '') ||
+    (isAdmin && internalNotes !== (reservation.checkinInternalNotes || ''));
   const canSave = selectedStatus !== null && !isSubmitting && !accessLoading;
 
   return (
@@ -209,7 +235,7 @@ export function CheckinDrawer({
             Pointage de la réservation de {fullName}
           </DrawerDescription>
           
-          {/* Infos complémentaires */}
+          {/* Infos principales */}
           <div className="mt-3 space-y-2">
             {reservation.guestStructure && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -217,10 +243,10 @@ export function CheckinDrawer({
                 <span>{reservation.guestStructure}</span>
               </div>
             )}
-            {reservation.guestEmail && (
+            {reservation.guestFunction && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Mail className="w-4 h-4 shrink-0" />
-                <span>{reservation.guestEmail}</span>
+                <Briefcase className="w-4 h-4 shrink-0" />
+                <span>{reservation.guestFunction}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
@@ -230,10 +256,53 @@ export function CheckinDrawer({
               </Badge>
             </div>
           </div>
+
+          {/* Section dépliable pour plus de détails */}
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-3">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+                <span>Voir les détails</span>
+                <ChevronDown className={cn(
+                  "w-4 h-4 transition-transform",
+                  detailsOpen && "rotate-180"
+                )} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-2 space-y-2 text-sm">
+              {reservation.guestEmail && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Mail className="w-4 h-4 shrink-0" />
+                  <a href={`mailto:${reservation.guestEmail}`} className="hover:underline">
+                    {reservation.guestEmail}
+                  </a>
+                </div>
+              )}
+              {reservation.guestPhone && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="w-4 h-4 shrink-0" />
+                  <a href={`tel:${reservation.guestPhone}`} className="hover:underline">
+                    {reservation.guestPhone}
+                  </a>
+                </div>
+              )}
+              {reservation.specialRequests && (
+                <div className="flex items-start gap-2 text-muted-foreground bg-amber-50 p-2 rounded-md">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-700 text-xs uppercase">Demandes spéciales</p>
+                    <p className="text-amber-900 mt-0.5">{reservation.specialRequests}</p>
+                  </div>
+                </div>
+              )}
+              {!reservation.guestEmail && !reservation.guestPhone && !reservation.specialRequests && (
+                <p className="text-muted-foreground/60 italic">Aucune information complémentaire</p>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
         </DrawerHeader>
 
-        {/* Corps du drawer */}
-        <div className="p-4 space-y-6 overflow-y-auto">
+        {/* Corps du drawer - scrollable */}
+        <div className="p-4 space-y-5 overflow-y-auto flex-1">
           {/* Grille des boutons de statut */}
           <div>
             <p className="text-sm font-medium text-muted-foreground mb-3">
@@ -270,6 +339,8 @@ export function CheckinDrawer({
             </div>
           </div>
 
+          <Separator />
+
           {/* Champ commentaire */}
           <div>
             <label 
@@ -277,18 +348,61 @@ export function CheckinDrawer({
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
             >
               <MessageSquare className="w-4 h-4" />
-              Commentaire (optionnel)
+              Commentaire
             </label>
             <Textarea
               id="checkin-comment"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder="Note sur l'invité..."
-              rows={3}
+              rows={2}
               disabled={isSubmitting}
               className="resize-none"
             />
           </div>
+
+          {/* Notes venue */}
+          <div>
+            <label 
+              htmlFor="checkin-venue-notes" 
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+            >
+              <MapPin className="w-4 h-4" />
+              Notes sur le lieu
+            </label>
+            <Textarea
+              id="checkin-venue-notes"
+              value={venueNotes}
+              onChange={(e) => setVenueNotes(e.target.value)}
+              placeholder="Informations liées au lieu, à l'accueil..."
+              rows={2}
+              disabled={isSubmitting}
+              className="resize-none"
+            />
+          </div>
+
+          {/* Notes internes - Admin uniquement */}
+          {isAdmin && (
+            <div>
+              <label 
+                htmlFor="checkin-internal-notes" 
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+              >
+                <Lock className="w-4 h-4" />
+                Notes internes Derviche
+                <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
+              </label>
+              <Textarea
+                id="checkin-internal-notes"
+                value={internalNotes}
+                onChange={(e) => setInternalNotes(e.target.value)}
+                placeholder="Notes confidentielles (non visibles par externes/compagnies)..."
+                rows={2}
+                disabled={isSubmitting}
+                className="resize-none"
+              />
+            </div>
+          )}
         </div>
 
         {/* Footer avec boutons d'action */}
@@ -304,7 +418,7 @@ export function CheckinDrawer({
               </Button>
             </DrawerClose>
             <Button
-              onClick={handleSave}
+              onClick={() => void handleSave()}
               disabled={!canSave}
               className={cn(
                 'flex-1',
@@ -325,7 +439,7 @@ export function CheckinDrawer({
           {/* Indicateur de changement */}
           {hasChanges && selectedStatus && (
             <p className="text-xs text-center text-muted-foreground mt-2">
-              Le statut sera mis à jour
+              Modifications non enregistrées
             </p>
           )}
         </DrawerFooter>
