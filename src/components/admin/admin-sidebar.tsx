@@ -16,6 +16,7 @@ import {
     ExternalLink,
     User,
     Loader2,
+    LayoutDashboard,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
@@ -29,6 +30,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+    {
+        label: 'Tableau de bord',
+        href: '/admin',
+        icon: LayoutDashboard,
+    },
     {
         label: 'Réservations',
         href: '/admin/reservations',
@@ -183,7 +189,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
                 {/* Header avec Logo */}
                 <div className="p-6 border-b border-derviche/30">
-                    <Link href="/admin-dashboard" className="flex flex-col items-center">
+                    <Link href="/admin" className="flex flex-col items-center">
                         <Image
                             src="/images/logos/logo-derviche-blanc-transparent.png"
                             alt="Derviche Diffusion"
@@ -201,7 +207,11 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                     <ul className="space-y-1">
                         {navItems.map((item) => {
                             const Icon = item.icon;
-                            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+                            // Pour /admin (tableau de bord), actif uniquement sur exact match
+                            // Pour les autres routes, actif sur exact match ou sous-routes
+                            const isActive = item.href === '/admin'
+                                ? pathname === '/admin'
+                                : pathname === item.href || pathname?.startsWith(item.href + '/');
 
                             return (
                                 <li key={item.href}>

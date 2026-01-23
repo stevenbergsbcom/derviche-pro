@@ -7,7 +7,7 @@
   "background_color": "#ffffff",
   "theme_color": "#1e3a5f",
   "orientation": "portrait",
-  "scope": "/",
+  "scope": "/accueil",
   "lang": "fr",
   "categories": ["business", "entertainment"],
   "icons": [

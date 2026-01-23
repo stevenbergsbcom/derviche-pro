@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
+import { useCurrentUserRole, type UserRole } from '@/hooks/useCurrentUserRole';
 import {
   getAccessibleShows,
   getAccessibleSlots,
@@ -22,6 +22,8 @@ import { logger } from '@/lib/logger';
 // ============================================
 
 export interface UseCheckinAccessReturn {
+  /** ID de l'utilisateur connecté */
+  userId: string | null;
   /** Spectacles accessibles */
   shows: CheckinShow[];
   /** Chargement des spectacles en cours */
@@ -37,7 +39,7 @@ export interface UseCheckinAccessReturn {
   slotsError: string | null;
 
   /** Rôle de l'utilisateur */
-  role: string | null;
+  role: UserRole;
   /** ID de la compagnie (si rôle company) */
   companyId: string | null;
   /** Nom de la compagnie (si rôle company) */
@@ -46,6 +48,8 @@ export interface UseCheckinAccessReturn {
   isAdmin: boolean;
   /** Chargement de l'auth en cours */
   isAuthLoading: boolean;
+  /** Alias pour isAuthLoading (compatibilité) */
+  isLoading: boolean;
 
   /** Charger les spectacles accessibles */
   loadShows: () => Promise<void>;
@@ -226,6 +230,7 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
   }, [isAuthLoading, user, role, companyId, loadShows]);
 
   return {
+    userId: user?.id ?? null,
     shows,
     isLoadingShows,
     showsError,
@@ -237,6 +242,7 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
     companyName,
     isAdmin,
     isAuthLoading,
+    isLoading: isAuthLoading,
     loadShows,
     loadSlots,
     refresh,

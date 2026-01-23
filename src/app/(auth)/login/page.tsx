@@ -11,7 +11,8 @@ import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
-import { getUserRole, getRedirectUrlByRole } from '@/lib/auth/get-user-role';
+import { getUserRole } from '@/lib/auth/get-user-role';
+import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -128,8 +129,8 @@ function LoginForm() {
 
             toast.success('Connexion réussie !');
             
-            // Rediriger vers l'URL demandée ou selon le rôle
-            if (nextUrl) {
+            // Rediriger vers l'URL demandée (si sécurisée) ou selon le rôle
+            if (nextUrl && isSafeRedirectUrl(nextUrl)) {
                 router.push(nextUrl);
             } else {
                 const role = await getUserRole(userId);
@@ -150,9 +151,9 @@ function LoginForm() {
         try {
             const supabase = createClient();
             
-            // Construire l'URL de callback avec le paramètre next si présent
+            // Construire l'URL de callback avec le paramètre next si présent et sécurisé
             const callbackUrl = new URL('/auth/callback', window.location.origin);
-            if (nextUrl) {
+            if (nextUrl && isSafeRedirectUrl(nextUrl)) {
                 callbackUrl.searchParams.set('next', nextUrl);
             }
             
