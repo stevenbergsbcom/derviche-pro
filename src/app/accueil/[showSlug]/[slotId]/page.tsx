@@ -423,7 +423,7 @@ export default function SlotReservationsPage() {
 
   // Handler succès check-in - met à jour la liste
   // Note: onSuccess envoie toujours tous les champs depuis result.data,
-  // donc on peut utiliser directement les valeurs (y compris null pour les champs vidés)
+  // donc on utilise ?? null pour convertir undefined en null (compatibilité de types)
   const handleCheckinSuccess = useCallback(
     (updatedReservation: ReservationRowData) => {
       setReservations((prev) =>
@@ -433,23 +433,23 @@ export default function SlotReservationsPage() {
                 ...r, 
                 // Check-in
                 checkinStatus: updatedReservation.checkinStatus,
-                checkinComment: updatedReservation.checkinComment,
-                checkinVenueNotes: updatedReservation.checkinVenueNotes,
-                checkinInternalNotes: updatedReservation.checkinInternalNotes,
+                checkinComment: updatedReservation.checkinComment ?? null,
+                checkinVenueNotes: updatedReservation.checkinVenueNotes ?? null,
+                checkinInternalNotes: updatedReservation.checkinInternalNotes ?? null,
                 // Infos guest
                 guestFirstName: updatedReservation.guestFirstName,
                 guestLastName: updatedReservation.guestLastName,
                 guestEmail: updatedReservation.guestEmail,
-                guestEmailSecondary: updatedReservation.guestEmailSecondary,
-                guestPhone: updatedReservation.guestPhone,
-                guestPhoneSecondary: updatedReservation.guestPhoneSecondary,
+                guestEmailSecondary: updatedReservation.guestEmailSecondary ?? null,
+                guestPhone: updatedReservation.guestPhone ?? null,
+                guestPhoneSecondary: updatedReservation.guestPhoneSecondary ?? null,
                 guestStructure: updatedReservation.guestStructure,
-                guestFunction: updatedReservation.guestFunction,
-                guestAddress: updatedReservation.guestAddress,
-                guestPostalCode: updatedReservation.guestPostalCode,
-                guestCity: updatedReservation.guestCity,
-                guestAfcNumber: updatedReservation.guestAfcNumber,
-                specialRequests: updatedReservation.specialRequests,
+                guestFunction: updatedReservation.guestFunction ?? null,
+                guestAddress: updatedReservation.guestAddress ?? null,
+                guestPostalCode: updatedReservation.guestPostalCode ?? null,
+                guestCity: updatedReservation.guestCity ?? null,
+                guestAfcNumber: updatedReservation.guestAfcNumber ?? null,
+                specialRequests: updatedReservation.specialRequests ?? null,
               }
             : r
         )
