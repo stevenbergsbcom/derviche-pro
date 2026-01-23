@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -225,7 +226,7 @@ export default function AdminDashboardPage() {
         }
       } catch (err) {
         // Silencieux - ce n'est pas critique
-        console.error('Erreur récupération profil:', err);
+        logger.error('Erreur récupération profil utilisateur', { error: err instanceof Error ? err.message : 'Erreur inconnue' });
       }
     };
 
