@@ -20,3 +20,6 @@ export * from './reservations';
 
 // Services Company (interface compagnie)
 export * from './company-dashboard';
+
+// Services Admin Dashboard
+export * from './admin-dashboard';
