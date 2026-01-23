@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getUserRoleServer, getRedirectUrlByRole } from '@/lib/auth/get-user-role-server';
+import { getUserRoleServer } from '@/lib/auth/get-user-role-server';
+import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -35,20 +36,9 @@ export async function GET(request: NextRequest) {
         if (type === 'recovery') {
             // Redirection vers la page de réinitialisation de mot de passe
             redirectUrl = '/reset-password';
-        } else if (next) {
-            // Valider que "next" commence par "/" pour éviter les open redirects
-            if (next.startsWith('/')) {
-                redirectUrl = next;
-            } else {
-                // Si "next" ne commence pas par "/", rediriger selon le rôle
-                const userId = data.user?.id;
-                if (userId) {
-                    const role = await getUserRoleServer(userId);
-                    redirectUrl = getRedirectUrlByRole(role);
-                } else {
-                    redirectUrl = '/dashboard';
-                }
-            }
+        } else if (next && isSafeRedirectUrl(next)) {
+            // Redirection vers l'URL demandée (si sécurisée)
+            redirectUrl = next;
         } else {
             // Redirection selon le rôle de l'utilisateur
             const userId = data.user?.id;
@@ -56,7 +46,8 @@ export async function GET(request: NextRequest) {
                 const role = await getUserRoleServer(userId);
                 redirectUrl = getRedirectUrlByRole(role);
             } else {
-                redirectUrl = '/dashboard';
+                // Fallback si pas d'userId (ne devrait pas arriver)
+                redirectUrl = '/catalogue';
             }
         }
 

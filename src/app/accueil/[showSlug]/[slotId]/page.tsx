@@ -25,6 +25,8 @@ import {
   ReservationRow,
   ReservationRowSkeleton,
   EmptyReservations,
+  CheckinDrawer,
+  type ReservationRowData,
 } from '@/components/accueil';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -230,6 +232,10 @@ export default function SlotReservationsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [companyId, setCompanyId] = useState<string | null>(null);
 
+  // States pour le drawer de check-in
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedReservation, setSelectedReservation] = useState<ReservationRowData | null>(null);
+
   // Ref pour éviter les doubles appels
   const loadedRef = useRef(false);
 
@@ -379,15 +385,36 @@ export default function SlotReservationsPage() {
     isPresent(r.checkinStatus)
   ).length;
 
-  // Handler clic sur réservation
+  // Handler clic sur réservation - ouvre le drawer
   const handleReservationClick = useCallback(
     (reservation: CheckinReservation) => {
-      // TODO Session 65 : Ouvrir le drawer de check-in
-      toast.info(
-        `Check-in pour ${reservation.guestFirstName || ''} ${reservation.guestLastName || 'Sans nom'}`,
-        { description: 'Fonctionnalité disponible prochainement' }
+      // Convertir en ReservationRowData pour le drawer
+      const rowData: ReservationRowData = {
+        id: reservation.id,
+        guestFirstName: reservation.guestFirstName,
+        guestLastName: reservation.guestLastName,
+        guestStructure: reservation.guestStructure,
+        guestEmail: reservation.guestEmail,
+        numPlaces: reservation.numPlaces,
+        checkinStatus: reservation.checkinStatus,
+        status: reservation.status,
+      };
+      setSelectedReservation(rowData);
+      setDrawerOpen(true);
+    },
+    []
+  );
+
+  // Handler succès check-in - met à jour la liste
+  const handleCheckinSuccess = useCallback(
+    (updatedReservation: ReservationRowData) => {
+      setReservations((prev) =>
+        prev.map((r) =>
+          r.id === updatedReservation.id
+            ? { ...r, checkinStatus: updatedReservation.checkinStatus }
+            : r
+        )
       );
-      logger.info('Clic réservation', { reservationId: reservation.id });
     },
     []
   );
@@ -505,6 +532,14 @@ export default function SlotReservationsPage() {
           </div>
         </div>
       )}
+
+      {/* Drawer de check-in */}
+      <CheckinDrawer
+        reservation={selectedReservation}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        onSuccess={handleCheckinSuccess}
+      />
     </div>
   );
 }

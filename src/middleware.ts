@@ -1,18 +1,21 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } from '@/lib/env';
+import type { UserRole } from '@/types/database';
+import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
 
 // ============================================
-// TYPES
+// CONSTANTS
 // ============================================
-
-type UserRole = 'super-admin' | 'admin' | 'externe' | 'professional' | 'company';
 
 // Rôles autorisés pour l'interface admin
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin', 'externe'];
 
 // Rôles autorisés pour l'interface compagnie
 const COMPANY_ROLES: UserRole[] = ['company'];
+
+// Rôles autorisés pour l'interface check-in (accueil)
+const ACCUEIL_ROLES: UserRole[] = ['super-admin', 'admin', 'externe', 'company'];
 
 // ============================================
 // MIDDLEWARE
@@ -51,7 +54,7 @@ export async function middleware(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
-    const { pathname } = request.nextUrl;
+    const { pathname, searchParams } = request.nextUrl;
 
     // Vérifier si l'utilisateur est désactivé
     if (user) {
@@ -105,7 +108,25 @@ export async function middleware(request: NextRequest) {
     // Si l'utilisateur est connecté et accède à une route d'authentification
     if (user && authRoutes.includes(pathname)) {
         const url = request.nextUrl.clone();
-        url.pathname = '/dashboard';
+        
+        // 1. Vérifier si ?next= existe et est sécurisé
+        const nextUrl = searchParams.get('next');
+        if (nextUrl && isSafeRedirectUrl(nextUrl)) {
+            url.pathname = nextUrl;
+            url.searchParams.delete('next');
+            return NextResponse.redirect(url);
+        }
+        
+        // 2. Sinon, récupérer le rôle et rediriger vers la destination par défaut
+        const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user.id)
+            .single();
+        
+        const userRole = roleData?.role as UserRole | null;
+        url.pathname = getRedirectUrlByRole(userRole);
+        url.searchParams.delete('next');
         return NextResponse.redirect(url);
     }
 
@@ -125,9 +146,10 @@ export async function middleware(request: NextRequest) {
     // Routes nécessitant une vérification de rôle
     const isAdminRoute = pathname.startsWith('/admin');
     const isCompanyRoute = pathname.startsWith('/company');
+    const isAccueilRoute = pathname.startsWith('/accueil');
 
     // Si c'est une route protégée par rôle et que l'utilisateur est connecté
-    if (user && (isAdminRoute || isCompanyRoute)) {
+    if (user && (isAdminRoute || isCompanyRoute || isAccueilRoute)) {
         // Récupérer le rôle de l'utilisateur
         const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
@@ -138,7 +160,7 @@ export async function middleware(request: NextRequest) {
         // SÉCURITÉ (fail-secure) : Si erreur lors de la récupération du rôle, bloquer l'accès
         if (roleError || !roleData) {
             const url = request.nextUrl.clone();
-            url.pathname = '/';
+            url.pathname = '/login';
             url.searchParams.set('error', 'role_not_found');
             return NextResponse.redirect(url);
         }
@@ -160,6 +182,14 @@ export async function middleware(request: NextRequest) {
             url.searchParams.set('error', 'unauthorized');
             return NextResponse.redirect(url);
         }
+
+        // Vérification pour les routes /accueil/* (check-in)
+        if (isAccueilRoute && !ACCUEIL_ROLES.includes(userRole)) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/';
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
     }
 
     return response;
@@ -174,6 +204,6 @@ export const config = {
          * - favicon.ico (favicon file)
          * - public folder files
          */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico)$).*)',
     ],
 };

@@ -624,6 +624,175 @@ export async function canAccessSlot(
   }
 }
 
+// ============================================
+// MISE À JOUR DU CHECK-IN
+// ============================================
+
+/** Paramètres pour mettre à jour le statut de check-in */
+export interface UpdateCheckinParams {
+  reservationId: string;
+  status: import('@/types/database').CheckinStatus;
+  comment?: string | null;
+  userId: string;
+  role: UserRole;
+  companyId: string | null;
+}
+
+/** Résultat de la mise à jour du check-in */
+export interface UpdateCheckinResult {
+  success: boolean;
+  data: CheckinReservation | null;
+  error: string | null;
+}
+
+/**
+ * Met à jour le statut de check-in d'une réservation
+ * 
+ * Vérifie que l'utilisateur a accès au slot associé avant de modifier.
+ * Enregistre également qui a fait le check-in et quand.
+ */
+export async function updateCheckinStatus(
+  params: UpdateCheckinParams
+): Promise<UpdateCheckinResult> {
+  const { reservationId, status, comment, userId, role, companyId } = params;
+
+  try {
+    logger.info('checkin.updateCheckinStatus - Début', { 
+      reservationId, 
+      status, 
+      userId, 
+      role 
+    });
+
+    const supabase = createClient();
+
+    // 1. Récupérer la réservation pour obtenir le slot_id
+    const { data: reservation, error: fetchError } = await supabase
+      .from('reservations')
+      .select('id, slot_id, status')
+      .eq('id', reservationId)
+      .single();
+
+    if (fetchError || !reservation) {
+      logger.warn('checkin.updateCheckinStatus - Réservation non trouvée', { 
+        reservationId, 
+        error: fetchError 
+      });
+      return { 
+        success: false, 
+        data: null, 
+        error: 'Réservation non trouvée' 
+      };
+    }
+
+    // 2. Vérifier que la réservation est confirmée
+    if (reservation.status !== 'confirmed') {
+      logger.warn('checkin.updateCheckinStatus - Réservation non confirmée', { 
+        reservationId, 
+        status: reservation.status 
+      });
+      return { 
+        success: false, 
+        data: null, 
+        error: 'Seules les réservations confirmées peuvent être pointées' 
+      };
+    }
+
+    // 3. Vérifier l'accès au slot
+    const hasAccess = await canAccessSlot(
+      reservation.slot_id,
+      userId,
+      role,
+      companyId
+    );
+
+    if (!hasAccess) {
+      logger.warn('checkin.updateCheckinStatus - Accès refusé', { 
+        reservationId, 
+        slotId: reservation.slot_id, 
+        userId 
+      });
+      return { 
+        success: false, 
+        data: null, 
+        error: 'Accès non autorisé à cette représentation' 
+      };
+    }
+
+    // 4. Mettre à jour la réservation
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabase
+      .from('reservations')
+      .update({
+        checkin_status: status,
+        checkin_comment: comment ?? null,
+        checkin_at: now,
+        checkin_by: userId,
+      })
+      .eq('id', reservationId)
+      .select(`
+        id,
+        guest_first_name,
+        guest_last_name,
+        guest_email,
+        guest_structure,
+        num_places,
+        status,
+        checkin_status,
+        checkin_comment,
+        special_requests,
+        created_at
+      `)
+      .single();
+
+    if (updateError || !updated) {
+      logger.error('checkin.updateCheckinStatus - Erreur mise à jour', { 
+        reservationId, 
+        error: updateError 
+      });
+      return { 
+        success: false, 
+        data: null, 
+        error: updateError?.message || 'Erreur lors de la mise à jour' 
+      };
+    }
+
+    // 5. Transformer et retourner la réservation mise à jour
+    const result: CheckinReservation = {
+      id: updated.id,
+      guestFirstName: updated.guest_first_name,
+      guestLastName: updated.guest_last_name,
+      guestEmail: updated.guest_email,
+      guestStructure: updated.guest_structure,
+      numPlaces: updated.num_places,
+      status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
+      checkinStatus: updated.checkin_status as import('@/types/database').CheckinStatus | null,
+      checkinComment: updated.checkin_comment,
+      specialRequests: updated.special_requests,
+      createdAt: updated.created_at,
+    };
+
+    logger.info('checkin.updateCheckinStatus - Succès', { 
+      reservationId, 
+      newStatus: status 
+    });
+
+    return { success: true, data: result, error: null };
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('checkin.updateCheckinStatus - Exception', { 
+      reservationId, 
+      error: message 
+    });
+    return { success: false, data: null, error: message };
+  }
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
 /**
  * Formate une date pour l'affichage
  */

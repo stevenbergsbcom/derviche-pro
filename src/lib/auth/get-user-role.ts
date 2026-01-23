@@ -31,21 +31,3 @@ export async function getUserRole(userId: string): Promise<UserRole | null> {
 
   return userRoles[0] || null;
 }
-
-/**
- * Retourne l'URL de redirection selon le rôle de l'utilisateur
- */
-export function getRedirectUrlByRole(role: UserRole | null): string {
-  switch (role) {
-    case 'super-admin':
-    case 'admin':
-      return '/admin/spectacles';
-    case 'externe':
-      return '/checkin';
-    case 'company':
-      return '/company';
-    case 'professional':
-    default:
-      return '/dashboard';
-  }
-}
