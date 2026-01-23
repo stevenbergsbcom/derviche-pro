@@ -86,9 +86,15 @@ export interface CheckinReservation {
   guestFirstName: string | null;
   guestLastName: string | null;
   guestEmail: string | null;
+  guestEmailSecondary: string | null;
   guestPhone: string | null;
+  guestPhoneSecondary: string | null;
   guestFunction: string | null;
   guestStructure: string | null;
+  guestAddress: string | null;
+  guestPostalCode: string | null;
+  guestCity: string | null;
+  guestAfcNumber: string | null;
   numPlaces: number;
   status: 'confirmed' | 'cancelled' | 'no_show';
   checkinStatus: import('@/types/database').CheckinStatus | null;
@@ -225,9 +231,8 @@ export async function getAccessibleShows(
     logger.info('checkin.getAccessibleShows - Début', { userId, role, companyId });
 
     const supabase = createClient();
-    const today = new Date().toISOString().split('T')[0];
 
-    // Récupérer les spectacles avec leurs slots à venir
+    // Récupérer les spectacles avec leurs slots (passés et futurs)
     let query = supabase
       .from('shows')
       .select(`
@@ -253,7 +258,6 @@ export async function getAccessibleShows(
       `)
       .is('deleted_at', null)
       .eq('status', 'published')
-      .gte('slots.date', today)
       .order('title', { ascending: true });
 
     // Filtrer selon le rôle
@@ -372,7 +376,6 @@ export async function getAccessibleSlots(
     logger.info('checkin.getAccessibleSlots - Début', { showSlug, userId, role });
 
     const supabase = createClient();
-    const today = new Date().toISOString().split('T')[0];
 
     // D'abord, récupérer le show par son slug
     const { data: showData, error: showError } = await supabase
@@ -393,7 +396,7 @@ export async function getAccessibleSlots(
       return { data: [], error: 'Accès non autorisé à ce spectacle' };
     }
 
-    // Récupérer les slots
+    // Récupérer les slots (passés et futurs)
     let query = supabase
       .from('slots')
       .select(`
@@ -421,7 +424,6 @@ export async function getAccessibleSlots(
         )
       `)
       .eq('show_id', showData.id)
-      .gte('date', today)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
 
@@ -538,9 +540,15 @@ export async function getSlotReservations(
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_email_secondary,
         guest_phone,
+        guest_phone_secondary,
         guest_function,
         guest_structure,
+        guest_address,
+        guest_postal_code,
+        guest_city,
+        guest_afc_number,
         num_places,
         status,
         checkin_status,
@@ -571,9 +579,15 @@ export async function getSlotReservations(
       guestFirstName: r.guest_first_name,
       guestLastName: r.guest_last_name,
       guestEmail: r.guest_email,
+      guestEmailSecondary: r.guest_email_secondary,
       guestPhone: r.guest_phone,
+      guestPhoneSecondary: r.guest_phone_secondary,
       guestFunction: r.guest_function,
       guestStructure: r.guest_structure,
+      guestAddress: r.guest_address,
+      guestPostalCode: r.guest_postal_code,
+      guestCity: r.guest_city,
+      guestAfcNumber: r.guest_afc_number,
       numPlaces: r.num_places,
       status: r.status as 'confirmed' | 'cancelled' | 'no_show',
       checkinStatus: r.checkin_status as import('@/types/database').CheckinStatus | null,
@@ -660,10 +674,11 @@ export async function canAccessSlot(
 // MISE À JOUR DU CHECK-IN
 // ============================================
 
-/** Paramètres pour mettre à jour le statut de check-in */
+/** Paramètres pour mettre à jour le statut de check-in et/ou les infos guest */
 export interface UpdateCheckinParams {
   reservationId: string;
-  status: import('@/types/database').CheckinStatus;
+  /** Statut de check-in (optionnel - si absent, seules les infos guest sont mises à jour) */
+  status?: import('@/types/database').CheckinStatus | null;
   comment?: string | null;
   /** Notes sur le lieu (visibles par tous les rôles) */
   venueNotes?: string | null;
@@ -672,6 +687,20 @@ export interface UpdateCheckinParams {
   userId: string;
   role: UserRole;
   companyId: string | null;
+  // Champs guest (optionnels - pour modification des infos du professionnel)
+  guestFirstName?: string;
+  guestLastName?: string;
+  guestEmail?: string;
+  guestEmailSecondary?: string | null;
+  guestPhone?: string | null;
+  guestPhoneSecondary?: string | null;
+  guestStructure?: string | null;
+  guestFunction?: string | null;
+  guestAddress?: string | null;
+  guestPostalCode?: string | null;
+  guestCity?: string | null;
+  guestAfcNumber?: string | null;
+  specialRequests?: string | null;
 }
 
 /** Résultat de la mise à jour du check-in */
@@ -690,7 +719,30 @@ export interface UpdateCheckinResult {
 export async function updateCheckinStatus(
   params: UpdateCheckinParams
 ): Promise<UpdateCheckinResult> {
-  const { reservationId, status, comment, venueNotes, internalNotes, userId, role, companyId } = params;
+  const { 
+    reservationId, 
+    status, 
+    comment, 
+    venueNotes, 
+    internalNotes, 
+    userId, 
+    role, 
+    companyId,
+    // Champs guest
+    guestFirstName,
+    guestLastName,
+    guestEmail,
+    guestEmailSecondary,
+    guestPhone,
+    guestPhoneSecondary,
+    guestStructure,
+    guestFunction,
+    guestAddress,
+    guestPostalCode,
+    guestCity,
+    guestAfcNumber,
+    specialRequests,
+  } = params;
 
   try {
     logger.info('checkin.updateCheckinStatus - Début', { 
@@ -760,19 +812,41 @@ export async function updateCheckinStatus(
     
     // Construire l'objet de mise à jour
     // Note: internalNotes uniquement pour super-admin et admin
+    // Note: Si status n'est pas fourni, on ne met pas à jour les champs checkin_*
     const updateData: {
-      checkin_status: typeof status;
-      checkin_comment: string | null;
+      checkin_status?: typeof status;
+      checkin_comment?: string | null;
       checkin_venue_notes?: string | null;
       checkin_internal_notes?: string | null;
-      checkin_at: string;
-      checkin_by: string;
-    } = {
-      checkin_status: status,
-      checkin_comment: comment ?? null,
-      checkin_at: now,
-      checkin_by: userId,
-    };
+      checkin_at?: string;
+      checkin_by?: string;
+      // Champs guest (optionnels)
+      guest_first_name?: string;
+      guest_last_name?: string;
+      guest_email?: string;
+      guest_email_secondary?: string | null;
+      guest_phone?: string | null;
+      guest_phone_secondary?: string | null;
+      guest_structure?: string | null;
+      guest_function?: string | null;
+      guest_address?: string | null;
+      guest_postal_code?: string | null;
+      guest_city?: string | null;
+      guest_afc_number?: string | null;
+      special_requests?: string | null;
+    } = {};
+
+    // Ajouter les champs check-in seulement si un status est fourni
+    if (status !== undefined && status !== null) {
+      updateData.checkin_status = status;
+      updateData.checkin_at = now;
+      updateData.checkin_by = userId;
+    }
+
+    // Le commentaire peut être modifié indépendamment du statut
+    if (comment !== undefined) {
+      updateData.checkin_comment = comment;
+    }
 
     // Ajouter venueNotes si fourni (tous les rôles peuvent le modifier)
     if (venueNotes !== undefined) {
@@ -784,6 +858,63 @@ export async function updateCheckinStatus(
       updateData.checkin_internal_notes = internalNotes;
     }
 
+    // Ajouter les champs guest si fournis
+    if (guestFirstName !== undefined) {
+      updateData.guest_first_name = guestFirstName.trim();
+    }
+    if (guestLastName !== undefined) {
+      updateData.guest_last_name = guestLastName.trim();
+    }
+    if (guestEmail !== undefined) {
+      updateData.guest_email = guestEmail.trim();
+    }
+    if (guestEmailSecondary !== undefined) {
+      updateData.guest_email_secondary = guestEmailSecondary?.trim() || null;
+    }
+    if (guestPhone !== undefined) {
+      updateData.guest_phone = guestPhone?.trim() || null;
+    }
+    if (guestPhoneSecondary !== undefined) {
+      updateData.guest_phone_secondary = guestPhoneSecondary?.trim() || null;
+    }
+    if (guestStructure !== undefined) {
+      updateData.guest_structure = guestStructure?.trim() || null;
+    }
+    if (guestFunction !== undefined) {
+      updateData.guest_function = guestFunction?.trim() || null;
+    }
+    if (guestAddress !== undefined) {
+      updateData.guest_address = guestAddress?.trim() || null;
+    }
+    if (guestPostalCode !== undefined) {
+      updateData.guest_postal_code = guestPostalCode?.trim() || null;
+    }
+    if (guestCity !== undefined) {
+      updateData.guest_city = guestCity?.trim() || null;
+    }
+    if (guestAfcNumber !== undefined) {
+      updateData.guest_afc_number = guestAfcNumber?.trim() || null;
+    }
+    if (specialRequests !== undefined) {
+      updateData.special_requests = specialRequests?.trim() || null;
+    }
+
+    // Vérifier qu'on a quelque chose à mettre à jour
+    if (Object.keys(updateData).length === 0) {
+      logger.warn('checkin.updateCheckinStatus - Aucune donnée à mettre à jour', { reservationId });
+      return {
+        success: false,
+        data: null,
+        error: 'Aucune modification à enregistrer',
+      };
+    }
+
+    logger.info('checkin.updateCheckinStatus - Données à mettre à jour', { 
+      reservationId, 
+      fieldsCount: Object.keys(updateData).length,
+      fields: Object.keys(updateData),
+    });
+
     const { data: updated, error: updateError } = await supabase
       .from('reservations')
       .update(updateData)
@@ -793,9 +924,15 @@ export async function updateCheckinStatus(
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_email_secondary,
         guest_phone,
+        guest_phone_secondary,
         guest_function,
         guest_structure,
+        guest_address,
+        guest_postal_code,
+        guest_city,
+        guest_afc_number,
         num_places,
         status,
         checkin_status,
@@ -825,9 +962,15 @@ export async function updateCheckinStatus(
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,
+      guestEmailSecondary: updated.guest_email_secondary,
       guestPhone: updated.guest_phone,
+      guestPhoneSecondary: updated.guest_phone_secondary,
       guestFunction: updated.guest_function,
       guestStructure: updated.guest_structure,
+      guestAddress: updated.guest_address,
+      guestPostalCode: updated.guest_postal_code,
+      guestCity: updated.guest_city,
+      guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
       checkinStatus: updated.checkin_status as import('@/types/database').CheckinStatus | null,

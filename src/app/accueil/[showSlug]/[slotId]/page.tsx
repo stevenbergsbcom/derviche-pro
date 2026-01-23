@@ -399,8 +399,14 @@ export default function SlotReservationsPage() {
         guestLastName: reservation.guestLastName,
         guestStructure: reservation.guestStructure,
         guestEmail: reservation.guestEmail,
+        guestEmailSecondary: reservation.guestEmailSecondary,
         guestPhone: reservation.guestPhone,
+        guestPhoneSecondary: reservation.guestPhoneSecondary,
         guestFunction: reservation.guestFunction,
+        guestAddress: reservation.guestAddress,
+        guestPostalCode: reservation.guestPostalCode,
+        guestCity: reservation.guestCity,
+        guestAfcNumber: reservation.guestAfcNumber,
         numPlaces: reservation.numPlaces,
         checkinStatus: reservation.checkinStatus,
         checkinComment: reservation.checkinComment,
@@ -416,6 +422,8 @@ export default function SlotReservationsPage() {
   );
 
   // Handler succès check-in - met à jour la liste
+  // Note: onSuccess envoie toujours tous les champs depuis result.data,
+  // donc on peut utiliser directement les valeurs (y compris null pour les champs vidés)
   const handleCheckinSuccess = useCallback(
     (updatedReservation: ReservationRowData) => {
       setReservations((prev) =>
@@ -423,10 +431,25 @@ export default function SlotReservationsPage() {
           r.id === updatedReservation.id
             ? { 
                 ...r, 
+                // Check-in
                 checkinStatus: updatedReservation.checkinStatus,
-                checkinComment: updatedReservation.checkinComment ?? r.checkinComment,
-                checkinVenueNotes: updatedReservation.checkinVenueNotes ?? r.checkinVenueNotes,
-                checkinInternalNotes: updatedReservation.checkinInternalNotes ?? r.checkinInternalNotes,
+                checkinComment: updatedReservation.checkinComment,
+                checkinVenueNotes: updatedReservation.checkinVenueNotes,
+                checkinInternalNotes: updatedReservation.checkinInternalNotes,
+                // Infos guest
+                guestFirstName: updatedReservation.guestFirstName,
+                guestLastName: updatedReservation.guestLastName,
+                guestEmail: updatedReservation.guestEmail,
+                guestEmailSecondary: updatedReservation.guestEmailSecondary,
+                guestPhone: updatedReservation.guestPhone,
+                guestPhoneSecondary: updatedReservation.guestPhoneSecondary,
+                guestStructure: updatedReservation.guestStructure,
+                guestFunction: updatedReservation.guestFunction,
+                guestAddress: updatedReservation.guestAddress,
+                guestPostalCode: updatedReservation.guestPostalCode,
+                guestCity: updatedReservation.guestCity,
+                guestAfcNumber: updatedReservation.guestAfcNumber,
+                specialRequests: updatedReservation.specialRequests,
               }
             : r
         )

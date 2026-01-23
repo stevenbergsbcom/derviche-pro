@@ -36,8 +36,20 @@ export interface ReservationRowData {
   checkinInternalNotes?: string | null;
   /** Téléphone du guest */
   guestPhone?: string | null;
+  /** Email secondaire */
+  guestEmailSecondary?: string | null;
+  /** Téléphone secondaire */
+  guestPhoneSecondary?: string | null;
   /** Fonction du guest */
   guestFunction?: string | null;
+  /** Adresse */
+  guestAddress?: string | null;
+  /** Code postal */
+  guestPostalCode?: string | null;
+  /** Ville */
+  guestCity?: string | null;
+  /** Numéro AFC */
+  guestAfcNumber?: string | null;
   /** Demandes spéciales */
   specialRequests?: string | null;
 }

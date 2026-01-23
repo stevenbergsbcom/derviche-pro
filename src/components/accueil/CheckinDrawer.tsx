@@ -12,6 +12,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import {
   Drawer,
   DrawerContent,
@@ -46,7 +47,11 @@ import {
   Loader2,
   ChevronDown,
   AlertCircle,
+  User,
+  Home,
+  CreditCard,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { updateCheckinStatus } from '@/lib/services/checkin';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { CheckinStatus } from '@/types/database';
@@ -146,29 +151,72 @@ export function CheckinDrawer({
 }: CheckinDrawerProps) {
   const { userId, role, companyId, isAdmin, isLoading: accessLoading } = useCheckinAccess();
   
-  // États locaux
+  // États locaux - Check-in
   const [selectedStatus, setSelectedStatus] = useState<CheckinStatus | null>(null);
   const [comment, setComment] = useState('');
   const [venueNotes, setVenueNotes] = useState('');
   const [internalNotes, setInternalNotes] = useState('');
+  
+  // États locaux - Infos guest (éditables)
+  const [guestFirstName, setGuestFirstName] = useState('');
+  const [guestLastName, setGuestLastName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestEmailSecondary, setGuestEmailSecondary] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [guestPhoneSecondary, setGuestPhoneSecondary] = useState('');
+  const [guestStructure, setGuestStructure] = useState('');
+  const [guestFunction, setGuestFunction] = useState('');
+  const [guestAddress, setGuestAddress] = useState('');
+  const [guestPostalCode, setGuestPostalCode] = useState('');
+  const [guestCity, setGuestCity] = useState('');
+  const [guestAfcNumber, setGuestAfcNumber] = useState('');
+  const [specialRequests, setSpecialRequests] = useState('');
+  
+  // États UI
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   // Réinitialiser quand la réservation change
   useEffect(() => {
     if (reservation) {
+      // Check-in
       setSelectedStatus(reservation.checkinStatus);
       setComment(reservation.checkinComment || '');
       setVenueNotes(reservation.checkinVenueNotes || '');
       setInternalNotes(reservation.checkinInternalNotes || '');
+      // Infos guest
+      setGuestFirstName(reservation.guestFirstName || '');
+      setGuestLastName(reservation.guestLastName || '');
+      setGuestEmail(reservation.guestEmail || '');
+      setGuestEmailSecondary(reservation.guestEmailSecondary || '');
+      setGuestPhone(reservation.guestPhone || '');
+      setGuestPhoneSecondary(reservation.guestPhoneSecondary || '');
+      setGuestStructure(reservation.guestStructure || '');
+      setGuestFunction(reservation.guestFunction || '');
+      setGuestAddress(reservation.guestAddress || '');
+      setGuestPostalCode(reservation.guestPostalCode || '');
+      setGuestCity(reservation.guestCity || '');
+      setGuestAfcNumber(reservation.guestAfcNumber || '');
+      setSpecialRequests(reservation.specialRequests || '');
+      // UI
       setDetailsOpen(false);
     }
   }, [reservation]);
 
   // Handler de sauvegarde
   const handleSave = useCallback(async () => {
-    if (!reservation || !selectedStatus || !userId || !role) {
-      toast.error('Données manquantes pour le pointage');
+    if (!reservation || !userId || !role) {
+      toast.error('Données manquantes pour la sauvegarde');
+      return;
+    }
+
+    // Validation basique
+    if (!guestFirstName.trim() || !guestLastName.trim()) {
+      toast.error('Le prénom et le nom sont obligatoires');
+      return;
+    }
+    if (!guestEmail.trim()) {
+      toast.error('L\'email est obligatoire');
       return;
     }
 
@@ -177,13 +225,27 @@ export function CheckinDrawer({
     try {
       const result = await updateCheckinStatus({
         reservationId: reservation.id,
-        status: selectedStatus,
+        status: selectedStatus ?? undefined,
         comment: comment.trim() || null,
         venueNotes: venueNotes.trim() || null,
         internalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
         userId,
         role,
         companyId,
+        // Champs guest
+        guestFirstName: guestFirstName.trim(),
+        guestLastName: guestLastName.trim(),
+        guestEmail: guestEmail.trim(),
+        guestEmailSecondary: guestEmailSecondary.trim() || null,
+        guestPhone: guestPhone.trim() || null,
+        guestPhoneSecondary: guestPhoneSecondary.trim() || null,
+        guestStructure: guestStructure.trim() || null,
+        guestFunction: guestFunction.trim() || null,
+        guestAddress: guestAddress.trim() || null,
+        guestPostalCode: guestPostalCode.trim() || null,
+        guestCity: guestCity.trim() || null,
+        guestAfcNumber: guestAfcNumber.trim() || null,
+        specialRequests: specialRequests.trim() || null,
       });
 
       if (!result.success || !result.data) {
@@ -191,114 +253,123 @@ export function CheckinDrawer({
         return;
       }
 
-      // Succès
-      const statusLabel = STATUS_BUTTONS.find(b => b.status === selectedStatus)?.label || 'Pointé';
-      toast.success(`${getFullName(reservation.guestFirstName, reservation.guestLastName)} : ${statusLabel}`);
+      // Succès - message adapté selon si on a changé le statut ou juste les infos
+      if (selectedStatus) {
+        const statusLabel = STATUS_BUTTONS.find(b => b.status === selectedStatus)?.label || 'Pointé';
+        toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : ${statusLabel}`);
+      } else {
+        toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : Informations mises à jour`);
+      }
 
       // Callback avec les données mises à jour
       onSuccess({
         ...reservation,
+        // Check-in
         checkinStatus: result.data.checkinStatus,
         checkinComment: result.data.checkinComment,
         checkinVenueNotes: result.data.checkinVenueNotes,
         checkinInternalNotes: result.data.checkinInternalNotes,
+        // Infos guest
+        guestFirstName: result.data.guestFirstName,
+        guestLastName: result.data.guestLastName,
+        guestEmail: result.data.guestEmail,
+        guestEmailSecondary: result.data.guestEmailSecondary,
+        guestPhone: result.data.guestPhone,
+        guestPhoneSecondary: result.data.guestPhoneSecondary,
+        guestStructure: result.data.guestStructure,
+        guestFunction: result.data.guestFunction,
+        guestAddress: result.data.guestAddress,
+        guestPostalCode: result.data.guestPostalCode,
+        guestCity: result.data.guestCity,
+        guestAfcNumber: result.data.guestAfcNumber,
+        specialRequests: result.data.specialRequests,
       });
 
       // Fermer le drawer
       onOpenChange(false);
 
     } catch (error) {
-      console.error('Erreur pointage:', error);
+      logger.error('CheckinDrawer - Erreur pointage', error as Error);
       toast.error('Erreur lors du pointage');
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, selectedStatus, comment, venueNotes, internalNotes, isAdmin, userId, role, companyId, onSuccess, onOpenChange]);
+  }, [
+    reservation, 
+    selectedStatus, 
+    comment, 
+    venueNotes, 
+    internalNotes, 
+    isAdmin, 
+    userId, 
+    role, 
+    companyId, 
+    guestFirstName,
+    guestLastName,
+    guestEmail,
+    guestEmailSecondary,
+    guestPhone,
+    guestPhoneSecondary,
+    guestStructure,
+    guestFunction,
+    guestAddress,
+    guestPostalCode,
+    guestCity,
+    guestAfcNumber,
+    specialRequests,
+    onSuccess, 
+    onOpenChange
+  ]);
 
   // Si pas de réservation, ne rien afficher
   if (!reservation) return null;
 
-  const fullName = getFullName(reservation.guestFirstName, reservation.guestLastName);
+  // Nom affiché (dynamique si modifié)
+  const displayName = getFullName(guestFirstName, guestLastName);
+  
+  // Détection des changements
   const hasChanges = 
+    // Check-in
     selectedStatus !== reservation.checkinStatus ||
     comment !== (reservation.checkinComment || '') ||
     venueNotes !== (reservation.checkinVenueNotes || '') ||
-    (isAdmin && internalNotes !== (reservation.checkinInternalNotes || ''));
-  const canSave = selectedStatus !== null && !isSubmitting && !accessLoading;
+    (isAdmin && internalNotes !== (reservation.checkinInternalNotes || '')) ||
+    // Infos guest
+    guestFirstName !== (reservation.guestFirstName || '') ||
+    guestLastName !== (reservation.guestLastName || '') ||
+    guestEmail !== (reservation.guestEmail || '') ||
+    guestEmailSecondary !== (reservation.guestEmailSecondary || '') ||
+    guestPhone !== (reservation.guestPhone || '') ||
+    guestPhoneSecondary !== (reservation.guestPhoneSecondary || '') ||
+    guestStructure !== (reservation.guestStructure || '') ||
+    guestFunction !== (reservation.guestFunction || '') ||
+    guestAddress !== (reservation.guestAddress || '') ||
+    guestPostalCode !== (reservation.guestPostalCode || '') ||
+    guestCity !== (reservation.guestCity || '') ||
+    guestAfcNumber !== (reservation.guestAfcNumber || '') ||
+    specialRequests !== (reservation.specialRequests || '');
+  
+  // On peut sauvegarder si :
+  // - Un statut est sélectionné (check-in)
+  // - OU des modifications ont été faites sur les infos guest/notes
+  const canSave = (selectedStatus !== null || hasChanges) && !isSubmitting && !accessLoading;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="text-left border-b pb-4">
-          <DrawerTitle className="text-xl">{fullName}</DrawerTitle>
+          <DrawerTitle className="text-xl">{displayName}</DrawerTitle>
           <DrawerDescription className="sr-only">
-            Pointage de la réservation de {fullName}
+            Pointage de la réservation de {displayName}
           </DrawerDescription>
           
-          {/* Infos principales */}
-          <div className="mt-3 space-y-2">
-            {reservation.guestStructure && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Building2 className="w-4 h-4 shrink-0" />
-                <span>{reservation.guestStructure}</span>
-              </div>
-            )}
-            {reservation.guestFunction && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Briefcase className="w-4 h-4 shrink-0" />
-                <span>{reservation.guestFunction}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-sm">
-                <Users className="w-4 h-4 mr-1.5" />
-                {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
-              </Badge>
-            </div>
+          {/* Badge nombre de places */}
+          <div className="mt-2">
+            <Badge variant="secondary" className="text-sm">
+              <Users className="w-4 h-4 mr-1.5" />
+              {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
+            </Badge>
           </div>
-
-          {/* Section dépliable pour plus de détails */}
-          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="mt-3">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
-                <span>Voir les détails</span>
-                <ChevronDown className={cn(
-                  "w-4 h-4 transition-transform",
-                  detailsOpen && "rotate-180"
-                )} />
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-2 space-y-2 text-sm">
-              {reservation.guestEmail && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Mail className="w-4 h-4 shrink-0" />
-                  <a href={`mailto:${reservation.guestEmail}`} className="hover:underline">
-                    {reservation.guestEmail}
-                  </a>
-                </div>
-              )}
-              {reservation.guestPhone && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Phone className="w-4 h-4 shrink-0" />
-                  <a href={`tel:${reservation.guestPhone}`} className="hover:underline">
-                    {reservation.guestPhone}
-                  </a>
-                </div>
-              )}
-              {reservation.specialRequests && (
-                <div className="flex items-start gap-2 text-muted-foreground bg-amber-50 p-2 rounded-md">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-amber-700 text-xs uppercase">Demandes spéciales</p>
-                    <p className="text-amber-900 mt-0.5">{reservation.specialRequests}</p>
-                  </div>
-                </div>
-              )}
-              {!reservation.guestEmail && !reservation.guestPhone && !reservation.specialRequests && (
-                <p className="text-muted-foreground/60 italic">Aucune information complémentaire</p>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
         </DrawerHeader>
 
         {/* Corps du drawer - scrollable */}
@@ -338,6 +409,222 @@ export function CheckinDrawer({
               })}
             </div>
           </div>
+
+          <Separator />
+
+          {/* Section dépliable - Informations du professionnel */}
+          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground -mx-2 px-2">
+                <span className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Informations du professionnel
+                </span>
+                <ChevronDown className={cn(
+                  "w-4 h-4 transition-transform",
+                  detailsOpen && "rotate-180"
+                )} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3 space-y-4">
+              {/* Prénom et Nom */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="guest-first-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Prénom *
+                  </label>
+                  <Input
+                    id="guest-first-name"
+                    value={guestFirstName}
+                    onChange={(e) => setGuestFirstName(e.target.value)}
+                    placeholder="Prénom"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="guest-last-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Nom *
+                  </label>
+                  <Input
+                    id="guest-last-name"
+                    value={guestLastName}
+                    onChange={(e) => setGuestLastName(e.target.value)}
+                    placeholder="Nom"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Mail className="w-3.5 h-3.5" />
+                  Email *
+                </label>
+                <Input
+                  id="guest-email"
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="email@exemple.com"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Email secondaire */}
+              <div>
+                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Mail className="w-3.5 h-3.5" />
+                  Email secondaire
+                </label>
+                <Input
+                  id="guest-email-secondary"
+                  type="email"
+                  value={guestEmailSecondary}
+                  onChange={(e) => setGuestEmailSecondary(e.target.value)}
+                  placeholder="autre@exemple.com"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Téléphone */}
+              <div>
+                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Phone className="w-3.5 h-3.5" />
+                  Téléphone
+                </label>
+                <Input
+                  id="guest-phone"
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="06 12 34 56 78"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Téléphone secondaire */}
+              <div>
+                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Phone className="w-3.5 h-3.5" />
+                  Téléphone secondaire
+                </label>
+                <Input
+                  id="guest-phone-secondary"
+                  type="tel"
+                  value={guestPhoneSecondary}
+                  onChange={(e) => setGuestPhoneSecondary(e.target.value)}
+                  placeholder="01 23 45 67 89"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Structure */}
+              <div>
+                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Structure / Organisation
+                </label>
+                <Input
+                  id="guest-structure"
+                  value={guestStructure}
+                  onChange={(e) => setGuestStructure(e.target.value)}
+                  placeholder="Théâtre, Centre culturel..."
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Fonction */}
+              <div>
+                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Briefcase className="w-3.5 h-3.5" />
+                  Fonction
+                </label>
+                <Input
+                  id="guest-function"
+                  value={guestFunction}
+                  onChange={(e) => setGuestFunction(e.target.value)}
+                  placeholder="Programmateur, Directeur..."
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Adresse */}
+              <div>
+                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <Home className="w-3.5 h-3.5" />
+                  Adresse
+                </label>
+                <Input
+                  id="guest-address"
+                  value={guestAddress}
+                  onChange={(e) => setGuestAddress(e.target.value)}
+                  placeholder="12 rue du Théâtre"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Code postal et Ville */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label htmlFor="guest-postal-code" className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Code postal
+                  </label>
+                  <Input
+                    id="guest-postal-code"
+                    value={guestPostalCode}
+                    onChange={(e) => setGuestPostalCode(e.target.value)}
+                    placeholder="75001"
+                    disabled={isSubmitting}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="guest-city" className="text-xs font-medium text-muted-foreground mb-1 block">
+                    Ville
+                  </label>
+                  <Input
+                    id="guest-city"
+                    value={guestCity}
+                    onChange={(e) => setGuestCity(e.target.value)}
+                    placeholder="Paris"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              </div>
+
+              {/* Numéro AFC */}
+              <div>
+                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <CreditCard className="w-3.5 h-3.5" />
+                  Numéro AFC
+                </label>
+                <Input
+                  id="guest-afc-number"
+                  value={guestAfcNumber}
+                  onChange={(e) => setGuestAfcNumber(e.target.value)}
+                  placeholder="Numéro d'adhérent AFC"
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {/* Demandes spéciales */}
+              <div>
+                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Demandes spéciales
+                </label>
+                <Textarea
+                  id="guest-special-requests"
+                  value={specialRequests}
+                  onChange={(e) => setSpecialRequests(e.target.value)}
+                  placeholder="Accessibilité, accompagnant, etc."
+                  rows={2}
+                  disabled={isSubmitting}
+                  className="resize-none"
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Separator />
 
@@ -437,7 +724,7 @@ export function CheckinDrawer({
           </div>
           
           {/* Indicateur de changement */}
-          {hasChanges && selectedStatus && (
+          {hasChanges && (
             <p className="text-xs text-center text-muted-foreground mt-2">
               Modifications non enregistrées
             </p>
