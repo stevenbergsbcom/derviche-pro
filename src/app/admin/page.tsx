@@ -1,6 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
+import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +27,20 @@ import Link from 'next/link';
 // ============================================
 // HELPERS
 // ============================================
+
+/**
+ * Formate la date du jour en français complet
+ * Ex: "vendredi 24 janvier 2025"
+ */
+function formatTodayDate(): string {
+  const today = new Date();
+  return today.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
 
 /**
  * Formate une date en français
@@ -187,15 +203,45 @@ function QuickLink({
 
 export default function AdminDashboardPage() {
   const { data, isLoading, error, refresh } = useAdminDashboard();
+  const [firstName, setFirstName] = useState<string | null>(null);
+
+  // Récupérer le prénom de l'utilisateur connecté
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) return;
+
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', user.id)
+          .single();
+
+        if (profile?.first_name) {
+          setFirstName(profile.first_name);
+        }
+      } catch (err) {
+        // Silencieux - ce n'est pas critique
+        console.error('Erreur récupération profil:', err);
+      }
+    };
+
+    void fetchUserProfile();
+  }, []);
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* En-tête avec salutation */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Tableau de bord</h1>
-          <p className="text-muted-foreground">
-            Vue d&apos;ensemble de l&apos;activité Derviche Diffusion
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-derviche-dark">
+            Bonjour{firstName ? ` ${firstName}` : ''} 👋
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Nous sommes le {formatTodayDate()}
           </p>
         </div>
         <Button
@@ -203,6 +249,7 @@ export default function AdminDashboardPage() {
           size="sm"
           onClick={() => void refresh()}
           disabled={isLoading}
+          aria-label="Actualiser le tableau de bord"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Actualiser

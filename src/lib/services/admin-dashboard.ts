@@ -73,18 +73,73 @@ export interface AdminDashboardResult {
 }
 
 // ============================================
+// TYPE GUARDS
+// ============================================
+
+/**
+ * Vérifie si les données correspondent à un Show valide
+ */
+function isValidShow(data: unknown): data is Pick<ShowRow, 'id' | 'title' | 'slug' | 'image_url'> {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'title' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { title: unknown }).title === 'string'
+  );
+}
+
+/**
+ * Vérifie si les données correspondent à un Venue valide
+ */
+function isValidVenue(data: unknown): data is Pick<VenueRow, 'id' | 'name' | 'city'> {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'name' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { name: unknown }).name === 'string'
+  );
+}
+
+/**
+ * Vérifie si les données correspondent à un Slot valide (pour réservations)
+ */
+function isValidSlot(data: unknown): data is {
+  id: string;
+  date: string;
+  time: string;
+  shows: unknown;
+  venues: unknown;
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'id' in data &&
+    'date' in data &&
+    'time' in data &&
+    typeof (data as { id: unknown }).id === 'string' &&
+    typeof (data as { date: unknown }).date === 'string' &&
+    typeof (data as { time: unknown }).time === 'string'
+  );
+}
+
+// ============================================
 // HELPERS
 // ============================================
 
 /**
  * Calcule le nombre de places réservées à partir de capacity et remaining_capacity
+ * Utilise Math.max pour éviter les valeurs négatives
  */
 function calculateBooked(capacity: number, remainingCapacity: number): number {
   // 999999 = capacité illimitée
   if (capacity === 999999) {
-    return 999999 - remainingCapacity;
+    return Math.max(0, 999999 - remainingCapacity);
   }
-  return capacity - remainingCapacity;
+  return Math.max(0, capacity - remainingCapacity);
 }
 
 /**
@@ -106,6 +161,8 @@ function calculateOccupancyRate(capacity: number, remainingCapacity: number): nu
  * Récupère les statistiques globales
  */
 async function getStats(): Promise<{ data: AdminDashboardStats; error: string | null }> {
+  const errors: string[] = [];
+  
   try {
     const supabase = createClient();
     const today = new Date().toISOString().split('T')[0];
@@ -127,6 +184,7 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     if (showsError) {
       logger.error('Erreur comptage spectacles', { error: showsError.message });
+      errors.push('spectacles');
     }
 
     // 2. Créneaux à venir
@@ -137,6 +195,7 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     if (slotsError) {
       logger.error('Erreur comptage créneaux', { error: slotsError.message });
+      errors.push('créneaux');
     }
 
     // 3. Réservations totales confirmées
@@ -147,6 +206,7 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     if (totalResError) {
       logger.error('Erreur comptage réservations totales', { error: totalResError.message });
+      errors.push('réservations totales');
     }
 
     // 4. Réservations aujourd'hui
@@ -161,6 +221,7 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     if (todayResError) {
       logger.error('Erreur comptage réservations aujourd\'hui', { error: todayResError.message });
+      errors.push('réservations du jour');
     }
 
     // 5. Réservations cette semaine
@@ -172,6 +233,7 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     if (weekResError) {
       logger.error('Erreur comptage réservations semaine', { error: weekResError.message });
+      errors.push('réservations de la semaine');
     }
 
     // 6. Taux de remplissage moyen (sur les créneaux à venir)
@@ -180,6 +242,11 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
       .select('capacity, remaining_capacity')
       .gte('date', today)
       .neq('capacity', 999999); // Exclure capacité illimitée
+
+    if (occupancyError) {
+      logger.error('Erreur calcul taux remplissage', { error: occupancyError.message });
+      errors.push('taux de remplissage');
+    }
 
     let averageOccupancy = 0;
     if (!occupancyError && upcomingSlots && upcomingSlots.length > 0) {
@@ -191,14 +258,14 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
     return {
       data: {
-        total_shows_active: showsCount || 0,
-        total_slots_upcoming: slotsCount || 0,
-        total_reservations: totalReservations || 0,
-        reservations_today: todayReservations || 0,
-        reservations_this_week: weekReservations || 0,
+        total_shows_active: showsCount ?? 0,
+        total_slots_upcoming: slotsCount ?? 0,
+        total_reservations: totalReservations ?? 0,
+        reservations_today: todayReservations ?? 0,
+        reservations_this_week: weekReservations ?? 0,
         average_occupancy_rate: averageOccupancy,
       },
-      error: null,
+      error: errors.length > 0 ? `Erreur partielle: ${errors.join(', ')}` : null,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -247,8 +314,15 @@ async function getUpcomingSlots(limit: number = 10): Promise<{ data: AdminUpcomi
     }
 
     const upcomingSlots: AdminUpcomingSlot[] = slots.map(slot => {
-      const show = slot.shows as unknown as Pick<ShowRow, 'id' | 'title' | 'slug' | 'image_url'>;
-      const venue = slot.venues as unknown as Pick<VenueRow, 'id' | 'name' | 'city'>;
+      // Utiliser les type guards pour valider les données
+      const show = isValidShow(slot.shows)
+        ? slot.shows
+        : { id: slot.show_id, title: 'Spectacle inconnu', slug: '', image_url: null };
+      
+      const venue = isValidVenue(slot.venues)
+        ? slot.venues
+        : { id: slot.venue_id, name: 'Lieu inconnu', city: '' };
+
       const reservationsCount = calculateBooked(slot.capacity, slot.remaining_capacity);
       const occupancyRate = calculateOccupancyRate(slot.capacity, slot.remaining_capacity);
 
@@ -261,8 +335,8 @@ async function getUpcomingSlots(limit: number = 10): Promise<{ data: AdminUpcomi
         capacity: slot.capacity,
         remaining_capacity: slot.remaining_capacity,
         hosted_by: slot.hosted_by as SlotHostedBy,
-        show: show || { id: slot.show_id, title: 'Spectacle inconnu', slug: '', image_url: null },
-        venue: venue || { id: slot.venue_id, name: 'Lieu inconnu', city: '' },
+        show,
+        venue,
         reservations_count: reservationsCount,
         occupancy_rate: occupancyRate,
       };
@@ -308,13 +382,13 @@ async function getRecentReservations(limit: number = 10): Promise<{ data: AdminR
     }
 
     const recentReservations: AdminRecentReservation[] = reservations.map(res => {
-      const slot = res.slots as unknown as {
-        id: string;
-        date: string;
-        time: string;
-        shows: Pick<ShowRow, 'id' | 'title'>;
-        venues: Pick<VenueRow, 'id' | 'name' | 'city'>;
-      };
+      // Utiliser le type guard pour valider le slot
+      const slotData = res.slots;
+      const slotIsValid = isValidSlot(slotData);
+      
+      // Extraire les données du show et venue avec validation
+      const showData = slotIsValid ? slotData.shows : null;
+      const venueData = slotIsValid ? slotData.venues : null;
 
       return {
         id: res.id,
@@ -326,11 +400,15 @@ async function getRecentReservations(limit: number = 10): Promise<{ data: AdminR
         guest_email: res.guest_email,
         guest_structure: res.guest_structure,
         slot: {
-          id: slot?.id || '',
-          date: slot?.date || '',
-          time: slot?.time || '',
-          show: slot?.shows || { id: '', title: 'Spectacle inconnu' },
-          venue: slot?.venues || { id: '', name: 'Lieu inconnu', city: '' },
+          id: slotIsValid ? slotData.id : '',
+          date: slotIsValid ? slotData.date : '',
+          time: slotIsValid ? slotData.time : '',
+          show: isValidShow(showData) 
+            ? { id: showData.id, title: showData.title }
+            : { id: '', title: 'Spectacle inconnu' },
+          venue: isValidVenue(venueData)
+            ? venueData
+            : { id: '', name: 'Lieu inconnu', city: '' },
         },
       };
     });
@@ -354,13 +432,17 @@ export async function getAdminDashboard(): Promise<AdminDashboardResult> {
       getRecentReservations(10),
     ]);
 
+    // Collecter toutes les erreurs
+    const errors = [statsResult.error, slotsResult.error, reservationsResult.error]
+      .filter(Boolean);
+
     return {
       data: {
         stats: statsResult.data,
         upcomingSlots: slotsResult.data,
         recentReservations: reservationsResult.data,
       },
-      error: statsResult.error || slotsResult.error || reservationsResult.error,
+      error: errors.length > 0 ? errors.join('; ') : null,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
