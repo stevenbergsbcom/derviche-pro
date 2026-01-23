@@ -86,11 +86,23 @@ export interface CheckinReservation {
   guestFirstName: string | null;
   guestLastName: string | null;
   guestEmail: string | null;
+  guestEmailSecondary: string | null;
+  guestPhone: string | null;
+  guestPhoneSecondary: string | null;
+  guestFunction: string | null;
   guestStructure: string | null;
+  guestAddress: string | null;
+  guestPostalCode: string | null;
+  guestCity: string | null;
+  guestAfcNumber: string | null;
   numPlaces: number;
   status: 'confirmed' | 'cancelled' | 'no_show';
   checkinStatus: import('@/types/database').CheckinStatus | null;
   checkinComment: string | null;
+  /** Notes sur le lieu (visibles par tous) */
+  checkinVenueNotes: string | null;
+  /** Notes internes Derviche (visibles uniquement par admin) */
+  checkinInternalNotes: string | null;
   specialRequests: string | null;
   createdAt: string;
 }
@@ -186,6 +198,22 @@ function isValidRawSlot(data: unknown): data is {
   );
 }
 
+/**
+ * Vérifie si une réponse RPC create_admin_reservation est valide
+ */
+function isValidRpcResult(data: unknown): data is { 
+  success: boolean; 
+  reservation_id?: string; 
+  error?: string 
+} {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'success' in data &&
+    typeof (data as { success: unknown }).success === 'boolean'
+  );
+}
+
 // ============================================
 // FONCTIONS PRINCIPALES
 // ============================================
@@ -203,9 +231,8 @@ export async function getAccessibleShows(
     logger.info('checkin.getAccessibleShows - Début', { userId, role, companyId });
 
     const supabase = createClient();
-    const today = new Date().toISOString().split('T')[0];
 
-    // Récupérer les spectacles avec leurs slots à venir
+    // Récupérer les spectacles avec leurs slots (passés et futurs)
     let query = supabase
       .from('shows')
       .select(`
@@ -231,7 +258,6 @@ export async function getAccessibleShows(
       `)
       .is('deleted_at', null)
       .eq('status', 'published')
-      .gte('slots.date', today)
       .order('title', { ascending: true });
 
     // Filtrer selon le rôle
@@ -350,7 +376,6 @@ export async function getAccessibleSlots(
     logger.info('checkin.getAccessibleSlots - Début', { showSlug, userId, role });
 
     const supabase = createClient();
-    const today = new Date().toISOString().split('T')[0];
 
     // D'abord, récupérer le show par son slug
     const { data: showData, error: showError } = await supabase
@@ -371,7 +396,7 @@ export async function getAccessibleSlots(
       return { data: [], error: 'Accès non autorisé à ce spectacle' };
     }
 
-    // Récupérer les slots
+    // Récupérer les slots (passés et futurs)
     let query = supabase
       .from('slots')
       .select(`
@@ -399,7 +424,6 @@ export async function getAccessibleSlots(
         )
       `)
       .eq('show_id', showData.id)
-      .gte('date', today)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
 
@@ -516,11 +540,21 @@ export async function getSlotReservations(
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_email_secondary,
+        guest_phone,
+        guest_phone_secondary,
+        guest_function,
         guest_structure,
+        guest_address,
+        guest_postal_code,
+        guest_city,
+        guest_afc_number,
         num_places,
         status,
         checkin_status,
         checkin_comment,
+        checkin_venue_notes,
+        checkin_internal_notes,
         special_requests,
         created_at
       `)
@@ -539,16 +573,28 @@ export async function getSlotReservations(
     }
 
     // Transformer les données
+    // Note: checkinInternalNotes masqué pour les non-admins
     const reservations: CheckinReservation[] = data.map((r) => ({
       id: r.id,
       guestFirstName: r.guest_first_name,
       guestLastName: r.guest_last_name,
       guestEmail: r.guest_email,
+      guestEmailSecondary: r.guest_email_secondary,
+      guestPhone: r.guest_phone,
+      guestPhoneSecondary: r.guest_phone_secondary,
+      guestFunction: r.guest_function,
       guestStructure: r.guest_structure,
+      guestAddress: r.guest_address,
+      guestPostalCode: r.guest_postal_code,
+      guestCity: r.guest_city,
+      guestAfcNumber: r.guest_afc_number,
       numPlaces: r.num_places,
       status: r.status as 'confirmed' | 'cancelled' | 'no_show',
       checkinStatus: r.checkin_status as import('@/types/database').CheckinStatus | null,
       checkinComment: r.checkin_comment,
+      checkinVenueNotes: r.checkin_venue_notes,
+      // Notes internes masquées pour les non-admins
+      checkinInternalNotes: ADMIN_ROLES.includes(role) ? r.checkin_internal_notes : null,
       specialRequests: r.special_requests,
       createdAt: r.created_at,
     }));
@@ -628,14 +674,33 @@ export async function canAccessSlot(
 // MISE À JOUR DU CHECK-IN
 // ============================================
 
-/** Paramètres pour mettre à jour le statut de check-in */
+/** Paramètres pour mettre à jour le statut de check-in et/ou les infos guest */
 export interface UpdateCheckinParams {
   reservationId: string;
-  status: import('@/types/database').CheckinStatus;
+  /** Statut de check-in (optionnel - si absent, seules les infos guest sont mises à jour) */
+  status?: import('@/types/database').CheckinStatus | null;
   comment?: string | null;
+  /** Notes sur le lieu (visibles par tous les rôles) */
+  venueNotes?: string | null;
+  /** Notes internes Derviche (visibles uniquement par super-admin/admin) */
+  internalNotes?: string | null;
   userId: string;
   role: UserRole;
   companyId: string | null;
+  // Champs guest (optionnels - pour modification des infos du professionnel)
+  guestFirstName?: string;
+  guestLastName?: string;
+  guestEmail?: string;
+  guestEmailSecondary?: string | null;
+  guestPhone?: string | null;
+  guestPhoneSecondary?: string | null;
+  guestStructure?: string | null;
+  guestFunction?: string | null;
+  guestAddress?: string | null;
+  guestPostalCode?: string | null;
+  guestCity?: string | null;
+  guestAfcNumber?: string | null;
+  specialRequests?: string | null;
 }
 
 /** Résultat de la mise à jour du check-in */
@@ -654,7 +719,30 @@ export interface UpdateCheckinResult {
 export async function updateCheckinStatus(
   params: UpdateCheckinParams
 ): Promise<UpdateCheckinResult> {
-  const { reservationId, status, comment, userId, role, companyId } = params;
+  const { 
+    reservationId, 
+    status, 
+    comment, 
+    venueNotes, 
+    internalNotes, 
+    userId, 
+    role, 
+    companyId,
+    // Champs guest
+    guestFirstName,
+    guestLastName,
+    guestEmail,
+    guestEmailSecondary,
+    guestPhone,
+    guestPhoneSecondary,
+    guestStructure,
+    guestFunction,
+    guestAddress,
+    guestPostalCode,
+    guestCity,
+    guestAfcNumber,
+    specialRequests,
+  } = params;
 
   try {
     logger.info('checkin.updateCheckinStatus - Début', { 
@@ -721,25 +809,136 @@ export async function updateCheckinStatus(
 
     // 4. Mettre à jour la réservation
     const now = new Date().toISOString();
+    
+    // Construire l'objet de mise à jour
+    // Note: internalNotes uniquement pour super-admin et admin
+    // Note: Si status n'est pas fourni, on ne met pas à jour les champs checkin_*
+    const updateData: {
+      checkin_status?: typeof status;
+      checkin_comment?: string | null;
+      checkin_venue_notes?: string | null;
+      checkin_internal_notes?: string | null;
+      checkin_at?: string;
+      checkin_by?: string;
+      // Champs guest (optionnels)
+      guest_first_name?: string;
+      guest_last_name?: string;
+      guest_email?: string;
+      guest_email_secondary?: string | null;
+      guest_phone?: string | null;
+      guest_phone_secondary?: string | null;
+      guest_structure?: string | null;
+      guest_function?: string | null;
+      guest_address?: string | null;
+      guest_postal_code?: string | null;
+      guest_city?: string | null;
+      guest_afc_number?: string | null;
+      special_requests?: string | null;
+    } = {};
+
+    // Ajouter les champs check-in seulement si un status est fourni
+    if (status !== undefined && status !== null) {
+      updateData.checkin_status = status;
+      updateData.checkin_at = now;
+      updateData.checkin_by = userId;
+    }
+
+    // Le commentaire peut être modifié indépendamment du statut
+    if (comment !== undefined) {
+      updateData.checkin_comment = comment;
+    }
+
+    // Ajouter venueNotes si fourni (tous les rôles peuvent le modifier)
+    if (venueNotes !== undefined) {
+      updateData.checkin_venue_notes = venueNotes;
+    }
+
+    // Ajouter internalNotes uniquement si l'utilisateur est admin
+    if (internalNotes !== undefined && ADMIN_ROLES.includes(role)) {
+      updateData.checkin_internal_notes = internalNotes;
+    }
+
+    // Ajouter les champs guest si fournis
+    if (guestFirstName !== undefined) {
+      updateData.guest_first_name = guestFirstName.trim();
+    }
+    if (guestLastName !== undefined) {
+      updateData.guest_last_name = guestLastName.trim();
+    }
+    if (guestEmail !== undefined) {
+      updateData.guest_email = guestEmail.trim();
+    }
+    if (guestEmailSecondary !== undefined) {
+      updateData.guest_email_secondary = guestEmailSecondary?.trim() || null;
+    }
+    if (guestPhone !== undefined) {
+      updateData.guest_phone = guestPhone?.trim() || null;
+    }
+    if (guestPhoneSecondary !== undefined) {
+      updateData.guest_phone_secondary = guestPhoneSecondary?.trim() || null;
+    }
+    if (guestStructure !== undefined) {
+      updateData.guest_structure = guestStructure?.trim() || null;
+    }
+    if (guestFunction !== undefined) {
+      updateData.guest_function = guestFunction?.trim() || null;
+    }
+    if (guestAddress !== undefined) {
+      updateData.guest_address = guestAddress?.trim() || null;
+    }
+    if (guestPostalCode !== undefined) {
+      updateData.guest_postal_code = guestPostalCode?.trim() || null;
+    }
+    if (guestCity !== undefined) {
+      updateData.guest_city = guestCity?.trim() || null;
+    }
+    if (guestAfcNumber !== undefined) {
+      updateData.guest_afc_number = guestAfcNumber?.trim() || null;
+    }
+    if (specialRequests !== undefined) {
+      updateData.special_requests = specialRequests?.trim() || null;
+    }
+
+    // Vérifier qu'on a quelque chose à mettre à jour
+    if (Object.keys(updateData).length === 0) {
+      logger.warn('checkin.updateCheckinStatus - Aucune donnée à mettre à jour', { reservationId });
+      return {
+        success: false,
+        data: null,
+        error: 'Aucune modification à enregistrer',
+      };
+    }
+
+    logger.info('checkin.updateCheckinStatus - Données à mettre à jour', { 
+      reservationId, 
+      fieldsCount: Object.keys(updateData).length,
+      fields: Object.keys(updateData),
+    });
+
     const { data: updated, error: updateError } = await supabase
       .from('reservations')
-      .update({
-        checkin_status: status,
-        checkin_comment: comment ?? null,
-        checkin_at: now,
-        checkin_by: userId,
-      })
+      .update(updateData)
       .eq('id', reservationId)
       .select(`
         id,
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_email_secondary,
+        guest_phone,
+        guest_phone_secondary,
+        guest_function,
         guest_structure,
+        guest_address,
+        guest_postal_code,
+        guest_city,
+        guest_afc_number,
         num_places,
         status,
         checkin_status,
         checkin_comment,
+        checkin_venue_notes,
+        checkin_internal_notes,
         special_requests,
         created_at
       `)
@@ -763,11 +962,22 @@ export async function updateCheckinStatus(
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,
+      guestEmailSecondary: updated.guest_email_secondary,
+      guestPhone: updated.guest_phone,
+      guestPhoneSecondary: updated.guest_phone_secondary,
+      guestFunction: updated.guest_function,
       guestStructure: updated.guest_structure,
+      guestAddress: updated.guest_address,
+      guestPostalCode: updated.guest_postal_code,
+      guestCity: updated.guest_city,
+      guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
       checkinStatus: updated.checkin_status as import('@/types/database').CheckinStatus | null,
       checkinComment: updated.checkin_comment,
+      checkinVenueNotes: updated.checkin_venue_notes,
+      // Notes internes masquées pour les non-admins
+      checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
     };
@@ -836,4 +1046,268 @@ export function groupSlotsByDate(slots: CheckinSlot[]): Map<string, CheckinSlot[
   }
 
   return grouped;
+}
+
+// ============================================
+// CRÉATION DE RÉSERVATION DEPUIS LE CHECK-IN
+// ============================================
+
+/** Données du formulaire de création de réservation depuis le check-in */
+export interface CreateCheckinReservationData {
+  // Champs obligatoires
+  slotId: string;
+  numPlaces: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  // Champs optionnels du guest
+  phone?: string;
+  emailSecondary?: string;
+  phoneSecondary?: string;
+  address?: string;
+  postalCode?: string;
+  city?: string;
+  organization?: string;  // -> guest_structure
+  function?: string;      // -> guest_function
+  afcNumber?: string;
+  // Commentaire / demandes
+  specialRequests?: string;
+  // Champs check-in (optionnels)
+  checkinStatus?: import('@/types/database').CheckinStatus;
+  checkinComment?: string;
+  checkinVenueNotes?: string;
+  checkinInternalNotes?: string;
+}
+
+/** Résultat de la création de réservation depuis le check-in */
+export interface CreateCheckinReservationResult {
+  success: boolean;
+  reservationId?: string;
+  /** Avertissement (ex: doublon email) - ne bloque pas la création */
+  warning?: string;
+  error?: string;
+}
+
+/** Résultat de la vérification de doublon */
+export interface DuplicateCheckResult {
+  hasDuplicate: boolean;
+  existingReservation?: {
+    id: string;
+    guestFirstName: string | null;
+    guestLastName: string | null;
+    numPlaces: number;
+  };
+}
+
+/**
+ * Vérifie si un email a déjà une réservation sur ce créneau
+ * Ne bloque pas, retourne juste l'info
+ */
+export async function checkDuplicateEmail(
+  slotId: string,
+  email: string
+): Promise<DuplicateCheckResult> {
+  try {
+    const supabase = createClient();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('id, guest_first_name, guest_last_name, num_places')
+      .eq('slot_id', slotId)
+      .ilike('guest_email', normalizedEmail)
+      .eq('status', 'confirmed')
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      logger.warn('checkin.checkDuplicateEmail - Erreur', { error });
+      return { hasDuplicate: false };
+    }
+
+    if (data) {
+      return {
+        hasDuplicate: true,
+        existingReservation: {
+          id: data.id,
+          guestFirstName: data.guest_first_name,
+          guestLastName: data.guest_last_name,
+          numPlaces: data.num_places,
+        },
+      };
+    }
+
+    return { hasDuplicate: false };
+  } catch (err) {
+    logger.error('checkin.checkDuplicateEmail - Exception', { err });
+    return { hasDuplicate: false };
+  }
+}
+
+/**
+ * Crée une réservation depuis l'interface de check-in (PWA)
+ * 
+ * Logique d'accès :
+ * - super-admin / admin : Peuvent créer sur tous les slots
+ * - externe : Peuvent créer sur les slots où ils sont hosted_by_id
+ * - company : Peuvent créer sur les slots de leurs spectacles où hosted_by='company'
+ * 
+ * Fonctionnalités :
+ * - Vérification d'accès au slot
+ * - Détection de doublon email (avertissement, ne bloque pas)
+ * - Création via RPC create_admin_reservation
+ * - Mise à jour du checkin_status si fourni
+ */
+export async function createReservationFromCheckin(
+  data: CreateCheckinReservationData,
+  userId: string,
+  role: UserRole,
+  companyId: string | null
+): Promise<CreateCheckinReservationResult> {
+  try {
+    logger.info('checkin.createReservationFromCheckin - Début', {
+      slotId: data.slotId,
+      email: data.email,
+      userId,
+      role,
+    });
+
+    // 1. Vérifier l'accès au slot
+    const hasAccess = await canAccessSlot(data.slotId, userId, role, companyId);
+    if (!hasAccess) {
+      logger.warn('checkin.createReservationFromCheckin - Accès refusé', { slotId: data.slotId });
+      return { success: false, error: 'Accès non autorisé à cette représentation' };
+    }
+
+    // 2. Vérifier les doublons email
+    let warning: string | undefined;
+    const duplicateCheck = await checkDuplicateEmail(data.slotId, data.email);
+    if (duplicateCheck.hasDuplicate && duplicateCheck.existingReservation) {
+      const existing = duplicateCheck.existingReservation;
+      const existingName = [existing.guestFirstName, existing.guestLastName]
+        .filter(Boolean)
+        .join(' ') || 'Sans nom';
+      warning = `Attention : ${data.email} a déjà une réservation (${existingName}, ${existing.numPlaces} place(s))`;
+      logger.info('checkin.createReservationFromCheckin - Doublon détecté', { warning });
+    }
+
+    // 3. Appeler la RPC create_admin_reservation
+    const supabase = createClient();
+    
+    // Note: La RPC ne supporte pas encore checkin_status directement
+    // On va créer la réservation puis mettre à jour le status si nécessaire
+    const { data: rpcResult, error: rpcError } = await supabase.rpc(
+      'create_admin_reservation',
+      {
+        p_slot_id: data.slotId,
+        p_num_places: data.numPlaces,
+        p_first_name: data.firstName.trim(),
+        p_last_name: data.lastName.trim(),
+        p_email: data.email.trim(),
+        p_phone: data.phone?.trim() || undefined,
+        p_email_secondary: data.emailSecondary?.trim() || undefined,
+        p_phone_secondary: data.phoneSecondary?.trim() || undefined,
+        p_address: data.address?.trim() || undefined,
+        p_postal_code: data.postalCode?.trim() || undefined,
+        p_city: data.city?.trim() || undefined,
+        p_organization: data.organization?.trim() || undefined,
+        p_function: data.function?.trim() || undefined,
+        p_afc_number: data.afcNumber?.trim() || undefined,
+        p_comment: data.specialRequests?.trim() || undefined,
+        p_checkin_comment: data.checkinComment?.trim() || undefined,
+        p_checkin_venue_notes: data.checkinVenueNotes?.trim() || undefined,
+        p_checkin_internal_notes: ADMIN_ROLES.includes(role) 
+          ? (data.checkinInternalNotes?.trim() || undefined) 
+          : undefined,
+      }
+    );
+
+    if (rpcError) {
+      logger.error('checkin.createReservationFromCheckin - Erreur RPC', { error: rpcError });
+      return { success: false, error: rpcError.message };
+    }
+
+    // Valider le format de la réponse RPC
+    if (!isValidRpcResult(rpcResult)) {
+      logger.error('checkin.createReservationFromCheckin - Format réponse invalide', { rpcResult });
+      return { success: false, error: 'Erreur interne: format de réponse invalide' };
+    }
+
+    if (!rpcResult.success) {
+      logger.error('checkin.createReservationFromCheckin - RPC échouée', { error: rpcResult.error });
+      return { success: false, error: rpcResult.error || 'Erreur lors de la création' };
+    }
+
+    const reservationId = rpcResult.reservation_id;
+    if (!reservationId) {
+      logger.error('checkin.createReservationFromCheckin - Pas d\'ID retourné');
+      return { success: false, error: 'Erreur interne: pas d\'ID de réservation' };
+    }
+
+    // 4. Si checkin_status fourni, mettre à jour la réservation
+    if (data.checkinStatus) {
+      const { error: updateError } = await supabase
+        .from('reservations')
+        .update({
+          checkin_status: data.checkinStatus,
+          checkin_at: new Date().toISOString(),
+          checkin_by: userId,
+        })
+        .eq('id', reservationId);
+
+      if (updateError) {
+        logger.warn('checkin.createReservationFromCheckin - Erreur mise à jour status', { 
+          reservationId, 
+          error: updateError 
+        });
+        // On ne fait pas échouer la création pour ça
+      }
+    }
+
+    logger.info('checkin.createReservationFromCheckin - Succès', { 
+      reservationId, 
+      hasWarning: !!warning 
+    });
+
+    return {
+      success: true,
+      reservationId,
+      warning,
+    };
+
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('checkin.createReservationFromCheckin - Exception', { error: message });
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Vérifie la capacité restante d'un slot
+ */
+export async function checkSlotCapacity(
+  slotId: string
+): Promise<{ capacity: number; remaining: number; isUnlimited: boolean } | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('slots')
+      .select('capacity, remaining_capacity')
+      .eq('id', slotId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    const isUnlimited = data.capacity >= 999999;
+    return {
+      capacity: data.capacity,
+      remaining: data.remaining_capacity,
+      isUnlimited,
+    };
+  } catch (err) {
+    logger.error('checkin.checkSlotCapacity - Exception', { err });
+    return null;
+  }
 }

@@ -27,6 +27,31 @@ export interface ReservationRowData {
   numPlaces: number;
   checkinStatus: CheckinStatus | null;
   status: 'confirmed' | 'cancelled' | 'no_show';
+  // Champs optionnels pour le drawer de check-in
+  /** Commentaire de check-in */
+  checkinComment?: string | null;
+  /** Notes sur le lieu (visibles par tous) */
+  checkinVenueNotes?: string | null;
+  /** Notes internes Derviche (visibles uniquement par admin) */
+  checkinInternalNotes?: string | null;
+  /** Téléphone du guest */
+  guestPhone?: string | null;
+  /** Email secondaire */
+  guestEmailSecondary?: string | null;
+  /** Téléphone secondaire */
+  guestPhoneSecondary?: string | null;
+  /** Fonction du guest */
+  guestFunction?: string | null;
+  /** Adresse */
+  guestAddress?: string | null;
+  /** Code postal */
+  guestPostalCode?: string | null;
+  /** Ville */
+  guestCity?: string | null;
+  /** Numéro AFC */
+  guestAfcNumber?: string | null;
+  /** Demandes spéciales */
+  specialRequests?: string | null;
 }
 
 export interface ReservationRowProps {

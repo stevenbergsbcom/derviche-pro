@@ -25,3 +25,7 @@ export type { ReservationRowData, ReservationRowProps } from './ReservationRow';
 // CheckinDrawer
 export { CheckinDrawer } from './CheckinDrawer';
 export type { CheckinDrawerProps } from './CheckinDrawer';
+
+// AddReservationDrawer
+export { AddReservationDrawer } from './AddReservationDrawer';
+export type { AddReservationDrawerProps } from './AddReservationDrawer';
