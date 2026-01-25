@@ -839,11 +839,14 @@ export async function updateCheckinStatus(
       special_requests?: string | null;
     } = {};
 
-    // Ajouter les champs check-in seulement si un status est fourni
-    if (status !== undefined && status !== null) {
+    // Ajouter les champs check-in si status est fourni (y compris null pour réinitialiser)
+    if (status !== undefined) {
       updateData.checkin_status = status;
-      updateData.checkin_at = now;
-      updateData.checkin_by = userId;
+      // Mettre à jour checkin_at/checkin_by seulement si on définit un status (pas si on réinitialise à null)
+      if (status !== null) {
+        updateData.checkin_at = now;
+        updateData.checkin_by = userId;
+      }
     }
 
     // Le commentaire peut être modifié indépendamment du statut

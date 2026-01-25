@@ -163,13 +163,13 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
           </div>
           
           {/* Heure */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-base text-muted-foreground">
             <Clock className="w-4 h-4 shrink-0" />
             <span>{formatSlotTime(slot.time)}</span>
           </div>
           
           {/* Lieu */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-base text-muted-foreground">
             <MapPin className="w-4 h-4 shrink-0" />
             <span className="truncate">{slot.venue.name}</span>
             {slot.venue.city && (
@@ -189,7 +189,7 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
           
           {/* Places restantes */}
           <div className={cn(
-            'flex items-center gap-1.5 text-sm',
+            'flex items-center gap-1.5 text-base',
             wouldOverbook ? 'text-orange-600' : 'text-muted-foreground'
           )}>
             <Users className="w-4 h-4" />
@@ -400,7 +400,7 @@ export function TransferSlotDrawer({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="text-left border-b pb-4">
-          <DrawerTitle className="text-xl flex items-center gap-2">
+          <DrawerTitle className="text-2xl flex items-center gap-2">
             <ArrowRight className="w-5 h-5 text-primary" />
             Transférer la réservation
           </DrawerTitle>
@@ -413,7 +413,7 @@ export function TransferSlotDrawer({
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Nombre de places */}
           <div className="p-4 border-b bg-muted/30">
-            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+            <label className="text-base font-medium text-muted-foreground mb-2 block">
               Nombre de places
             </label>
             <div className="flex items-center gap-3">
@@ -458,7 +458,7 @@ export function TransferSlotDrawer({
 
           {/* Liste des créneaux */}
           <div className="p-4 pb-2">
-            <p className="text-sm font-medium text-muted-foreground mb-3">
+            <p className="text-base font-medium text-muted-foreground mb-3">
               Sélectionner le nouveau créneau
             </p>
           </div>
@@ -472,7 +472,7 @@ export function TransferSlotDrawer({
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <AlertTriangle className="w-8 h-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">{error}</p>
+                <p className="text-base text-muted-foreground">{error}</p>
               </div>
             ) : (
               <div className="space-y-3 pb-4">
@@ -497,7 +497,7 @@ export function TransferSlotDrawer({
           {wouldOverbook && selectedSlot && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-orange-50 border border-orange-200 mb-3">
               <AlertTriangle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-              <div className="text-sm">
+              <div className="text-base">
                 <p className="font-medium text-orange-800">Attention : surbooking</p>
                 <p className="text-orange-700">
                   Ce créneau aura {Math.abs(selectedSlot.remainingCapacity - numPlaces)} place(s) 

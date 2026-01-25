@@ -98,12 +98,12 @@ function SlotHeader({
   return (
     <div className="bg-white border-b px-4 py-4">
       {/* Titre du spectacle */}
-      <h2 className="font-bold text-derviche-dark line-clamp-1">
+      <h2 className="text-xl font-bold text-derviche-dark line-clamp-1">
         {slotInfo.showTitle}
       </h2>
 
       {/* Date, heure, lieu */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-base text-muted-foreground">
         <span className={`flex items-center gap-1 ${isToday ? 'text-gold font-medium' : ''}`}>
           <Calendar className="w-4 h-4" />
           {isToday ? "Aujourd'hui" : formatSlotDate(slotInfo.date)}
@@ -124,7 +124,7 @@ function SlotHeader({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Présents</span>
+              <span className="text-base text-muted-foreground">Présents</span>
             </div>
             <div className="text-right">
               <span className="text-2xl font-bold text-derviche-dark">
@@ -182,7 +182,7 @@ function SearchBar({
         )}
       </div>
       {value && (
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           {resultsCount} résultat{resultsCount > 1 ? 's' : ''} sur {totalCount}
         </p>
       )}
@@ -203,10 +203,10 @@ function ErrorState({
       <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
         <AlertTriangle className="w-8 h-8 text-destructive" />
       </div>
-      <h2 className="text-lg font-semibold text-derviche-dark mb-2">
+      <h2 className="text-xl font-semibold text-derviche-dark mb-2">
         Erreur de chargement
       </h2>
-      <p className="text-sm text-muted-foreground max-w-xs mb-4">{message}</p>
+      <p className="text-base text-muted-foreground max-w-xs mb-4">{message}</p>
       <Button onClick={onRetry} variant="outline" size="sm">
         <RefreshCw className="w-4 h-4 mr-2" />
         Réessayer

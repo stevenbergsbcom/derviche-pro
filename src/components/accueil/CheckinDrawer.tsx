@@ -302,9 +302,10 @@ export function CheckinDrawer({
 
       } else {
         // Réservation confirmée : utiliser updateCheckinStatus
+        // Note: on passe selectedStatus directement (null = réinitialiser)
         const result = await updateCheckinStatus({
           reservationId: reservation.id,
-          status: selectedStatus ?? undefined,
+          status: selectedStatus,
           comment: comment.trim() || null,
           venueNotes: venueNotes.trim() || null,
           internalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
@@ -332,12 +333,19 @@ export function CheckinDrawer({
           return;
         }
 
-        // Succès - message adapté selon si on a changé le statut ou juste les infos
-        if (selectedStatus) {
+        // Succès - message adapté selon l'action
+        const guestName = getFullName(result.data.guestFirstName, result.data.guestLastName);
+        
+        if (selectedStatus === null && reservation.checkinStatus !== null) {
+          // Réinitialisation du statut
+          toast.success(`${guestName} : Statut réinitialisé (non pointé)`);
+        } else if (selectedStatus) {
+          // Nouveau statut défini
           const statusLabel = STATUS_BUTTONS.find(b => b.status === selectedStatus)?.label || 'Pointé';
-          toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : ${statusLabel}`);
+          toast.success(`${guestName} : ${statusLabel}`);
         } else {
-          toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : Informations mises à jour`);
+          // Juste mise à jour des infos
+          toast.success(`${guestName} : Informations mises à jour`);
         }
 
         // Callback avec les données mises à jour
@@ -569,21 +577,23 @@ export function CheckinDrawer({
   
   // On peut sauvegarder si :
   // - Un statut est sélectionné (check-in)
+  // - OU on réinitialise (selectedStatus=null alors que reservation avait un statut)
   // - OU des modifications ont été faites sur les infos guest/notes
-  const canSave = (selectedStatus !== null || hasChanges) && !isSubmitting && !accessLoading;
+  const isResetingStatus = selectedStatus === null && reservation.checkinStatus !== null;
+  const canSave = (selectedStatus !== null || isResetingStatus || hasChanges) && !isSubmitting && !accessLoading;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="text-left border-b pb-4">
-          <DrawerTitle className="text-xl">{displayName}</DrawerTitle>
+          <DrawerTitle className="text-2xl">{displayName}</DrawerTitle>
           <DrawerDescription className="sr-only">
             Pointage de la réservation de {displayName}
           </DrawerDescription>
           
           {/* Badge nombre de places */}
           <div className="mt-2 flex items-center justify-between">
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-base">
               <Users className="w-4 h-4 mr-1.5" />
               {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
             </Badge>
@@ -643,7 +653,7 @@ export function CheckinDrawer({
           {/* Grille des boutons de statut - masquée si annulée */}
           {!isCancelled && (
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-3">
+              <p className="text-base font-medium text-muted-foreground mb-3">
                 Statut de présence
               </p>
               <div className="grid grid-cols-2 gap-3">
@@ -668,13 +678,27 @@ export function CheckinDrawer({
                       )}
                     >
                       <Icon className={cn('w-6 h-6', isActive && 'text-white')} />
-                      <span className={cn('text-sm font-medium', isActive && 'text-white')}>
+                      <span className={cn('text-base font-medium', isActive && 'text-white')}>
                         {config.label}
                       </span>
                     </button>
                   );
                 })}
               </div>
+              
+              {/* Bouton réinitialiser - visible si un statut est sélectionné */}
+              {selectedStatus !== null && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedStatus(null)}
+                  disabled={isSubmitting}
+                  className="mt-3 w-full text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
+                  Réinitialiser (non pointé)
+                </Button>
+              )}
             </div>
           )}
 
@@ -698,7 +722,7 @@ export function CheckinDrawer({
               {/* Prénom et Nom */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="guest-first-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-first-name" className="text-sm font-medium text-muted-foreground mb-1 block">
                     Prénom *
                   </label>
                   <Input
@@ -710,7 +734,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div>
-                  <label htmlFor="guest-last-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-last-name" className="text-sm font-medium text-muted-foreground mb-1 block">
                     Nom *
                   </label>
                   <Input
@@ -725,7 +749,7 @@ export function CheckinDrawer({
 
               {/* Email */}
               <div>
-                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email *
                 </label>
@@ -741,7 +765,7 @@ export function CheckinDrawer({
 
               {/* Email secondaire */}
               <div>
-                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email secondaire
                 </label>
@@ -757,7 +781,7 @@ export function CheckinDrawer({
 
               {/* Téléphone */}
               <div>
-                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone
                 </label>
@@ -773,7 +797,7 @@ export function CheckinDrawer({
 
               {/* Téléphone secondaire */}
               <div>
-                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone secondaire
                 </label>
@@ -789,7 +813,7 @@ export function CheckinDrawer({
 
               {/* Structure */}
               <div>
-                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Building2 className="w-3.5 h-3.5" />
                   Structure / Organisation
                 </label>
@@ -804,7 +828,7 @@ export function CheckinDrawer({
 
               {/* Fonction */}
               <div>
-                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Briefcase className="w-3.5 h-3.5" />
                   Fonction
                 </label>
@@ -819,7 +843,7 @@ export function CheckinDrawer({
 
               {/* Adresse */}
               <div>
-                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <Home className="w-3.5 h-3.5" />
                   Adresse
                 </label>
@@ -835,7 +859,7 @@ export function CheckinDrawer({
               {/* Code postal et Ville */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label htmlFor="guest-postal-code" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-postal-code" className="text-sm font-medium text-muted-foreground mb-1 block">
                     Code postal
                   </label>
                   <Input
@@ -847,7 +871,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div className="col-span-2">
-                  <label htmlFor="guest-city" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-city" className="text-sm font-medium text-muted-foreground mb-1 block">
                     Ville
                   </label>
                   <Input
@@ -862,7 +886,7 @@ export function CheckinDrawer({
 
               {/* Numéro AFC */}
               <div>
-                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <CreditCard className="w-3.5 h-3.5" />
                   Numéro AFC
                 </label>
@@ -877,7 +901,7 @@ export function CheckinDrawer({
 
               {/* Demandes spéciales */}
               <div>
-                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   Demandes spéciales
                 </label>
@@ -900,7 +924,7 @@ export function CheckinDrawer({
           <div>
             <label 
               htmlFor="checkin-comment" 
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+              className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
             >
               <MessageSquare className="w-4 h-4" />
               Commentaire

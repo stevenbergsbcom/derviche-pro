@@ -100,10 +100,10 @@ function ShowCard({ show, onClick }: ShowCardProps) {
           <div className="flex-1 min-w-0 py-2">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="font-semibold text-base leading-tight">
+                <h3 className="font-semibold text-lg leading-tight">
                   {show.title}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                <p className="text-sm text-muted-foreground mt-0.5 truncate">
                   {show.company.name}
                 </p>
               </div>
@@ -113,7 +113,7 @@ function ShowCard({ show, onClick }: ShowCardProps) {
             {/* Prochaine représentation */}
             {show.nextSlot && (
               <div className="mt-2 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs">
+                <div className="flex items-center gap-1.5 text-sm">
                   <Calendar className="w-3.5 h-3.5 text-gold" />
                   <span className={isToday ? 'font-semibold text-gold' : ''}>
                     {isToday ? 'Aujourd\'hui' : formatSlotDate(show.nextSlot.date)}
@@ -121,7 +121,7 @@ function ShowCard({ show, onClick }: ShowCardProps) {
                   <span className="text-muted-foreground">•</span>
                   <span className="font-medium">{formatSlotTime(show.nextSlot.time)}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <MapPin className="w-3.5 h-3.5" />
                   <span className="truncate">{show.nextSlot.venueName}</span>
                 </div>
@@ -130,11 +130,11 @@ function ShowCard({ show, onClick }: ShowCardProps) {
 
             {/* Badge nombre de représentations */}
             <div className="mt-2">
-              <Badge variant="secondary" className="text-xs">
+              <Badge variant="secondary" className="text-sm">
                 {show.upcomingSlotsCount} représentation{show.upcomingSlotsCount > 1 ? 's' : ''}
               </Badge>
               {isToday && (
-                <Badge variant="default" className="text-xs ml-1 bg-gold text-derviche-dark">
+                <Badge variant="default" className="text-sm ml-1 bg-gold text-derviche-dark">
                   Aujourd&apos;hui
                 </Badge>
               )}
@@ -153,10 +153,10 @@ function EmptyState({ isAdmin }: { isAdmin: boolean }) {
       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
         <Theater className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h2 className="text-lg font-semibold text-derviche-dark mb-2">
+      <h2 className="text-xl font-semibold text-derviche-dark mb-2">
         Aucun spectacle
       </h2>
-      <p className="text-sm text-muted-foreground max-w-xs">
+      <p className="text-base text-muted-foreground max-w-xs">
         {isAdmin
           ? 'Aucun spectacle avec des représentations à venir.'
           : 'Vous n\'êtes assigné à aucune représentation à venir.'}
@@ -172,10 +172,10 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
       <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
         <AlertTriangle className="w-8 h-8 text-destructive" />
       </div>
-      <h2 className="text-lg font-semibold text-derviche-dark mb-2">
+      <h2 className="text-xl font-semibold text-derviche-dark mb-2">
         Erreur de chargement
       </h2>
-      <p className="text-sm text-muted-foreground max-w-xs mb-4">
+      <p className="text-base text-muted-foreground max-w-xs mb-4">
         {message}
       </p>
       <Button onClick={onRetry} variant="outline" size="sm">
@@ -221,10 +221,10 @@ export default function AccueilPage() {
     <div className="pb-6">
       {/* En-tête contextuel */}
       <div className="bg-white border-b px-4 py-4">
-        <h2 className="text-lg font-bold text-derviche-dark">
+        <h2 className="text-xl font-bold text-derviche-dark">
           {isAdmin ? 'Tous les spectacles' : 'Mes spectacles'}
         </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="text-base text-muted-foreground mt-0.5">
           {role === 'company' && companyName
             ? `Compagnie ${companyName}`
             : isAdmin
@@ -257,7 +257,7 @@ export default function AccueilPage() {
         {/* Spectacles aujourd'hui */}
         {!isLoadingShows && !showsError && todayShows.length > 0 && (
           <section>
-            <h3 className="text-sm font-semibold text-gold uppercase tracking-wide mb-3 flex items-center gap-2">
+            <h3 className="text-base font-semibold text-gold uppercase tracking-wide mb-3 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               Aujourd&apos;hui
             </h3>
@@ -276,7 +276,7 @@ export default function AccueilPage() {
         {/* Spectacles à venir */}
         {!isLoadingShows && !showsError && upcomingShows.length > 0 && (
           <section>
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            <h3 className="text-base font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               À venir
             </h3>
             <div className="space-y-3">

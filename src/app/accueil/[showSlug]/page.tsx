@@ -61,7 +61,7 @@ function TabFilters({
         type="button"
         onClick={() => onTabChange('upcoming')}
         className={cn(
-          'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors',
+          'flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-base font-medium transition-colors',
           activeTab === 'upcoming'
             ? 'bg-derviche-dark text-white'
             : 'bg-gray-100 text-muted-foreground hover:bg-gray-200'
@@ -71,7 +71,7 @@ function TabFilters({
         À venir
         {upcomingCount > 0 && (
           <span className={cn(
-            'px-1.5 py-0.5 text-xs rounded-full',
+            'px-1.5 py-0.5 text-sm rounded-full',
             activeTab === 'upcoming' 
               ? 'bg-white/20 text-white' 
               : 'bg-gray-200 text-muted-foreground'
@@ -94,7 +94,7 @@ function TabFilters({
         Passés
         {pastCount > 0 && (
           <span className={cn(
-            'px-1.5 py-0.5 text-xs rounded-full',
+            'px-1.5 py-0.5 text-sm rounded-full',
             activeTab === 'past' 
               ? 'bg-white/20 text-white' 
               : 'bg-gray-200 text-muted-foreground'
@@ -132,10 +132,10 @@ function ShowHeader({
         </div>
       ) : (
         <>
-          <h2 className="text-lg font-bold text-derviche-dark line-clamp-2">
+          <h2 className="text-xl font-bold text-derviche-dark line-clamp-2">
             {title}
           </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-base text-muted-foreground mt-0.5">
             {label}
           </p>
         </>
@@ -157,10 +157,10 @@ function EmptyState({ activeTab }: { activeTab: TabFilter }) {
           <History className="w-8 h-8 text-muted-foreground/50" />
         )}
       </div>
-      <h2 className="text-lg font-semibold text-derviche-dark mb-2">
+      <h2 className="text-xl font-semibold text-derviche-dark mb-2">
         {isUpcoming ? 'Aucune représentation à venir' : 'Aucune représentation passée'}
       </h2>
-      <p className="text-sm text-muted-foreground max-w-xs">
+      <p className="text-base text-muted-foreground max-w-xs">
         {isUpcoming 
           ? "Ce spectacle n'a pas de représentation à venir accessible."
           : "Ce spectacle n'a pas encore eu de représentation."
@@ -183,10 +183,10 @@ function ErrorState({
       <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
         <AlertTriangle className="w-8 h-8 text-destructive" />
       </div>
-      <h2 className="text-lg font-semibold text-derviche-dark mb-2">
+      <h2 className="text-xl font-semibold text-derviche-dark mb-2">
         Erreur de chargement
       </h2>
-      <p className="text-sm text-muted-foreground max-w-xs mb-4">{message}</p>
+      <p className="text-base text-muted-foreground max-w-xs mb-4">{message}</p>
       <Button onClick={onRetry} variant="outline" size="sm">
         <RefreshCw className="w-4 h-4 mr-2" />
         Réessayer
@@ -213,7 +213,7 @@ function DateSection({
     <section>
       <h3
         className={cn(
-          'text-sm font-semibold uppercase tracking-wide mb-3 flex items-center gap-2',
+          'text-base font-semibold uppercase tracking-wide mb-3 flex items-center gap-2',
           isToday ? 'text-gold' : isPast ? 'text-muted-foreground/70' : 'text-muted-foreground'
         )}
       >
