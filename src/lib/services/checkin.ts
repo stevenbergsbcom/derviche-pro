@@ -119,6 +119,9 @@ const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
 /** Valeurs valides pour hosted_by */
 const VALID_HOSTED_BY: SlotHostedBy[] = ['derviche', 'company', 'externe'];
 
+/** Nombre maximum de places par réservation (cohérence avec AddReservationDrawer) */
+const MAX_PLACES = 20;
+
 // ============================================
 // TYPE GUARDS
 // ============================================
@@ -1485,11 +1488,28 @@ export async function transferReservation(
     // 6. Calculer le nombre de places final
     const finalNumPlaces = newNumPlaces !== undefined ? newNumPlaces : reservation.num_places;
 
+    // Validation du nombre de places : entier entre 1 et MAX_PLACES
+    if (!Number.isInteger(finalNumPlaces)) {
+      return {
+        success: false,
+        data: null,
+        error: 'Le nombre de places doit être un nombre entier',
+      };
+    }
+
     if (finalNumPlaces < 1) {
       return {
         success: false,
         data: null,
         error: 'Le nombre de places doit être au moins 1',
+      };
+    }
+
+    if (finalNumPlaces > MAX_PLACES) {
+      return {
+        success: false,
+        data: null,
+        error: `Le nombre de places ne peut pas dépasser ${MAX_PLACES}`,
       };
     }
 
@@ -1611,7 +1631,7 @@ export async function transferReservation(
     return {
       success: false,
       data: null,
-      error: message,
+      error: 'Une erreur inattendue est survenue lors du transfert',
     };
   }
 }
@@ -1774,6 +1794,6 @@ export async function getTransferTargetSlots(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('checkin.getTransferTargetSlots - Exception', { error: message });
-    return { data: [], error: message };
+    return { data: [], error: 'Une erreur inattendue est survenue' };
   }
 }

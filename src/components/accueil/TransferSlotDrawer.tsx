@@ -48,6 +48,13 @@ import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { ReservationRowData } from './ReservationRow';
 
 // ============================================
+// CONSTANTES
+// ============================================
+
+/** Nombre maximum de places par réservation (cohérence avec AddReservationDrawer) */
+const MAX_PLACES = 20;
+
+// ============================================
 // TYPES
 // ============================================
 
@@ -229,39 +236,60 @@ export function TransferSlotDrawer({
 
   // Charger les slots cibles quand le drawer s'ouvre
   useEffect(() => {
-    if (open && reservation && userId && role) {
-      setIsLoadingSlots(true);
-      setError(null);
-      setSelectedSlotId(null);
-      setNumPlaces(reservation.numPlaces);
-      
-      void (async () => {
-        try {
-          const result = await getTransferTargetSlots(
-            reservation.id,
-            userId,
-            role,
-            companyId
-          );
-          
-          if (result.error) {
-            setError(result.error);
-            setSlots([]);
-          } else {
-            setSlots(result.data);
-            if (result.data.length === 0) {
-              setError('Aucun autre créneau disponible pour ce spectacle');
-            }
-          }
-        } catch (err) {
-          logger.error('TransferSlotDrawer - Erreur chargement slots', err as Error);
-          setError('Erreur lors du chargement des créneaux');
+    // Guard : ne rien faire si le drawer est fermé ou si les données manquent
+    if (!open || !reservation || !userId || !role) {
+      return;
+    }
+
+    // Capturer l'ID de la réservation au début pour détecter les changements
+    const currentReservationId = reservation.id;
+    let cancelled = false;
+
+    setIsLoadingSlots(true);
+    setError(null);
+    setSelectedSlotId(null);
+    setNumPlaces(reservation.numPlaces);
+    
+    void (async () => {
+      try {
+        const result = await getTransferTargetSlots(
+          currentReservationId,
+          userId,
+          role,
+          companyId
+        );
+        
+        // Ignorer le résultat si annulé (drawer fermé ou réservation changée)
+        if (cancelled) return;
+        
+        if (result.error) {
+          setError(result.error);
           setSlots([]);
-        } finally {
+        } else {
+          setSlots(result.data);
+          if (result.data.length === 0) {
+            setError('Aucun autre créneau disponible pour ce spectacle');
+          }
+        }
+      } catch (err) {
+        // Ignorer le résultat si annulé
+        if (cancelled) return;
+        
+        logger.error('TransferSlotDrawer - Erreur chargement slots', err as Error);
+        setError('Erreur lors du chargement des créneaux');
+        setSlots([]);
+      } finally {
+        // Ignorer le résultat si annulé
+        if (!cancelled) {
           setIsLoadingSlots(false);
         }
-      })();
-    }
+      }
+    })();
+
+    // Cleanup : marquer comme annulé si le drawer se ferme ou la réservation change
+    return () => {
+      cancelled = true;
+    };
   }, [open, reservation, userId, role, companyId]);
 
   // Réinitialiser à la fermeture
@@ -280,12 +308,12 @@ export function TransferSlotDrawer({
   }, []);
 
   const handleIncrease = useCallback(() => {
-    setNumPlaces(prev => prev + 1);
+    setNumPlaces(prev => Math.min(MAX_PLACES, prev + 1));
   }, []);
 
   const handleNumPlacesChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
-    if (!isNaN(value) && value >= 1) {
+    if (!isNaN(value) && value >= 1 && value <= MAX_PLACES) {
       setNumPlaces(value);
     }
   }, []);
@@ -401,6 +429,7 @@ export function TransferSlotDrawer({
               <Input
                 type="number"
                 min={1}
+                max={MAX_PLACES}
                 value={numPlaces}
                 onChange={handleNumPlacesChange}
                 disabled={isSubmitting}
@@ -411,7 +440,7 @@ export function TransferSlotDrawer({
                 variant="outline"
                 size="icon"
                 onClick={handleIncrease}
-                disabled={isSubmitting}
+                disabled={numPlaces >= MAX_PLACES || isSubmitting}
               >
                 <Plus className="w-4 h-4" />
               </Button>

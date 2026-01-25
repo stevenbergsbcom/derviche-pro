@@ -30,8 +30,6 @@ CREATE OR REPLACE FUNCTION public.update_slot_capacity()
 RETURNS TRIGGER AS $$
 DECLARE
   v_capacity_change INTEGER;
-  v_slot_capacity INTEGER;
-  v_slot_remaining INTEGER;
 BEGIN
   -- ========================================
   -- CAS 1 : INSERT (nouvelle réservation)

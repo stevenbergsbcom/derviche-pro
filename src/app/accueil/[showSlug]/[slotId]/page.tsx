@@ -484,19 +484,17 @@ export default function SlotReservationsPage() {
 
   // Handler succès transfert - retire la réservation de la liste (elle est maintenant sur un autre slot)
   const handleTransferSuccess = useCallback(
-    (/* updatedReservation: ReservationRowData */) => {
+    (updatedReservation: ReservationRowData) => {
       // La réservation a été transférée vers un autre créneau
       // On la retire de la liste actuelle
-      if (selectedReservation) {
-        setReservations((prev) =>
-          prev.filter((r) => r.id !== selectedReservation.id)
-        );
-      }
+      setReservations((prev) =>
+        prev.filter((r) => r.id !== updatedReservation.id)
+      );
       // Fermer le drawer et réinitialiser la sélection
       setTransferDrawerOpen(false);
       setSelectedReservation(null);
     },
-    [selectedReservation]
+    []
   );
 
   return (
