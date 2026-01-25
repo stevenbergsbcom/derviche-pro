@@ -587,7 +587,7 @@ export function CheckinDrawer({
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="text-left border-b pb-4">
           <DrawerTitle className="text-2xl">{displayName}</DrawerTitle>
-          <DrawerDescription className="sr-only">
+          <DrawerDescription className="sr-only text-base">
             Pointage de la réservation de {displayName}
           </DrawerDescription>
           

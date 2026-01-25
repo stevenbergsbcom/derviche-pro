@@ -310,7 +310,7 @@ export function AddReservationDrawer({
               <Users className="w-5 h-5" />
               Nouvelle réservation
             </DrawerTitle>
-            <DrawerDescription>
+            <DrawerDescription className="text-base">
               Créer une réservation pour ce créneau
             </DrawerDescription>
             

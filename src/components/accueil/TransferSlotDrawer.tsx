@@ -404,7 +404,7 @@ export function TransferSlotDrawer({
             <ArrowRight className="w-5 h-5 text-primary" />
             Transférer la réservation
           </DrawerTitle>
-          <DrawerDescription>
+          <DrawerDescription className="text-base">
             {displayName} • {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
           </DrawerDescription>
         </DrawerHeader>

@@ -182,7 +182,7 @@ function SearchBar({
         )}
       </div>
       {value && (
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-base text-muted-foreground mt-2">
           {resultsCount} résultat{resultsCount > 1 ? 's' : ''} sur {totalCount}
         </p>
       )}
