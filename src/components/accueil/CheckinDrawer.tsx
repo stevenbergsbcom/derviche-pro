@@ -50,6 +50,7 @@ import {
   User,
   Home,
   CreditCard,
+  ArrowRight,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { updateCheckinStatus } from '@/lib/services/checkin';
@@ -70,6 +71,8 @@ export interface CheckinDrawerProps {
   onOpenChange: (open: boolean) => void;
   /** Callback après sauvegarde réussie */
   onSuccess: (updatedReservation: ReservationRowData) => void;
+  /** Callback pour ouvrir le drawer de transfert (optionnel) */
+  onTransferClick?: () => void;
 }
 
 // ============================================
@@ -148,6 +151,7 @@ export function CheckinDrawer({
   open,
   onOpenChange,
   onSuccess,
+  onTransferClick,
 }: CheckinDrawerProps) {
   const { userId, role, companyId, isAdmin, isLoading: accessLoading } = useCheckinAccess();
   
@@ -364,11 +368,25 @@ export function CheckinDrawer({
           </DrawerDescription>
           
           {/* Badge nombre de places */}
-          <div className="mt-2">
+          <div className="mt-2 flex items-center justify-between">
             <Badge variant="secondary" className="text-sm">
               <Users className="w-4 h-4 mr-1.5" />
               {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
             </Badge>
+            
+            {/* Bouton Transférer */}
+            {onTransferClick && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onTransferClick}
+                disabled={isSubmitting}
+                className="text-sm"
+              >
+                <ArrowRight className="w-4 h-4 mr-1.5" />
+                Transférer
+              </Button>
+            )}
           </div>
         </DrawerHeader>
 

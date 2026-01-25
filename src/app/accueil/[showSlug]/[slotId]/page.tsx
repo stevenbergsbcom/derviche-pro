@@ -27,6 +27,7 @@ import {
   EmptyReservations,
   CheckinDrawer,
   AddReservationDrawer,
+  TransferSlotDrawer,
   type ReservationRowData,
 } from '@/components/accueil';
 import { Button } from '@/components/ui/button';
@@ -239,6 +240,9 @@ export default function SlotReservationsPage() {
 
   // State pour le drawer d'ajout de réservation
   const [addDrawerOpen, setAddDrawerOpen] = useState(false);
+
+  // State pour le drawer de transfert
+  const [transferDrawerOpen, setTransferDrawerOpen] = useState(false);
 
   // Ref pour éviter les doubles appels
   const loadedRef = useRef(false);
@@ -471,6 +475,30 @@ export default function SlotReservationsPage() {
     toast.success('Réservation ajoutée');
   }, [loadData]);
 
+  // Handler pour ouvrir le drawer de transfert
+  const handleTransferClick = useCallback(() => {
+    // Fermer le drawer de check-in et ouvrir celui de transfert
+    setDrawerOpen(false);
+    setTransferDrawerOpen(true);
+  }, []);
+
+  // Handler succès transfert - retire la réservation de la liste (elle est maintenant sur un autre slot)
+  const handleTransferSuccess = useCallback(
+    (/* updatedReservation: ReservationRowData */) => {
+      // La réservation a été transférée vers un autre créneau
+      // On la retire de la liste actuelle
+      if (selectedReservation) {
+        setReservations((prev) =>
+          prev.filter((r) => r.id !== selectedReservation.id)
+        );
+      }
+      // Fermer le drawer et réinitialiser la sélection
+      setTransferDrawerOpen(false);
+      setSelectedReservation(null);
+    },
+    [selectedReservation]
+  );
+
   return (
     <div className="flex flex-col min-h-full">
       {/* En-tête */}
@@ -583,6 +611,15 @@ export default function SlotReservationsPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         onSuccess={handleCheckinSuccess}
+        onTransferClick={handleTransferClick}
+      />
+
+      {/* Drawer de transfert */}
+      <TransferSlotDrawer
+        reservation={selectedReservation}
+        open={transferDrawerOpen}
+        onOpenChange={setTransferDrawerOpen}
+        onSuccess={handleTransferSuccess}
       />
 
       {/* Drawer d'ajout de réservation */}
