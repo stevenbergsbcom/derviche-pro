@@ -88,14 +88,14 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
     <button
       type="button"
       onClick={onClick}
-      disabled={isCancelled}
+
       className={cn(
         'w-full flex items-center gap-3 p-3 text-left',
         'bg-white rounded-lg border border-gray-200 shadow-sm',
         'transition-all',
-        !isCancelled && 'hover:shadow-md hover:border-gray-300 active:scale-[0.99]',
+        'hover:shadow-md hover:border-gray-300 active:scale-[0.99]',
         checkedIn && 'bg-green-50/50 border-green-200',
-        isCancelled && 'opacity-50 cursor-not-allowed bg-gray-50',
+        isCancelled && 'opacity-60 bg-gray-50 border-dashed',
         className
       )}
     >
@@ -151,9 +151,10 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
       )}
 
       {/* Chevron */}
-      {!isCancelled && (
-        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-      )}
+      <ChevronRight className={cn(
+        'w-5 h-5 shrink-0',
+        isCancelled ? 'text-muted-foreground/50' : 'text-muted-foreground'
+      )} />
     </button>
   );
 }

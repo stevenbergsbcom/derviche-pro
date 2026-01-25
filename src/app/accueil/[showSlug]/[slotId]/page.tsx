@@ -435,6 +435,8 @@ export default function SlotReservationsPage() {
           r.id === updatedReservation.id
             ? { 
                 ...r, 
+                // Statut de la réservation (important pour réactivation/annulation)
+                status: updatedReservation.status,
                 // Check-in
                 checkinStatus: updatedReservation.checkinStatus,
                 checkinComment: updatedReservation.checkinComment ?? null,
