@@ -155,10 +155,10 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
               {formatSlotDate(slot.date)}
             </span>
             {isToday && (
-              <Badge variant="default" className="text-xs">Aujourd&apos;hui</Badge>
+              <Badge variant="default" className="text-sm">Aujourd&apos;hui</Badge>
             )}
             {isPast && !isToday && (
-              <Badge variant="secondary" className="text-xs">Passé</Badge>
+              <Badge variant="secondary" className="text-sm">Passé</Badge>
             )}
           </div>
           
@@ -173,7 +173,7 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
             <MapPin className="w-4 h-4 shrink-0" />
             <span className="truncate">{slot.venue.name}</span>
             {slot.venue.city && (
-              <span className="text-xs">({slot.venue.city})</span>
+              <span className="text-sm">({slot.venue.city})</span>
             )}
           </div>
         </div>
@@ -196,15 +196,15 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
             <span className="font-medium">
               {getDisplayRemaining(slot)}
             </span>
-            <span className="text-xs">
+            <span className="text-sm">
               {isUnlimited ? '' : 'restantes'}
             </span>
           </div>
           
           {/* Warning overbooking */}
           {wouldOverbook && (
-            <div className="flex items-center gap-1 text-xs text-orange-600">
-              <AlertTriangle className="w-3 h-3" />
+            <div className="flex items-center gap-1 text-sm text-orange-600">
+              <AlertTriangle className="w-3.5 h-3.5" />
               <span>Surbooking</span>
             </div>
           )}

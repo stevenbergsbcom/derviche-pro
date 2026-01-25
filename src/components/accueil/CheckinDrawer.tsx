@@ -722,7 +722,7 @@ export function CheckinDrawer({
               {/* Prénom et Nom */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="guest-first-name" className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-first-name" className="text-base font-medium text-muted-foreground mb-1 block">
                     Prénom *
                   </label>
                   <Input
@@ -734,7 +734,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div>
-                  <label htmlFor="guest-last-name" className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-last-name" className="text-base font-medium text-muted-foreground mb-1 block">
                     Nom *
                   </label>
                   <Input
@@ -749,7 +749,7 @@ export function CheckinDrawer({
 
               {/* Email */}
               <div>
-                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email *
                 </label>
@@ -765,7 +765,7 @@ export function CheckinDrawer({
 
               {/* Email secondaire */}
               <div>
-                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email secondaire
                 </label>
@@ -781,7 +781,7 @@ export function CheckinDrawer({
 
               {/* Téléphone */}
               <div>
-                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone
                 </label>
@@ -797,7 +797,7 @@ export function CheckinDrawer({
 
               {/* Téléphone secondaire */}
               <div>
-                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone secondaire
                 </label>
@@ -813,7 +813,7 @@ export function CheckinDrawer({
 
               {/* Structure */}
               <div>
-                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Building2 className="w-3.5 h-3.5" />
                   Structure / Organisation
                 </label>
@@ -828,7 +828,7 @@ export function CheckinDrawer({
 
               {/* Fonction */}
               <div>
-                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Briefcase className="w-3.5 h-3.5" />
                   Fonction
                 </label>
@@ -843,7 +843,7 @@ export function CheckinDrawer({
 
               {/* Adresse */}
               <div>
-                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Home className="w-3.5 h-3.5" />
                   Adresse
                 </label>
@@ -859,7 +859,7 @@ export function CheckinDrawer({
               {/* Code postal et Ville */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label htmlFor="guest-postal-code" className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-postal-code" className="text-base font-medium text-muted-foreground mb-1 block">
                     Code postal
                   </label>
                   <Input
@@ -871,7 +871,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div className="col-span-2">
-                  <label htmlFor="guest-city" className="text-sm font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-city" className="text-base font-medium text-muted-foreground mb-1 block">
                     Ville
                   </label>
                   <Input
@@ -886,7 +886,7 @@ export function CheckinDrawer({
 
               {/* Numéro AFC */}
               <div>
-                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <CreditCard className="w-3.5 h-3.5" />
                   Numéro AFC
                 </label>
@@ -901,7 +901,7 @@ export function CheckinDrawer({
 
               {/* Demandes spéciales */}
               <div>
-                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   Demandes spéciales
                 </label>
@@ -944,7 +944,7 @@ export function CheckinDrawer({
           <div>
             <label 
               htmlFor="checkin-venue-notes" 
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+              className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
             >
               <MapPin className="w-4 h-4" />
               Notes sur le lieu
@@ -965,7 +965,7 @@ export function CheckinDrawer({
             <div>
               <label 
                 htmlFor="checkin-internal-notes" 
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+                className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
               >
                 <Lock className="w-4 h-4" />
                 Notes internes Derviche
