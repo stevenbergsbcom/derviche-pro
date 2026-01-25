@@ -42,7 +42,7 @@ import {
   transferReservation,
   formatSlotDate,
   formatSlotTime,
-  type CheckinSlot,
+  type TransferTargetSlot,
 } from '@/lib/services/checkin';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { ReservationRowData } from './ReservationRow';
@@ -82,7 +82,7 @@ function getFullName(firstName: string | null, lastName: string | null): string 
  * Calcule les places restantes affichées
  * Gère les capacités illimitées (999999)
  */
-function getDisplayRemaining(slot: CheckinSlot): string {
+function getDisplayRemaining(slot: TransferTargetSlot): string {
   if (slot.capacity >= 999999) {
     return '∞';
   }
@@ -110,7 +110,7 @@ function isSlotToday(date: string): boolean {
 // ============================================
 
 interface SlotItemProps {
-  slot: CheckinSlot;
+  slot: TransferTargetSlot;
   isSelected: boolean;
   onSelect: () => void;
   numPlaces: number;
@@ -126,19 +126,27 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
   const remainingAfterTransfer = slot.remainingCapacity - numPlaces;
   const wouldOverbook = !isUnlimited && remainingAfterTransfer < 0;
   
+  // Vérifier si l'invité a déjà une réservation sur ce créneau
+  const hasExistingReservation = slot.hasExistingGuestReservation;
+  
+  // Désactiver si déjà réservé ou si disabled externe
+  const isDisabled = disabled || hasExistingReservation;
+  
   return (
     <button
       type="button"
       onClick={onSelect}
-      disabled={disabled}
+      disabled={isDisabled}
       className={cn(
         'w-full text-left p-4 rounded-lg border-2 transition-all',
         'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary',
         isSelected
           ? 'border-primary bg-primary/5'
-          : 'border-border hover:border-primary/50 hover:bg-muted/50',
-        disabled && 'opacity-50 cursor-not-allowed',
-        isPast && !isSelected && 'opacity-60'
+          : hasExistingReservation
+            ? 'border-red-200 bg-red-50/50'
+            : 'border-border hover:border-primary/50 hover:bg-muted/50',
+        isDisabled && 'opacity-50 cursor-not-allowed',
+        isPast && !isSelected && !hasExistingReservation && 'opacity-60'
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -202,10 +210,18 @@ function SlotItem({ slot, isSelected, onSelect, numPlaces, disabled }: SlotItemP
           </div>
           
           {/* Warning overbooking */}
-          {wouldOverbook && (
+          {wouldOverbook && !hasExistingReservation && (
             <div className="flex items-center gap-1 text-sm text-orange-600">
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>Surbooking</span>
+            </div>
+          )}
+          
+          {/* Indicateur déjà réservé */}
+          {hasExistingReservation && (
+            <div className="flex items-center gap-1 text-sm text-red-600">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>Déjà réservé</span>
             </div>
           )}
         </div>
@@ -227,7 +243,7 @@ export function TransferSlotDrawer({
   const { userId, role, companyId, isLoading: accessLoading } = useCheckinAccess();
   
   // États
-  const [slots, setSlots] = useState<CheckinSlot[]>([]);
+  const [slots, setSlots] = useState<TransferTargetSlot[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [numPlaces, setNumPlaces] = useState(1);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -385,7 +401,7 @@ export function TransferSlotDrawer({
   // Nom affiché
   const displayName = getFullName(reservation.guestFirstName, reservation.guestLastName);
   
-  // Slot sélectionné
+  // Slot sélectionné (centralisé pour éviter plusieurs find)
   const selectedSlot = slots.find(s => s.id === selectedSlotId);
   
   // Calcul overbooking pour le slot sélectionné
@@ -393,8 +409,13 @@ export function TransferSlotDrawer({
     ? (selectedSlot.capacity < 999999 && (selectedSlot.remainingCapacity - numPlaces) < 0)
     : false;
 
-  // Peut-on transférer ?
-  const canTransfer = selectedSlotId !== null && !isSubmitting && !accessLoading && !isLoadingSlots;
+  // Peut-on transférer ? (défense en profondeur : vérifier aussi hasExistingGuestReservation)
+  const canTransfer = 
+    selectedSlotId !== null && 
+    !selectedSlot?.hasExistingGuestReservation &&
+    !isSubmitting && 
+    !accessLoading && 
+    !isLoadingSlots;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
