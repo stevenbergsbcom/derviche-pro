@@ -88,14 +88,14 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
     <button
       type="button"
       onClick={onClick}
-      disabled={isCancelled}
+
       className={cn(
         'w-full flex items-center gap-3 p-3 text-left',
         'bg-white rounded-lg border border-gray-200 shadow-sm',
         'transition-all',
-        !isCancelled && 'hover:shadow-md hover:border-gray-300 active:scale-[0.99]',
+        'hover:shadow-md hover:border-gray-300 active:scale-[0.99]',
         checkedIn && 'bg-green-50/50 border-green-200',
-        isCancelled && 'opacity-50 cursor-not-allowed bg-gray-50',
+        isCancelled && 'opacity-60 bg-gray-50 border-dashed',
         className
       )}
     >
@@ -110,7 +110,7 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
       <div className="flex-1 min-w-0">
         <p
           className={cn(
-            'font-semibold text-base truncate',
+            'font-semibold text-lg truncate',
             checkedIn && 'text-green-700',
             isCancelled && 'line-through text-muted-foreground'
           )}
@@ -121,14 +121,14 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
         {/* Structure et/ou email */}
         <div className="mt-1 space-y-0.5">
           {reservation.guestStructure && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-              <Building2 className="w-3 h-3 shrink-0" />
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground truncate">
+              <Building2 className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{reservation.guestStructure}</span>
             </p>
           )}
           {reservation.guestEmail && (
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-              <Mail className="w-3 h-3 shrink-0" />
+            <p className="flex items-center gap-1.5 text-sm text-muted-foreground truncate">
+              <Mail className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{reservation.guestEmail}</span>
             </p>
           )}
@@ -137,7 +137,7 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
 
       {/* Nombre de places */}
       {reservation.numPlaces > 1 && (
-        <Badge variant="secondary" className="shrink-0 text-xs font-medium">
+        <Badge variant="secondary" className="shrink-0 text-sm font-medium">
           <Users className="w-3.5 h-3.5 mr-1" />
           {reservation.numPlaces}
         </Badge>
@@ -145,15 +145,16 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
 
       {/* Badge annulé */}
       {isCancelled && (
-        <Badge variant="outline" className="shrink-0 text-xs text-red-600 border-red-200">
+        <Badge variant="outline" className="shrink-0 text-sm text-red-600 border-red-200">
           Annulé
         </Badge>
       )}
 
       {/* Chevron */}
-      {!isCancelled && (
-        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-      )}
+      <ChevronRight className={cn(
+        'w-5 h-5 shrink-0',
+        isCancelled ? 'text-muted-foreground/50' : 'text-muted-foreground'
+      )} />
     </button>
   );
 }
@@ -184,7 +185,7 @@ export function EmptyReservations({ message }: { message?: string }) {
       <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
         <Users className="w-6 h-6 text-muted-foreground/50" />
       </div>
-      <p className="text-sm text-muted-foreground">
+      <p className="text-base text-muted-foreground">
         {message || 'Aucune réservation'}
       </p>
     </div>

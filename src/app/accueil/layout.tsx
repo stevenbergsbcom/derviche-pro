@@ -46,8 +46,8 @@ function AccessDenied({ message }: { message: string }) {
         <div className="w-14 h-14 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
           <AlertTriangle className="w-7 h-7 text-destructive" />
         </div>
-        <h1 className="text-lg font-bold text-derviche-dark">Accès refusé</h1>
-        <p className="text-sm text-muted-foreground">{message}</p>
+        <h1 className="text-xl font-bold text-derviche-dark">Accès refusé</h1>
+        <p className="text-base text-muted-foreground">{message}</p>
         <Button onClick={() => router.push('/')} variant="outline" className="w-full">
           <Home className="w-4 h-4 mr-2" />
           Retour à l&apos;accueil
@@ -66,7 +66,7 @@ function LoadingScreen() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-derviche/5 to-white">
       <div className="text-center space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-gold mx-auto" />
-        <p className="text-sm text-muted-foreground">Chargement...</p>
+        <p className="text-base text-muted-foreground">Chargement...</p>
       </div>
     </div>
   );
@@ -124,9 +124,9 @@ function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
             </Link>
           )}
           <div>
-            <h1 className="font-semibold text-sm">Accueil</h1>
+            <h1 className="font-semibold text-base">Accueil</h1>
             {role && (
-              <p className="text-xs text-white/70">{ROLE_LABELS[role] || role}</p>
+              <p className="text-sm text-white/70">{ROLE_LABELS[role] || role}</p>
             )}
           </div>
         </div>

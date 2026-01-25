@@ -51,9 +51,12 @@ import {
   Home,
   CreditCard,
   ArrowRight,
+  RotateCcw,
+  AlertTriangle,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { updateCheckinStatus } from '@/lib/services/checkin';
+import { updateCheckinStatus, updateGuestInfo, reactivateReservation, cancelReservationFromPWA } from '@/lib/services/checkin';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { CheckinStatus } from '@/types/database';
 import type { ReservationRowData } from './ReservationRow';
@@ -179,6 +182,10 @@ export function CheckinDrawer({
   // États UI
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  /** True si la réservation vient d'être réactivée dans cette session */
+  const [justReactivated, setJustReactivated] = useState(false);
+  /** Statut local de la réservation (peut changer après réactivation) */
+  const [localStatus, setLocalStatus] = useState<'confirmed' | 'cancelled' | 'no_show'>('confirmed');
 
   // Réinitialiser quand la réservation change
   useEffect(() => {
@@ -204,8 +211,13 @@ export function CheckinDrawer({
       setSpecialRequests(reservation.specialRequests || '');
       // UI
       setDetailsOpen(false);
+      setJustReactivated(false);
+      setLocalStatus(reservation.status);
     }
   }, [reservation]);
+
+  // Détermine si la réservation est annulée (et pas encore réactivée dans cette session)
+  const isCancelled = localStatus === 'cancelled';
 
   // Handler de sauvegarde
   const handleSave = useCallback(async () => {
@@ -227,74 +239,145 @@ export function CheckinDrawer({
     setIsSubmitting(true);
 
     try {
-      const result = await updateCheckinStatus({
-        reservationId: reservation.id,
-        status: selectedStatus ?? undefined,
-        comment: comment.trim() || null,
-        venueNotes: venueNotes.trim() || null,
-        internalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
-        userId,
-        role,
-        companyId,
-        // Champs guest
-        guestFirstName: guestFirstName.trim(),
-        guestLastName: guestLastName.trim(),
-        guestEmail: guestEmail.trim(),
-        guestEmailSecondary: guestEmailSecondary.trim() || null,
-        guestPhone: guestPhone.trim() || null,
-        guestPhoneSecondary: guestPhoneSecondary.trim() || null,
-        guestStructure: guestStructure.trim() || null,
-        guestFunction: guestFunction.trim() || null,
-        guestAddress: guestAddress.trim() || null,
-        guestPostalCode: guestPostalCode.trim() || null,
-        guestCity: guestCity.trim() || null,
-        guestAfcNumber: guestAfcNumber.trim() || null,
-        specialRequests: specialRequests.trim() || null,
-      });
+      // Si annulée, utiliser updateGuestInfo (pas de check-in possible)
+      // Sinon, utiliser updateCheckinStatus
+      if (isCancelled) {
+        const result = await updateGuestInfo({
+          reservationId: reservation.id,
+          userId,
+          role,
+          companyId,
+          // Champs guest
+          guestFirstName: guestFirstName.trim(),
+          guestLastName: guestLastName.trim(),
+          guestEmail: guestEmail.trim(),
+          guestEmailSecondary: guestEmailSecondary.trim() || null,
+          guestPhone: guestPhone.trim() || null,
+          guestPhoneSecondary: guestPhoneSecondary.trim() || null,
+          guestStructure: guestStructure.trim() || null,
+          guestFunction: guestFunction.trim() || null,
+          guestAddress: guestAddress.trim() || null,
+          guestPostalCode: guestPostalCode.trim() || null,
+          guestCity: guestCity.trim() || null,
+          guestAfcNumber: guestAfcNumber.trim() || null,
+          specialRequests: specialRequests.trim() || null,
+          // Notes
+          checkinComment: comment.trim() || null,
+          checkinVenueNotes: venueNotes.trim() || null,
+          checkinInternalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
+        });
 
-      if (!result.success || !result.data) {
-        toast.error(result.error || 'Erreur lors du pointage');
-        return;
-      }
+        if (!result.success || !result.data) {
+          toast.error(result.error || 'Erreur lors de la mise à jour');
+          return;
+        }
 
-      // Succès - message adapté selon si on a changé le statut ou juste les infos
-      if (selectedStatus) {
-        const statusLabel = STATUS_BUTTONS.find(b => b.status === selectedStatus)?.label || 'Pointé';
-        toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : ${statusLabel}`);
-      } else {
         toast.success(`${getFullName(result.data.guestFirstName, result.data.guestLastName)} : Informations mises à jour`);
+
+        // Callback avec les données mises à jour
+        onSuccess({
+          ...reservation,
+          status: result.data.status,
+          checkinStatus: result.data.checkinStatus,
+          checkinComment: result.data.checkinComment,
+          checkinVenueNotes: result.data.checkinVenueNotes,
+          checkinInternalNotes: result.data.checkinInternalNotes,
+          guestFirstName: result.data.guestFirstName,
+          guestLastName: result.data.guestLastName,
+          guestEmail: result.data.guestEmail,
+          guestEmailSecondary: result.data.guestEmailSecondary,
+          guestPhone: result.data.guestPhone,
+          guestPhoneSecondary: result.data.guestPhoneSecondary,
+          guestStructure: result.data.guestStructure,
+          guestFunction: result.data.guestFunction,
+          guestAddress: result.data.guestAddress,
+          guestPostalCode: result.data.guestPostalCode,
+          guestCity: result.data.guestCity,
+          guestAfcNumber: result.data.guestAfcNumber,
+          specialRequests: result.data.specialRequests,
+        });
+
+        // Fermer le drawer
+        onOpenChange(false);
+
+      } else {
+        // Réservation confirmée : utiliser updateCheckinStatus
+        // Note: on passe selectedStatus directement (null = réinitialiser)
+        const result = await updateCheckinStatus({
+          reservationId: reservation.id,
+          status: selectedStatus,
+          comment: comment.trim() || null,
+          venueNotes: venueNotes.trim() || null,
+          internalNotes: isAdmin ? (internalNotes.trim() || null) : undefined,
+          userId,
+          role,
+          companyId,
+          // Champs guest
+          guestFirstName: guestFirstName.trim(),
+          guestLastName: guestLastName.trim(),
+          guestEmail: guestEmail.trim(),
+          guestEmailSecondary: guestEmailSecondary.trim() || null,
+          guestPhone: guestPhone.trim() || null,
+          guestPhoneSecondary: guestPhoneSecondary.trim() || null,
+          guestStructure: guestStructure.trim() || null,
+          guestFunction: guestFunction.trim() || null,
+          guestAddress: guestAddress.trim() || null,
+          guestPostalCode: guestPostalCode.trim() || null,
+          guestCity: guestCity.trim() || null,
+          guestAfcNumber: guestAfcNumber.trim() || null,
+          specialRequests: specialRequests.trim() || null,
+        });
+
+        if (!result.success || !result.data) {
+          toast.error(result.error || 'Erreur lors du pointage');
+          return;
+        }
+
+        // Succès - message adapté selon l'action
+        const guestName = getFullName(result.data.guestFirstName, result.data.guestLastName);
+        
+        if (selectedStatus === null && reservation.checkinStatus !== null) {
+          // Réinitialisation du statut
+          toast.success(`${guestName} : Statut réinitialisé (non pointé)`);
+        } else if (selectedStatus) {
+          // Nouveau statut défini
+          const statusLabel = STATUS_BUTTONS.find(b => b.status === selectedStatus)?.label || 'Pointé';
+          toast.success(`${guestName} : ${statusLabel}`);
+        } else {
+          // Juste mise à jour des infos
+          toast.success(`${guestName} : Informations mises à jour`);
+        }
+
+        // Callback avec les données mises à jour
+        onSuccess({
+          ...reservation,
+          status: result.data.status,
+          checkinStatus: result.data.checkinStatus,
+          checkinComment: result.data.checkinComment,
+          checkinVenueNotes: result.data.checkinVenueNotes,
+          checkinInternalNotes: result.data.checkinInternalNotes,
+          guestFirstName: result.data.guestFirstName,
+          guestLastName: result.data.guestLastName,
+          guestEmail: result.data.guestEmail,
+          guestEmailSecondary: result.data.guestEmailSecondary,
+          guestPhone: result.data.guestPhone,
+          guestPhoneSecondary: result.data.guestPhoneSecondary,
+          guestStructure: result.data.guestStructure,
+          guestFunction: result.data.guestFunction,
+          guestAddress: result.data.guestAddress,
+          guestPostalCode: result.data.guestPostalCode,
+          guestCity: result.data.guestCity,
+          guestAfcNumber: result.data.guestAfcNumber,
+          specialRequests: result.data.specialRequests,
+        });
+
+        // Fermer le drawer
+        onOpenChange(false);
       }
-
-      // Callback avec les données mises à jour
-      onSuccess({
-        ...reservation,
-        // Check-in
-        checkinStatus: result.data.checkinStatus,
-        checkinComment: result.data.checkinComment,
-        checkinVenueNotes: result.data.checkinVenueNotes,
-        checkinInternalNotes: result.data.checkinInternalNotes,
-        // Infos guest
-        guestFirstName: result.data.guestFirstName,
-        guestLastName: result.data.guestLastName,
-        guestEmail: result.data.guestEmail,
-        guestEmailSecondary: result.data.guestEmailSecondary,
-        guestPhone: result.data.guestPhone,
-        guestPhoneSecondary: result.data.guestPhoneSecondary,
-        guestStructure: result.data.guestStructure,
-        guestFunction: result.data.guestFunction,
-        guestAddress: result.data.guestAddress,
-        guestPostalCode: result.data.guestPostalCode,
-        guestCity: result.data.guestCity,
-        guestAfcNumber: result.data.guestAfcNumber,
-        specialRequests: result.data.specialRequests,
-      });
-
-      // Fermer le drawer
-      onOpenChange(false);
 
     } catch (error) {
-      logger.error('CheckinDrawer - Erreur pointage', error as Error);
-      toast.error('Erreur lors du pointage');
+      logger.error('CheckinDrawer - Erreur sauvegarde', error as Error);
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setIsSubmitting(false);
     }
@@ -321,9 +404,148 @@ export function CheckinDrawer({
     guestCity,
     guestAfcNumber,
     specialRequests,
+    isCancelled,
     onSuccess, 
     onOpenChange
   ]);
+
+  // Handler de réactivation
+  const handleReactivate = useCallback(async () => {
+    if (!reservation || !userId || !role) {
+      toast.error('Données manquantes pour la réactivation');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await reactivateReservation({
+        reservationId: reservation.id,
+        userId,
+        role,
+        companyId,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Erreur lors de la réactivation');
+        return;
+      }
+
+      // Succès
+      const guestName = getFullName(
+        result.data.reservation.guestFirstName,
+        result.data.reservation.guestLastName
+      );
+
+      if (result.data.isOverbooking) {
+        toast.warning(`${guestName} : Réservation réactivée (attention: overbooking)`);
+      } else {
+        toast.success(`${guestName} : Réservation réactivée`);
+      }
+
+      // Mettre à jour l'état local pour afficher les boutons de statut
+      setLocalStatus('confirmed');
+      setJustReactivated(true);
+
+      // NE PAS fermer le drawer pour permettre le check-in immédiat
+      // Mais notifier le parent pour mettre à jour la liste
+      onSuccess({
+        ...reservation,
+        status: 'confirmed',
+        checkinStatus: result.data.reservation.checkinStatus,
+        checkinComment: result.data.reservation.checkinComment,
+        checkinVenueNotes: result.data.reservation.checkinVenueNotes,
+        checkinInternalNotes: result.data.reservation.checkinInternalNotes,
+        guestFirstName: result.data.reservation.guestFirstName,
+        guestLastName: result.data.reservation.guestLastName,
+        guestEmail: result.data.reservation.guestEmail,
+        guestEmailSecondary: result.data.reservation.guestEmailSecondary,
+        guestPhone: result.data.reservation.guestPhone,
+        guestPhoneSecondary: result.data.reservation.guestPhoneSecondary,
+        guestStructure: result.data.reservation.guestStructure,
+        guestFunction: result.data.reservation.guestFunction,
+        guestAddress: result.data.reservation.guestAddress,
+        guestPostalCode: result.data.reservation.guestPostalCode,
+        guestCity: result.data.reservation.guestCity,
+        guestAfcNumber: result.data.reservation.guestAfcNumber,
+        specialRequests: result.data.reservation.specialRequests,
+      });
+
+    } catch (error) {
+      logger.error('CheckinDrawer - Erreur réactivation', error as Error);
+      toast.error('Erreur lors de la réactivation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [reservation, userId, role, companyId, onSuccess]);
+
+  // Handler d'annulation
+  const handleCancel = useCallback(async () => {
+    if (!reservation || !userId || !role) {
+      toast.error('Données manquantes pour l\'annulation');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await cancelReservationFromPWA({
+        reservationId: reservation.id,
+        userId,
+        role,
+        companyId,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Erreur lors de l\'annulation');
+        return;
+      }
+
+      // Succès
+      const guestName = getFullName(
+        result.data.guestFirstName,
+        result.data.guestLastName
+      );
+
+      toast.success(`${guestName} : Réservation annulée`);
+
+      // Mettre à jour l'état local
+      setLocalStatus('cancelled');
+      setSelectedStatus(null); // Reset le statut de check-in
+
+      // Notifier le parent pour mettre à jour la liste
+      onSuccess({
+        ...reservation,
+        status: 'cancelled',
+        checkinStatus: result.data.checkinStatus,
+        checkinComment: result.data.checkinComment,
+        checkinVenueNotes: result.data.checkinVenueNotes,
+        checkinInternalNotes: result.data.checkinInternalNotes,
+        guestFirstName: result.data.guestFirstName,
+        guestLastName: result.data.guestLastName,
+        guestEmail: result.data.guestEmail,
+        guestEmailSecondary: result.data.guestEmailSecondary,
+        guestPhone: result.data.guestPhone,
+        guestPhoneSecondary: result.data.guestPhoneSecondary,
+        guestStructure: result.data.guestStructure,
+        guestFunction: result.data.guestFunction,
+        guestAddress: result.data.guestAddress,
+        guestPostalCode: result.data.guestPostalCode,
+        guestCity: result.data.guestCity,
+        guestAfcNumber: result.data.guestAfcNumber,
+        specialRequests: result.data.specialRequests,
+      });
+
+      // Fermer le drawer
+      onOpenChange(false);
+
+    } catch (error) {
+      logger.error('CheckinDrawer - Erreur annulation', error as Error);
+      toast.error('Erreur lors de l\'annulation');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [reservation, userId, role, companyId, onSuccess, onOpenChange]);
 
   // Si pas de réservation, ne rien afficher
   if (!reservation) return null;
@@ -355,27 +577,29 @@ export function CheckinDrawer({
   
   // On peut sauvegarder si :
   // - Un statut est sélectionné (check-in)
+  // - OU on réinitialise (selectedStatus=null alors que reservation avait un statut)
   // - OU des modifications ont été faites sur les infos guest/notes
-  const canSave = (selectedStatus !== null || hasChanges) && !isSubmitting && !accessLoading;
+  const isResetingStatus = selectedStatus === null && reservation.checkinStatus !== null;
+  const canSave = (selectedStatus !== null || isResetingStatus || hasChanges) && !isSubmitting && !accessLoading;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[90vh]">
         <DrawerHeader className="text-left border-b pb-4">
-          <DrawerTitle className="text-xl">{displayName}</DrawerTitle>
-          <DrawerDescription className="sr-only">
+          <DrawerTitle className="text-2xl">{displayName}</DrawerTitle>
+          <DrawerDescription className="sr-only text-base">
             Pointage de la réservation de {displayName}
           </DrawerDescription>
           
           {/* Badge nombre de places */}
           <div className="mt-2 flex items-center justify-between">
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-base">
               <Users className="w-4 h-4 mr-1.5" />
               {reservation.numPlaces} {reservation.numPlaces > 1 ? 'places' : 'place'}
             </Badge>
             
-            {/* Bouton Transférer */}
-            {onTransferClick && (
+            {/* Bouton Transférer - masqué si annulée */}
+            {onTransferClick && !isCancelled && (
               <Button
                 variant="outline"
                 size="sm"
@@ -392,41 +616,91 @@ export function CheckinDrawer({
 
         {/* Corps du drawer - scrollable */}
         <div className="p-4 space-y-5 overflow-y-auto flex-1">
-          {/* Grille des boutons de statut */}
-          <div>
-            <p className="text-sm font-medium text-muted-foreground mb-3">
-              Statut de présence
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              {STATUS_BUTTONS.map((config) => {
-                const Icon = config.icon;
-                const isActive = selectedStatus === config.status;
-                
-                return (
-                  <button
-                    key={config.status}
-                    type="button"
-                    onClick={() => setSelectedStatus(config.status)}
-                    disabled={isSubmitting}
-                    className={cn(
-                      'flex flex-col items-center justify-center gap-2 p-4',
-                      'rounded-xl border-2 transition-all',
-                      'focus:outline-none focus:ring-2 focus:ring-offset-2',
-                      isActive
-                        ? config.activeColor
-                        : cn(config.bgColor, config.borderColor, config.color),
-                      isSubmitting && 'opacity-50 cursor-not-allowed'
-                    )}
-                  >
-                    <Icon className={cn('w-6 h-6', isActive && 'text-white')} />
-                    <span className={cn('text-sm font-medium', isActive && 'text-white')}>
-                      {config.label}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* Bandeau réservation annulée */}
+          {isCancelled && (
+            <Alert variant="destructive" className="border-red-300 bg-red-50">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>Cette réservation est annulée</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void handleReactivate()}
+                  disabled={isSubmitting}
+                  className="ml-3 border-red-300 hover:bg-red-100 text-red-700"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-4 h-4 mr-1.5" />
+                  )}
+                  Réactiver
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Message après réactivation */}
+          {justReactivated && (
+            <Alert className="border-green-300 bg-green-50">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-700">
+                Réservation réactivée ! Vous pouvez maintenant pointer cette personne.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Grille des boutons de statut - masquée si annulée */}
+          {!isCancelled && (
+            <div>
+              <p className="text-base font-medium text-muted-foreground mb-3">
+                Statut de présence
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {STATUS_BUTTONS.map((config) => {
+                  const Icon = config.icon;
+                  const isActive = selectedStatus === config.status;
+                  
+                  return (
+                    <button
+                      key={config.status}
+                      type="button"
+                      onClick={() => setSelectedStatus(config.status)}
+                      disabled={isSubmitting}
+                      className={cn(
+                        'flex flex-col items-center justify-center gap-2 p-4',
+                        'rounded-xl border-2 transition-all',
+                        'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                        isActive
+                          ? config.activeColor
+                          : cn(config.bgColor, config.borderColor, config.color),
+                        isSubmitting && 'opacity-50 cursor-not-allowed'
+                      )}
+                    >
+                      <Icon className={cn('w-6 h-6', isActive && 'text-white')} />
+                      <span className={cn('text-base font-medium', isActive && 'text-white')}>
+                        {config.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Bouton réinitialiser - visible si un statut est sélectionné */}
+              {selectedStatus !== null && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedStatus(null)}
+                  disabled={isSubmitting}
+                  className="mt-3 w-full text-muted-foreground hover:text-foreground"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
+                  Réinitialiser (non pointé)
+                </Button>
+              )}
             </div>
-          </div>
+          )}
 
           <Separator />
 
@@ -448,7 +722,7 @@ export function CheckinDrawer({
               {/* Prénom et Nom */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="guest-first-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-first-name" className="text-base font-medium text-muted-foreground mb-1 block">
                     Prénom *
                   </label>
                   <Input
@@ -460,7 +734,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div>
-                  <label htmlFor="guest-last-name" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-last-name" className="text-base font-medium text-muted-foreground mb-1 block">
                     Nom *
                   </label>
                   <Input
@@ -475,7 +749,7 @@ export function CheckinDrawer({
 
               {/* Email */}
               <div>
-                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email *
                 </label>
@@ -491,7 +765,7 @@ export function CheckinDrawer({
 
               {/* Email secondaire */}
               <div>
-                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-email-secondary" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Mail className="w-3.5 h-3.5" />
                   Email secondaire
                 </label>
@@ -507,7 +781,7 @@ export function CheckinDrawer({
 
               {/* Téléphone */}
               <div>
-                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone
                 </label>
@@ -523,7 +797,7 @@ export function CheckinDrawer({
 
               {/* Téléphone secondaire */}
               <div>
-                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-phone-secondary" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Phone className="w-3.5 h-3.5" />
                   Téléphone secondaire
                 </label>
@@ -539,7 +813,7 @@ export function CheckinDrawer({
 
               {/* Structure */}
               <div>
-                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-structure" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Building2 className="w-3.5 h-3.5" />
                   Structure / Organisation
                 </label>
@@ -554,7 +828,7 @@ export function CheckinDrawer({
 
               {/* Fonction */}
               <div>
-                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-function" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Briefcase className="w-3.5 h-3.5" />
                   Fonction
                 </label>
@@ -569,7 +843,7 @@ export function CheckinDrawer({
 
               {/* Adresse */}
               <div>
-                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-address" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <Home className="w-3.5 h-3.5" />
                   Adresse
                 </label>
@@ -585,7 +859,7 @@ export function CheckinDrawer({
               {/* Code postal et Ville */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label htmlFor="guest-postal-code" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-postal-code" className="text-base font-medium text-muted-foreground mb-1 block">
                     Code postal
                   </label>
                   <Input
@@ -597,7 +871,7 @@ export function CheckinDrawer({
                   />
                 </div>
                 <div className="col-span-2">
-                  <label htmlFor="guest-city" className="text-xs font-medium text-muted-foreground mb-1 block">
+                  <label htmlFor="guest-city" className="text-base font-medium text-muted-foreground mb-1 block">
                     Ville
                   </label>
                   <Input
@@ -612,7 +886,7 @@ export function CheckinDrawer({
 
               {/* Numéro AFC */}
               <div>
-                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-afc-number" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <CreditCard className="w-3.5 h-3.5" />
                   Numéro AFC
                 </label>
@@ -627,7 +901,7 @@ export function CheckinDrawer({
 
               {/* Demandes spéciales */}
               <div>
-                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
+                <label htmlFor="guest-special-requests" className="flex items-center gap-1.5 text-base font-medium text-muted-foreground mb-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   Demandes spéciales
                 </label>
@@ -650,7 +924,7 @@ export function CheckinDrawer({
           <div>
             <label 
               htmlFor="checkin-comment" 
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+              className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
             >
               <MessageSquare className="w-4 h-4" />
               Commentaire
@@ -670,7 +944,7 @@ export function CheckinDrawer({
           <div>
             <label 
               htmlFor="checkin-venue-notes" 
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+              className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
             >
               <MapPin className="w-4 h-4" />
               Notes sur le lieu
@@ -691,7 +965,7 @@ export function CheckinDrawer({
             <div>
               <label 
                 htmlFor="checkin-internal-notes" 
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2"
+                className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
               >
                 <Lock className="w-4 h-4" />
                 Notes internes Derviche
@@ -719,7 +993,7 @@ export function CheckinDrawer({
                 className="flex-1"
                 disabled={isSubmitting}
               >
-                Annuler
+                Fermer
               </Button>
             </DrawerClose>
             <Button
@@ -746,6 +1020,20 @@ export function CheckinDrawer({
             <p className="text-xs text-center text-muted-foreground mt-2">
               Modifications non enregistrées
             </p>
+          )}
+
+          {/* Bouton annuler la réservation - uniquement si confirmée */}
+          {!isCancelled && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => void handleCancel()}
+              disabled={isSubmitting}
+              className="mt-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="w-4 h-4 mr-1.5" />
+              Annuler cette réservation
+            </Button>
           )}
         </DrawerFooter>
       </DrawerContent>

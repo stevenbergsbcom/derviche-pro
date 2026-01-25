@@ -306,11 +306,11 @@ export function AddReservationDrawer({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="max-h-[95vh]">
           <DrawerHeader className="text-left border-b pb-4">
-            <DrawerTitle className="text-xl flex items-center gap-2">
+            <DrawerTitle className="text-2xl flex items-center gap-2">
               <Users className="w-5 h-5" />
               Nouvelle réservation
             </DrawerTitle>
-            <DrawerDescription>
+            <DrawerDescription className="text-base">
               Créer une réservation pour ce créneau
             </DrawerDescription>
             
@@ -334,14 +334,14 @@ export function AddReservationDrawer({
               
               {/* Section : Informations obligatoires */}
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                <h3 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
                   Informations obligatoires
                 </h3>
                 
                 {/* Prénom / Nom */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="firstName" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="firstName" className="text-base flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5" />
                       Prénom *
                     </Label>
@@ -352,11 +352,11 @@ export function AddReservationDrawer({
                       disabled={isSubmitting}
                     />
                     {form.formState.errors.firstName && (
-                      <p className="text-xs text-destructive">{form.formState.errors.firstName.message}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.firstName.message}</p>
                     )}
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="lastName" className="text-sm">Nom *</Label>
+                    <Label htmlFor="lastName" className="text-base">Nom *</Label>
                     <Input
                       id="lastName"
                       {...form.register('lastName')}
@@ -364,14 +364,14 @@ export function AddReservationDrawer({
                       disabled={isSubmitting}
                     />
                     {form.formState.errors.lastName && (
-                      <p className="text-xs text-destructive">{form.formState.errors.lastName.message}</p>
+                      <p className="text-sm text-destructive">{form.formState.errors.lastName.message}</p>
                     )}
                   </div>
                 </div>
 
                 {/* Email */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="email" className="text-sm flex items-center gap-1.5">
+                  <Label htmlFor="email" className="text-base flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5" />
                     Email *
                   </Label>
@@ -383,13 +383,13 @@ export function AddReservationDrawer({
                     disabled={isSubmitting}
                   />
                   {form.formState.errors.email && (
-                    <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>
+                    <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
                   )}
                 </div>
 
                 {/* Nombre de places */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="numPlaces" className="text-sm flex items-center gap-1.5">
+                  <Label htmlFor="numPlaces" className="text-base flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5" />
                     Nombre de places *
                   </Label>
@@ -402,7 +402,7 @@ export function AddReservationDrawer({
                     disabled={isSubmitting}
                   />
                   {form.formState.errors.numPlaces && (
-                    <p className="text-xs text-destructive">{form.formState.errors.numPlaces.message}</p>
+                    <p className="text-sm text-destructive">{form.formState.errors.numPlaces.message}</p>
                   )}
                 </div>
               </div>
@@ -413,7 +413,7 @@ export function AddReservationDrawer({
               <Collapsible open={optionalFieldsOpen} onOpenChange={setOptionalFieldsOpen}>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="w-full justify-between">
-                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    <span className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
                       Informations complémentaires
                     </span>
                     <ChevronDown className={cn(
@@ -426,7 +426,7 @@ export function AddReservationDrawer({
                   
                   {/* Téléphone */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="phone" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="phone" className="text-base flex items-center gap-1.5">
                       <Phone className="w-3.5 h-3.5" />
                       Téléphone
                     </Label>
@@ -442,7 +442,7 @@ export function AddReservationDrawer({
                   {/* Structure / Fonction */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="organization" className="text-sm flex items-center gap-1.5">
+                      <Label htmlFor="organization" className="text-base flex items-center gap-1.5">
                         <Building2 className="w-3.5 h-3.5" />
                         Structure
                       </Label>
@@ -454,7 +454,7 @@ export function AddReservationDrawer({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="function" className="text-sm flex items-center gap-1.5">
+                      <Label htmlFor="function" className="text-base flex items-center gap-1.5">
                         <Briefcase className="w-3.5 h-3.5" />
                         Fonction
                       </Label>
@@ -469,7 +469,7 @@ export function AddReservationDrawer({
 
                   {/* N° AFC */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="afcNumber" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="afcNumber" className="text-base flex items-center gap-1.5">
                       <CreditCard className="w-3.5 h-3.5" />
                       N° AFC
                     </Label>
@@ -484,7 +484,7 @@ export function AddReservationDrawer({
                   {/* Email / Téléphone secondaires */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="emailSecondary" className="text-sm">Email secondaire</Label>
+                      <Label htmlFor="emailSecondary" className="text-base">Email secondaire</Label>
                       <Input
                         id="emailSecondary"
                         type="email"
@@ -493,7 +493,7 @@ export function AddReservationDrawer({
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="phoneSecondary" className="text-sm">Tél. secondaire</Label>
+                      <Label htmlFor="phoneSecondary" className="text-base">Tél. secondaire</Label>
                       <Input
                         id="phoneSecondary"
                         type="tel"
@@ -505,7 +505,7 @@ export function AddReservationDrawer({
 
                   {/* Adresse */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="address" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="address" className="text-base flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5" />
                       Adresse
                     </Label>
@@ -520,7 +520,7 @@ export function AddReservationDrawer({
                   {/* CP / Ville */}
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="postalCode" className="text-sm">Code postal</Label>
+                      <Label htmlFor="postalCode" className="text-base">Code postal</Label>
                       <Input
                         id="postalCode"
                         {...form.register('postalCode')}
@@ -529,7 +529,7 @@ export function AddReservationDrawer({
                       />
                     </div>
                     <div className="col-span-2 space-y-1.5">
-                      <Label htmlFor="city" className="text-sm">Ville</Label>
+                      <Label htmlFor="city" className="text-base">Ville</Label>
                       <Input
                         id="city"
                         {...form.register('city')}
@@ -541,7 +541,7 @@ export function AddReservationDrawer({
 
                   {/* Demandes spéciales */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="specialRequests" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="specialRequests" className="text-base flex items-center gap-1.5">
                       <MessageSquare className="w-3.5 h-3.5" />
                       Demandes spéciales
                     </Label>
@@ -563,7 +563,7 @@ export function AddReservationDrawer({
               <Collapsible open={checkinFieldsOpen} onOpenChange={setCheckinFieldsOpen}>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="w-full justify-between">
-                    <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                    <span className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
                       Pointage immédiat (optionnel)
                     </span>
                     <ChevronDown className={cn(
@@ -576,7 +576,7 @@ export function AddReservationDrawer({
                   
                   {/* Statut de présence */}
                   <div className="space-y-1.5">
-                    <Label className="text-sm">Statut de présence</Label>
+                    <Label className="text-base">Statut de présence</Label>
                     <Select
                       value={form.watch('checkinStatus') || ''}
                       onValueChange={(value) => form.setValue('checkinStatus', value as CheckinStatus)}
@@ -603,7 +603,7 @@ export function AddReservationDrawer({
 
                   {/* Commentaire check-in */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="checkinComment" className="text-sm">Commentaire</Label>
+                    <Label htmlFor="checkinComment" className="text-base">Commentaire</Label>
                     <Textarea
                       id="checkinComment"
                       {...form.register('checkinComment')}
@@ -616,7 +616,7 @@ export function AddReservationDrawer({
 
                   {/* Notes venue */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="checkinVenueNotes" className="text-sm flex items-center gap-1.5">
+                    <Label htmlFor="checkinVenueNotes" className="text-base flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5" />
                       Notes sur le lieu
                     </Label>
@@ -633,7 +633,7 @@ export function AddReservationDrawer({
                   {/* Notes internes - Admin uniquement */}
                   {isAdmin && (
                     <div className="space-y-1.5">
-                      <Label htmlFor="checkinInternalNotes" className="text-sm flex items-center gap-1.5">
+                      <Label htmlFor="checkinInternalNotes" className="text-base flex items-center gap-1.5">
                         <Lock className="w-3.5 h-3.5" />
                         Notes internes Derviche
                         <Badge variant="outline" className="text-xs ml-1">Admin</Badge>

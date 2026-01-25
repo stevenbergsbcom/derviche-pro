@@ -58,7 +58,7 @@ export function SlotCard({ slot, onClick, className }: SlotCardProps) {
             )}
           >
             <Clock className="w-4 h-4 mb-0.5" />
-            <span className="text-lg font-bold leading-none">
+            <span className="text-xl font-bold leading-none">
               {formatSlotTime(slot.time)}
             </span>
           </div>
@@ -66,19 +66,19 @@ export function SlotCard({ slot, onClick, className }: SlotCardProps) {
           {/* Infos */}
           <div className="flex-1 min-w-0">
             {/* Lieu */}
-            <div className="flex items-center gap-1.5 text-sm">
+            <div className="flex items-center gap-1.5 text-base">
               <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
               <span className="font-medium truncate">{slot.venue.name}</span>
             </div>
             {slot.venue.city && (
-              <p className="text-xs text-muted-foreground ml-[22px] truncate">
+              <p className="text-sm text-muted-foreground ml-[22px] truncate">
                 {slot.venue.city}
               </p>
             )}
 
             {/* Compteurs */}
             <div className="flex items-center gap-2 mt-2">
-              <div className="flex items-center gap-1 text-sm">
+              <div className="flex items-center gap-1 text-base">
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <span
                   className={cn(
@@ -89,12 +89,12 @@ export function SlotCard({ slot, onClick, className }: SlotCardProps) {
                 >
                   {slot.checkedInCount}/{slot.confirmedCount}
                 </span>
-                <span className="text-muted-foreground text-xs">présents</span>
+                <span className="text-muted-foreground text-sm">présents</span>
               </div>
 
               {/* Badge capacité */}
               {slot.capacity !== 999999 && (
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-sm">
                   {slot.confirmedCount}/{slot.capacity} places
                 </Badge>
               )}
