@@ -1034,6 +1034,15 @@ export function isSlotToday(date: string): boolean {
 }
 
 /**
+ * Vérifie si un slot est passé (date antérieure à aujourd'hui)
+ * Note: les slots d'aujourd'hui sont considérés comme "à venir"
+ */
+export function isSlotPast(date: string): boolean {
+  const today = new Date().toISOString().split('T')[0];
+  return date < today;
+}
+
+/**
  * Groupe les slots par date
  */
 export function groupSlotsByDate(slots: CheckinSlot[]): Map<string, CheckinSlot[]> {
@@ -2296,13 +2305,13 @@ export interface CancelReservationResult {
  * - Réinitialise le checkin_status à null
  * - Le trigger update_slot_capacity gère l'incrémentation de remaining_capacity
  */
-export async function cancelReservation(
+export async function cancelReservationFromPWA(
   params: CancelReservationParams
 ): Promise<CancelReservationResult> {
   const { reservationId, userId, role, companyId } = params;
 
   try {
-    logger.info('checkin.cancelReservation - Début', {
+    logger.info('checkin.cancelReservationFromPWA - Début', {
       reservationId,
       userId,
       role,
@@ -2318,7 +2327,7 @@ export async function cancelReservation(
       .single();
 
     if (fetchError || !reservation) {
-      logger.warn('checkin.cancelReservation - Réservation non trouvée', {
+      logger.warn('checkin.cancelReservationFromPWA - Réservation non trouvée', {
         reservationId,
         error: fetchError,
       });
@@ -2331,7 +2340,7 @@ export async function cancelReservation(
 
     // 2. Vérifier que la réservation est bien confirmée
     if (reservation.status !== 'confirmed') {
-      logger.warn('checkin.cancelReservation - Réservation non confirmée', {
+      logger.warn('checkin.cancelReservationFromPWA - Réservation non confirmée', {
         reservationId,
         status: reservation.status,
       });
@@ -2351,7 +2360,7 @@ export async function cancelReservation(
     );
 
     if (!hasAccess) {
-      logger.warn('checkin.cancelReservation - Accès refusé', {
+      logger.warn('checkin.cancelReservationFromPWA - Accès refusé', {
         reservationId,
         slotId: reservation.slot_id,
         userId,
@@ -2397,7 +2406,7 @@ export async function cancelReservation(
       .single();
 
     if (updateError || !updated) {
-      logger.error('checkin.cancelReservation - Erreur mise à jour', {
+      logger.error('checkin.cancelReservationFromPWA - Erreur mise à jour', {
         reservationId,
         error: updateError,
       });
@@ -2433,13 +2442,13 @@ export async function cancelReservation(
       createdAt: updated.created_at,
     };
 
-    logger.info('checkin.cancelReservation - Succès', { reservationId });
+    logger.info('checkin.cancelReservationFromPWA - Succès', { reservationId });
 
     return { success: true, data: result, error: null };
 
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('checkin.cancelReservation - Exception', {
+    logger.error('checkin.cancelReservationFromPWA - Exception', {
       reservationId,
       error: message,
     });

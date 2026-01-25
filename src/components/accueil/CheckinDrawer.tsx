@@ -56,7 +56,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { updateCheckinStatus, updateGuestInfo, reactivateReservation, cancelReservation } from '@/lib/services/checkin';
+import { updateCheckinStatus, updateGuestInfo, reactivateReservation, cancelReservationFromPWA } from '@/lib/services/checkin';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { CheckinStatus } from '@/types/database';
 import type { ReservationRowData } from './ReservationRow';
@@ -481,7 +481,7 @@ export function CheckinDrawer({
     setIsSubmitting(true);
 
     try {
-      const result = await cancelReservation({
+      const result = await cancelReservationFromPWA({
         reservationId: reservation.id,
         userId,
         role,
