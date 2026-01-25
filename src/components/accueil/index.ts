@@ -29,3 +29,7 @@ export type { CheckinDrawerProps } from './CheckinDrawer';
 // AddReservationDrawer
 export { AddReservationDrawer } from './AddReservationDrawer';
 export type { AddReservationDrawerProps } from './AddReservationDrawer';
+
+// TransferSlotDrawer
+export { TransferSlotDrawer } from './TransferSlotDrawer';
+export type { TransferSlotDrawerProps } from './TransferSlotDrawer';

@@ -23,3 +23,6 @@ export * from './company-dashboard';
 
 // Services Admin Dashboard
 export * from './admin-dashboard';
+
+// Services Check-in (PWA)
+export * from './checkin';
