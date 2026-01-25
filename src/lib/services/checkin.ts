@@ -1390,7 +1390,7 @@ export async function transferReservation(
 
     const supabase = createClient();
 
-    // 1. Récupérer la réservation avec les infos du slot source
+    // 1. Récupérer la réservation avec les infos du slot source ET l'email de l'invité
     const { data: reservation, error: fetchError } = await supabase
       .from('reservations')
       .select(`
@@ -1398,6 +1398,9 @@ export async function transferReservation(
         slot_id,
         num_places,
         status,
+        guest_email,
+        guest_first_name,
+        guest_last_name,
         slots!inner (
           id,
           show_id
@@ -1497,10 +1500,49 @@ export async function transferReservation(
       };
     }
 
-    // 6. Calculer le nombre de places final
+    // 6. Vérifier si l'invité a déjà une réservation sur le créneau cible
+    // Note : on normalise l'email (trim) pour éviter les faux négatifs dus aux espaces
+    // LIMITATION : les réservations sans email ne sont pas détectées comme doublons
+    // (la contrainte unique idx_unique_reservation_guest_slot les bloquera quand même)
+    const guestEmailNormalized = reservation.guest_email?.trim() || null;
+    
+    if (guestEmailNormalized) {
+      const { data: existingReservation, error: duplicateError } = await supabase
+        .from('reservations')
+        .select('id, guest_first_name, guest_last_name')
+        .eq('slot_id', targetSlotId)
+        .ilike('guest_email', guestEmailNormalized)
+        .eq('status', 'confirmed')
+        .neq('id', reservationId) // Exclure la réservation en cours de transfert
+        .limit(1)
+        .maybeSingle();
+
+      if (duplicateError) {
+        logger.warn('checkin.transferReservation - Erreur vérification doublon', {
+          error: duplicateError,
+        });
+        // On continue quand même, le trigger PostgreSQL bloquera si nécessaire
+      } else if (existingReservation) {
+        const existingName = [existingReservation.guest_first_name, existingReservation.guest_last_name]
+          .filter(Boolean)
+          .join(' ') || 'Sans nom';
+        logger.warn('checkin.transferReservation - Doublon détecté', {
+          reservationId,
+          targetSlotId,
+          existingReservationId: existingReservation.id,
+        });
+        return {
+          success: false,
+          data: null,
+          error: `Cet invité (${guestEmailNormalized}) a déjà une réservation sur ce créneau (${existingName})`,
+        };
+      }
+    }
+
+    // 7. Calculer le nombre de places final
     const finalNumPlaces = newNumPlaces !== undefined ? newNumPlaces : reservation.num_places;
 
-    // Validation du nombre de places : entier entre 1 et MAX_PLACES
+    // 8. Validation du nombre de places : entier entre 1 et MAX_PLACES
     if (!Number.isInteger(finalNumPlaces)) {
       return {
         success: false,
@@ -1525,7 +1567,7 @@ export async function transferReservation(
       };
     }
 
-    // 7. Calculer la capacité après transfert pour l'avertissement d'overbooking
+    // 9. Calculer la capacité après transfert pour l'avertissement d'overbooking
     // Note: on ne libère pas encore les places du slot source dans ce calcul
     // car le trigger le fera automatiquement
     const remainingAfterTransfer = targetSlot.remaining_capacity - finalNumPlaces;
@@ -1540,7 +1582,7 @@ export async function transferReservation(
       isOverbooking,
     });
 
-    // 8. Effectuer le transfert (UPDATE)
+    // 10. Effectuer le transfert (UPDATE)
     // Le trigger update_slot_capacity gère automatiquement les capacités
     const { data: updated, error: updateError } = await supabase
       .from('reservations')
@@ -1576,6 +1618,20 @@ export async function transferReservation(
       .single();
 
     if (updateError || !updated) {
+      // Gestion spécifique de l'erreur de doublon (code PostgreSQL 23505)
+      if (updateError?.code === '23505') {
+        logger.warn('checkin.transferReservation - Doublon détecté par contrainte unique', {
+          reservationId,
+          targetSlotId,
+          error: updateError,
+        });
+        return {
+          success: false,
+          data: null,
+          error: 'Cet invité a déjà une réservation sur ce créneau',
+        };
+      }
+      
       logger.error('checkin.transferReservation - Erreur mise à jour', {
         reservationId,
         error: updateError,
@@ -1587,7 +1643,7 @@ export async function transferReservation(
       };
     }
 
-    // 9. Transformer la réservation mise à jour
+    // 11. Transformer la réservation mise à jour
     const result: CheckinReservation = {
       id: updated.id,
       guestFirstName: updated.guest_first_name,
@@ -1648,28 +1704,42 @@ export async function transferReservation(
   }
 }
 
+/** Résultat étendu pour les slots de transfert (inclut info doublon) */
+export interface TransferTargetSlot extends CheckinSlot {
+  /** True si l'invité a déjà une réservation confirmée sur ce créneau */
+  hasExistingGuestReservation: boolean;
+}
+
+/** Résultat de la récupération des slots de transfert */
+export interface TransferTargetSlotsResult {
+  data: TransferTargetSlot[];
+  error: string | null;
+}
+
 /**
  * Récupère les créneaux disponibles pour le transfert d'une réservation
  * Retourne tous les créneaux du même spectacle (sauf le créneau actuel)
+ * avec indication si l'invité a déjà une réservation sur chaque créneau
  */
 export async function getTransferTargetSlots(
   reservationId: string,
   userId: string,
   role: UserRole,
   companyId: string | null
-): Promise<{ data: CheckinSlot[]; error: string | null }> {
+): Promise<TransferTargetSlotsResult> {
   try {
     logger.info('checkin.getTransferTargetSlots - Début', { reservationId, userId, role });
 
     const supabase = createClient();
 
-    // 1. Récupérer la réservation pour obtenir le slot_id actuel
+    // 1. Récupérer la réservation pour obtenir le slot_id actuel ET l'email de l'invité
     const { data: reservation, error: fetchError } = await supabase
       .from('reservations')
       .select(`
         id,
         slot_id,
         status,
+        guest_email,
         slots!inner (
           id,
           show_id,
@@ -1731,7 +1801,8 @@ export async function getTransferTargetSlots(
         reservations (
           id,
           status,
-          checkin_status
+          checkin_status,
+          guest_email
         )
       `)
       .eq('show_id', sourceSlot.show_id)
@@ -1748,8 +1819,11 @@ export async function getTransferTargetSlots(
       return { data: [], error: null };
     }
 
+    // Normaliser l'email de l'invité pour la comparaison
+    const guestEmailNormalized = reservation.guest_email?.toLowerCase().trim() || null;
+
     // 4. Transformer les données
-    const slots: CheckinSlot[] = [];
+    const slots: TransferTargetSlot[] = [];
 
     for (const slot of allSlots) {
       // Valider le venue
@@ -1768,18 +1842,23 @@ export async function getTransferTargetSlots(
 
       // Compter les réservations
       const reservations = Array.isArray(slot.reservations) ? slot.reservations : [];
-      const confirmedCount = reservations.filter(
-        (r): r is { id: string; status: string; checkin_status: string | null } =>
+      const confirmedReservations = reservations.filter(
+        (r): r is { id: string; status: string; checkin_status: string | null; guest_email: string | null } =>
           typeof r === 'object' && r !== null && (r as { status?: unknown }).status === 'confirmed'
+      );
+      const confirmedCount = confirmedReservations.length;
+      const checkedInCount = confirmedReservations.filter(
+        (r) =>
+          r.checkin_status !== null &&
+          r.checkin_status !== 'absent'
       ).length;
-      const checkedInCount = reservations.filter(
-        (r): r is { id: string; status: string; checkin_status: string | null } =>
-          typeof r === 'object' &&
-          r !== null &&
-          (r as { status?: unknown }).status === 'confirmed' &&
-          (r as { checkin_status?: unknown }).checkin_status !== null &&
-          (r as { checkin_status?: unknown }).checkin_status !== 'absent'
-      ).length;
+
+      // Vérifier si l'invité a déjà une réservation confirmée sur ce créneau
+      const hasExistingGuestReservation = guestEmailNormalized
+        ? confirmedReservations.some(
+            (r) => r.guest_email?.toLowerCase().trim() === guestEmailNormalized
+          )
+        : false;
 
       slots.push({
         id: slot.id,
@@ -1797,6 +1876,7 @@ export async function getTransferTargetSlots(
         },
         confirmedCount,
         checkedInCount,
+        hasExistingGuestReservation,
       });
     }
 
