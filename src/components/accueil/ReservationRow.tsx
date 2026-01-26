@@ -9,6 +9,7 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import { getFullName } from '@/lib/utils/guest';
 import { Badge } from '@/components/ui/badge';
 import { ChevronRight, Users, Mail, Building2 } from 'lucide-react';
 import { StatusBadge, isPresent } from './StatusBadge';
@@ -61,18 +62,6 @@ export interface ReservationRowProps {
   onClick: () => void;
   /** Classes CSS additionnelles */
   className?: string;
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Construit le nom complet
- */
-function getFullName(firstName: string | null, lastName: string | null): string {
-  const parts = [firstName, lastName].filter(Boolean);
-  return parts.length > 0 ? parts.join(' ') : 'Sans nom';
 }
 
 // ============================================
