@@ -1,0 +1,277 @@
+/**
+ * Hook useAddReservation
+ * Derviche Diffusion - Session 82
+ *
+ * Encapsule la logique du formulaire d'ajout de réservation :
+ * - Form react-hook-form avec validation Zod
+ * - Gestion des états (collapsibles, capacité, doublons)
+ * - Handlers de soumission et confirmation
+ *
+ * Corrections appliquées (audit Cursor) :
+ * - Cleanup dans useEffect pour checkSlotCapacity
+ * - Dépendances useEffect optimisées (form retiré)
+ * - Reset isSubmittingRef en cas d'erreur
+ * - useMemo pour l'objet state
+ * - useRef pour pendingFormData
+ */
+
+'use client';
+
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
+import {
+  createReservationFromCheckin,
+  checkDuplicateEmail,
+  checkSlotCapacity,
+  type CreateCheckinReservationData,
+  type DuplicateCheckResult,
+} from '@/lib/services/checkin';
+import { useCheckinAccess } from '@/hooks/useCheckinAccess';
+import { logger } from '@/lib/logger';
+// CheckinStatus est inféré par Zod, pas besoin d'import explicite
+import { addReservationSchema, DEFAULT_FORM_VALUES } from './constants';
+import type {
+  AddReservationFormData,
+  CapacityInfo,
+  UseAddReservationReturn,
+} from './types';
+
+// ============================================
+// HOOK
+// ============================================
+
+interface UseAddReservationParams {
+  slotId: string;
+  open: boolean;
+  onSuccess: () => void;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function useAddReservation({
+  slotId,
+  open,
+  onSuccess,
+  onOpenChange,
+}: UseAddReservationParams): UseAddReservationReturn {
+  const { userId, role, companyId, isAdmin } = useCheckinAccess();
+
+  // ============================================
+  // ÉTATS
+  // ============================================
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [optionalFieldsOpen, setOptionalFieldsOpen] = useState(false);
+  const [checkinFieldsOpen, setCheckinFieldsOpen] = useState(false);
+  const [capacityInfo, setCapacityInfo] = useState<CapacityInfo | null>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+
+  // Refs pour éviter les problèmes de race conditions et dépendances
+  const isSubmittingRef = useRef(false);
+  const pendingFormDataRef = useRef<AddReservationFormData | null>(null);
+
+  // ============================================
+  // FORM REACT-HOOK-FORM
+  // ============================================
+
+  const form = useForm<AddReservationFormData>({
+    resolver: zodResolver(addReservationSchema),
+    defaultValues: DEFAULT_FORM_VALUES,
+  });
+
+  // ============================================
+  // EFFETS
+  // ============================================
+
+  /**
+   * Charger la capacité du slot quand le drawer s'ouvre
+   * Avec cleanup pour annuler si le drawer se ferme
+   */
+  useEffect(() => {
+    if (!open || !slotId) {
+      setCapacityInfo(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const capacity = await checkSlotCapacity(slotId);
+      if (!cancelled && capacity) {
+        setCapacityInfo({
+          remaining: capacity.remaining,
+          isUnlimited: capacity.isUnlimited,
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, slotId]);
+
+  /**
+   * Reset form et états quand le drawer s'ouvre
+   * Note: form.reset est stable, pas besoin dans les dépendances
+   */
+  useEffect(() => {
+    if (open) {
+      form.reset(DEFAULT_FORM_VALUES);
+      setOptionalFieldsOpen(false);
+      setCheckinFieldsOpen(false);
+      setDuplicateInfo(null);
+      pendingFormDataRef.current = null;
+      setShowDuplicateDialog(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]); // form.reset est stable
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  /**
+   * Soumet le formulaire avec vérification optionnelle des doublons
+   */
+  const handleSubmit = useCallback(
+    async (formData: AddReservationFormData, skipDuplicateCheck = false) => {
+      // Protection contre les doubles soumissions
+      if (isSubmittingRef.current) return;
+
+      if (!userId || !role) {
+        toast.error('Session expirée, veuillez vous reconnecter');
+        return;
+      }
+
+      // Vérifier les doublons si pas déjà fait
+      if (!skipDuplicateCheck) {
+        const duplicate = await checkDuplicateEmail(slotId, formData.email);
+        if (duplicate.hasDuplicate) {
+          setDuplicateInfo(duplicate);
+          pendingFormDataRef.current = formData;
+          setShowDuplicateDialog(true);
+          return;
+        }
+      }
+
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+
+      try {
+        const data: CreateCheckinReservationData = {
+          slotId,
+          numPlaces: formData.numPlaces,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          emailSecondary: formData.emailSecondary || undefined,
+          phoneSecondary: formData.phoneSecondary || undefined,
+          address: formData.address || undefined,
+          postalCode: formData.postalCode || undefined,
+          city: formData.city || undefined,
+          organization: formData.organization || undefined,
+          function: formData.function || undefined,
+          afcNumber: formData.afcNumber || undefined,
+          specialRequests: formData.specialRequests || undefined,
+          checkinStatus: formData.checkinStatus,
+          checkinComment: formData.checkinComment || undefined,
+          checkinVenueNotes: formData.checkinVenueNotes || undefined,
+          checkinInternalNotes: formData.checkinInternalNotes || undefined,
+        };
+
+        const result = await createReservationFromCheckin(data, userId, role, companyId);
+
+        if (!result.success) {
+          // Reset des flags avant le return early
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+          toast.error(result.error || 'Erreur lors de la création');
+          return;
+        }
+
+        // Afficher le warning si doublon (mais création réussie)
+        if (result.warning) {
+          toast.warning(result.warning);
+        }
+
+        toast.success(`Réservation créée pour ${formData.firstName} ${formData.lastName}`);
+        onSuccess();
+        onOpenChange(false);
+      } catch (error) {
+        logger.error('useAddReservation - Erreur création réservation', { error });
+        toast.error('Erreur lors de la création de la réservation');
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    },
+    [userId, role, companyId, slotId, onSuccess, onOpenChange]
+  );
+
+  /**
+   * Handler pour le form submit (wrappé par react-hook-form)
+   */
+  const onFormSubmit = form.handleSubmit((data) => {
+    void handleSubmit(data);
+  });
+
+  /**
+   * Confirme la création malgré un doublon détecté
+   * Utilise la ref pour éviter les problèmes de dépendances
+   */
+  const handleConfirmDuplicate = useCallback(() => {
+    setShowDuplicateDialog(false);
+    if (pendingFormDataRef.current) {
+      void handleSubmit(pendingFormDataRef.current, true);
+    }
+  }, [handleSubmit]);
+
+  /**
+   * Annule après détection d'un doublon
+   */
+  const handleCancelDuplicate = useCallback(() => {
+    setShowDuplicateDialog(false);
+    pendingFormDataRef.current = null;
+  }, []);
+
+  // ============================================
+  // ÉTAT MÉMORISÉ (évite les re-renders)
+  // ============================================
+
+  const state = useMemo(
+    () => ({
+      isSubmitting,
+      optionalFieldsOpen,
+      checkinFieldsOpen,
+      capacityInfo,
+      duplicateInfo,
+      showDuplicateDialog,
+    }),
+    [
+      isSubmitting,
+      optionalFieldsOpen,
+      checkinFieldsOpen,
+      capacityInfo,
+      duplicateInfo,
+      showDuplicateDialog,
+    ]
+  );
+
+  // ============================================
+  // RETOUR
+  // ============================================
+
+  return {
+    form,
+    state,
+    setOptionalFieldsOpen,
+    setCheckinFieldsOpen,
+    onFormSubmit,
+    handleConfirmDuplicate,
+    handleCancelDuplicate,
+    isAdmin,
+  };
+}
