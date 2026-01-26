@@ -30,6 +30,6 @@ export type { CheckinDrawerProps } from './checkin-drawer';
 export { AddReservationDrawer } from './add-reservation-drawer';
 export type { AddReservationDrawerProps } from './add-reservation-drawer';
 
-// TransferSlotDrawer
-export { TransferSlotDrawer } from './TransferSlotDrawer';
-export type { TransferSlotDrawerProps } from './TransferSlotDrawer';
+// TransferSlotDrawer (refactorisé en dossier - Session 83)
+export { TransferSlotDrawer } from './transfer-slot-drawer';
+export type { TransferSlotDrawerProps } from './transfer-slot-drawer';
