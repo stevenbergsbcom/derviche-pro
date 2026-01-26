@@ -22,13 +22,13 @@ export {
 } from './ReservationRow';
 export type { ReservationRowData, ReservationRowProps } from './ReservationRow';
 
-// CheckinDrawer (refactorisé en dossier)
+// CheckinDrawer (refactorisé en dossier - Session 81)
 export { CheckinDrawer } from './checkin-drawer';
 export type { CheckinDrawerProps } from './checkin-drawer';
 
-// AddReservationDrawer
-export { AddReservationDrawer } from './AddReservationDrawer';
-export type { AddReservationDrawerProps } from './AddReservationDrawer';
+// AddReservationDrawer (refactorisé en dossier - Session 82)
+export { AddReservationDrawer } from './add-reservation-drawer';
+export type { AddReservationDrawerProps } from './add-reservation-drawer';
 
 // TransferSlotDrawer
 export { TransferSlotDrawer } from './TransferSlotDrawer';
