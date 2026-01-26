@@ -14,6 +14,7 @@ import {
   getAccessibleSlots,
   type CheckinShow,
   type CheckinSlot,
+  type GetSlotsOptions,
 } from '@/lib/services/checkin';
 import { logger } from '@/lib/logger';
 
@@ -54,7 +55,7 @@ export interface UseCheckinAccessReturn {
   /** Charger les spectacles accessibles */
   loadShows: () => Promise<void>;
   /** Charger les représentations d'un spectacle */
-  loadSlots: (showSlug: string) => Promise<void>;
+  loadSlots: (showSlug: string, options?: GetSlotsOptions) => Promise<void>;
   /** Rafraîchir les données */
   refresh: () => Promise<void>;
 }
@@ -176,7 +177,7 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
   }, [user, role, companyId]);
 
   // Charger les représentations d'un spectacle
-  const loadSlots = useCallback(async (showSlug: string) => {
+  const loadSlots = useCallback(async (showSlug: string, options?: GetSlotsOptions) => {
     if (!user || !role) {
       setSlots([]);
       return;
@@ -187,7 +188,7 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
     setSlotsError(null);
 
     try {
-      const result = await getAccessibleSlots(showSlug, user.id, role, companyId);
+      const result = await getAccessibleSlots(showSlug, user.id, role, companyId, options);
 
       if (!mountedRef.current) return;
       if (currentShowSlugRef.current !== showSlug) return; // Requête obsolète

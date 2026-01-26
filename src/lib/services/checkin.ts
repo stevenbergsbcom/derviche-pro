@@ -32,10 +32,19 @@ export interface CheckinShow {
     id: string;
     name: string;
   };
-  /** Nombre de représentations à venir */
+  /** Nombre de représentations à venir (aujourd'hui inclus) */
   upcomingSlotsCount: number;
-  /** Prochaine représentation */
+  /** Nombre de représentations passées */
+  pastSlotsCount: number;
+  /** Prochaine représentation (ou null si aucune à venir) */
   nextSlot: {
+    id: string;
+    date: string;
+    time: string;
+    venueName: string;
+  } | null;
+  /** Dernière représentation passée (ou null si aucune passée) */
+  lastSlot: {
     id: string;
     date: string;
     time: string;
@@ -112,6 +121,19 @@ export interface CheckinReservationsResult {
   data: CheckinReservation[];
   error: string | null;
 }
+
+/** Options pour filtrer les slots lors de la récupération */
+export interface GetSlotsOptions {
+  /** Limite en jours pour les slots passés (par défaut: 30) */
+  pastDaysLimit?: number;
+  /** Charger uniquement les slots à venir (ignorer les passés) */
+  upcomingOnly?: boolean;
+  /** Charger tout l'historique (ignorer pastDaysLimit) */
+  includeAllPast?: boolean;
+}
+
+/** Constante par défaut pour la limite des slots passés */
+export const DEFAULT_PAST_DAYS_LIMIT = 30;
 
 /** Rôles avec accès complet (admin) */
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
@@ -319,8 +341,15 @@ export async function getAccessibleShows(
 
       if (validSlots.length === 0) continue;
 
-      // Trouver le prochain slot
-      const nextSlot = validSlots[0];
+      // Séparer les slots passés et à venir (aujourd'hui = à venir)
+      const today = new Date().toISOString().split('T')[0];
+      const upcomingSlots = validSlots.filter((s) => s.date >= today);
+      const pastSlots = validSlots.filter((s) => s.date < today);
+
+      // Trouver le prochain slot (à venir)
+      const nextSlot = upcomingSlots[0] ?? null;
+      // Trouver le dernier slot passé (le plus récent = dernier du tableau)
+      const lastSlot = pastSlots[pastSlots.length - 1] ?? null;
 
       // Créer ou mettre à jour l'entrée
       const existing = showsMap.get(show.id);
@@ -334,12 +363,19 @@ export async function getAccessibleShows(
             id: company.id,
             name: company.name,
           },
-          upcomingSlotsCount: validSlots.length,
+          upcomingSlotsCount: upcomingSlots.length,
+          pastSlotsCount: pastSlots.length,
           nextSlot: nextSlot ? {
             id: nextSlot.id,
             date: nextSlot.date,
             time: nextSlot.time,
             venueName: isValidVenue(nextSlot.venues) ? nextSlot.venues.name : 'Lieu inconnu',
+          } : null,
+          lastSlot: lastSlot ? {
+            id: lastSlot.id,
+            date: lastSlot.date,
+            time: lastSlot.time,
+            venueName: isValidVenue(lastSlot.venues) ? lastSlot.venues.name : 'Lieu inconnu',
           } : null,
         });
       }
@@ -368,15 +404,38 @@ export async function getAccessibleShows(
 
 /**
  * Récupère les représentations d'un spectacle accessibles pour l'utilisateur
+ * 
+ * @param showSlug - Slug du spectacle
+ * @param userId - ID de l'utilisateur
+ * @param role - Rôle de l'utilisateur
+ * @param companyId - ID de la compagnie (si rôle company)
+ * @param options - Options de filtrage (optionnel)
+ *   - pastDaysLimit: Limite en jours pour les slots passés (défaut: 30)
+ *   - upcomingOnly: Charger uniquement les slots à venir
+ *   - includeAllPast: Charger tout l'historique (ignore pastDaysLimit)
  */
 export async function getAccessibleSlots(
   showSlug: string,
   userId: string,
   role: UserRole,
-  companyId: string | null
+  companyId: string | null,
+  options?: GetSlotsOptions
 ): Promise<CheckinSlotsResult> {
   try {
-    logger.info('checkin.getAccessibleSlots - Début', { showSlug, userId, role });
+    // Extraire et valider les options
+    const rawPastDaysLimit = options?.pastDaysLimit ?? DEFAULT_PAST_DAYS_LIMIT;
+    const pastDaysLimit = Math.max(1, rawPastDaysLimit); // Minimum 1 jour
+    const upcomingOnly = options?.upcomingOnly ?? false;
+    const includeAllPast = options?.includeAllPast ?? false;
+    
+    logger.info('checkin.getAccessibleSlots - Début', { 
+      showSlug, 
+      userId, 
+      role,
+      pastDaysLimit,
+      upcomingOnly,
+      includeAllPast,
+    });
 
     const supabase = createClient();
 
@@ -399,7 +458,25 @@ export async function getAccessibleSlots(
       return { data: [], error: 'Accès non autorisé à ce spectacle' };
     }
 
-    // Récupérer les slots (passés et futurs)
+    // Calculer la date limite pour les slots passés
+    // Priorité : includeAllPast > upcomingOnly > pastDaysLimit
+    const today = new Date().toISOString().split('T')[0];
+    let minDate: string | null = null;
+    
+    if (includeAllPast) {
+      // Charger tout l'historique (pas de limite de date)
+      minDate = null;
+    } else if (upcomingOnly) {
+      // Uniquement les slots à venir (aujourd'hui inclus)
+      minDate = today;
+    } else {
+      // Limiter les slots passés selon pastDaysLimit (défaut: 30 jours)
+      const limitDate = new Date();
+      limitDate.setDate(limitDate.getDate() - pastDaysLimit);
+      minDate = limitDate.toISOString().split('T')[0];
+    }
+
+    // Récupérer les slots avec filtrage optionnel par date
     let query = supabase
       .from('slots')
       .select(`
@@ -426,7 +503,15 @@ export async function getAccessibleSlots(
           checkin_status
         )
       `)
-      .eq('show_id', showData.id)
+      .eq('show_id', showData.id);
+
+    // Appliquer le filtre de date si nécessaire
+    if (minDate) {
+      query = query.gte('date', minDate);
+    }
+
+    // Trier par date et heure
+    query = query
       .order('date', { ascending: true })
       .order('time', { ascending: true });
 

@@ -11,7 +11,7 @@
 
 import { useEffect, useCallback, useRef, useState, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useCheckinAccess } from '@/hooks';
+import { useCheckinAccess, DEFAULT_PAST_DAYS_LIMIT } from '@/hooks';
 import {
   formatSlotDate,
   isSlotToday,
@@ -113,15 +113,24 @@ function ShowHeader({
   slotsCount,
   isLoading,
   activeTab,
+  showFullHistory,
 }: {
   title: string;
   slotsCount: number;
   isLoading: boolean;
   activeTab: TabFilter;
+  showFullHistory: boolean;
 }) {
-  const label = activeTab === 'upcoming' 
-    ? `${slotsCount} représentation${slotsCount > 1 ? 's' : ''} à venir`
-    : `${slotsCount} représentation${slotsCount > 1 ? 's' : ''} passée${slotsCount > 1 ? 's' : ''}`;
+  let label: string;
+  
+  if (activeTab === 'upcoming') {
+    label = `${slotsCount} représentation${slotsCount > 1 ? 's' : ''} à venir`;
+  } else {
+    const suffix = showFullHistory 
+      ? '(historique complet)' 
+      : `(${DEFAULT_PAST_DAYS_LIMIT} derniers jours)`;
+    label = `${slotsCount} représentation${slotsCount > 1 ? 's' : ''} passée${slotsCount > 1 ? 's' : ''} ${suffix}`;
+  }
 
   return (
     <div className="bg-white border-b px-4 py-4">
@@ -248,21 +257,49 @@ export default function ShowSlotsPage() {
   // État pour l'onglet actif
   const [activeTab, setActiveTab] = useState<TabFilter>('upcoming');
 
+  // État pour afficher tout l'historique (slots passés)
+  const [showFullHistory, setShowFullHistory] = useState(false);
+
   // Ref pour éviter les appels multiples
   const loadedSlugRef = useRef<string | null>(null);
+  
+  // Ref pour tracker si on a chargé l'historique complet
+  const loadedFullHistoryRef = useRef(false);
 
   // Charger les slots au montage (une fois auth prête)
   useEffect(() => {
     if (!isAuthLoading && role && showSlug && loadedSlugRef.current !== showSlug) {
       loadedSlugRef.current = showSlug;
-      void loadSlots(showSlug);
+      loadedFullHistoryRef.current = false;
+      setShowFullHistory(false);
+      // Chargement initial : slots à venir + 30 derniers jours passés
+      void loadSlots(showSlug, { includeAllPast: false });
     }
   }, [isAuthLoading, role, showSlug, loadSlots]);
 
   // Handler refresh manuel
   const handleRefresh = useCallback(() => {
     loadedSlugRef.current = null;
-    void loadSlots(showSlug);
+    // Garder l'état showFullHistory lors du refresh
+    void loadSlots(showSlug, { includeAllPast: showFullHistory });
+    loadedSlugRef.current = showSlug;
+  }, [showSlug, loadSlots, showFullHistory]);
+
+  // Handler pour charger tout l'historique
+  const handleLoadFullHistory = useCallback(async () => {
+    if (loadedFullHistoryRef.current) return; // Déjà chargé
+    
+    setShowFullHistory(true);
+    
+    try {
+      await loadSlots(showSlug, { includeAllPast: true });
+      // Marquer comme chargé uniquement en cas de succès
+      loadedFullHistoryRef.current = true;
+    } catch {
+      // En cas d'erreur, permettre un retry
+      setShowFullHistory(false);
+      // L'erreur est déjà gérée par loadSlots (setSlotsError)
+    }
   }, [showSlug, loadSlots]);
 
   // Handler navigation vers slot
@@ -328,6 +365,7 @@ export default function ShowSlotsPage() {
         slotsCount={displayedSlots.length}
         isLoading={isLoadingSlots && slots.length === 0}
         activeTab={activeTab}
+        showFullHistory={showFullHistory}
       />
 
       {/* Onglets de filtrage */}
@@ -382,6 +420,25 @@ export default function ShowSlotsPage() {
               isPast={activeTab === 'past'}
             />
           ))}
+
+        {/* Bouton "Voir tout l'historique" - uniquement pour l'onglet Passés */}
+        {!isLoadingSlots && 
+          !slotsError && 
+          activeTab === 'past' && 
+          !showFullHistory && 
+          pastSlots.length > 0 && (
+          <div className="pt-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLoadFullHistory}
+              className="w-full text-muted-foreground hover:text-derviche-dark"
+            >
+              <History className="w-4 h-4 mr-2" />
+              Voir tout l&apos;historique
+            </Button>
+          </div>
+        )}
 
         {/* Bouton actualiser */}
         {!isLoadingSlots && !slotsError && slots.length > 0 && (
