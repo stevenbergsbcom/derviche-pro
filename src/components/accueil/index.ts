@@ -22,9 +22,9 @@ export {
 } from './ReservationRow';
 export type { ReservationRowData, ReservationRowProps } from './ReservationRow';
 
-// CheckinDrawer
-export { CheckinDrawer } from './CheckinDrawer';
-export type { CheckinDrawerProps } from './CheckinDrawer';
+// CheckinDrawer (refactorisé en dossier)
+export { CheckinDrawer } from './checkin-drawer';
+export type { CheckinDrawerProps } from './checkin-drawer';
 
 // AddReservationDrawer
 export { AddReservationDrawer } from './AddReservationDrawer';
