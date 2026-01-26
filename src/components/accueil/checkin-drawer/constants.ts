@@ -7,6 +7,9 @@ import { Check, Heart, Newspaper, X } from 'lucide-react';
 import type { CheckinStatus } from '@/types/database';
 import type { StatusButtonConfig } from './types';
 
+// Ré-export getFullName depuis utils/guest pour rétrocompatibilité
+export { getFullName } from '@/lib/utils/guest';
+
 // ============================================
 // CONFIGURATION DES BOUTONS DE STATUT
 // ============================================
@@ -57,14 +60,6 @@ export const STATUS_BUTTONS: StatusButtonConfig[] = [
 // ============================================
 // HELPERS
 // ============================================
-
-/**
- * Génère le nom complet à partir du prénom et du nom
- */
-export function getFullName(firstName: string | null, lastName: string | null): string {
-  const parts = [firstName, lastName].filter(Boolean);
-  return parts.length > 0 ? parts.join(' ') : 'Sans nom';
-}
 
 /**
  * Trouve la configuration d'un bouton de statut par son status
