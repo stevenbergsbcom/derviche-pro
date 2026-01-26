@@ -32,10 +32,19 @@ export interface CheckinShow {
     id: string;
     name: string;
   };
-  /** Nombre de représentations à venir */
+  /** Nombre de représentations à venir (aujourd'hui inclus) */
   upcomingSlotsCount: number;
-  /** Prochaine représentation */
+  /** Nombre de représentations passées */
+  pastSlotsCount: number;
+  /** Prochaine représentation (ou null si aucune à venir) */
   nextSlot: {
+    id: string;
+    date: string;
+    time: string;
+    venueName: string;
+  } | null;
+  /** Dernière représentation passée (ou null si aucune passée) */
+  lastSlot: {
     id: string;
     date: string;
     time: string;
@@ -332,8 +341,15 @@ export async function getAccessibleShows(
 
       if (validSlots.length === 0) continue;
 
-      // Trouver le prochain slot
-      const nextSlot = validSlots[0];
+      // Séparer les slots passés et à venir (aujourd'hui = à venir)
+      const today = new Date().toISOString().split('T')[0];
+      const upcomingSlots = validSlots.filter((s) => s.date >= today);
+      const pastSlots = validSlots.filter((s) => s.date < today);
+
+      // Trouver le prochain slot (à venir)
+      const nextSlot = upcomingSlots[0] ?? null;
+      // Trouver le dernier slot passé (le plus récent = dernier du tableau)
+      const lastSlot = pastSlots[pastSlots.length - 1] ?? null;
 
       // Créer ou mettre à jour l'entrée
       const existing = showsMap.get(show.id);
@@ -347,12 +363,19 @@ export async function getAccessibleShows(
             id: company.id,
             name: company.name,
           },
-          upcomingSlotsCount: validSlots.length,
+          upcomingSlotsCount: upcomingSlots.length,
+          pastSlotsCount: pastSlots.length,
           nextSlot: nextSlot ? {
             id: nextSlot.id,
             date: nextSlot.date,
             time: nextSlot.time,
             venueName: isValidVenue(nextSlot.venues) ? nextSlot.venues.name : 'Lieu inconnu',
+          } : null,
+          lastSlot: lastSlot ? {
+            id: lastSlot.id,
+            date: lastSlot.date,
+            time: lastSlot.time,
+            venueName: isValidVenue(lastSlot.venues) ? lastSlot.venues.name : 'Lieu inconnu',
           } : null,
         });
       }
