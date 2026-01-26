@@ -57,6 +57,12 @@ export { useCompanyDashboard } from './useCompanyDashboard';
 export { useCheckinAccess } from './useCheckinAccess';
 export type { UseCheckinAccessReturn } from './useCheckinAccess';
 
+// Réexports depuis le service checkin pour faciliter l'accès
+export { 
+  DEFAULT_PAST_DAYS_LIMIT,
+  type GetSlotsOptions,
+} from '@/lib/services/checkin';
+
 // Hooks Utilitaires
 export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
 export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';
