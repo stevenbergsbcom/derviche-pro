@@ -432,6 +432,8 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
           code: insertRoleError.code,
           details: insertRoleError.details
         });
+        // Rollback : supprimer l'utilisateur auth et profil créés pour éviter un état incohérent
+        await supabaseAdmin.auth.admin.deleteUser(userId);
         return NextResponse.json(
           { success: false, error: 'Erreur lors de l\'attribution du rôle' },
           { status: 500 }
