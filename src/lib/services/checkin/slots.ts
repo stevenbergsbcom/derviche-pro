@@ -13,7 +13,7 @@ import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { SlotHostedBy } from '@/types/database';
 
 import type { CheckinSlot, CheckinSlotsResult, GetSlotsOptions } from './types';
-import { DEFAULT_PAST_DAYS_LIMIT, VALID_HOSTED_BY } from './constants';
+import { DEFAULT_PAST_DAYS_LIMIT, VALID_HOSTED_BY, isValidCheckinRole } from './constants';
 
 /**
  * Type retourné par la RPC get_accessible_slots
@@ -34,17 +34,6 @@ interface AccessibleSlotRow {
   show_title: string;
   confirmed_count: number;
   checked_in_count: number;
-}
-
-/** Rôles valides pour l'accès check-in */
-const VALID_CHECKIN_ROLES = ['super-admin', 'admin', 'externe', 'company'] as const;
-type ValidCheckinRole = typeof VALID_CHECKIN_ROLES[number];
-
-/**
- * Type guard pour vérifier si le rôle est valide pour le check-in
- */
-function isValidCheckinRole(role: UserRole): role is ValidCheckinRole {
-  return role !== null && VALID_CHECKIN_ROLES.includes(role as ValidCheckinRole);
 }
 
 /**

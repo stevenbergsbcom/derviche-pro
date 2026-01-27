@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 
 import type { CheckinShow, CheckinShowsResult } from './types';
-import { ADMIN_ROLES } from './constants';
+import { ADMIN_ROLES, isValidCheckinRole } from './constants';
 
 /**
  * Type retourné par la RPC get_accessible_shows
@@ -34,17 +34,6 @@ interface AccessibleShowRow {
   last_slot_date: string | null;
   last_slot_time: string | null;
   last_slot_venue_name: string | null;
-}
-
-/** Rôles valides pour l'accès check-in */
-const VALID_CHECKIN_ROLES = ['super-admin', 'admin', 'externe', 'company'] as const;
-type ValidCheckinRole = typeof VALID_CHECKIN_ROLES[number];
-
-/**
- * Type guard pour vérifier si le rôle est valide pour le check-in
- */
-function isValidCheckinRole(role: UserRole): role is ValidCheckinRole {
-  return role !== null && VALID_CHECKIN_ROLES.includes(role as ValidCheckinRole);
 }
 
 /**
