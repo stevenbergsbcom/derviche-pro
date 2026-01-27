@@ -7,15 +7,15 @@ import { Settings, X } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-// Emails des admins (fallback pour le mode maquette sans BDD)
-const ADMIN_EMAILS = ['steven.berg@sbcom.fr'];
+// Rôles autorisés à voir la barre admin
+const ADMIN_ROLES = ['super-admin', 'admin', 'externe'];
 
 // Préfixes de routes où la barre admin ne doit PAS s'afficher
-const EXCLUDED_ROUTE_PREFIXES = ['/admin', '/checkin', '/compagnie'];
+const EXCLUDED_ROUTE_PREFIXES = ['/admin', '/accueil', '/compagnie'];
 
 /**
  * Barre admin flottante affichée sur les pages publiques
- * Visible uniquement pour les super-admin et admin
+ * Visible uniquement pour les super-admin, admin et externe
  */
 export function AdminBar() {
   const pathname = usePathname();
@@ -28,16 +28,37 @@ export function AdminBar() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Fonction pour vérifier si l'utilisateur est admin
-    const checkIsAdmin = (user: User | null) => {
-      if (!user?.email) return false;
-      return ADMIN_EMAILS.includes(user.email);
+    // Fonction pour vérifier si l'utilisateur a un rôle admin
+    const checkIsAdmin = async (user: User | null) => {
+      if (!user?.id) {
+        setIsVisible(false);
+        return;
+      }
+
+      // Vérifier le rôle dans la table user_roles
+      const { data: roleData, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error || !roleData) {
+        setIsVisible(false);
+        return;
+      }
+
+      const hasAdminRole = ADMIN_ROLES.includes(roleData.role);
+      setIsVisible(hasAdminRole);
     };
+
+    // Vérifier l'état initial
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      void checkIsAdmin(user);
+    });
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      const isAdmin = checkIsAdmin(session?.user ?? null);
-      setIsVisible(isAdmin);
+      void checkIsAdmin(session?.user ?? null);
     });
 
     return () => {
@@ -62,7 +83,7 @@ export function AdminBar() {
 
         <div className="flex items-center gap-4">
           <Link
-            href="/admin/spectacles"
+            href="/admin"
             className="text-sm font-medium text-gold hover:text-gold/80 transition-colors"
           >
             ← Retour à l&apos;administration

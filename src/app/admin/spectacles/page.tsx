@@ -19,6 +19,7 @@ import { searchMatch } from '@/lib/utils';
 
 // Hooks Supabase
 import { useShows } from '@/hooks/useShows';
+import { useAdminPermissions } from '@/hooks/useAdminPermissions';
 import { useCategories } from '@/hooks/useCategories';
 import { useTargetAudiences } from '@/hooks/useTargetAudiences';
 import { useCompanies } from '@/hooks/useCompanies';
@@ -139,6 +140,14 @@ function AdminSpectaclesContent() {
         isLoading: isLoadingInternalUsers,
         error: internalUsersError,
     } = useInternalUsers();
+
+    // Hook pour les permissions admin (filtrage externe)
+    const {
+        hasFullAccess,
+        isExterne,
+        assignedShowIds,
+        isLoading: isLoadingPermissions,
+    } = useAdminPermissions();
 
     // Convertir les données Supabase vers le format d'affichage
     const shows: ShowForDisplay[] = useMemo(() => {
@@ -295,22 +304,29 @@ function AdminSpectaclesContent() {
         router.push('/admin/spectacles');
     };
 
-    // Filtrer les spectacles selon la recherche
+    // Filtrer les spectacles selon les permissions et la recherche
     const filteredShows = useMemo(() => {
+        // 1. Filtrer par assignations si externe
+        let filtered = shows;
+        if (isExterne && assignedShowIds !== null) {
+            filtered = shows.filter(show => assignedShowIds.includes(show.id));
+        }
+
+        // 2. Filtrer par recherche
         if (!searchQuery.trim()) {
-            return shows;
+            return filtered;
         }
         const query = searchQuery.trim();
-        return shows.filter(
+        return filtered.filter(
             (show) =>
                 searchMatch(show.title, query) ||
                 searchMatch(show.companyName, query) ||
                 show.categories.some((cat) => searchMatch(cat, query))
         );
-    }, [searchQuery, shows]);
+    }, [searchQuery, shows, isExterne, assignedShowIds]);
 
     // Loading global
-    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies || isLoadingInternalUsers;
+    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies || isLoadingInternalUsers || isLoadingPermissions;
 
     // Attendre que le composant soit monté
     if (!isMounted) {
@@ -703,8 +719,8 @@ function AdminSpectaclesContent() {
             {/* Header avec titre et bouton */}
             <AdminPageHeader
                 title="Gestion des Spectacles"
-                actionLabel="Ajouter un spectacle"
-                onAction={handleCreate}
+                actionLabel={hasFullAccess ? "Ajouter un spectacle" : undefined}
+                onAction={hasFullAccess ? handleCreate : undefined}
             />
 
             {/* Message d'erreur global */}
@@ -845,24 +861,28 @@ function AdminSpectaclesContent() {
                                                 <Eye className="w-4 h-4" />
                                                 <span className="sr-only">Voir</span>
                                             </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => handleEdit(show)}
-                                            >
-                                                <Pencil className="w-4 h-4" />
-                                                <span className="sr-only">Modifier</span>
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                onClick={() => void handleDeleteClick(show)}
-                                            >
-                                                <Trash2 className="w-4 h-4" />
-                                                <span className="sr-only">Supprimer</span>
-                                            </Button>
+                                            {hasFullAccess && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8"
+                                                    onClick={() => handleEdit(show)}
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                    <span className="sr-only">Modifier</span>
+                                                </Button>
+                                            )}
+                                            {hasFullAccess && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => void handleDeleteClick(show)}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                    <span className="sr-only">Supprimer</span>
+                                                </Button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -923,12 +943,16 @@ function AdminSpectaclesContent() {
                                     <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)} title="Voir">
                                         <Eye className="w-4 h-4" />
                                     </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)} title="Modifier">
-                                        <Pencil className="w-4 h-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)} title="Supprimer">
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    {hasFullAccess && (
+                                        <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)} title="Modifier">
+                                            <Pencil className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                    {hasFullAccess && (
+                                        <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)} title="Supprimer">
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -971,8 +995,8 @@ function AdminSpectaclesContent() {
                                     {copiedShowId === show.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                                 </Button>
                                 <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)}><Eye className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)}><Pencil className="w-4 h-4" /></Button>
-                                <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)}><Trash2 className="w-4 h-4" /></Button>
+                                {hasFullAccess && <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)}><Pencil className="w-4 h-4" /></Button>}
+                                {hasFullAccess && <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)}><Trash2 className="w-4 h-4" /></Button>}
                             </div>
                         </CardContent>
                     </Card>
