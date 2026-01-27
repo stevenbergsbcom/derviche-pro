@@ -925,6 +925,9 @@ export type Database = {
         Args: {
           p_address?: string
           p_afc_number?: string
+          p_checkin_comment?: string
+          p_checkin_internal_notes?: string
+          p_checkin_venue_notes?: string
           p_city?: string
           p_comment?: string
           p_email: string
@@ -970,6 +973,16 @@ export type Database = {
         Returns: boolean
       }
       generate_slug: { Args: { title: string }; Returns: string }
+      get_accessible_shows: {
+        Args: { p_company_id?: string; p_role: string; p_user_id: string }
+        Returns: Database["public"]["CompositeTypes"]["accessible_show_result"][]
+        SetofOptions: {
+          from: "*"
+          to: "accessible_show_result"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_admin_or_super: { Args: never; Returns: boolean }
       is_own_company_show: { Args: { p_show_id: string }; Returns: boolean }
@@ -1016,7 +1029,24 @@ export type Database = {
       reservation_source: "public" | "admin"
     }
     CompositeTypes: {
-      [_ in never]: never
+      accessible_show_result: {
+        id: string | null
+        slug: string | null
+        title: string | null
+        image_url: string | null
+        company_id: string | null
+        company_name: string | null
+        upcoming_slots_count: number | null
+        past_slots_count: number | null
+        next_slot_id: string | null
+        next_slot_date: string | null
+        next_slot_time: string | null
+        next_slot_venue_name: string | null
+        last_slot_id: string | null
+        last_slot_date: string | null
+        last_slot_time: string | null
+        last_slot_venue_name: string | null
+      }
     }
   }
 }
