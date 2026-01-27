@@ -36,6 +36,17 @@ interface AccessibleShowRow {
   last_slot_venue_name: string | null;
 }
 
+/** Rôles valides pour l'accès check-in */
+const VALID_CHECKIN_ROLES = ['super-admin', 'admin', 'externe', 'company'] as const;
+type ValidCheckinRole = typeof VALID_CHECKIN_ROLES[number];
+
+/**
+ * Type guard pour vérifier si le rôle est valide pour le check-in
+ */
+function isValidCheckinRole(role: UserRole): role is ValidCheckinRole {
+  return role !== null && VALID_CHECKIN_ROLES.includes(role as ValidCheckinRole);
+}
+
 /**
  * Récupère les spectacles accessibles pour l'utilisateur courant
  * Utilise la RPC PostgreSQL optimisée pour les performances
@@ -58,7 +69,7 @@ export async function getAccessibleShows(
       return { data: [], error: 'User ID requis' };
     }
 
-    if (!['super-admin', 'admin', 'externe', 'company'].includes(role)) {
+    if (!isValidCheckinRole(role)) {
       logger.warn('checkin.getAccessibleShows - Rôle non autorisé', { role });
       return { data: [], error: 'Rôle non autorisé pour l\'accueil' };
     }
@@ -71,10 +82,11 @@ export async function getAccessibleShows(
     const supabase = createClient();
 
     // Appel de la RPC optimisée
+    // Note: On convertit null en undefined pour p_company_id car Supabase RPC attend undefined pour les paramètres optionnels
     const { data, error } = await supabase.rpc('get_accessible_shows', {
       p_user_id: userId,
       p_role: role,
-      p_company_id: companyId,
+      p_company_id: companyId ?? undefined,
     });
 
     if (error) {
@@ -159,7 +171,7 @@ export async function canAccessSlot(
     }
 
     // Admin : accès à tout
-    if (ADMIN_ROLES.includes(role)) {
+    if (role !== null && ADMIN_ROLES.includes(role)) {
       return true;
     }
 

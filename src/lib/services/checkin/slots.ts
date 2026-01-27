@@ -3,6 +3,8 @@
  * Derviche Diffusion
  * 
  * Gestion des représentations (créneaux) pour le check-in.
+ * 
+ * Session S91: Optimisé avec RPC PostgreSQL get_accessible_slots
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -11,11 +13,50 @@ import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { SlotHostedBy } from '@/types/database';
 
 import type { CheckinSlot, CheckinSlotsResult, GetSlotsOptions } from './types';
-import { DEFAULT_PAST_DAYS_LIMIT } from './constants';
-import { isValidVenue, isValidShow, isValidHostedBy } from './guards';
+import { DEFAULT_PAST_DAYS_LIMIT, VALID_HOSTED_BY } from './constants';
+
+/**
+ * Type retourné par la RPC get_accessible_slots
+ */
+interface AccessibleSlotRow {
+  id: string;
+  date: string;
+  time: string;
+  capacity: number;
+  remaining_capacity: number;
+  hosted_by: string;
+  hosted_by_id: string | null;
+  venue_id: string;
+  venue_name: string;
+  venue_city: string;
+  show_id: string;
+  show_slug: string;
+  show_title: string;
+  confirmed_count: number;
+  checked_in_count: number;
+}
+
+/** Rôles valides pour l'accès check-in */
+const VALID_CHECKIN_ROLES = ['super-admin', 'admin', 'externe', 'company'] as const;
+type ValidCheckinRole = typeof VALID_CHECKIN_ROLES[number];
+
+/**
+ * Type guard pour vérifier si le rôle est valide pour le check-in
+ */
+function isValidCheckinRole(role: UserRole): role is ValidCheckinRole {
+  return role !== null && VALID_CHECKIN_ROLES.includes(role as ValidCheckinRole);
+}
+
+/**
+ * Type guard pour valider hosted_by
+ */
+function isValidHostedBy(value: unknown): value is SlotHostedBy {
+  return typeof value === 'string' && VALID_HOSTED_BY.includes(value as SlotHostedBy);
+}
 
 /**
  * Récupère les représentations d'un spectacle accessibles pour l'utilisateur
+ * Utilise la RPC PostgreSQL optimisée pour les performances
  * 
  * @param showSlug - Slug du spectacle
  * @param userId - ID de l'utilisateur
@@ -40,7 +81,7 @@ export async function getAccessibleSlots(
     const upcomingOnly = options?.upcomingOnly ?? false;
     const includeAllPast = options?.includeAllPast ?? false;
     
-    logger.info('checkin.getAccessibleSlots - Début', { 
+    logger.info('checkin.getAccessibleSlots - Début (RPC)', { 
       showSlug, 
       userId, 
       role,
@@ -49,159 +90,82 @@ export async function getAccessibleSlots(
       includeAllPast,
     });
 
+    // Validation précoce
+    if (!showSlug) {
+      return { data: [], error: 'Show slug requis' };
+    }
+
+    if (!userId) {
+      return { data: [], error: 'User ID requis' };
+    }
+
+    if (!isValidCheckinRole(role)) {
+      logger.warn('checkin.getAccessibleSlots - Rôle non autorisé', { role });
+      return { data: [], error: 'Rôle non autorisé pour l\'accueil' };
+    }
+
+    if (role === 'company' && !companyId) {
+      logger.warn('checkin.getAccessibleSlots - Rôle company sans company_id');
+      return { data: [], error: 'Compte compagnie non configuré' };
+    }
+
     const supabase = createClient();
 
-    // D'abord, récupérer le show par son slug
-    const { data: showData, error: showError } = await supabase
-      .from('shows')
-      .select('id, slug, title, company_id')
-      .eq('slug', showSlug)
-      .is('deleted_at', null)
-      .single();
-
-    if (showError || !showData) {
-      logger.error('checkin.getAccessibleSlots - Spectacle non trouvé', { showSlug });
-      return { data: [], error: 'Spectacle non trouvé' };
-    }
-
-    // Vérifier l'accès selon le rôle
-    if (role === 'company' && showData.company_id !== companyId) {
-      logger.warn('checkin.getAccessibleSlots - Accès refusé (mauvaise compagnie)');
-      return { data: [], error: 'Accès non autorisé à ce spectacle' };
-    }
-
-    // Calculer la date limite pour les slots passés
-    // Priorité : includeAllPast > upcomingOnly > pastDaysLimit
-    const today = new Date().toISOString().split('T')[0];
-    let minDate: string | null = null;
-    
-    if (includeAllPast) {
-      // Charger tout l'historique (pas de limite de date)
-      minDate = null;
-    } else if (upcomingOnly) {
-      // Uniquement les slots à venir (aujourd'hui inclus)
-      minDate = today;
-    } else {
-      // Limiter les slots passés selon pastDaysLimit (défaut: 30 jours)
-      const limitDate = new Date();
-      limitDate.setDate(limitDate.getDate() - pastDaysLimit);
-      minDate = limitDate.toISOString().split('T')[0];
-    }
-
-    // Récupérer les slots avec filtrage optionnel par date
-    let query = supabase
-      .from('slots')
-      .select(`
-        id,
-        date,
-        time,
-        capacity,
-        remaining_capacity,
-        hosted_by,
-        hosted_by_id,
-        venues (
-          id,
-          name,
-          city
-        ),
-        shows!inner (
-          id,
-          slug,
-          title
-        ),
-        reservations (
-          id,
-          status,
-          checkin_status
-        )
-      `)
-      .eq('show_id', showData.id);
-
-    // Appliquer le filtre de date si nécessaire
-    if (minDate) {
-      query = query.gte('date', minDate);
-    }
-
-    // Trier par date et heure
-    query = query
-      .order('date', { ascending: true })
-      .order('time', { ascending: true });
-
-    // Filtrer selon le rôle
-    if (role === 'externe') {
-      query = query.eq('hosted_by_id', userId);
-    } else if (role === 'company') {
-      query = query.eq('hosted_by', 'company');
-    }
-    // Admin : pas de filtre supplémentaire
-
-    const { data, error } = await query;
+    // Appel de la RPC optimisée
+    // Note: On convertit null en undefined pour p_company_id car Supabase RPC attend undefined pour les paramètres optionnels
+    const { data, error } = await supabase.rpc('get_accessible_slots', {
+      p_show_slug: showSlug,
+      p_user_id: userId,
+      p_role: role,
+      p_company_id: companyId ?? undefined,
+      p_past_days_limit: pastDaysLimit,
+      p_upcoming_only: upcomingOnly,
+      p_include_all_past: includeAllPast,
+    });
 
     if (error) {
-      logger.error('checkin.getAccessibleSlots - Erreur Supabase', { error });
+      // Gérer les erreurs spécifiques de la RPC
+      if (error.message.includes('Show not found')) {
+        logger.error('checkin.getAccessibleSlots - Spectacle non trouvé', { showSlug });
+        return { data: [], error: 'Spectacle non trouvé' };
+      }
+      if (error.message.includes('Access denied')) {
+        logger.warn('checkin.getAccessibleSlots - Accès refusé', { showSlug, role });
+        return { data: [], error: 'Accès non autorisé à ce spectacle' };
+      }
+      logger.error('checkin.getAccessibleSlots - Erreur RPC', { error });
       return { data: [], error: error.message };
     }
 
     if (!data || data.length === 0) {
+      logger.info('checkin.getAccessibleSlots - Aucun slot trouvé');
       return { data: [], error: null };
     }
 
-    // Transformer les données avec validation
-    const slots: CheckinSlot[] = [];
+    // Transformer les données RPC vers le format CheckinSlot
+    const slots: CheckinSlot[] = (data as AccessibleSlotRow[]).map((row) => ({
+      id: row.id,
+      date: row.date,
+      time: row.time,
+      capacity: row.capacity,
+      remainingCapacity: row.remaining_capacity,
+      hostedBy: isValidHostedBy(row.hosted_by) ? row.hosted_by : 'derviche',
+      hostedById: row.hosted_by_id,
+      venue: {
+        id: row.venue_id,
+        name: row.venue_name,
+        city: row.venue_city,
+      },
+      show: {
+        id: row.show_id,
+        slug: row.show_slug,
+        title: row.show_title,
+      },
+      confirmedCount: row.confirmed_count,
+      checkedInCount: row.checked_in_count,
+    }));
 
-    for (const slot of data) {
-      // Valider le venue
-      const venue = isValidVenue(slot.venues) 
-        ? { id: slot.venues.id, name: slot.venues.name, city: (slot.venues as { city?: string }).city || '' }
-        : { id: '', name: 'Lieu inconnu', city: '' };
-
-      // Valider le show
-      if (!isValidShow(slot.shows)) {
-        logger.warn('checkin.getAccessibleSlots - Show invalide dans slot', { slotId: slot.id });
-        continue;
-      }
-      const show = slot.shows;
-
-      // Valider hosted_by avec fallback sécurisé
-      const hostedBy: SlotHostedBy = isValidHostedBy(slot.hosted_by) 
-        ? slot.hosted_by 
-        : 'derviche';
-
-      // Compter les réservations
-      const reservations = Array.isArray(slot.reservations) ? slot.reservations : [];
-      const confirmedCount = reservations.filter(
-        (r): r is { id: string; status: string; checkin_status: string | null } => 
-          typeof r === 'object' && r !== null && (r as { status?: unknown }).status === 'confirmed'
-      ).length;
-      const checkedInCount = reservations.filter(
-        (r): r is { id: string; status: string; checkin_status: string | null } => 
-          typeof r === 'object' && 
-          r !== null && 
-          (r as { status?: unknown }).status === 'confirmed' && 
-          (r as { checkin_status?: unknown }).checkin_status !== null &&
-          (r as { checkin_status?: unknown }).checkin_status !== 'absent'
-      ).length;
-
-      slots.push({
-        id: slot.id,
-        date: slot.date,
-        time: slot.time,
-        capacity: slot.capacity,
-        remainingCapacity: slot.remaining_capacity,
-        hostedBy,
-        hostedById: slot.hosted_by_id,
-        venue,
-        show: {
-          id: show.id,
-          slug: show.slug,
-          title: show.title,
-        },
-        confirmedCount,
-        checkedInCount,
-      });
-    }
-
-    logger.info('checkin.getAccessibleSlots - Succès', { count: slots.length });
+    logger.info('checkin.getAccessibleSlots - Succès (RPC)', { count: slots.length });
     return { data: slots, error: null };
 
   } catch (err) {
