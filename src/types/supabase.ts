@@ -983,6 +983,24 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_accessible_slots: {
+        Args: {
+          p_company_id?: string
+          p_include_all_past?: boolean
+          p_past_days_limit?: number
+          p_role: string
+          p_show_slug: string
+          p_upcoming_only?: boolean
+          p_user_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["accessible_slot_result"][]
+        SetofOptions: {
+          from: "*"
+          to: "accessible_slot_result"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_admin_or_super: { Args: never; Returns: boolean }
       is_own_company_show: { Args: { p_show_id: string }; Returns: boolean }
@@ -1046,6 +1064,23 @@ export type Database = {
         last_slot_date: string | null
         last_slot_time: string | null
         last_slot_venue_name: string | null
+      }
+      accessible_slot_result: {
+        id: string | null
+        date: string | null
+        time: string | null
+        capacity: number | null
+        remaining_capacity: number | null
+        hosted_by: string | null
+        hosted_by_id: string | null
+        venue_id: string | null
+        venue_name: string | null
+        venue_city: string | null
+        show_id: string | null
+        show_slug: string | null
+        show_title: string | null
+        confirmed_count: number | null
+        checked_in_count: number | null
       }
     }
   }

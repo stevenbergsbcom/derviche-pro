@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 
 import type { CheckinShow, CheckinShowsResult } from './types';
-import { ADMIN_ROLES } from './constants';
+import { ADMIN_ROLES, isValidCheckinRole } from './constants';
 
 /**
  * Type retourné par la RPC get_accessible_shows
@@ -58,7 +58,7 @@ export async function getAccessibleShows(
       return { data: [], error: 'User ID requis' };
     }
 
-    if (!['super-admin', 'admin', 'externe', 'company'].includes(role)) {
+    if (!isValidCheckinRole(role)) {
       logger.warn('checkin.getAccessibleShows - Rôle non autorisé', { role });
       return { data: [], error: 'Rôle non autorisé pour l\'accueil' };
     }
@@ -71,10 +71,11 @@ export async function getAccessibleShows(
     const supabase = createClient();
 
     // Appel de la RPC optimisée
+    // Note: On convertit null en undefined pour p_company_id car Supabase RPC attend undefined pour les paramètres optionnels
     const { data, error } = await supabase.rpc('get_accessible_shows', {
       p_user_id: userId,
       p_role: role,
-      p_company_id: companyId,
+      p_company_id: companyId ?? undefined,
     });
 
     if (error) {
@@ -159,7 +160,7 @@ export async function canAccessSlot(
     }
 
     // Admin : accès à tout
-    if (ADMIN_ROLES.includes(role)) {
+    if (role !== null && ADMIN_ROLES.includes(role)) {
       return true;
     }
 
