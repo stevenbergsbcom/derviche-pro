@@ -74,7 +74,7 @@ export function SpectacleModals({
         open={isFormDialogOpen}
         onOpenChange={onFormDialogOpenChange}
         editingShow={editingShowRaw}
-        onSubmit={(data, isEditing) => onFormSubmit(data, isEditing)}
+        onSubmit={onFormSubmit}
         companies={companies}
         categories={categories}
         targetAudiences={targetAudiences}
@@ -106,8 +106,8 @@ export function SpectacleModals({
         open={isCategoriesDialogOpen}
         onOpenChange={onCategoriesDialogOpenChange}
         categories={rawCategories}
-        onAddCategory={(name) => onAddCategory(name)}
-        onRemoveCategory={(id) => onRemoveCategory(id)}
+        onAddCategory={onAddCategory}
+        onRemoveCategory={onRemoveCategory}
       />
 
       {/* Modale de gestion des publics cibles */}
@@ -115,15 +115,15 @@ export function SpectacleModals({
         open={isAudiencesDialogOpen}
         onOpenChange={onAudiencesDialogOpenChange}
         targetAudiences={targetAudiences}
-        onAddTargetAudience={(name) => onAddTargetAudience(name)}
-        onRemoveTargetAudience={(id) => onRemoveTargetAudience(id)}
+        onAddTargetAudience={onAddTargetAudience}
+        onRemoveTargetAudience={onRemoveTargetAudience}
       />
 
       {/* Modale création de compagnie */}
       <CompanyQuickCreateDialog
         open={isNewCompanyDialogOpen}
         onOpenChange={onNewCompanyDialogOpenChange}
-        onCreateCompany={(data) => onCreateCompany(data)}
+        onCreateCompany={onCreateCompany}
         onCompanyCreated={onCompanyCreated}
       />
 

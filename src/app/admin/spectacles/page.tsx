@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin';
@@ -145,6 +145,33 @@ function AdminSpectaclesContent() {
   } = useSpectaclesPage();
 
   // ============================================================================
+  // Props mémoïsées pour les vues (évite les re-renders inutiles)
+  // ============================================================================
+
+  const viewProps = useMemo(
+    () => ({
+      shows: filteredShows,
+      onView: handleView,
+      onEdit: handleEdit,
+      onDelete: handleDeleteClick,
+      onCopyLink: copyLink,
+      onNavigateToRepresentations: handleNavigateToRepresentations,
+      copiedShowId,
+      hasFullAccess,
+    }),
+    [
+      filteredShows,
+      handleView,
+      handleEdit,
+      handleDeleteClick,
+      copyLink,
+      handleNavigateToRepresentations,
+      copiedShowId,
+      hasFullAccess,
+    ]
+  );
+
+  // ============================================================================
   // États de chargement et erreurs
   // ============================================================================
 
@@ -196,21 +223,6 @@ function AdminSpectaclesContent() {
       </div>
     );
   }
-
-  // ============================================================================
-  // Props communes pour les vues
-  // ============================================================================
-
-  const viewProps = {
-    shows: filteredShows,
-    onView: handleView,
-    onEdit: handleEdit,
-    onDelete: handleDeleteClick,
-    onCopyLink: copyLink,
-    onNavigateToRepresentations: handleNavigateToRepresentations,
-    copiedShowId,
-    hasFullAccess,
-  };
 
   // ============================================================================
   // Rendu
