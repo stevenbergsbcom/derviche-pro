@@ -1,1090 +1,338 @@
+/**
+ * Page de gestion des spectacles - Admin
+ * Orchestrateur minimal qui délègue la logique au hook et aux composants
+ */
+
 'use client';
 
-import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { AlertCircle } from 'lucide-react';
+import { AdminPageHeader } from '@/components/admin';
+
+// Hook et composants locaux
+import { useSpectaclesPage } from './hooks';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import Image from 'next/image';
-import { Pencil, Trash2, Eye, Copy, Check, LayoutGrid, LayoutList, Calendar, RotateCcw, AlertCircle } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { searchMatch } from '@/lib/utils';
+  SpectacleFiltersBar,
+  SpectacleTableView,
+  SpectacleGridView,
+  SpectacleMobileView,
+  SpectacleModals,
+} from './components';
 
-// Hooks Supabase
-import { useShows } from '@/hooks/useShows';
-import { useAdminPermissions } from '@/hooks/useAdminPermissions';
-import { useCategories } from '@/hooks/useCategories';
-import { useTargetAudiences } from '@/hooks/useTargetAudiences';
-import { useCompanies } from '@/hooks/useCompanies';
-import { useInternalUsers } from '@/hooks/useInternalUsers';
-import type { ShowWithRelations } from '@/lib/services/shows';
-import type { ShowStatus, ShowPriceType } from '@/types/database';
+// ============================================================================
+// Composant wrapper avec Suspense
+// ============================================================================
 
-// Service de gestion des images
-import { uploadShowImage, deleteShowImage, replaceShowImage } from '@/lib/services/storage';
-
-
-
-// Composants admin réutilisables
-import {
-    AdminPageHeader,
-    SearchInput,
-    StatusBadge,
-    DeleteConfirmDialog,
-} from '@/components/admin';
-
-// Composants spécifiques aux spectacles
-import {
-    SpectacleFormDialog,
-    SpectacleViewDialog,
-    CategoryManagerDialog,
-    TargetAudienceManagerDialog,
-    CompanyQuickCreateDialog,
-} from '@/components/admin/spectacles';
-import type { SpectacleFormData } from '@/components/admin/spectacles/spectacle-form-dialog';
-
-// Type pour l'affichage (compatible avec MockShow)
-interface ShowForDisplay {
-    id: string;
-    slug: string;
-    title: string;
-    companyId: string;
-    companyName: string;
-    categories: string[];
-    targetAudienceIds: string[];
-    description?: string;
-    shortDescription: string | null;
-    imageUrl: string | null;
-    duration: number | null;
-    status: ShowStatus;
-    priceType: ShowPriceType;
-    period?: string;
-    dervisheManagerId?: string;
-    dervisheManager?: string;
-    invitationPolicy?: string;
-    maxParticipantsPerBooking?: number;
-    closureDates?: string;
-    representationsCount: number;
-    folderUrl?: string;
-    teaserUrl?: string;
-    captationAvailable: boolean;
-    captationUrl?: string;
-}
-
-// Composant wrapper avec Suspense pour useSearchParams
 export default function AdminSpectaclesPage() {
-    return (
-        <Suspense fallback={
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-pulse text-muted-foreground">Chargement...</div>
-            </div>
-        }>
-            <AdminSpectaclesContent />
-        </Suspense>
-    );
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="flex items-center justify-center min-h-[400px]"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="animate-pulse text-muted-foreground">
+            <span className="sr-only">Chargement de la page spectacles</span>
+            Chargement...
+          </div>
+        </div>
+      }
+    >
+      <AdminSpectaclesContent />
+    </Suspense>
+  );
 }
+
+// ============================================================================
+// Composant principal
+// ============================================================================
 
 function AdminSpectaclesContent() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
+  const {
+    // États de chargement
+    isMounted,
+    isLoading,
+    loadingError,
 
-    // État pour éviter les erreurs d'hydratation SSR/Client
-    const [isMounted, setIsMounted] = useState(false);
+    // Données
+    shows,
+    filteredShows,
+    rawCategories,
+    rawTargetAudiences,
+    categoryOptions,
+    targetAudiences,
+    companies,
+    dervisheUsers,
 
-    // Hooks Supabase
-    const {
-        shows: rawShows,
-        isLoading: isLoadingShows,
-        error: showsError,
-        create: createShow,
-        update: updateShow,
-        remove: removeShow,
-        checkUsage: checkShowUsage,
-        generateSlug,
-    } = useShows();
+    // Permissions
+    hasFullAccess,
 
-    const {
-        categories: rawCategories,
-        isLoading: isLoadingCategories,
-        error: categoriesError,
-        create: createCategory,
-        remove: removeCategory,
-        checkUsage: checkCategoryUsage,
-    } = useCategories();
+    // Recherche et filtres
+    searchQuery,
+    setSearchQuery,
+    hasActiveFilters,
+    resetFilters,
 
-    const {
-        targetAudiences: rawTargetAudiences,
-        isLoading: isLoadingTargetAudiences,
-        error: targetAudiencesError,
-        create: createTargetAudience,
-        remove: removeTargetAudience,
-        checkUsage: checkTargetAudienceUsage,
-    } = useTargetAudiences();
+    // Mode d'affichage
+    viewMode,
+    setViewMode,
 
-    const {
-        companies: rawCompanies,
-        isLoading: isLoadingCompanies,
-        error: companiesError,
-        create: createCompany,
-    } = useCompanies();
+    // États modales
+    isFormDialogOpen,
+    handleFormDialogOpenChange,
+    editingShow,
+    editingShowRaw,
+    viewingShowRaw,
+    showToDelete,
+    deleteWarning,
+    isDeleting,
+    handleDeleteDialogOpenChange,
+    isCategoriesDialogOpen,
+    setIsCategoriesDialogOpen,
+    isAudiencesDialogOpen,
+    setIsAudiencesDialogOpen,
+    isNewCompanyDialogOpen,
+    setIsNewCompanyDialogOpen,
+    newlyCreatedCompanyId,
+    handleClearNewlyCreatedCompanyId,
 
-    const {
-        users: rawInternalUsers,
-        isLoading: isLoadingInternalUsers,
-        error: internalUsersError,
-    } = useInternalUsers();
+    // Erreurs
+    operationError,
+    clearOperationError,
 
-    // Hook pour les permissions admin (filtrage externe)
-    const {
-        hasFullAccess,
-        isExterne,
-        assignedShowIds,
-        isLoading: isLoadingPermissions,
-    } = useAdminPermissions();
+    // Refetch
+    handleRefetch,
 
-    // Convertir les données Supabase vers le format d'affichage
-    const shows: ShowForDisplay[] = useMemo(() => {
-        return rawShows.map((show: ShowWithRelations) => {
-            // Mapper les category_ids vers les noms de catégories
-            const categoryNames = show.category_ids
-                .map(id => rawCategories.find(c => c.id === id)?.name)
-                .filter((name): name is string => name !== undefined);
+    // Handlers CRUD
+    handleCreate,
+    handleEdit,
+    handleView,
+    handleDeleteClick,
+    handleConfirmDelete,
+    handleFormSubmit,
+    handleViewToEdit,
+    handleViewToDelete,
+    handleCloseView,
+    handleDeleteFromForm,
 
-            return {
-                id: show.id,
-                slug: show.slug,
-                title: show.title,
-                companyId: show.company_id,
-                companyName: show.company_name,
-                categories: categoryNames,
-                targetAudienceIds: show.target_audience_ids,
-                description: show.long_description || undefined,
-                shortDescription: show.short_description,
-                imageUrl: show.image_url,
-                duration: show.duration_minutes,
-                status: show.status as ShowStatus,
-                priceType: show.price_type as ShowPriceType,
-                period: show.period || undefined,
-                dervisheManagerId: show.derviche_manager_id || undefined,
-                invitationPolicy: show.invitation_policy || undefined,
-                maxParticipantsPerBooking: show.max_reservations_per_booking,
-                closureDates: show.closure_dates || undefined,
-                representationsCount: show.representations_count,
-                folderUrl: show.folder_url || undefined,
-                teaserUrl: show.teaser_url || undefined,
-                captationAvailable: show.captation_available,
-                captationUrl: show.captation_url || undefined,
-            };
-        });
-    }, [rawShows, rawCategories]);
+    // Handlers catégories
+    handleAddCategory,
+    handleRemoveCategoryById,
 
-    // Convertir les catégories pour SpectacleFormDialog (id + name)
-    const categoryOptions = useMemo(() =>
-        rawCategories.map(c => ({ id: c.id, name: c.name })),
-        [rawCategories]
-    );
+    // Handlers publics cibles
+    handleAddTargetAudience,
+    handleRemoveTargetAudience,
 
-    // Convertir les target audiences pour l'UI
-    const targetAudiences = useMemo(() =>
-        rawTargetAudiences.map(ta => ({ id: ta.id, name: ta.name })),
-        [rawTargetAudiences]
-    );
+    // Handlers compagnies
+    handleCreateCompany,
+    handleCompanyCreated,
 
-    // Convertir les compagnies pour l'UI
-    const companies = useMemo(() =>
-        rawCompanies.map(c => ({
-            id: c.id,
-            name: c.name,
-            contactEmail: c.contact_email,
-            contactPhone: c.contact_phone,
-        })),
-        [rawCompanies]
-    );
+    // Navigation
+    handleNavigateToRepresentations,
 
-    // Convertir les utilisateurs internes pour l'UI (format DervisheUserOption)
-    // Filtrer uniquement les utilisateurs actifs (non désactivés)
-    const dervisheUsers = useMemo(() =>
-        rawInternalUsers
-            .filter(u => !u.disabled_at) // Exclure les utilisateurs désactivés
-            .map(u => ({
-                id: u.id,
-                firstName: u.first_name || '',
-                lastName: u.last_name || '',
-                role: u.role,
-            })),
-        [rawInternalUsers]
-    );
+    // Handlers stables pour modales
+    handleOpenCategoriesManager,
+    handleOpenTargetAudiencesManager,
+    handleOpenNewCompanyDialog,
 
-    // État de recherche
-    const [searchQuery, setSearchQuery] = useState<string>('');
-    const urlSearchParam = searchParams.get('search') || '';
+    // Copie de lien
+    copiedShowId,
+    copyError,
+    copyLink,
+    clearCopyError,
+  } = useSpectaclesPage();
 
-    // États des modales
-    const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
-    const [editingShow, setEditingShow] = useState<ShowForDisplay | null>(null);
-    const [editingShowRaw, setEditingShowRaw] = useState<ShowWithRelations | null>(null); // Pour SpectacleFormDialog
-    const [viewingShow, setViewingShow] = useState<ShowForDisplay | null>(null);
-    const [viewingShowRaw, setViewingShowRaw] = useState<ShowWithRelations | null>(null); // Pour SpectacleViewDialog
-    const [showToDelete, setShowToDelete] = useState<ShowForDisplay | null>(null);
-    const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
-    const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState<boolean>(false);
-    const [isAudiencesDialogOpen, setIsAudiencesDialogOpen] = useState<boolean>(false);
-    const [isNewCompanyDialogOpen, setIsNewCompanyDialogOpen] = useState<boolean>(false);
-    const [newlyCreatedCompanyId, setNewlyCreatedCompanyId] = useState<string | null>(null);
-    
-    // État d'erreur pour les opérations
-    const [operationError, setOperationError] = useState<string | null>(null);
-    
-    // État de suppression en cours
-    const [isDeleting, setIsDeleting] = useState<boolean>(false);
-    
-    // État pour rouvrir la vue après édition
-    const [showIdToReopen, setShowIdToReopen] = useState<string | null>(null);
+  // ============================================================================
+  // États de chargement et erreurs
+  // ============================================================================
 
-    // État pour le feedback de copie
-    const [copiedShowId, setCopiedShowId] = useState<string | null>(null);
-    const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Ref pour éviter les race conditions lors de la suppression
-    const pendingDeleteCheckRef = useRef<string | null>(null);
-
-    // État d'affichage
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-
-    // Fix d'hydratation
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    // Synchroniser la recherche avec le paramètre URL
-    useEffect(() => {
-        setSearchQuery(urlSearchParam);
-    }, [urlSearchParam]);
-
-    // Cleanup du timeout lors du démontage
-    useEffect(() => {
-        return () => {
-            if (copyTimeoutRef.current) {
-                clearTimeout(copyTimeoutRef.current);
-            }
-        };
-    }, []);
-    
-    // Rouvrir la vue après édition
-    useEffect(() => {
-        if (showIdToReopen && !isFormDialogOpen) {
-            // Petit délai pour s'assurer que les données sont à jour
-            const timeout = setTimeout(() => {
-                const show = shows.find(s => s.id === showIdToReopen);
-                const rawShow = rawShows.find(s => s.id === showIdToReopen);
-                if (show && rawShow) {
-                    setViewingShow(show);
-                    setViewingShowRaw(rawShow);
-                    setShowIdToReopen(null);
-                }
-            }, 100);
-            
-            return () => clearTimeout(timeout);
-        }
-    }, [showIdToReopen, isFormDialogOpen, shows, rawShows]);
-
-    // Vérifier si des filtres sont actifs
-    const hasActiveFilters = searchQuery.trim() !== '';
-
-    // Réinitialiser les filtres
-    const resetFilters = () => {
-        setSearchQuery('');
-        router.push('/admin/spectacles');
-    };
-
-    // Filtrer les spectacles selon les permissions et la recherche
-    const filteredShows = useMemo(() => {
-        // 1. Filtrer par assignations si externe
-        let filtered = shows;
-        if (isExterne && assignedShowIds !== null) {
-            filtered = shows.filter(show => assignedShowIds.includes(show.id));
-        }
-
-        // 2. Filtrer par recherche
-        if (!searchQuery.trim()) {
-            return filtered;
-        }
-        const query = searchQuery.trim();
-        return filtered.filter(
-            (show) =>
-                searchMatch(show.title, query) ||
-                searchMatch(show.companyName, query) ||
-                show.categories.some((cat) => searchMatch(cat, query))
-        );
-    }, [searchQuery, shows, isExterne, assignedShowIds]);
-
-    // Loading global
-    const isLoading = isLoadingShows || isLoadingCategories || isLoadingTargetAudiences || isLoadingCompanies || isLoadingInternalUsers || isLoadingPermissions;
-
-    // Attendre que le composant soit monté
-    if (!isMounted) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-pulse text-muted-foreground">Chargement...</div>
-            </div>
-        );
-    }
-
-    // Affichage du chargement
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-pulse text-muted-foreground">Chargement des spectacles...</div>
-            </div>
-        );
-    }
-
-    // Affichage des erreurs de chargement
-    const loadingError = showsError || categoriesError || targetAudiencesError || companiesError || internalUsersError;
-    if (loadingError) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <AlertCircle className="w-12 h-12 text-destructive" />
-                <p className="text-destructive">Erreur: {loadingError}</p>
-                <Button onClick={() => window.location.reload()}>Réessayer</Button>
-            </div>
-        );
-    }
-
-    // === HANDLERS ===
-
-    // Ouvrir la modale en mode création
-    const handleCreate = () => {
-        setOperationError(null);
-        setEditingShow(null);
-        setEditingShowRaw(null);
-        setIsFormDialogOpen(true);
-    };
-
-    // Ouvrir la modale en mode édition
-    const handleEdit = (show: ShowForDisplay) => {
-        setOperationError(null);
-        // Trouver le show brut correspondant dans rawShows
-        const rawShow = rawShows.find(s => s.id === show.id);
-        if (!rawShow) {
-            setOperationError('Ce spectacle n\'est plus disponible. Veuillez rafraîchir la page.');
-            return;
-        }
-        setEditingShow(show);
-        setEditingShowRaw(rawShow);
-        setIsFormDialogOpen(true);
-    };
-
-    // Gérer la suppression - vérifier l'utilisation
-    const handleDeleteClick = async (show: ShowForDisplay) => {
-        setOperationError(null);
-        pendingDeleteCheckRef.current = show.id;
-        setDeleteWarning(null);
-        setShowToDelete(show);
-
-        const usage = await checkShowUsage(show.id);
-        
-        // Vérifier que c'est toujours le même spectacle qu'on veut supprimer
-        if (pendingDeleteCheckRef.current !== show.id) {
-            return;
-        }
-
-        // Gérer l'erreur de vérification
-        if (usage.error) {
-            setDeleteWarning(
-                'Impossible de vérifier les représentations associées. La suppression sera quand même possible.'
-            );
-            return;
-        }
-
-        if (usage.used) {
-            setDeleteWarning(
-                `Ce spectacle a ${usage.count} représentation(s) associée(s). La suppression masquera le spectacle mais conservera les données.`
-            );
-        }
-    };
-
-    // Confirmer la suppression
-    const handleConfirmDelete = async () => {
-        if (!showToDelete) return;
-
-        setIsDeleting(true);
-        try {
-            // Supprimer l'image associée si elle existe
-            const rawShow = rawShows.find(s => s.id === showToDelete.id);
-            if (rawShow?.image_url) {
-                await deleteShowImage(rawShow.image_url);
-                // On ne bloque pas si la suppression de l'image échoue
-            }
-            
-            const result = await removeShow(showToDelete.id);
-            if (result.error) {
-                setOperationError(result.error);
-                // Ne pas fermer le dialog en cas d'erreur
-                return;
-            }
-            setShowToDelete(null);
-            setDeleteWarning(null);
-            pendingDeleteCheckRef.current = null;
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
-    // Ouvrir la modale de visualisation
-    const handleView = (show: ShowForDisplay) => {
-        // Trouver le show brut correspondant dans rawShows
-        const rawShow = rawShows.find(s => s.id === show.id);
-        if (!rawShow) {
-            setOperationError('Ce spectacle n\'est plus disponible. Veuillez rafraîchir la page.');
-            return;
-        }
-        setViewingShow(show);
-        setViewingShowRaw(rawShow);
-    };
-
-    // Fermer la modale de visualisation et ouvrir l'édition
-    const handleViewToEdit = () => {
-        if (viewingShow) {
-            const showToEdit = viewingShow;
-            // Sauvegarder l'ID pour rouvrir la vue après édition
-            setShowIdToReopen(showToEdit.id);
-            setViewingShow(null);
-            setViewingShowRaw(null);
-            handleEdit(showToEdit);
-        }
-    };
-
-    // Fermer la modale de visualisation et ouvrir la suppression
-    const handleViewToDelete = () => {
-        if (viewingShow) {
-            const showToRemove = viewingShow;
-            setViewingShow(null);
-            setViewingShowRaw(null);
-            void handleDeleteClick(showToRemove);
-        }
-    };
-
-    // Soumettre le formulaire de spectacle
-    const handleFormSubmit = async (formData: SpectacleFormData, isEditing: boolean) => {
-        // Gérer l'upload de l'image si une nouvelle image a été sélectionnée
-        let finalImageUrl: string | null = formData.imageUrl;
-        
-        // Pour une création, on doit d'abord créer le spectacle pour avoir l'ID
-        // Puis uploader l'image, puis mettre à jour l'URL
-        // Pour une édition, on peut uploader directement avec l'ID existant
-        
-        if (isEditing && editingShow) {
-            // Mode édition
-            if (formData.imageFile) {
-                // Nouvelle image sélectionnée - remplacer l'ancienne
-                const oldImageUrl = editingShowRaw?.image_url || null;
-                const uploadResult = await replaceShowImage(formData.imageFile, editingShow.id, oldImageUrl);
-                if (!uploadResult.success) {
-                    throw new Error(uploadResult.error || 'Erreur lors de l\'upload de l\'image');
-                }
-                finalImageUrl = uploadResult.url || null;
-            } else if (formData.imageRemoved && editingShowRaw?.image_url) {
-                // Image supprimée
-                await deleteShowImage(editingShowRaw.image_url);
-                finalImageUrl = null;
-            }
-            
-            // Préparer les données pour Supabase
-            const showData = {
-                slug: formData.slug || generateSlug(formData.title),
-                title: formData.title.trim(),
-                company_id: formData.companyId,
-                short_description: formData.shortDescription?.trim() || null,
-                long_description: formData.description?.trim() || null,
-                duration_minutes: formData.duration,
-                image_url: finalImageUrl,
-                status: formData.status,
-                price_type: formData.priceType,
-                period: formData.period?.trim() || null,
-                derviche_manager_id: formData.dervisheManagerId || null,
-                invitation_policy: formData.invitationPolicy?.trim() || null,
-                max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
-                closure_dates: formData.closureDates?.trim() || null,
-                folder_url: formData.folderUrl?.trim() || null,
-                teaser_url: formData.teaserUrl?.trim() || null,
-                captation_available: formData.captationAvailable,
-                captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
-            };
-            
-            const result = await updateShow(editingShow.id, {
-                show: showData,
-                category_ids: formData.categoryIds,
-                target_audience_ids: formData.targetAudienceIds,
-            });
-
-            if (result.error) {
-                throw new Error(result.error);
-            }
-        } else {
-            // Mode création
-            // D'abord créer le spectacle sans image
-            const showData = {
-                slug: formData.slug || generateSlug(formData.title),
-                title: formData.title.trim(),
-                company_id: formData.companyId,
-                short_description: formData.shortDescription?.trim() || null,
-                long_description: formData.description?.trim() || null,
-                duration_minutes: formData.duration,
-                image_url: null, // Sera mis à jour après l'upload
-                status: formData.status,
-                price_type: formData.priceType,
-                period: formData.period?.trim() || null,
-                derviche_manager_id: formData.dervisheManagerId || null,
-                invitation_policy: formData.invitationPolicy?.trim() || null,
-                max_reservations_per_booking: formData.maxParticipantsPerBooking ?? 5,
-                closure_dates: formData.closureDates?.trim() || null,
-                folder_url: formData.folderUrl?.trim() || null,
-                teaser_url: formData.teaserUrl?.trim() || null,
-                captation_available: formData.captationAvailable,
-                captation_url: formData.captationAvailable ? (formData.captationUrl?.trim() || null) : null,
-            };
-            
-            const createResult = await createShow({
-                show: showData,
-                category_ids: formData.categoryIds,
-                target_audience_ids: formData.targetAudienceIds,
-            });
-
-            if (createResult.error || !createResult.data) {
-                throw new Error(createResult.error || 'Erreur lors de la création du spectacle');
-            }
-            
-            // Si une image a été sélectionnée, l'uploader et mettre à jour le spectacle
-            if (formData.imageFile) {
-                const newShowId = createResult.data.id;
-                const uploadResult = await uploadShowImage(formData.imageFile, newShowId);
-                
-                if (!uploadResult.success) {
-                    // L'upload a échoué - on ferme le dialog mais on informe l'utilisateur
-                    setIsFormDialogOpen(false);
-                    setEditingShow(null);
-                    setEditingShowRaw(null);
-                    setOperationError(`Le spectacle a été créé, mais l'image n'a pas pu être uploadée: ${uploadResult.error || 'Erreur inconnue'}`);
-                    return;
-                }
-                
-                if (!uploadResult.url) {
-                    // Upload réussi mais pas d'URL retournée - cas edge
-                    setIsFormDialogOpen(false);
-                    setEditingShow(null);
-                    setEditingShowRaw(null);
-                    setOperationError('Le spectacle a été créé, mais l\'URL de l\'image n\'a pas été générée. Vous pouvez réessayer en modifiant le spectacle.');
-                    return;
-                }
-                
-                // Mettre à jour le spectacle avec l'URL de l'image
-                const updateResult = await updateShow(newShowId, {
-                    show: { image_url: uploadResult.url },
-                    category_ids: formData.categoryIds,
-                    target_audience_ids: formData.targetAudienceIds,
-                });
-                
-                if (updateResult.error) {
-                    // Le spectacle est créé mais l'image n'a pas pu être liée
-                    setIsFormDialogOpen(false);
-                    setEditingShow(null);
-                    setEditingShowRaw(null);
-                    setOperationError('Le spectacle a été créé, mais l\'image n\'a pas pu être liée. Vous pouvez la réajouter en modifiant le spectacle.');
-                    return;
-                }
-            }
-        }
-
-        setIsFormDialogOpen(false);
-        setEditingShow(null);
-        setEditingShowRaw(null);
-    };
-
-    // Gérer les catégories
-    const handleAddCategory = async (categoryName: string) => {
-        const result = await createCategory(categoryName);
-        if (result.error) {
-            throw new Error(result.error); // L'erreur est gérée par le dialog
-        }
-    };
-
-    // Supprimer une catégorie par ID (pour CategoryManagerDialog)
-    const handleRemoveCategoryById = async (categoryId: string) => {
-        const category = rawCategories.find(c => c.id === categoryId);
-        const categoryName = category?.name || 'cette catégorie';
-
-        const usage = await checkCategoryUsage(categoryId);
-        
-        // Gérer l'erreur de vérification
-        if (usage.error) {
-            throw new Error(`Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`);
-        }
-        
-        if (usage.used) {
-            throw new Error(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
-        }
-
-        const result = await removeCategory(categoryId);
-        if (result.error) {
-            throw new Error(result.error);
-        }
-    };
-
-    // Gérer les publics cibles
-    const handleAddTargetAudience = async (name: string) => {
-        const result = await createTargetAudience(name);
-        if (result.error) {
-            throw new Error(result.error); // L'erreur est gérée par le dialog
-        }
-    };
-
-    const handleRemoveTargetAudience = async (id: string) => {
-        const audienceName = rawTargetAudiences.find(ta => ta.id === id)?.name || 'ce public cible';
-        
-        const usage = await checkTargetAudienceUsage(id);
-        
-        // Gérer l'erreur de vérification
-        if (usage.error) {
-            throw new Error(`Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`);
-        }
-        
-        if (usage.used) {
-            throw new Error(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
-        }
-
-        const result = await removeTargetAudience(id);
-        if (result.error) {
-            throw new Error(result.error);
-        }
-    };
-
-    // Gérer la création de compagnie
-    const handleCreateCompany = async (data: { name: string; email: string }): Promise<string> => {
-        const result = await createCompany({
-            name: data.name.trim(),
-            contact_email: data.email.trim(),
-        });
-
-        if (result.error || !result.data) {
-            throw new Error(result.error || 'Erreur lors de la création de la compagnie');
-        }
-
-        return result.data.id;
-    };
-
-    // Auto-sélection de la compagnie nouvellement créée
-    const handleCompanyCreated = (companyId: string) => {
-        setNewlyCreatedCompanyId(companyId);
-    };
-
-    // Générer l'URL de la page spectacle
-    const getShowUrl = (slug: string) => {
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-        return `${baseUrl}/spectacle/${slug}`;
-    };
-
-    // Copier le lien du spectacle (accepte tout objet avec id et slug)
-    const handleCopyLink = async (show: { id: string; slug: string }) => {
-        const url = getShowUrl(show.slug);
-        try {
-            await navigator.clipboard.writeText(url);
-            setCopiedShowId(show.id);
-            if (copyTimeoutRef.current) {
-                clearTimeout(copyTimeoutRef.current);
-            }
-            copyTimeoutRef.current = setTimeout(() => {
-                setCopiedShowId(null);
-                copyTimeoutRef.current = null;
-            }, 2000);
-        } catch (err) {
-            console.error('Erreur lors de la copie:', err);
-        }
-    };
-
-    // Naviguer vers les représentations
-    const handleNavigateToRepresentations = (showId: string) => {
-        router.push(`/admin/spectacles/${showId}/representations`);
-    };
-
+  if (!isMounted) {
     return (
-        <div className="space-y-6">
-            {/* Header avec titre et bouton */}
-            <AdminPageHeader
-                title="Gestion des Spectacles"
-                actionLabel={hasFullAccess ? "Ajouter un spectacle" : undefined}
-                onAction={hasFullAccess ? handleCreate : undefined}
-            />
-
-            {/* Message d'erreur global */}
-            {operationError && (
-                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-destructive shrink-0" />
-                    <p className="text-sm text-destructive">{operationError}</p>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setOperationError(null)}
-                        className="ml-auto"
-                    >
-                        Fermer
-                    </Button>
-                </div>
-            )}
-
-            {/* Compteur de résultats et bouton réinitialiser */}
-            <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                    {filteredShows.length} spectacle{filteredShows.length > 1 ? 's' : ''}
-                    {hasActiveFilters && ` (sur ${shows.length} au total)`}
-                </p>
-                {hasActiveFilters && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={resetFilters}
-                        className="text-muted-foreground hover:text-foreground"
-                    >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Réinitialiser
-                    </Button>
-                )}
-            </div>
-
-            {/* Barre de recherche + Toggle vue */}
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <SearchInput
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    placeholder="Rechercher un spectacle..."
-                />
-
-                {/* Toggle vue - Desktop uniquement */}
-                <div className="hidden lg:flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
-                    <Button
-                        variant={viewMode === 'list' ? 'default' : 'ghost'}
-                        size="sm"
-                        className={`h-8 px-3 ${viewMode === 'list' ? 'bg-derviche hover:bg-derviche-light text-white' : ''}`}
-                        onClick={() => setViewMode('list')}
-                    >
-                        <LayoutList className="w-4 h-4 mr-2" />
-                        Liste
-                    </Button>
-                    <Button
-                        variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                        size="sm"
-                        className={`h-8 px-3 ${viewMode === 'grid' ? 'bg-derviche hover:bg-derviche-light text-white' : ''}`}
-                        onClick={() => setViewMode('grid')}
-                    >
-                        <LayoutGrid className="w-4 h-4 mr-2" />
-                        Grille
-                    </Button>
-                </div>
-            </div>
-
-            {/* Tableau des spectacles - Desktop mode Liste */}
-            {viewMode === 'list' && (
-                <div className="hidden lg:block rounded-md border bg-white">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Titre</TableHead>
-                                <TableHead>Compagnie</TableHead>
-                                <TableHead>Catégories</TableHead>
-                                <TableHead>Représentations</TableHead>
-                                <TableHead>Statut</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredShows.map((show) => (
-                                <TableRow key={show.id}>
-                                    <TableCell className="font-medium">
-                                        <button
-                                            onClick={() => handleView(show)}
-                                            className="cursor-pointer hover:text-derviche hover:underline text-left"
-                                        >
-                                            {show.title}
-                                        </button>
-                                    </TableCell>
-                                    <TableCell>{show.companyName}</TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-wrap gap-1">
-                                            {show.categories.map((cat) => (
-                                                <Badge key={cat} className="bg-gold/10 text-gold border-gold/20">
-                                                    {cat}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20"
-                                            onClick={() => handleNavigateToRepresentations(show.id)}
-                                        >
-                                            <Calendar className="w-3 h-3 mr-1" />
-                                            {show.representationsCount} repr.
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <StatusBadge status={show.status} />
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => void handleCopyLink(show)}
-                                                title="Copier le lien de réservation"
-                                            >
-                                                {copiedShowId === show.id ? (
-                                                    <Check className="w-4 h-4 text-green-600" />
-                                                ) : (
-                                                    <Copy className="w-4 h-4" />
-                                                )}
-                                                <span className="sr-only">Copier le lien</span>
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                onClick={() => handleView(show)}
-                                            >
-                                                <Eye className="w-4 h-4" />
-                                                <span className="sr-only">Voir</span>
-                                            </Button>
-                                            {hasFullAccess && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => handleEdit(show)}
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                    <span className="sr-only">Modifier</span>
-                                                </Button>
-                                            )}
-                                            {hasFullAccess && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => void handleDeleteClick(show)}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    <span className="sr-only">Supprimer</span>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-            )}
-
-            {/* Grille des spectacles - Desktop mode Grille */}
-            {viewMode === 'grid' && (
-                <div className="hidden lg:grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
-                    {filteredShows.map((show) => (
-                        <Card key={show.id} className="overflow-hidden group hover:shadow-lg transition-shadow bg-white rounded-xl p-0 gap-0 h-full flex flex-col">
-                            <div className="aspect-4/3 overflow-hidden relative">
-                                {show.imageUrl ? (
-                                    <Image
-                                        src={show.imageUrl}
-                                        alt={show.title}
-                                        fill
-                                        sizes="(max-width: 1280px) 50vw, (max-width: 1536px) 33vw, 25vw"
-                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                        unoptimized={show.imageUrl.startsWith('data:')}
-                                    />
-                                ) : (
-                                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                                        <span className="text-muted-foreground text-sm">Pas d&apos;image</span>
-                                    </div>
-                                )}
-                                {show.categories[0] && (
-                                    <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
-                                        {show.categories[0]}
-                                    </span>
-                                )}
-                                <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'published' ? 'bg-green-500 text-white' : show.status === 'draft' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'}`}>
-                                    {show.status === 'published' ? 'Disponible' : show.status === 'draft' ? 'Bientôt' : 'Terminé'}
-                                </span>
-                            </div>
-                            <CardContent className="px-4 pb-4 pt-3 flex flex-col grow">
-                                <p className="text-xs font-medium text-gold mb-2 flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {show.period || 'Période non définie'}
-                                </p>
-                                <h3 className="font-bold text-lg mb-2 line-clamp-2 min-h-12 text-derviche-dark leading-tight cursor-pointer hover:text-derviche hover:underline" onClick={() => handleView(show)}>
-                                    {show.title}
-                                </h3>
-                                <p className="text-sm font-semibold text-foreground mb-1 line-clamp-1">{show.companyName}</p>
-                                <div className="mb-4">
-                                    <Badge className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20" onClick={() => handleNavigateToRepresentations(show.id)}>
-                                        <Calendar className="w-3 h-3 mr-1" />
-                                        {show.representationsCount} représentations
-                                    </Badge>
-                                </div>
-                                <div className="mt-auto flex items-center gap-1 pt-3 border-t">
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => void handleCopyLink(show)} title="Copier le lien">
-                                        {copiedShowId === show.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                                    </Button>
-                                    <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)} title="Voir">
-                                        <Eye className="w-4 h-4" />
-                                    </Button>
-                                    {hasFullAccess && (
-                                        <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)} title="Modifier">
-                                            <Pencil className="w-4 h-4" />
-                                        </Button>
-                                    )}
-                                    {hasFullAccess && (
-                                        <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)} title="Supprimer">
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            )}
-
-            {/* Cartes des spectacles - Mobile uniquement */}
-            <div className="lg:hidden space-y-4">
-                {filteredShows.map((show) => (
-                    <Card key={show.id} className="overflow-hidden p-0 gap-0">
-                        <div className="aspect-video overflow-hidden relative">
-                            {show.imageUrl ? (
-                                <Image src={show.imageUrl} alt={show.title} fill sizes="100vw" className="object-cover" unoptimized={show.imageUrl.startsWith('data:')} />
-                            ) : (
-                                <div className="w-full h-full bg-muted flex items-center justify-center">
-                                    <span className="text-muted-foreground text-sm">Pas d&apos;image</span>
-                                </div>
-                            )}
-                            {show.categories[0] && <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">{show.categories[0]}</span>}
-                            <span className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${show.status === 'published' ? 'bg-green-500 text-white' : show.status === 'draft' ? 'bg-orange-500 text-white' : 'bg-red-500 text-white'}`}>
-                                {show.status === 'published' ? 'Disponible' : show.status === 'draft' ? 'Bientôt' : 'Terminé'}
-                            </span>
-                        </div>
-                        <CardContent className="p-4">
-                            <p className="text-xs font-medium text-gold mb-2 flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {show.period || 'Période non définie'}
-                            </p>
-                            <h3 className="font-bold text-lg mb-1 text-derviche-dark leading-tight cursor-pointer hover:text-derviche hover:underline" onClick={() => handleView(show)}>{show.title}</h3>
-                            <p className="text-sm font-semibold text-foreground mb-1">{show.companyName}</p>
-                            <div className="mb-2">
-                                <Badge className="bg-derviche/10 text-derviche border-derviche/20 cursor-pointer hover:bg-derviche/20" onClick={() => handleNavigateToRepresentations(show.id)}>
-                                    <Calendar className="w-3 h-3 mr-1" />
-                                    {show.representationsCount} représentations
-                                </Badge>
-                            </div>
-                            <div className="flex items-center gap-1 pt-3 mt-3 border-t">
-                                <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => void handleCopyLink(show)}>
-                                    {copiedShowId === show.id ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                                </Button>
-                                <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleView(show)}><Eye className="w-4 h-4" /></Button>
-                                {hasFullAccess && <Button variant="ghost" size="sm" className="flex-1 h-9" onClick={() => handleEdit(show)}><Pencil className="w-4 h-4" /></Button>}
-                                {hasFullAccess && <Button variant="ghost" size="sm" className="flex-1 h-9 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => void handleDeleteClick(show)}><Trash2 className="w-4 h-4" /></Button>}
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* === MODALES === */}
-
-            {/* Modale création/édition de spectacle */}
-            <SpectacleFormDialog
-                open={isFormDialogOpen}
-                onOpenChange={setIsFormDialogOpen}
-                editingShow={editingShowRaw}
-                onSubmit={(data, isEditing) => handleFormSubmit(data, isEditing)}
-                companies={companies}
-                categories={categoryOptions}
-                targetAudiences={targetAudiences}
-                dervisheUsers={dervisheUsers}
-                onOpenCategoriesManager={() => setIsCategoriesDialogOpen(true)}
-                onOpenTargetAudiencesManager={() => setIsAudiencesDialogOpen(true)}
-                onOpenNewCompanyDialog={() => setIsNewCompanyDialogOpen(true)}
-                newlyCreatedCompanyId={newlyCreatedCompanyId}
-                onClearNewlyCreatedCompanyId={() => setNewlyCreatedCompanyId(null)}
-                onDelete={editingShow ? () => void handleDeleteClick(editingShow) : undefined}
-            />
-
-            {/* Modale de visualisation */}
-            <SpectacleViewDialog
-                show={viewingShowRaw}
-                categories={rawCategories}
-                targetAudiences={rawTargetAudiences}
-                onClose={() => {
-                    setViewingShow(null);
-                    setViewingShowRaw(null);
-                }}
-                onEdit={handleViewToEdit}
-                onDelete={handleViewToDelete}
-                onCopyLink={(show) => void handleCopyLink(show)}
-                copiedShowId={copiedShowId}
-                onNavigateToRepresentations={handleNavigateToRepresentations}
-                dervisheUsers={dervisheUsers}
-            />
-
-            {/* Modale de gestion des catégories */}
-            <CategoryManagerDialog
-                open={isCategoriesDialogOpen}
-                onOpenChange={setIsCategoriesDialogOpen}
-                categories={rawCategories}
-                onAddCategory={(name) => handleAddCategory(name)}
-                onRemoveCategory={(id) => handleRemoveCategoryById(id)}
-            />
-
-            {/* Modale de gestion des publics cibles */}
-            <TargetAudienceManagerDialog
-                open={isAudiencesDialogOpen}
-                onOpenChange={setIsAudiencesDialogOpen}
-                targetAudiences={targetAudiences}
-                onAddTargetAudience={(name) => handleAddTargetAudience(name)}
-                onRemoveTargetAudience={(id) => handleRemoveTargetAudience(id)}
-            />
-
-            {/* Modale création de compagnie */}
-            <CompanyQuickCreateDialog
-                open={isNewCompanyDialogOpen}
-                onOpenChange={setIsNewCompanyDialogOpen}
-                onCreateCompany={(data) => handleCreateCompany(data)}
-                onCompanyCreated={handleCompanyCreated}
-            />
-
-            {/* Modale de confirmation de suppression */}
-            <DeleteConfirmDialog
-                open={showToDelete !== null}
-                onOpenChange={(open) => {
-                    if (!open && !isDeleting) {
-                        setShowToDelete(null);
-                        setDeleteWarning(null);
-                        pendingDeleteCheckRef.current = null;
-                    }
-                }}
-                onConfirm={() => void handleConfirmDelete()}
-                title="Supprimer ce spectacle ?"
-                description={
-                    deleteWarning
-                        ? `${deleteWarning} Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ?`
-                        : `Êtes-vous sûr de vouloir supprimer le spectacle « ${showToDelete?.title} » ? Cette action est irréversible.`
-                }
-                isSubmitting={isDeleting}
-            />
+      <div
+        className="flex items-center justify-center min-h-[400px]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="animate-pulse text-muted-foreground">
+          <span className="sr-only">Initialisation de la page</span>
+          Chargement...
         </div>
+      </div>
     );
+  }
+
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center min-h-[400px]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="animate-pulse text-muted-foreground">
+          <span className="sr-only">Chargement des spectacles en cours</span>
+          Chargement des spectacles...
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingError) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center min-h-[400px] gap-4"
+        role="alert"
+        aria-live="assertive"
+      >
+        <AlertCircle className="w-12 h-12 text-destructive" aria-hidden="true" />
+        <p className="text-destructive">Erreur: {loadingError}</p>
+        <Button
+          onClick={() => void handleRefetch()}
+          aria-label="Réessayer le chargement des données"
+        >
+          Réessayer
+        </Button>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // Props communes pour les vues
+  // ============================================================================
+
+  const viewProps = {
+    shows: filteredShows,
+    onView: handleView,
+    onEdit: handleEdit,
+    onDelete: handleDeleteClick,
+    onCopyLink: copyLink,
+    onNavigateToRepresentations: handleNavigateToRepresentations,
+    copiedShowId,
+    hasFullAccess,
+  };
+
+  // ============================================================================
+  // Rendu
+  // ============================================================================
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <AdminPageHeader
+        title="Gestion des Spectacles"
+        actionLabel={hasFullAccess ? 'Ajouter un spectacle' : undefined}
+        onAction={hasFullAccess ? handleCreate : undefined}
+      />
+
+      {/* Message d'erreur global */}
+      {operationError && (
+        <div
+          className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3"
+          role="alert"
+          aria-live="assertive"
+        >
+          <AlertCircle className="w-5 h-5 text-destructive shrink-0" aria-hidden="true" />
+          <p className="text-sm text-destructive">{operationError}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearOperationError}
+            className="ml-auto"
+            aria-label="Fermer le message d'erreur"
+          >
+            Fermer
+          </Button>
+        </div>
+      )}
+
+      {/* Message d'erreur de copie */}
+      {copyError && (
+        <div
+          className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3"
+          role="alert"
+          aria-live="polite"
+        >
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" aria-hidden="true" />
+          <p className="text-sm text-amber-700">{copyError}</p>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearCopyError}
+            className="ml-auto text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+            aria-label="Fermer le message d'erreur de copie"
+          >
+            Fermer
+          </Button>
+        </div>
+      )}
+
+      {/* Filtres */}
+      <SpectacleFiltersBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        totalCount={shows.length}
+        filteredCount={filteredShows.length}
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={resetFilters}
+      />
+
+      {/* Vues */}
+      {viewMode === 'list' && <SpectacleTableView {...viewProps} />}
+      {viewMode === 'grid' && <SpectacleGridView {...viewProps} />}
+      <SpectacleMobileView {...viewProps} />
+
+      {/* Modales */}
+      <SpectacleModals
+        // Form dialog
+        isFormDialogOpen={isFormDialogOpen}
+        onFormDialogOpenChange={handleFormDialogOpenChange}
+        editingShowRaw={editingShowRaw}
+        onFormSubmit={handleFormSubmit}
+        companies={companies}
+        categories={categoryOptions}
+        targetAudiences={targetAudiences}
+        dervisheUsers={dervisheUsers}
+        newlyCreatedCompanyId={newlyCreatedCompanyId}
+        onClearNewlyCreatedCompanyId={handleClearNewlyCreatedCompanyId}
+        onOpenCategoriesManager={handleOpenCategoriesManager}
+        onOpenTargetAudiencesManager={handleOpenTargetAudiencesManager}
+        onOpenNewCompanyDialog={handleOpenNewCompanyDialog}
+        onDeleteFromForm={editingShow ? handleDeleteFromForm : undefined}
+        // View dialog
+        viewingShowRaw={viewingShowRaw}
+        rawCategories={rawCategories}
+        rawTargetAudiences={rawTargetAudiences}
+        onCloseView={handleCloseView}
+        onViewToEdit={handleViewToEdit}
+        onViewToDelete={handleViewToDelete}
+        onCopyLinkFromView={copyLink}
+        copiedShowId={copiedShowId}
+        onNavigateToRepresentations={handleNavigateToRepresentations}
+        // Category manager
+        isCategoriesDialogOpen={isCategoriesDialogOpen}
+        onCategoriesDialogOpenChange={setIsCategoriesDialogOpen}
+        onAddCategory={handleAddCategory}
+        onRemoveCategory={handleRemoveCategoryById}
+        // Target audience manager
+        isAudiencesDialogOpen={isAudiencesDialogOpen}
+        onAudiencesDialogOpenChange={setIsAudiencesDialogOpen}
+        onAddTargetAudience={handleAddTargetAudience}
+        onRemoveTargetAudience={handleRemoveTargetAudience}
+        // Company quick create
+        isNewCompanyDialogOpen={isNewCompanyDialogOpen}
+        onNewCompanyDialogOpenChange={setIsNewCompanyDialogOpen}
+        onCreateCompany={handleCreateCompany}
+        onCompanyCreated={handleCompanyCreated}
+        // Delete confirm
+        showToDelete={showToDelete}
+        deleteWarning={deleteWarning}
+        isDeleting={isDeleting}
+        onDeleteDialogOpenChange={handleDeleteDialogOpenChange}
+        onConfirmDelete={handleConfirmDelete}
+      />
+    </div>
+  );
 }
