@@ -12,7 +12,7 @@ import {
   ReservationRowSkeleton,
   EmptyReservations,
 } from '@/components/accueil';
-import { ErrorState } from './ErrorState';
+import { ErrorState } from '@/components/pwa';
 
 interface ReservationsContentProps {
   isLoading: boolean;

@@ -10,17 +10,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { History, RefreshCw } from 'lucide-react';
+import { History, RefreshCw, Theater } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SlotCardSkeleton } from '@/components/accueil';
 import { useShowSlots, DEFAULT_PAST_DAYS_LIMIT } from './hooks/useShowSlots';
+import { EmptyState, ErrorState, LoadingOverlay } from '@/components/pwa';
 import {
   TabFilters,
   ShowHeader,
-  EmptyState,
-  ErrorState,
   DateSection,
-  LoadingOverlay,
 } from './components';
 
 // ============================================
@@ -104,7 +102,15 @@ export default function ShowSlotsPage() {
 
         {/* Liste vide */}
         {!isLoading && !error && displayedSlots.length === 0 && (
-          <EmptyState activeTab={activeTab} />
+          <EmptyState
+            icon={activeTab === 'upcoming' ? Theater : History}
+            title={activeTab === 'upcoming' ? 'Aucune représentation à venir' : 'Aucune représentation passée'}
+            message={
+              activeTab === 'upcoming'
+                ? "Ce spectacle n'a pas de représentation à venir accessible."
+                : "Ce spectacle n'a pas encore eu de représentation."
+            }
+          />
         )}
 
         {/* Slots aujourd'hui (uniquement pour l'onglet "À venir") */}
@@ -161,7 +167,7 @@ export default function ShowSlotsPage() {
       </main>
 
       {/* Indicateur de chargement overlay */}
-      <LoadingOverlay isVisible={isLoading && hasSlots} />
+      <LoadingOverlay visible={isLoading && hasSlots} />
     </div>
   );
 }

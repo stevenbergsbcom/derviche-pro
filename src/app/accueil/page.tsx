@@ -16,11 +16,10 @@ import { useCheckinAccess } from '@/hooks';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { useShowsFiltering } from './hooks/useShowsFiltering';
+import { Theater } from 'lucide-react';
+import { EmptyState, ErrorState, LoadingOverlay } from '@/components/pwa';
 import {
   ShowCardSkeleton,
-  EmptyState,
-  ErrorState,
-  LoadingOverlay,
   HeaderSection,
   TabFilters,
   ShowsList,
@@ -117,7 +116,17 @@ export default function AccueilPage() {
         )}
 
         {/* État : Liste vide globale */}
-        {showEmptyGlobal && <EmptyState isAdmin={isAdmin} />}
+        {showEmptyGlobal && (
+          <EmptyState
+            icon={Theater}
+            title="Aucun spectacle"
+            message={
+              isAdmin
+                ? 'Aucun spectacle avec des représentations à venir.'
+                : "Vous n'êtes assigné à aucune représentation à venir."
+            }
+          />
+        )}
 
         {/* Contenu onglet "À venir" */}
         {!isLoadingShows && !showsError && activeTab === 'upcoming' && (
