@@ -12,6 +12,8 @@ export interface SearchInputProps {
   placeholder?: string;
   /** Classes CSS additionnelles pour le container */
   className?: string;
+  /** Label accessible pour les lecteurs d'écran */
+  ariaLabel?: string;
 }
 
 /**
@@ -22,6 +24,7 @@ export function SearchInput({
   onChange,
   placeholder = 'Rechercher...',
   className = '',
+  ariaLabel,
 }: SearchInputProps) {
   return (
     <div className={`relative w-full lg:max-w-md ${className}`}>
@@ -37,6 +40,7 @@ export function SearchInput({
         data-form-type="other"
         data-1p-ignore="true"
         data-lpignore="true"
+        aria-label={ariaLabel || placeholder}
       />
     </div>
   );
