@@ -182,14 +182,11 @@ export default function AccueilLayout({
     }
   }, [isLoading, isAuthenticated, role, hasRoleFetchError, router]);
 
-  // Chargement
-  if (isLoading) {
+  // Chargement ou déconnexion en cours
+  // Note: On affiche LoadingScreen au lieu de AccessDenied pour éviter un flash
+  // lors de la déconnexion (le useEffect redirige vers /login)
+  if (isLoading || !isAuthenticated) {
     return <LoadingScreen />;
-  }
-
-  // Non authentifié
-  if (!isAuthenticated) {
-    return <AccessDenied message="Vous devez être connecté pour accéder à cette interface." />;
   }
 
   // Erreur de récupération du rôle

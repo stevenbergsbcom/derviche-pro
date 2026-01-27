@@ -33,7 +33,8 @@ export function useShowSlots(): UseShowSlotsReturn {
     loadSlots, 
     shows, 
     isAuthLoading, 
-    role 
+    role,
+    companyId,
   } = useCheckinAccess();
 
   // ============================================
@@ -85,6 +86,10 @@ export function useShowSlots(): UseShowSlotsReturn {
       // (le layout redirigera si pas autorisé)
       if (!role || !showSlug) return;
       
+      // Pour le rôle company, attendre que companyId soit chargé
+      // (évite l'erreur "Compte compagnie non configuré" au premier rendu)
+      if (role === 'company' && companyId === null) return;
+      
       // Éviter les doubles chargements pour le même slug
       if (loadedSlugRef.current === showSlug) return;
 
@@ -105,7 +110,7 @@ export function useShowSlots(): UseShowSlotsReturn {
       cancelled = true;
     };
     // Note: loadSlots est stable (useCallback dans useCheckinAccess)
-  }, [isAuthLoading, role, showSlug, loadSlots]);
+  }, [isAuthLoading, role, companyId, showSlug, loadSlots]);
 
   // ============================================
   // HANDLERS
