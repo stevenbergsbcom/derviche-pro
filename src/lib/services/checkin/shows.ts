@@ -3,6 +3,8 @@
  * Derviche Diffusion
  * 
  * Gestion de l'accès aux spectacles selon le rôle utilisateur.
+ * 
+ * Session S90: Optimisé avec RPC PostgreSQL get_accessible_shows
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -11,11 +13,32 @@ import type { UserRole } from '@/hooks/useCurrentUserRole';
 
 import type { CheckinShow, CheckinShowsResult } from './types';
 import { ADMIN_ROLES } from './constants';
-import { isValidCompany, isValidVenue, isValidRawSlot } from './guards';
+
+/**
+ * Type retourné par la RPC get_accessible_shows
+ */
+interface AccessibleShowRow {
+  id: string;
+  slug: string;
+  title: string;
+  image_url: string | null;
+  company_id: string;
+  company_name: string;
+  upcoming_slots_count: number;
+  past_slots_count: number;
+  next_slot_id: string | null;
+  next_slot_date: string | null;
+  next_slot_time: string | null;
+  next_slot_venue_name: string | null;
+  last_slot_id: string | null;
+  last_slot_date: string | null;
+  last_slot_time: string | null;
+  last_slot_venue_name: string | null;
+}
 
 /**
  * Récupère les spectacles accessibles pour l'utilisateur courant
- * Filtre selon le rôle et les assignations
+ * Utilise la RPC PostgreSQL optimisée pour les performances
  * 
  * Logique d'accès :
  * - super-admin / admin : TOUS les spectacles avec représentations
@@ -28,63 +51,34 @@ export async function getAccessibleShows(
   companyId: string | null
 ): Promise<CheckinShowsResult> {
   try {
-    logger.info('checkin.getAccessibleShows - Début', { userId, role, companyId });
+    logger.info('checkin.getAccessibleShows - Début (RPC)', { userId, role, companyId });
 
-    const supabase = createClient();
+    // Validation précoce
+    if (!userId) {
+      return { data: [], error: 'User ID requis' };
+    }
 
-    // Récupérer les spectacles avec leurs slots (passés et futurs)
-    let query = supabase
-      .from('shows')
-      .select(`
-        id,
-        slug,
-        title,
-        image_url,
-        companies!inner (
-          id,
-          name
-        ),
-        slots!inner (
-          id,
-          date,
-          time,
-          hosted_by,
-          hosted_by_id,
-          venues (
-            id,
-            name
-          )
-        )
-      `)
-      .is('deleted_at', null)
-      .eq('status', 'published')
-      .order('title', { ascending: true });
-
-    // Filtrer selon le rôle
-    if (ADMIN_ROLES.includes(role)) {
-      // Admin : tous les spectacles avec slots à venir
-      // Pas de filtre supplémentaire
-    } else if (role === 'externe') {
-      // Externe : seulement les slots où il est hosted_by_id
-      query = query.eq('slots.hosted_by_id', userId);
-    } else if (role === 'company') {
-      // Compagnie : spectacles de sa compagnie avec hosted_by = 'company'
-      if (!companyId) {
-        logger.warn('checkin.getAccessibleShows - Rôle company sans company_id');
-        return { data: [], error: 'Compte compagnie non configuré' };
-      }
-      query = query
-        .eq('company_id', companyId)
-        .eq('slots.hosted_by', 'company');
-    } else {
+    if (!['super-admin', 'admin', 'externe', 'company'].includes(role)) {
       logger.warn('checkin.getAccessibleShows - Rôle non autorisé', { role });
       return { data: [], error: 'Rôle non autorisé pour l\'accueil' };
     }
 
-    const { data, error } = await query;
+    if (role === 'company' && !companyId) {
+      logger.warn('checkin.getAccessibleShows - Rôle company sans company_id');
+      return { data: [], error: 'Compte compagnie non configuré' };
+    }
+
+    const supabase = createClient();
+
+    // Appel de la RPC optimisée
+    const { data, error } = await supabase.rpc('get_accessible_shows', {
+      p_user_id: userId,
+      p_role: role,
+      p_company_id: companyId,
+    });
 
     if (error) {
-      logger.error('checkin.getAccessibleShows - Erreur Supabase', { error });
+      logger.error('checkin.getAccessibleShows - Erreur RPC', { error });
       return { data: [], error: error.message };
     }
 
@@ -93,81 +87,33 @@ export async function getAccessibleShows(
       return { data: [], error: null };
     }
 
-    // Transformer et agréger les données
-    const showsMap = new Map<string, CheckinShow>();
+    // Transformer les données RPC vers le format CheckinShow
+    const shows: CheckinShow[] = (data as AccessibleShowRow[]).map((row) => ({
+      id: row.id,
+      slug: row.slug,
+      title: row.title,
+      imageUrl: row.image_url,
+      company: {
+        id: row.company_id,
+        name: row.company_name,
+      },
+      upcomingSlotsCount: row.upcoming_slots_count,
+      pastSlotsCount: row.past_slots_count,
+      nextSlot: row.next_slot_id ? {
+        id: row.next_slot_id,
+        date: row.next_slot_date!,
+        time: row.next_slot_time!,
+        venueName: row.next_slot_venue_name ?? 'Lieu inconnu',
+      } : null,
+      lastSlot: row.last_slot_id ? {
+        id: row.last_slot_id,
+        date: row.last_slot_date!,
+        time: row.last_slot_time!,
+        venueName: row.last_slot_venue_name ?? 'Lieu inconnu',
+      } : null,
+    }));
 
-    for (const show of data) {
-      // Valider et extraire les données de la compagnie
-      if (!isValidCompany(show.companies)) {
-        logger.warn('checkin.getAccessibleShows - Compagnie invalide', { showId: show.id });
-        continue;
-      }
-      const company = show.companies;
-      
-      // Valider et filtrer les slots
-      const rawSlots = Array.isArray(show.slots) ? show.slots : [];
-      const validSlots = rawSlots
-        .filter(isValidRawSlot)
-        .sort((a, b) => {
-          const dateA = new Date(`${a.date}T${a.time}`);
-          const dateB = new Date(`${b.date}T${b.time}`);
-          return dateA.getTime() - dateB.getTime();
-        });
-
-      if (validSlots.length === 0) continue;
-
-      // Séparer les slots passés et à venir (aujourd'hui = à venir)
-      const today = new Date().toISOString().split('T')[0];
-      const upcomingSlots = validSlots.filter((s) => s.date >= today);
-      const pastSlots = validSlots.filter((s) => s.date < today);
-
-      // Trouver le prochain slot (à venir)
-      const nextSlot = upcomingSlots[0] ?? null;
-      // Trouver le dernier slot passé (le plus récent = dernier du tableau)
-      const lastSlot = pastSlots[pastSlots.length - 1] ?? null;
-
-      // Créer ou mettre à jour l'entrée
-      const existing = showsMap.get(show.id);
-      if (!existing) {
-        showsMap.set(show.id, {
-          id: show.id,
-          slug: show.slug,
-          title: show.title,
-          imageUrl: show.image_url,
-          company: {
-            id: company.id,
-            name: company.name,
-          },
-          upcomingSlotsCount: upcomingSlots.length,
-          pastSlotsCount: pastSlots.length,
-          nextSlot: nextSlot ? {
-            id: nextSlot.id,
-            date: nextSlot.date,
-            time: nextSlot.time,
-            venueName: isValidVenue(nextSlot.venues) ? nextSlot.venues.name : 'Lieu inconnu',
-          } : null,
-          lastSlot: lastSlot ? {
-            id: lastSlot.id,
-            date: lastSlot.date,
-            time: lastSlot.time,
-            venueName: isValidVenue(lastSlot.venues) ? lastSlot.venues.name : 'Lieu inconnu',
-          } : null,
-        });
-      }
-    }
-
-    const shows = Array.from(showsMap.values());
-    
-    // Trier par date du prochain slot
-    shows.sort((a, b) => {
-      if (!a.nextSlot) return 1;
-      if (!b.nextSlot) return -1;
-      const dateA = new Date(`${a.nextSlot.date}T${a.nextSlot.time}`);
-      const dateB = new Date(`${b.nextSlot.date}T${b.nextSlot.time}`);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    logger.info('checkin.getAccessibleShows - Succès', { count: shows.length });
+    logger.info('checkin.getAccessibleShows - Succès (RPC)', { count: shows.length });
     return { data: shows, error: null };
 
   } catch (err) {
