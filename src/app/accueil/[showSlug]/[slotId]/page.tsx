@@ -17,11 +17,11 @@ import {
   TransferSlotDrawer,
 } from '@/components/accueil';
 import { useSlotDetails } from './hooks/useSlotDetails';
+import { LoadingOverlay } from '@/components/pwa';
 import {
   SlotHeader,
   SearchBar,
   ActionBar,
-  LoadingOverlay,
   ReservationsContent,
 } from './components';
 
@@ -111,7 +111,7 @@ export default function SlotReservationsPage() {
       )}
 
       {/* Overlay de chargement (refresh) */}
-      {isLoading && reservations.length > 0 && <LoadingOverlay />}
+      <LoadingOverlay visible={isLoading && reservations.length > 0} />
 
       {/* Drawer de check-in */}
       <CheckinDrawer
