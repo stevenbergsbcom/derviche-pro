@@ -51,17 +51,6 @@ export interface ShowCardProps {
   onClick: () => void;
 }
 
-/** Props pour EmptyState */
-export interface EmptyStateProps {
-  isAdmin: boolean;
-}
-
-/** Props pour ErrorState */
-export interface ErrorStateProps {
-  message: string;
-  onRetry: () => void;
-}
-
 /** Props pour HeaderSection */
 export interface HeaderSectionProps {
   isAdmin: boolean;
@@ -87,11 +76,6 @@ export interface ShowsListProps {
   todayShows?: ShowListItem[];
   /** Pour l'onglet "upcoming" : spectacles à venir (hors aujourd'hui) */
   laterShows?: ShowListItem[];
-}
-
-/** Props pour LoadingOverlay */
-export interface LoadingOverlayProps {
-  visible: boolean;
 }
 
 /** Props pour EmptyTabMessage */

@@ -77,7 +77,15 @@ export function useShowSlots(): UseShowSlotsReturn {
 
     const loadInitialSlots = async () => {
       if (cancelled || !isMountedRef.current) return;
-      if (isAuthLoading || !role || !showSlug) return;
+      
+      // Attendre que l'auth soit terminée
+      if (isAuthLoading) return;
+      
+      // Si pas de rôle ou pas de slug, ne pas charger
+      // (le layout redirigera si pas autorisé)
+      if (!role || !showSlug) return;
+      
+      // Éviter les doubles chargements pour le même slug
       if (loadedSlugRef.current === showSlug) return;
 
       loadedSlugRef.current = showSlug;

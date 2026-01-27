@@ -74,12 +74,12 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
 
   // State shows
   const [shows, setShows] = useState<CheckinShow[]>([]);
-  const [isLoadingShows, setIsLoadingShows] = useState(false);
+  const [isLoadingShows, setIsLoadingShows] = useState(true); // true par défaut pour éviter flash "aucun spectacle"
   const [showsError, setShowsError] = useState<string | null>(null);
 
   // State slots
   const [slots, setSlots] = useState<CheckinSlot[]>([]);
-  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(true); // true par défaut pour éviter flash "état vide"
   const [slotsError, setSlotsError] = useState<string | null>(null);
 
   // Ref pour éviter les race conditions
@@ -221,13 +221,23 @@ export function useCheckinAccess(): UseCheckinAccessReturn {
 
   // Charger les spectacles au montage (une fois auth prêt)
   useEffect(() => {
-    if (!isAuthLoading && user && role) {
-      // Pour company, attendre companyId
-      if (role === 'company' && companyId === null) {
-        return;
-      }
-      void loadShows();
+    // Si pas d'utilisateur ou pas de rôle, on ne charge pas
+    if (!isAuthLoading && (!user || !role)) {
+      setIsLoadingShows(false);
+      return;
     }
+
+    // Attendre que l'auth soit terminée
+    if (isAuthLoading) {
+      return;
+    }
+
+    // Pour company, attendre companyId
+    if (role === 'company' && companyId === null) {
+      return;
+    }
+
+    void loadShows();
   }, [isAuthLoading, user, role, companyId, loadShows]);
 
   return {

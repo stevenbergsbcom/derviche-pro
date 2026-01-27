@@ -35,28 +35,12 @@ export interface ShowHeaderProps {
   pastDaysLimit: number;
 }
 
-/** Props EmptyState */
-export interface EmptyStateProps {
-  activeTab: TabFilter;
-}
-
-/** Props ErrorState */
-export interface ErrorStateProps {
-  message: string;
-  onRetry: () => void;
-}
-
 /** Props DateSection */
 export interface DateSectionProps {
   date: string;
   slots: CheckinSlot[];
   onSlotClick: (slotId: string) => void;
   isPast?: boolean;
-}
-
-/** Props LoadingOverlay */
-export interface LoadingOverlayProps {
-  isVisible: boolean;
 }
 
 // ============================================
