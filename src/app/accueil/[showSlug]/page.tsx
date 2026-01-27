@@ -34,6 +34,7 @@ export default function ShowSlotsPage() {
     error,
     // Données
     showTitle,
+    showImageUrl,
     displayedSlots,
     upcomingSlots,
     pastSlots,
@@ -62,6 +63,7 @@ export default function ShowSlotsPage() {
       {/* En-tête */}
       <ShowHeader
         title={showTitle}
+        imageUrl={showImageUrl}
         slotsCount={displayedSlots.length}
         isLoading={isInitialLoading}
         activeTab={activeTab}

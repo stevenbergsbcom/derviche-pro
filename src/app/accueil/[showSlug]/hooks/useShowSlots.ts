@@ -157,6 +157,12 @@ export function useShowSlots(): UseShowSlotsReturn {
     return foundShow?.title ?? 'Spectacle';
   }, [slots, shows, showSlug]);
 
+  /** Image du spectacle */
+  const showImageUrl = useMemo(() => {
+    const foundShow = shows.find((s) => s.slug === showSlug);
+    return foundShow?.imageUrl ?? null;
+  }, [shows, showSlug]);
+
   /** Séparer les slots en "à venir" et "passés" */
   const { upcomingSlots, pastSlots } = useMemo(() => {
     const upcoming: CheckinSlot[] = [];
@@ -223,6 +229,7 @@ export function useShowSlots(): UseShowSlotsReturn {
     
     // Données
     showTitle,
+    showImageUrl,
     displayedSlots,
     upcomingSlots,
     pastSlots,

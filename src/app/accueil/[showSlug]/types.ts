@@ -27,6 +27,7 @@ export interface TabFiltersProps {
 /** Props ShowHeader */
 export interface ShowHeaderProps {
   title: string;
+  imageUrl: string | null;
   slotsCount: number;
   isLoading: boolean;
   activeTab: TabFilter;
@@ -72,6 +73,7 @@ export interface UseShowSlotsReturn {
   
   // Données
   showTitle: string;
+  showImageUrl: string | null;
   displayedSlots: CheckinSlot[];
   upcomingSlots: CheckinSlot[];
   pastSlots: CheckinSlot[];
