@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Theater } from 'lucide-react';
@@ -22,6 +22,11 @@ export function ShowHeader({
 }: ShowHeaderProps) {
   // État pour gérer l'erreur de chargement d'image
   const [imageLoadError, setImageLoadError] = useState(false);
+
+  // Reset l'erreur quand l'image change (changement de spectacle)
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [imageUrl]);
 
   // Construire le label du compteur
   const buildLabel = (): string => {
