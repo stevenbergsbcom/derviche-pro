@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -27,43 +27,56 @@ interface NavItem {
     label: string;
     href: string;
     icon: React.ComponentType<{ className?: string }>;
+    /** Rôles autorisés à voir ce lien. Si undefined, visible par tous les rôles internes */
+    allowedRoles?: InternalRole[];
 }
 
+/** Rôles avec accès admin complet */
+const FULL_ACCESS_ROLES: InternalRole[] = ['super-admin', 'admin'];
+
+/** Configuration des liens de navigation avec permissions */
 const navItems: NavItem[] = [
     {
         label: 'Tableau de bord',
         href: '/admin',
         icon: LayoutDashboard,
+        // Visible par tous les rôles internes
     },
     {
         label: 'Réservations',
         href: '/admin/reservations',
         icon: Calendar,
+        // Visible par tous les rôles internes
     },
     {
         label: 'Spectacles',
         href: '/admin/spectacles',
         icon: Film,
+        // Visible par tous les rôles internes
     },
     {
         label: 'Lieux',
         href: '/admin/lieux',
         icon: MapPin,
+        allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
     },
     {
         label: 'Compagnies',
         href: '/admin/compagnies',
         icon: Users,
+        allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
     },
     {
         label: 'Utilisateurs',
         href: '/admin/utilisateurs',
         icon: UserCog,
+        allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
     },
     {
         label: 'Préférences',
         href: '/admin/preferences',
         icon: Settings,
+        allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
     },
 ];
 
@@ -84,7 +97,8 @@ interface SidebarUserData {
     firstName: string | null;
     lastName: string | null;
     email: string;
-    role: string;
+    role: InternalRole | null;
+    roleLabel: string;
 }
 
 export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
@@ -119,21 +133,23 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 if (profile) {
                     // Extraire le rôle (peut être un tableau ou un objet)
                     const userRoles = profile.user_roles;
-                    let roleValue = 'Utilisateur';
+                    let role: InternalRole | null = null;
+                    let roleLabel = 'Utilisateur';
                     
                     if (Array.isArray(userRoles) && userRoles.length > 0) {
-                        const role = (userRoles[0] as { role: string }).role;
-                        roleValue = ROLE_LABELS[role as InternalRole] || role;
+                        role = (userRoles[0] as { role: string }).role as InternalRole;
+                        roleLabel = ROLE_LABELS[role] || role;
                     } else if (userRoles && typeof userRoles === 'object' && 'role' in userRoles) {
-                        const role = (userRoles as { role: string }).role;
-                        roleValue = ROLE_LABELS[role as InternalRole] || role;
+                        role = (userRoles as { role: string }).role as InternalRole;
+                        roleLabel = ROLE_LABELS[role] || role;
                     }
 
                     setUserData({
                         firstName: profile.first_name,
                         lastName: profile.last_name,
                         email: profile.email,
-                        role: roleValue,
+                        role,
+                        roleLabel,
                     });
                 }
             } catch (error) {
@@ -145,6 +161,18 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
 
         void fetchUserData();
     }, []);
+
+    // Filtrer les liens de navigation selon le rôle de l'utilisateur
+    const filteredNavItems = useMemo(() => {
+        if (!userData?.role) return navItems; // Afficher tous pendant le chargement
+        
+        return navItems.filter((item) => {
+            // Si pas de restriction, visible par tous
+            if (!item.allowedRoles) return true;
+            // Sinon, vérifier que le rôle est dans la liste autorisée
+            return item.allowedRoles.includes(userData.role as InternalRole);
+        });
+    }, [userData?.role]);
 
     // Formater le nom d'affichage
     const displayName = userData
@@ -205,7 +233,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                 {/* Navigation */}
                 <nav className="flex-1 py-4 px-3 overflow-y-auto">
                     <ul className="space-y-1">
-                        {navItems.map((item) => {
+                        {filteredNavItems.map((item) => {
                             const Icon = item.icon;
                             // Pour /admin (tableau de bord), actif uniquement sur exact match
                             // Pour les autres routes, actif sur exact match ou sous-routes
@@ -258,7 +286,7 @@ export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
                             </div>
                         ) : (
                             <>
-                                <p className="text-sm font-medium text-gold">{userData?.role || 'Utilisateur'}</p>
+                                <p className="text-sm font-medium text-gold">{userData?.roleLabel || 'Utilisateur'}</p>
                                 <p className="text-sm text-white truncate">{displayName}</p>
                             </>
                         )}

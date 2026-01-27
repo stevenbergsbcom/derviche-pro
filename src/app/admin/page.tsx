@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAdminDashboard } from '@/hooks/useAdminDashboard';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
@@ -24,6 +24,73 @@ import {
   Settings,
 } from 'lucide-react';
 import Link from 'next/link';
+
+// ============================================
+// TYPES
+// ============================================
+
+interface QuickLinkItem {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+  /** Nécessite un accès complet (super-admin/admin) ? */
+  requiresFullAccess?: boolean;
+}
+
+// ============================================
+// CONSTANTS
+// ============================================
+
+/** Configuration des liens d'accès rapide avec permissions */
+const QUICK_LINKS: QuickLinkItem[] = [
+  {
+    href: '/admin/spectacles',
+    icon: Theater,
+    title: 'Spectacles',
+    description: 'Voir les spectacles',
+  },
+  {
+    href: '/admin/reservations',
+    icon: Ticket,
+    title: 'Réservations',
+    description: 'Voir les réservations',
+  },
+  {
+    href: '/admin/lieux',
+    icon: MapPin,
+    title: 'Lieux',
+    description: 'Gérer les salles',
+    requiresFullAccess: true,
+  },
+  {
+    href: '/admin/utilisateurs',
+    icon: UserCheck,
+    title: 'Utilisateurs',
+    description: 'Gérer les comptes',
+    requiresFullAccess: true,
+  },
+  {
+    href: '/admin/compagnies',
+    icon: Building2,
+    title: 'Compagnies',
+    description: 'Gérer les compagnies',
+    requiresFullAccess: true,
+  },
+  {
+    href: '/accueil',
+    icon: Calendar,
+    title: 'Check-in',
+    description: 'Accueil des invités',
+  },
+  {
+    href: '/admin/preferences',
+    icon: Settings,
+    title: 'Préférences',
+    description: 'Configuration',
+    requiresFullAccess: true,
+  },
+];
 
 // ============================================
 // HELPERS
@@ -203,8 +270,19 @@ function QuickLink({
 // ============================================
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, error, refresh } = useAdminDashboard();
+  const { data, isLoading, error, hasFullAccess, refresh } = useAdminDashboard();
   const [firstName, setFirstName] = useState<string | null>(null);
+
+  // Filtrer les liens d'accès rapide selon les permissions
+  const filteredQuickLinks = useMemo(() => {
+    return QUICK_LINKS.filter(link => {
+      // Si le lien nécessite un accès complet, vérifier les permissions
+      if (link.requiresFullAccess) {
+        return hasFullAccess;
+      }
+      return true;
+    });
+  }, [hasFullAccess]);
 
   // Récupérer le prénom de l'utilisateur connecté
   useEffect(() => {
@@ -274,7 +352,7 @@ export default function AdminDashboardPage() {
           <StatCard
             title="Spectacles actifs"
             value={data.stats.total_shows_active}
-            description="Publiés sur le catalogue"
+            description={hasFullAccess ? "Publiés sur le catalogue" : "Vos spectacles assignés"}
             icon={Theater}
           />
           <StatCard
@@ -306,48 +384,15 @@ export default function AdminDashboardPage() {
       <div>
         <h2 className="text-lg font-semibold mb-4">Accès rapides</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <QuickLink
-            href="/admin/spectacles"
-            icon={Theater}
-            title="Spectacles"
-            description="Gérer les spectacles"
-          />
-          <QuickLink
-            href="/admin/reservations"
-            icon={Ticket}
-            title="Réservations"
-            description="Voir les réservations"
-          />
-          <QuickLink
-            href="/admin/lieux"
-            icon={MapPin}
-            title="Lieux"
-            description="Gérer les salles"
-          />
-          <QuickLink
-            href="/admin/utilisateurs"
-            icon={UserCheck}
-            title="Utilisateurs"
-            description="Gérer les comptes"
-          />
-          <QuickLink
-            href="/admin/compagnies"
-            icon={Building2}
-            title="Compagnies"
-            description="Gérer les compagnies"
-          />
-          <QuickLink
-            href="/accueil"
-            icon={Calendar}
-            title="Check-in"
-            description="Accueil des invités"
-          />
-          <QuickLink
-            href="/admin/preferences"
-            icon={Settings}
-            title="Préférences"
-            description="Configuration"
-          />
+          {filteredQuickLinks.map((link) => (
+            <QuickLink
+              key={link.href}
+              href={link.href}
+              icon={link.icon}
+              title={link.title}
+              description={link.description}
+            />
+          ))}
         </div>
       </div>
 
@@ -358,7 +403,9 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg">Prochaines représentations</CardTitle>
-              <CardDescription>Les 10 prochains créneaux</CardDescription>
+              <CardDescription>
+                {hasFullAccess ? "Les 10 prochains créneaux" : "Vos 10 prochains créneaux"}
+              </CardDescription>
             </div>
             <Link href="/admin/spectacles">
               <Button variant="ghost" size="sm">
@@ -415,7 +462,9 @@ export default function AdminDashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-lg">Réservations récentes</CardTitle>
-              <CardDescription>Les 10 dernières réservations</CardDescription>
+              <CardDescription>
+                {hasFullAccess ? "Les 10 dernières réservations" : "Vos 10 dernières réservations"}
+              </CardDescription>
             </div>
             <Link href="/admin/reservations">
               <Button variant="ghost" size="sm">

@@ -3,6 +3,7 @@
  * Derviche Diffusion
  * 
  * Récupère les données pour le tableau de bord administrateur
+ * Supporte le filtrage par spectacles assignés (pour les externes)
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -70,6 +71,12 @@ export interface AdminDashboardData {
 export interface AdminDashboardResult {
   data: AdminDashboardData | null;
   error: string | null;
+}
+
+/** Options pour filtrer les données (externes) */
+export interface AdminDashboardOptions {
+  /** Liste des show_id auxquels l'utilisateur a accès (null = accès complet) */
+  assignedShowIds?: string[] | null;
 }
 
 // ============================================
@@ -159,9 +166,12 @@ function calculateOccupancyRate(capacity: number, remainingCapacity: number): nu
 
 /**
  * Récupère les statistiques globales
+ * @param options - Options de filtrage (assignedShowIds pour les externes)
  */
-async function getStats(): Promise<{ data: AdminDashboardStats; error: string | null }> {
+async function getStats(options?: AdminDashboardOptions): Promise<{ data: AdminDashboardStats; error: string | null }> {
   const errors: string[] = [];
+  const { assignedShowIds } = options || {};
+  const hasFilter = assignedShowIds && assignedShowIds.length > 0;
   
   try {
     const supabase = createClient();
@@ -175,73 +185,161 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
     monday.setDate(now.getDate() - diffToMonday);
     const weekStart = monday.toISOString().split('T')[0];
 
-    // 1. Spectacles actifs
-    const { count: showsCount, error: showsError } = await supabase
+    // 1. Spectacles actifs (filtrés si externe)
+    let showsQuery = supabase
       .from('shows')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'published')
       .is('deleted_at', null);
+    
+    if (hasFilter) {
+      showsQuery = showsQuery.in('id', assignedShowIds);
+    }
+
+    const { count: showsCount, error: showsError } = await showsQuery;
 
     if (showsError) {
       logger.error('Erreur comptage spectacles', { error: showsError.message });
       errors.push('spectacles');
     }
 
-    // 2. Créneaux à venir
-    const { count: slotsCount, error: slotsError } = await supabase
+    // 2. Créneaux à venir (filtrés si externe)
+    let slotsQuery = supabase
       .from('slots')
       .select('*', { count: 'exact', head: true })
       .gte('date', today);
+    
+    if (hasFilter) {
+      slotsQuery = slotsQuery.in('show_id', assignedShowIds);
+    }
+
+    const { count: slotsCount, error: slotsError } = await slotsQuery;
 
     if (slotsError) {
       logger.error('Erreur comptage créneaux', { error: slotsError.message });
       errors.push('créneaux');
     }
 
-    // 3. Réservations totales confirmées
-    const { count: totalReservations, error: totalResError } = await supabase
-      .from('reservations')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'confirmed');
+    // 3. Réservations totales confirmées (filtrées si externe)
+    // Pour filtrer par show, on doit joindre avec slots
+    let totalReservations = 0;
+    let totalResError = null;
+
+    if (hasFilter) {
+      // Pour les externes : récupérer les slot_ids de leurs spectacles
+      const { data: slotIds, error: slotIdsError } = await supabase
+        .from('slots')
+        .select('id')
+        .in('show_id', assignedShowIds);
+
+      if (slotIdsError) {
+        logger.error('Erreur récupération slot_ids', { error: slotIdsError.message });
+        errors.push('slot_ids');
+      } else if (slotIds && slotIds.length > 0) {
+        const slotIdList = slotIds.map(s => s.id);
+        const { count, error } = await supabase
+          .from('reservations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'confirmed')
+          .in('slot_id', slotIdList);
+        totalReservations = count ?? 0;
+        totalResError = error;
+      }
+    } else {
+      const { count, error } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'confirmed');
+      totalReservations = count ?? 0;
+      totalResError = error;
+    }
 
     if (totalResError) {
       logger.error('Erreur comptage réservations totales', { error: totalResError.message });
       errors.push('réservations totales');
     }
 
-    // 4. Réservations aujourd'hui
+    // 4 & 5. Réservations aujourd'hui et cette semaine (filtrées si externe)
     const todayStart = `${today}T00:00:00`;
     const todayEnd = `${today}T23:59:59`;
-    const { count: todayReservations, error: todayResError } = await supabase
-      .from('reservations')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'confirmed')
-      .gte('created_at', todayStart)
-      .lte('created_at', todayEnd);
+    let todayReservations = 0;
+    let weekReservations = 0;
 
-    if (todayResError) {
-      logger.error('Erreur comptage réservations aujourd\'hui', { error: todayResError.message });
-      errors.push('réservations du jour');
+    if (hasFilter) {
+      const { data: slotIds } = await supabase
+        .from('slots')
+        .select('id')
+        .in('show_id', assignedShowIds);
+
+      if (slotIds && slotIds.length > 0) {
+        const slotIdList = slotIds.map(s => s.id);
+
+        const { count: todayCount, error: todayResError } = await supabase
+          .from('reservations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'confirmed')
+          .in('slot_id', slotIdList)
+          .gte('created_at', todayStart)
+          .lte('created_at', todayEnd);
+
+        if (todayResError) {
+          logger.error('Erreur comptage réservations aujourd\'hui', { error: todayResError.message });
+          errors.push('réservations du jour');
+        }
+        todayReservations = todayCount ?? 0;
+
+        const { count: weekCount, error: weekResError } = await supabase
+          .from('reservations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'confirmed')
+          .in('slot_id', slotIdList)
+          .gte('created_at', weekStart);
+
+        if (weekResError) {
+          logger.error('Erreur comptage réservations semaine', { error: weekResError.message });
+          errors.push('réservations de la semaine');
+        }
+        weekReservations = weekCount ?? 0;
+      }
+    } else {
+      const { count: todayCount, error: todayResError } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'confirmed')
+        .gte('created_at', todayStart)
+        .lte('created_at', todayEnd);
+
+      if (todayResError) {
+        logger.error('Erreur comptage réservations aujourd\'hui', { error: todayResError.message });
+        errors.push('réservations du jour');
+      }
+      todayReservations = todayCount ?? 0;
+
+      const { count: weekCount, error: weekResError } = await supabase
+        .from('reservations')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'confirmed')
+        .gte('created_at', weekStart);
+
+      if (weekResError) {
+        logger.error('Erreur comptage réservations semaine', { error: weekResError.message });
+        errors.push('réservations de la semaine');
+      }
+      weekReservations = weekCount ?? 0;
     }
 
-    // 5. Réservations cette semaine
-    const { count: weekReservations, error: weekResError } = await supabase
-      .from('reservations')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'confirmed')
-      .gte('created_at', weekStart);
-
-    if (weekResError) {
-      logger.error('Erreur comptage réservations semaine', { error: weekResError.message });
-      errors.push('réservations de la semaine');
-    }
-
-    // 6. Taux de remplissage moyen (sur les créneaux à venir)
-    const { data: upcomingSlots, error: occupancyError } = await supabase
+    // 6. Taux de remplissage moyen (sur les créneaux à venir, filtrés si externe)
+    let occupancyQuery = supabase
       .from('slots')
       .select('capacity, remaining_capacity')
       .gte('date', today)
       .neq('capacity', 999999); // Exclure capacité illimitée
+    
+    if (hasFilter) {
+      occupancyQuery = occupancyQuery.in('show_id', assignedShowIds);
+    }
+
+    const { data: upcomingSlots, error: occupancyError } = await occupancyQuery;
 
     if (occupancyError) {
       logger.error('Erreur calcul taux remplissage', { error: occupancyError.message });
@@ -260,9 +358,9 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
       data: {
         total_shows_active: showsCount ?? 0,
         total_slots_upcoming: slotsCount ?? 0,
-        total_reservations: totalReservations ?? 0,
-        reservations_today: todayReservations ?? 0,
-        reservations_this_week: weekReservations ?? 0,
+        total_reservations: totalReservations,
+        reservations_today: todayReservations,
+        reservations_this_week: weekReservations,
         average_occupancy_rate: averageOccupancy,
       },
       error: errors.length > 0 ? `Erreur partielle: ${errors.join(', ')}` : null,
@@ -286,13 +384,20 @@ async function getStats(): Promise<{ data: AdminDashboardStats; error: string | 
 
 /**
  * Récupère les prochains créneaux
+ * @param limit - Nombre maximum de créneaux à retourner
+ * @param options - Options de filtrage (assignedShowIds pour les externes)
  */
-async function getUpcomingSlots(limit: number = 10): Promise<{ data: AdminUpcomingSlot[]; error: string | null }> {
+async function getUpcomingSlots(
+  limit: number = 10,
+  options?: AdminDashboardOptions
+): Promise<{ data: AdminUpcomingSlot[]; error: string | null }> {
   try {
     const supabase = createClient();
     const today = new Date().toISOString().split('T')[0];
+    const { assignedShowIds } = options || {};
+    const hasFilter = assignedShowIds && assignedShowIds.length > 0;
 
-    const { data: slots, error: slotsError } = await supabase
+    let query = supabase
       .from('slots')
       .select(`
         id, show_id, venue_id, date, time, capacity, remaining_capacity, hosted_by,
@@ -303,6 +408,12 @@ async function getUpcomingSlots(limit: number = 10): Promise<{ data: AdminUpcomi
       .order('date', { ascending: true })
       .order('time', { ascending: true })
       .limit(limit);
+
+    if (hasFilter) {
+      query = query.in('show_id', assignedShowIds);
+    }
+
+    const { data: slots, error: slotsError } = await query;
 
     if (slotsError) {
       logger.error('Erreur récupération créneaux à venir', { error: slotsError.message });
@@ -352,12 +463,39 @@ async function getUpcomingSlots(limit: number = 10): Promise<{ data: AdminUpcomi
 
 /**
  * Récupère les réservations récentes
+ * @param limit - Nombre maximum de réservations à retourner
+ * @param options - Options de filtrage (assignedShowIds pour les externes)
  */
-async function getRecentReservations(limit: number = 10): Promise<{ data: AdminRecentReservation[]; error: string | null }> {
+async function getRecentReservations(
+  limit: number = 10,
+  options?: AdminDashboardOptions
+): Promise<{ data: AdminRecentReservation[]; error: string | null }> {
   try {
     const supabase = createClient();
+    const { assignedShowIds } = options || {};
+    const hasFilter = assignedShowIds && assignedShowIds.length > 0;
 
-    const { data: reservations, error: resError } = await supabase
+    // Si externe, récupérer d'abord les slot_ids de leurs spectacles
+    let slotIdFilter: string[] | null = null;
+    if (hasFilter) {
+      const { data: slots, error: slotsError } = await supabase
+        .from('slots')
+        .select('id')
+        .in('show_id', assignedShowIds);
+
+      if (slotsError) {
+        logger.error('Erreur récupération slot_ids pour réservations', { error: slotsError.message });
+        return { data: [], error: slotsError.message };
+      }
+
+      if (!slots || slots.length === 0) {
+        return { data: [], error: null };
+      }
+
+      slotIdFilter = slots.map(s => s.id);
+    }
+
+    let query = supabase
       .from('reservations')
       .select(`
         id, created_at, num_places, status,
@@ -371,6 +509,12 @@ async function getRecentReservations(limit: number = 10): Promise<{ data: AdminR
       .eq('status', 'confirmed')
       .order('created_at', { ascending: false })
       .limit(limit);
+
+    if (slotIdFilter) {
+      query = query.in('slot_id', slotIdFilter);
+    }
+
+    const { data: reservations, error: resError } = await query;
 
     if (resError) {
       logger.error('Erreur récupération réservations récentes', { error: resError.message });
@@ -423,13 +567,14 @@ async function getRecentReservations(limit: number = 10): Promise<{ data: AdminR
 
 /**
  * Récupère toutes les données du dashboard admin
+ * @param options - Options de filtrage (assignedShowIds pour les externes)
  */
-export async function getAdminDashboard(): Promise<AdminDashboardResult> {
+export async function getAdminDashboard(options?: AdminDashboardOptions): Promise<AdminDashboardResult> {
   try {
     const [statsResult, slotsResult, reservationsResult] = await Promise.all([
-      getStats(),
-      getUpcomingSlots(10),
-      getRecentReservations(10),
+      getStats(options),
+      getUpcomingSlots(10, options),
+      getRecentReservations(10, options),
     ]);
 
     // Collecter toutes les erreurs

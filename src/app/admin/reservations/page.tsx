@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { AdminPageHeader } from '@/components/admin';
 import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
+import { useAdminPermissions } from '@/hooks/useAdminPermissions';
 import { useDebounce } from '@/hooks/useDebounce';
 import {
   useReservationColumnsPreference,
@@ -110,6 +111,12 @@ export default function AdminReservationsPage() {
   } = useAdminReservations(50);
 
   const { shows, refresh: refreshShows } = useShows();
+  const {
+    isExterne,
+    assignedShowIds,
+    isLoading: permissionsLoading,
+  } = useAdminPermissions();
+
   const { 
     preference: columnsPreference, 
     visibleColumns, 
@@ -187,8 +194,23 @@ export default function AdminReservationsPage() {
 
   const isDebouncing = searchInput !== debouncedSearch;
 
-  // Spectacles pour le filtre
-  const showsOptions = useMemo(() => shows.filter(s => s.status === 'published'), [shows]);
+  // Spectacles pour le filtre (filtrés par assignation pour les externes)
+  const showsOptions = useMemo(() => {
+    const publishedShows = shows.filter(s => s.status === 'published');
+    // Ne pas filtrer pendant le chargement des permissions
+    if (permissionsLoading) {
+      return publishedShows;
+    }
+    // Si externe avec des spectacles assignés, filtrer
+    if (isExterne && assignedShowIds && assignedShowIds.length > 0) {
+      return publishedShows.filter(s => assignedShowIds.includes(s.id));
+    }
+    // Si externe SANS spectacles assignés, ne rien montrer
+    if (isExterne && assignedShowIds && assignedShowIds.length === 0) {
+      return [];
+    }
+    return publishedShows;
+  }, [shows, isExterne, assignedShowIds, permissionsLoading]);
 
   // ============================================
   // HANDLERS
@@ -368,11 +390,14 @@ export default function AdminReservationsPage() {
         const presentsPercent = stats.confirmed > 0 ? Math.round((totalPresents / stats.confirmed) * 100) : 0;
         const cancelledPercent = stats.total > 0 ? Math.round((stats.cancelled / stats.total) * 100) : 0;
         
+        // Libellés adaptés pour les externes
+        const statsLabel = isExterne ? 'Vos réservations' : 'Total réservations';
+        
         return (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <Card className="py-1 bg-card/80 border-muted-foreground/10">
               <CardContent className="px-3 py-2">
-                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total réservations</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">{statsLabel}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <Users className="w-4 h-4 text-derviche" />
                   <span className="text-xl md:text-2xl font-bold">{stats.total}</span>
@@ -497,7 +522,9 @@ export default function AdminReservationsPage() {
                   <SelectValue placeholder="Tous" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les spectacles</SelectItem>
+                  <SelectItem value="all">
+                    {isExterne ? 'Vos spectacles assignés' : 'Tous les spectacles'}
+                  </SelectItem>
                   {showsOptions.map((show) => (
                     <SelectItem key={show.id} value={show.id}>{show.title}</SelectItem>
                   ))}
@@ -596,7 +623,7 @@ export default function AdminReservationsPage() {
       </div>
 
       {/* Contenu principal */}
-      {isLoading || columnsLoading ? (
+      {isLoading || columnsLoading || permissionsLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-derviche" />
         </div>
@@ -817,7 +844,7 @@ export default function AdminReservationsPage() {
       <CreateReservationDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        shows={shows}
+        shows={showsOptions}
         onGetSlots={getSlots}
         onCreate={handleCreate}
       />

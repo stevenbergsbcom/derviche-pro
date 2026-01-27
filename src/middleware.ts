@@ -11,11 +11,36 @@ import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-uti
 // Rôles autorisés pour l'interface admin
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin', 'externe'];
 
+// Rôles avec accès admin complet (tous les menus)
+const FULL_ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
+
+// Routes admin réservées aux rôles avec accès complet (interdites aux externes)
+const RESTRICTED_ADMIN_ROUTES: string[] = [
+    '/admin/lieux',
+    '/admin/compagnies',
+    '/admin/utilisateurs',
+    '/admin/preferences',
+];
+
 // Rôles autorisés pour l'interface compagnie
 const COMPANY_ROLES: UserRole[] = ['company'];
 
 // Rôles autorisés pour l'interface check-in (accueil)
 const ACCUEIL_ROLES: UserRole[] = ['super-admin', 'admin', 'externe', 'company'];
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Vérifie si un chemin correspond à une route restreinte
+ * Gère les sous-routes (ex: /admin/lieux/123)
+ */
+function isRestrictedAdminRoute(pathname: string): boolean {
+    return RESTRICTED_ADMIN_ROUTES.some(
+        (route) => pathname === route || pathname.startsWith(route + '/')
+    );
+}
 
 // ============================================
 // MIDDLEWARE
@@ -168,11 +193,22 @@ export async function middleware(request: NextRequest) {
         const userRole = roleData.role as UserRole;
 
         // Vérification pour les routes /admin/*
-        if (isAdminRoute && !ADMIN_ROLES.includes(userRole)) {
-            const url = request.nextUrl.clone();
-            url.pathname = '/';
-            url.searchParams.set('error', 'unauthorized');
-            return NextResponse.redirect(url);
+        if (isAdminRoute) {
+            // Vérifier si l'utilisateur a un rôle admin (super-admin, admin, externe)
+            if (!ADMIN_ROLES.includes(userRole)) {
+                const url = request.nextUrl.clone();
+                url.pathname = '/';
+                url.searchParams.set('error', 'unauthorized');
+                return NextResponse.redirect(url);
+            }
+
+            // Vérification supplémentaire pour les routes restreintes (externes interdits)
+            if (isRestrictedAdminRoute(pathname) && !FULL_ADMIN_ROLES.includes(userRole)) {
+                const url = request.nextUrl.clone();
+                url.pathname = '/admin'; // Rediriger vers le dashboard admin
+                url.searchParams.set('error', 'restricted_route');
+                return NextResponse.redirect(url);
+            }
         }
 
         // Vérification pour les routes /company/*

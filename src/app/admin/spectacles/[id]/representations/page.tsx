@@ -76,6 +76,8 @@ interface MockUser {
 
 // Hook pour les utilisateurs internes (remplace mockDervisheUsers)
 import { useInternalUsers } from '@/hooks/useInternalUsers';
+// Hook pour les permissions admin (rôle externe)
+import { useAdminPermissions } from '@/hooks/useAdminPermissions';
 import type { InternalUser } from '@/types/database';
 
 // Hooks Supabase
@@ -233,6 +235,9 @@ export default function AdminRepresentationsPage() {
         error: usersError,
         refresh: refreshUsers,
     } = useInternalUsers();
+
+    // Hook pour les permissions admin (rôle externe = lecture seule)
+    const { isExterne } = useAdminPermissions();
 
     // Trouver le spectacle - mémorisé pour éviter les recalculs inutiles
     // getShowById crée un nouvel objet à chaque appel, donc on mémorise directement
@@ -730,26 +735,29 @@ export default function AdminRepresentationsPage() {
                     </h1>
                     <p className="text-sm text-muted-foreground">{show.company?.name || 'Compagnie inconnue'}</p>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                    <Button
-                        variant="outline"
-                        onClick={() => setIsGenerateSeriesOpen(true)}
-                        className="w-full sm:w-auto"
-                        disabled={isSubmitting}
-                    >
-                        <Copy className="w-4 h-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Générer une série</span>
-                    </Button>
-                    <Button
-                        onClick={handleCreate}
-                        className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
-                        disabled={isSubmitting}
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        <span className="sm:hidden">Ajouter</span>
-                        <span className="hidden sm:inline">Ajouter une représentation</span>
-                    </Button>
-                </div>
+                {/* Boutons masqués pour les externes (lecture seule) */}
+                {!isExterne && (
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsGenerateSeriesOpen(true)}
+                            className="w-full sm:w-auto"
+                            disabled={isSubmitting}
+                        >
+                            <Copy className="w-4 h-4 sm:mr-2" />
+                            <span className="hidden sm:inline">Générer une série</span>
+                        </Button>
+                        <Button
+                            onClick={handleCreate}
+                            className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
+                            disabled={isSubmitting}
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            <span className="sm:hidden">Ajouter</span>
+                            <span className="hidden sm:inline">Ajouter une représentation</span>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             {/* Barre de filtres */}
@@ -826,13 +834,13 @@ export default function AdminRepresentationsPage() {
                             <TableHead>Lieu</TableHead>
                             <TableHead>Places max</TableHead>
                             <TableHead>Accueil</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            {!isExterne && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredRepresentations.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                <TableCell colSpan={isExterne ? 5 : 6} className="text-center text-muted-foreground py-8">
                                     Aucune représentation trouvée
                                 </TableCell>
                             </TableRow>
@@ -885,30 +893,32 @@ export default function AdminRepresentationsPage() {
                                                 </Badge>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                    onClick={() => void handleEdit(rep)}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                    <span className="sr-only">Modifier</span>
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                                    onClick={() => void handleDeleteClick(rep)}
-                                                    disabled={isSubmitting}
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                    <span className="sr-only">Supprimer</span>
-                                                </Button>
-                                            </div>
-                                        </TableCell>
+                                        {!isExterne && (
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8"
+                                                        onClick={() => void handleEdit(rep)}
+                                                        disabled={isSubmitting}
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                        <span className="sr-only">Modifier</span>
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                        onClick={() => void handleDeleteClick(rep)}
+                                                        disabled={isSubmitting}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                        <span className="sr-only">Supprimer</span>
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 );
                             })
@@ -981,28 +991,31 @@ export default function AdminRepresentationsPage() {
                                         </div>
                                     )}
 
-                                    <div className="flex items-center gap-2 pt-2 border-t">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="flex-1"
-                                            onClick={() => void handleEdit(rep)}
-                                            disabled={isSubmitting}
-                                        >
-                                            <Pencil className="w-4 h-4 mr-2" />
-                                            Modifier
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => void handleDeleteClick(rep)}
-                                            disabled={isSubmitting}
-                                        >
-                                            <Trash2 className="w-4 h-4 mr-2" />
-                                            Supprimer
-                                        </Button>
-                                    </div>
+                                    {/* Boutons masqués pour les externes (lecture seule) */}
+                                    {!isExterne && (
+                                        <div className="flex items-center gap-2 pt-2 border-t">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="flex-1"
+                                                onClick={() => void handleEdit(rep)}
+                                                disabled={isSubmitting}
+                                            >
+                                                <Pencil className="w-4 h-4 mr-2" />
+                                                Modifier
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                onClick={() => void handleDeleteClick(rep)}
+                                                disabled={isSubmitting}
+                                            >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Supprimer
+                                            </Button>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         );
