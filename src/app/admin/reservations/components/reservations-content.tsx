@@ -173,10 +173,18 @@ export function ReservationsContent({
                   {reservations.map((r, index) => (
                     <tr
                       key={r.id}
-                      className={`border-b transition-colors cursor-pointer hover:bg-muted/70 ${
+                      role="button"
+                      tabIndex={0}
+                      className={`border-b transition-colors cursor-pointer hover:bg-muted/70 focus:outline-none focus:ring-2 focus:ring-derviche/50 ${
                         r.status === 'cancelled' ? 'opacity-60' : ''
                       } ${index % 2 === 1 ? 'bg-muted/50' : ''}`}
                       onClick={() => onEdit(r)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onEdit(r);
+                        }
+                      }}
                     >
                       <td className="p-2 align-middle">
                         <RowHoverActions

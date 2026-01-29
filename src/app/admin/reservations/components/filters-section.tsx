@@ -122,7 +122,7 @@ export function FiltersSection({
               value={filters.showId || 'all'} 
               onValueChange={onShowFilter}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrer par spectacle">
                 <SelectValue placeholder="Tous" />
               </SelectTrigger>
               <SelectContent>
@@ -145,7 +145,7 @@ export function FiltersSection({
               value={filters.status || 'all'} 
               onValueChange={onStatusFilter}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Filtrer par statut">
                 <SelectValue placeholder="Tous" />
               </SelectTrigger>
               <SelectContent>
@@ -167,7 +167,7 @@ export function FiltersSection({
               value={filters.sortBy || 'slot_date_asc'} 
               onValueChange={onSortChange}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Trier les résultats">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -191,7 +191,10 @@ export function FiltersSection({
               onValueChange={onPeriodFilter}
               disabled={hasDateFilters}
             >
-              <SelectTrigger className={hasDateFilters ? 'opacity-50' : ''}>
+              <SelectTrigger 
+                aria-label="Filtrer par période" 
+                className={hasDateFilters ? 'opacity-50' : ''}
+              >
                 <SelectValue placeholder="À venir" />
               </SelectTrigger>
               <SelectContent>
@@ -209,7 +212,7 @@ export function FiltersSection({
               value={datePreset || ''}
               onValueChange={(v) => onDatePreset(v as DatePreset)}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Raccourci de date">
                 <SelectValue placeholder="Choisir..." />
               </SelectTrigger>
               <SelectContent>

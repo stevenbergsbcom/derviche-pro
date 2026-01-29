@@ -4,7 +4,7 @@
  * Derviche Diffusion
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   type PeriodPreset,
   type DatePreset,
@@ -68,32 +68,36 @@ export function useReservationFilters({
   const [dateTo, setDateTo] = useState('');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
+  // Ref pour stabilité des callbacks (évite re-création à chaque changement de filters)
+  const filtersRef = useRef(filters);
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
+
   // ============================================
   // HANDLERS
   // ============================================
 
   const handleShowFilter = useCallback((showId: string) => {
-    setFilters({ ...filters, showId: showId === 'all' ? undefined : showId });
-  }, [filters, setFilters]);
+    setFilters({ ...filtersRef.current, showId: showId === 'all' ? undefined : showId });
+  }, [setFilters]);
 
   const handleStatusFilter = useCallback((status: string) => {
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       status: status === 'all' ? undefined : status as ReservationStatus 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handlePeriodFilter = useCallback((period: string) => {
     setDateFrom('');
     setDateTo('');
     setDatePreset(null);
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       period: period as PeriodPreset, 
       dateFrom: undefined, 
       dateTo: undefined 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handleDatePreset = useCallback((preset: DatePreset) => {
     if (preset === 'custom') {
@@ -105,39 +109,39 @@ export function useReservationFilters({
     setDateFrom(range.dateFrom || '');
     setDateTo(range.dateTo || '');
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       period: undefined, 
       dateFrom: range.dateFrom, 
       dateTo: range.dateTo 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handleDateFromChange = useCallback((value: string) => {
     setDateFrom(value);
     setDatePreset('custom');
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       period: undefined, 
       dateFrom: value || undefined 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handleDateToChange = useCallback((value: string) => {
     setDateTo(value);
     setDatePreset('custom');
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       period: undefined, 
       dateTo: value || undefined 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handleSortChange = useCallback((sortBy: SortOption | string | undefined) => {
     setFilters({ 
-      ...filters, 
+      ...filtersRef.current, 
       sortBy: (sortBy || 'slot_date_asc') as SortOption 
     });
-  }, [filters, setFilters]);
+  }, [setFilters]);
 
   const handleResetFilters = useCallback(() => {
     setDateFrom('');
