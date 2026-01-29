@@ -1,10 +1,16 @@
 /**
  * Constantes pour UserFormDialog
- * Derviche Diffusion - Session 102
+ * Derviche Diffusion - Session 102 (mis à jour S104)
  */
 
 import type { ManagedRole } from '@/lib/services/internal-users';
 import type { CreateUserFormData } from './types';
+
+// Import centralisé - EMAIL_REGEX défini dans @/lib/constants/validation
+import { EMAIL_REGEX } from '@/lib/constants/validation';
+
+// Réexport pour compatibilité
+export { EMAIL_REGEX };
 
 // ============================================
 // RÔLES
@@ -77,10 +83,7 @@ export const HELP_MESSAGES = {
 } as const;
 
 // ============================================
-// REGEX
+// REGEX (maintenant centralisé)
 // ============================================
-
-/**
- * Pattern de validation email
- */
-export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// EMAIL_REGEX est désormais importé depuis @/lib/constants/validation
+// et réexporté en haut de ce fichier pour compatibilité
