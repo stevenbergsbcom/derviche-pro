@@ -3,8 +3,9 @@
  * Derviche Diffusion - Session 103
  */
 
-import type { MockUser } from './types';
-import { ROLE_LABELS } from './constants';
+import type { UserRole } from '@/types/database';
+import type { MockUser, SlotHostedBy } from './types';
+import { ROLE_LABELS, HOSTED_BY_OPTIONS } from './constants';
 
 // ============================================
 // FONCTIONS DATE
@@ -20,6 +21,33 @@ export function getLocalDateString(date: Date = new Date()): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+// ============================================
+// FONCTIONS VALIDATION
+// ============================================
+
+/**
+ * Valeurs valides pour SlotHostedBy extraites des options
+ */
+const VALID_HOSTED_BY_VALUES: SlotHostedBy[] = HOSTED_BY_OPTIONS.map((opt) => opt.value);
+
+/**
+ * Vérifie si une valeur est un SlotHostedBy valide
+ * @param value - Valeur à vérifier
+ * @returns true si la valeur est valide
+ */
+export function isValidHostedBy(value: string): value is SlotHostedBy {
+  return VALID_HOSTED_BY_VALUES.includes(value as SlotHostedBy);
+}
+
+/**
+ * Vérifie si une valeur est un UserRole valide
+ * @param role - Valeur à vérifier
+ * @returns true si la valeur est un UserRole valide
+ */
+function isValidUserRole(role: string): role is UserRole {
+  return role in ROLE_LABELS;
 }
 
 // ============================================
@@ -39,10 +67,13 @@ export function formatUserName(user: MockUser): string {
 /**
  * Obtient le label du rôle d'un utilisateur
  * @param role - Rôle de l'utilisateur
- * @returns Label formaté
+ * @returns Label formaté ou le rôle brut si non reconnu
  */
 export function getRoleLabel(role: string): string {
-  return ROLE_LABELS[role] || role;
+  if (isValidUserRole(role)) {
+    return ROLE_LABELS[role];
+  }
+  return role;
 }
 
 /**

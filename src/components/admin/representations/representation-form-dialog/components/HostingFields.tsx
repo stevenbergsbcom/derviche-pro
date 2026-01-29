@@ -12,9 +12,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-import type { HostingFieldsProps, SlotHostedBy } from '../types';
+import type { HostingFieldsProps } from '../types';
 import { LABELS, HOSTED_BY_OPTIONS, EMPTY_USER_VALUE } from '../constants';
-import { formatUserForSelect } from '../utils';
+import { formatUserForSelect, isValidHostedBy } from '../utils';
 
 /**
  * Champs de configuration de l'accueil
@@ -26,6 +26,15 @@ export function HostingFields({
   onHostedByChange,
   onHostedByIdChange,
 }: HostingFieldsProps) {
+  /**
+   * Gère le changement du type d'accueil avec validation
+   */
+  const handleHostedByChange = (value: string) => {
+    if (isValidHostedBy(value)) {
+      onHostedByChange(value);
+    }
+  };
+
   return (
     <>
       {/* Type d'accueil */}
@@ -33,10 +42,7 @@ export function HostingFields({
         <Label htmlFor="representation-hostedBy">
           {LABELS.hostedBy} <span className="text-destructive">*</span>
         </Label>
-        <Select
-          value={hostedBy}
-          onValueChange={(value: SlotHostedBy) => onHostedByChange(value)}
-        >
+        <Select value={hostedBy} onValueChange={handleHostedByChange}>
           <SelectTrigger id="representation-hostedBy" aria-label={LABELS.hostedBy}>
             <SelectValue />
           </SelectTrigger>

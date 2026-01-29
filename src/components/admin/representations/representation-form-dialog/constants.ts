@@ -4,6 +4,7 @@
  */
 
 import type { RepresentationFormData, SlotHostedBy } from './types';
+import type { UserRole } from '@/types/database';
 
 // ============================================
 // VALEURS PAR DÉFAUT
@@ -11,13 +12,14 @@ import type { RepresentationFormData, SlotHostedBy } from './types';
 
 /**
  * Valeurs par défaut du formulaire
+ * @note Le type de hostedBy est inféré depuis RepresentationFormData
  */
 export const DEFAULT_FORM_DATA: RepresentationFormData = {
   date: '',
   time: '',
   venueId: '',
   capacity: null,
-  hostedBy: 'derviche' as SlotHostedBy,
+  hostedBy: 'derviche',
   hostedById: null,
 };
 
@@ -112,9 +114,12 @@ export const HOSTED_BY_OPTIONS: Array<{ value: SlotHostedBy; label: string }> = 
 
 /**
  * Labels des rôles pour l'affichage dans le sélecteur
+ * Couvre tous les UserRole pour robustesse
  */
-export const ROLE_LABELS: Record<string, string> = {
+export const ROLE_LABELS: Record<UserRole, string> = {
   'super-admin': 'Super Admin',
   admin: 'Admin',
   externe: 'Externe',
+  professional: 'Programmateur',
+  company: 'Compagnie',
 } as const;

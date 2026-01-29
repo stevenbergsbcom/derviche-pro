@@ -19,6 +19,19 @@ export function CapacityField({
   onCapacityChange,
   onUnlimitedChange,
 }: CapacityFieldProps) {
+  /**
+   * Gère le changement de capacité
+   * Ne met à jour que si la valeur est un nombre valide >= 1
+   */
+  const handleCapacityChange = (value: string) => {
+    const parsed = parseInt(value, 10);
+    // Ne mettre à jour que si c'est un nombre valide >= 1
+    // Sinon, conserver la valeur précédente (le champ affichera '' pour null)
+    if (!isNaN(parsed) && parsed >= 1) {
+      onCapacityChange(parsed);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor="representation-capacity">
@@ -31,7 +44,7 @@ export function CapacityField({
           type="number"
           min="1"
           value={capacity ?? ''}
-          onChange={(e) => onCapacityChange(parseInt(e.target.value) || 0)}
+          onChange={(e) => handleCapacityChange(e.target.value)}
           disabled={isUnlimited}
           required={!isUnlimited}
           className={isUnlimited ? 'flex-1 bg-muted text-muted-foreground' : 'flex-1'}
