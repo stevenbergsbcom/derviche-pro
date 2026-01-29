@@ -1,0 +1,69 @@
+/**
+ * Section Informations professionnelles du formulaire
+ * Derviche Diffusion - Session 104
+ */
+
+'use client';
+
+import { Building } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import type { ProfessionalInfoSectionProps } from '../types';
+import { LABELS, PLACEHOLDERS } from '../constants';
+
+export function ProfessionalInfoSection({
+  organization,
+  function: functionField, // 'function' est un mot réservé
+  afcNumber,
+  onChange,
+  disabled,
+}: ProfessionalInfoSectionProps) {
+  return (
+    <div className="space-y-4">
+      <h4 className="font-medium flex items-center gap-2">
+        <Building className="w-4 h-4" aria-hidden="true" />
+        {LABELS.sectionProfessional}
+      </h4>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Organisation */}
+        <div className="space-y-2">
+          <Label htmlFor="organization">{LABELS.organization}</Label>
+          <Input
+            id="organization"
+            value={organization || ''}
+            onChange={(e) => onChange('organization', e.target.value || null)}
+            placeholder={PLACEHOLDERS.organization}
+            disabled={disabled}
+            autoComplete="organization"
+          />
+        </div>
+        
+        {/* Fonction */}
+        <div className="space-y-2">
+          <Label htmlFor="function">{LABELS.function}</Label>
+          <Input
+            id="function"
+            value={functionField || ''}
+            onChange={(e) => onChange('function', e.target.value || null)}
+            placeholder={PLACEHOLDERS.function}
+            disabled={disabled}
+            autoComplete="organization-title"
+          />
+        </div>
+        
+        {/* Numéro AFC */}
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="afcNumber">{LABELS.afcNumber}</Label>
+          <Input
+            id="afcNumber"
+            value={afcNumber || ''}
+            onChange={(e) => onChange('afcNumber', e.target.value || null)}
+            placeholder={PLACEHOLDERS.afcNumber}
+            disabled={disabled}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
