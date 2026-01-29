@@ -9,8 +9,9 @@ export type { TargetAudienceManagerDialogProps, TargetAudience } from './target-
 export { CompanyQuickCreateDialog } from './company-quick-create-dialog';
 export type { CompanyQuickCreateDialogProps } from './company-quick-create-dialog';
 
+// SpectacleViewDialog - refactorisé en module (Session 110)
 export { SpectacleViewDialog } from './spectacle-view-dialog';
-export type { SpectacleViewDialogProps } from './spectacle-view-dialog';
+export type { SpectacleViewDialogProps, DervisheUser } from './spectacle-view-dialog';
 
 // SpectacleFormDialog - refactorisé en module (Session 101)
 export { SpectacleFormDialog } from './spectacle-form-dialog';
