@@ -162,16 +162,11 @@ export function useEditReservation({
   }, [reservation]);
 
   /**
-   * Gère l'ouverture/fermeture du dialog avec reset
+   * Gère l'ouverture/fermeture du dialog
+   * Note : On ne reset PAS les données à la fermeture pour éviter le flash.
+   * Les données seront réinitialisées à la prochaine ouverture via le useEffect.
    */
   const handleOpenChange = useCallback((isOpen: boolean) => {
-    if (!isOpen) {
-      // Reset du formulaire quand le dialog se ferme
-      setFormData(null);
-      setValidationErrors([]);
-      setAvailableSlots([]);
-      setSlotsError(null);
-    }
     onOpenChangeRef.current(isOpen);
   }, []);
 
