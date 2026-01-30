@@ -1,9 +1,9 @@
 /**
  * Constantes pour la page réservations compagnie
- * Derviche Diffusion - Session 117
+ * Derviche Diffusion - Session 119
  */
 
-import type { CompanyExportColumn } from '@/lib/services/company-reservations';
+import type { CompanyReservationColumn } from '@/hooks/useUserPreferences';
 
 // ============================================
 // COLONNES
@@ -13,7 +13,7 @@ import type { CompanyExportColumn } from '@/lib/services/company-reservations';
  * Colonnes visibles par défaut dans le tableau compagnie
  * (lecture seule, pas de colonne actions)
  */
-export const DEFAULT_VISIBLE_COLUMNS: CompanyExportColumn[] = [
+export const DEFAULT_VISIBLE_COLUMNS: CompanyReservationColumn[] = [
   'date',
   'spectacle',
   'lastName',
@@ -35,8 +35,9 @@ export const DEFAULT_PAGE_SIZE = 50;
 
 /**
  * Options de taille de page disponibles
+ * Aligné avec admin/reservations
  */
-export const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+export const PAGE_SIZE_OPTIONS = [50, 100, 200, 300, 400, 500] as const;
 
 /**
  * Nombre maximum de pages à afficher dans la pagination

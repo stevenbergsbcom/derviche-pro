@@ -1,9 +1,9 @@
 /**
- * Composants pour la gestion des réservations compagnie
- * Derviche Diffusion
+ * Composants réservations compagnie - Barrel exports
+ * Derviche Diffusion - Session 119
  */
 
-// Helpers et types
+// Helpers
 export {
   type PeriodPreset,
   type DatePreset,
@@ -14,20 +14,12 @@ export {
   getDatePresetRange,
   formatDateFr,
   formatDateTimeFr,
+  SORTABLE_COLUMNS,
   isSortableColumn,
   getColumnSortState,
-  SORTABLE_COLUMNS,
-} from './company-reservation-helpers';
+} from './reservation-helpers';
 
 // Composants
-export { CompanySortableHeader } from './company-sortable-header';
-export { renderCompanyTableCell } from './company-table-cell-renderer';
-
-// Dialogs
-export { CompanyExportDialog, type CompanyExportDialogProps } from './company-export-dialog';
-
-// Réexport des badges depuis admin (partagés)
-export {
-  ReservationStatusBadge,
-  ReservationCheckinBadge,
-} from '@/components/admin/reservations/reservation-badges';
+export { CompanySortableHeader as SortableHeader } from './sortable-header';
+export { renderCompanyTableCell as renderTableCell } from './table-cell-renderer';
+export { CompanyExportDialog } from './company-export-dialog';

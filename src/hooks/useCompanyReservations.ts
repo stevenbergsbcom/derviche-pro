@@ -115,6 +115,8 @@ export const COMPANY_COLUMNS_CONFIG: Record<CompanyExportColumn, { label: string
   status: { label: 'Statut', defaultVisible: true },
   checkinStatus: { label: 'Check-in', defaultVisible: true },
   specialRequests: { label: 'Demandes', defaultVisible: false },
+  checkinNotes: { label: 'Notes check-in', defaultVisible: false },
+  checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
 };
 
@@ -137,6 +139,8 @@ export const COMPANY_COLUMNS_ORDER: CompanyExportColumn[] = [
   'status',
   'checkinStatus',
   'specialRequests',
+  'checkinNotes',
+  'checkinVenueNotes',
   'createdAt',
 ];
 
@@ -168,6 +172,8 @@ const EXPORT_COLUMN_LABELS: Record<CompanyExportColumn, string> = {
   status: 'Statut',
   checkinStatus: 'Check-in',
   specialRequests: 'Demandes spéciales',
+  checkinNotes: 'Notes check-in',
+  checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
 };
 
@@ -243,6 +249,10 @@ function getCellValue(col: CompanyExportColumn, r: CompanyReservation): string {
       return translateCheckin(r.checkinStatus);
     case 'specialRequests':
       return r.specialRequests || '-';
+    case 'checkinNotes':
+      return r.checkinNotes || '-';
+    case 'checkinVenueNotes':
+      return r.checkinVenueNotes || '-';
     case 'createdAt':
       return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
     default:

@@ -1,6 +1,6 @@
 /**
  * Composant CompanyStatsCards - Statistiques réservations compagnie
- * Derviche Diffusion - Session 117
+ * Derviche Diffusion - Session 119
  * 
  * Affiche 4 cartes avec:
  * - Total réservations
@@ -15,7 +15,19 @@ import { memo, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Users, CheckCircle, Ban, Heart, Newspaper, Meh } from 'lucide-react';
-import type { CompanyStatsCardsProps } from '../types';
+import type { CompanyReservationStats } from '@/lib/services/company-reservations';
+
+// ============================================
+// TYPES
+// ============================================
+
+export interface CompanyStatsCardsProps {
+  stats: CompanyReservationStats;
+}
+
+// ============================================
+// COMPOSANT
+// ============================================
 
 function CompanyStatsCardsComponent({ stats }: CompanyStatsCardsProps) {
   // Calculs mémorisés
