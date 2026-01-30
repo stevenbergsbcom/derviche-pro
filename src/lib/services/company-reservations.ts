@@ -63,9 +63,11 @@ export interface CompanyReservation {
   status: ReservationStatus;
   specialRequests: string | null;
   
-  // Check-in (sans notes internes)
+  // Check-in (sans notes internes - checkinInternalNotes exclu)
   checkinStatus: CheckinStatus | null;
   checkinAt: string | null;
+  checkinNotes: string | null;
+  checkinVenueNotes: string | null;
   
   // Timestamps
   createdAt: string;
@@ -144,6 +146,8 @@ export type CompanyExportColumn =
   | 'status'
   | 'checkinStatus'
   | 'specialRequests'
+  | 'checkinNotes'
+  | 'checkinVenueNotes'
   | 'createdAt';
 
 // ============================================
@@ -192,9 +196,11 @@ function transformReservation(
     status: row.status as ReservationStatus,
     specialRequests: row.special_requests,
     
-    // Check-in (sans notes internes)
+    // Check-in (sans notes internes - checkinInternalNotes exclu)
     checkinStatus: row.checkin_status as CheckinStatus | null,
     checkinAt: row.checkin_at,
+    checkinNotes: row.checkin_comment || null,
+    checkinVenueNotes: row.checkin_venue_notes || null,
     
     // Timestamps
     createdAt: row.created_at,
@@ -294,6 +300,8 @@ export async function getCompanyReservations(
         special_requests,
         checkin_status,
         checkin_at,
+        checkin_comment,
+        checkin_venue_notes,
         created_at,
         cancelled_at,
         slots!inner (
@@ -467,6 +475,8 @@ export async function getAllCompanyReservationsForExport(
         special_requests,
         checkin_status,
         checkin_at,
+        checkin_comment,
+        checkin_venue_notes,
         created_at,
         cancelled_at,
         slots!inner (
@@ -622,6 +632,7 @@ export async function getCompanyReservationStats(
 
 /**
  * Récupère les spectacles de la compagnie connectée (pour le filtre)
+ * Filtre explicitement par company_id de l'utilisateur connecté
  */
 export async function getCompanyShows(): Promise<{
   data: Array<{ id: string; title: string; slug: string }>;
@@ -630,10 +641,30 @@ export async function getCompanyShows(): Promise<{
   try {
     const supabase = createClient();
 
-    // Les RLS policies filtrent automatiquement par company_id
+    // 1. Récupérer l'utilisateur connecté
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      logger.error('[company-reservations] Utilisateur non connecté', { error: authError?.message });
+      return { data: [], error: 'Utilisateur non connecté' };
+    }
+
+    // 2. Récupérer le company_id depuis le profil
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('company_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile?.company_id) {
+      logger.error('[company-reservations] Profil ou company_id non trouvé', { error: profileError?.message });
+      return { data: [], error: 'Compagnie non associée au profil' };
+    }
+
+    // 3. Récupérer les spectacles de cette compagnie uniquement
     const { data, error } = await supabase
       .from('shows')
       .select('id, title, slug')
+      .eq('company_id', profile.company_id)
       .eq('status', 'published')
       .is('deleted_at', null)
       .order('title', { ascending: true });
@@ -643,6 +674,7 @@ export async function getCompanyShows(): Promise<{
       return { data: [], error: error.message };
     }
 
+    logger.info(`[company-reservations] ${(data || []).length} spectacle(s) chargé(s) pour compagnie ${profile.company_id}`);
     return { data: data || [], error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

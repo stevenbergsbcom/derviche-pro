@@ -1,39 +1,49 @@
 /**
  * Page Réservations - Espace Compagnie
- * Derviche Diffusion - Session 117
+ * Structure identique à admin/reservations
+ * Derviche Diffusion - Session 119
  * 
  * Orchestrateur qui assemble les composants modulaires
- * Fonctionnalités : filtres, tri, export CSV/Excel
+ * Fonctionnalités : recherche, filtres, tri, colonnes personnalisables, export CSV/Excel
  */
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   useCompanyReservations,
   type CompanyExportOptions,
 } from '@/hooks/useCompanyReservations';
+import {
+  useCompanyReservationColumnsPreference,
+  type CompanyReservationColumnsPreference,
+} from '@/hooks/useUserPreferences';
 import { type SortOption, CompanyExportDialog } from '@/components/company/reservations';
-import { Card, CardContent } from '@/components/ui/card';
-import { AlertTriangle } from 'lucide-react';
+import { CompanyColumnSelectorDialog } from '@/components/company/column-selector-dialog';
+import { toast } from 'sonner';
 
 // Composants locaux
 import {
-  HeaderActions,
   CompanyStatsCards,
+  SearchAndActions,
   FiltersSection,
-  ReservationsTable,
+  ReservationsContent,
   PaginationControls,
 } from './components';
 import { useCompanyFilters } from './hooks';
-import { DEFAULT_VISIBLE_COLUMNS, DEFAULT_PERIOD, DEFAULT_SORT } from './constants';
+import { DEFAULT_PERIOD, DEFAULT_SORT } from './constants';
+import type { DatePreset } from './types';
 
 // ============================================
 // COMPOSANT PAGE
 // ============================================
 
 export default function CompanyReservationsPage() {
-  // Hook principal des réservations
+  // ============================================
+  // HOOKS EXTERNES
+  // ============================================
+  
   const {
     reservations,
     total,
@@ -54,11 +64,14 @@ export default function CompanyReservationsPage() {
     setFilters,
   } = useCompanyReservations(50);
 
-  // États dialogs
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const {
+    preference: columnsPreference,
+    visibleColumns,
+    isLoading: columnsLoading,
+    setPreference: setColumnsPreference,
+  } = useCompanyReservationColumnsPreference();
 
-  // Hook des filtres avec toute la logique
+  // Hook de gestion des filtres
   const filtersHook = useCompanyFilters({
     initialFilters: filters,
     onFiltersChange: setFilters,
@@ -66,13 +79,34 @@ export default function CompanyReservationsPage() {
     pageSize,
   });
 
-  // Colonnes visibles (fixes pour la compagnie)
-  const visibleColumns = DEFAULT_VISIBLE_COLUMNS;
+  // ============================================
+  // ÉTATS LOCAUX
+  // ============================================
 
-  // ----------------------------------------
+  // Recherche avec debounce (géré séparément comme dans admin)
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebounce(searchInput, 300);
+  const [isSearching, setIsSearching] = useState(false);
+  const previousSearchRef = useRef<string | undefined>(undefined);
+
+  // Refs pour stabilité des callbacks
+  const filtersRef = useRef(filters);
+  const pageSizeRef = useRef(pageSize);
+  const loadReservationsRef = useRef(loadReservations);
+
+  // États dialogs
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [columnsDialogOpen, setColumnsDialogOpen] = useState(false);
+
+  // États de traitement
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // ============================================
+  // EFFETS
+  // ============================================
+
   // Chargement initial
-  // ----------------------------------------
-
   useEffect(() => {
     void loadReservations({ period: DEFAULT_PERIOD, sortBy: DEFAULT_SORT });
     void loadStats();
@@ -80,116 +114,172 @@ export default function CompanyReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ----------------------------------------
-  // Handlers
-  // ----------------------------------------
+  // Mise à jour des refs
+  useEffect(() => { filtersRef.current = filters; }, [filters]);
+  useEffect(() => { pageSizeRef.current = pageSize; }, [pageSize]);
+  useEffect(() => { loadReservationsRef.current = loadReservations; }, [loadReservations]);
 
-  const handleRefresh = useCallback(() => {
-    void loadReservations(filters, { page, pageSize });
-    void loadStats();
-  }, [filters, page, pageSize, loadReservations, loadStats]);
+  // Effet de recherche avec debounce
+  useEffect(() => {
+    if (previousSearchRef.current === undefined && debouncedSearch === '') {
+      previousSearchRef.current = '';
+      return;
+    }
+    if (previousSearchRef.current === debouncedSearch) return;
 
-  const handleExport = useCallback(() => {
-    setExportDialogOpen(true);
-  }, []);
+    previousSearchRef.current = debouncedSearch;
+    setIsSearching(true);
 
-  const handleExportWithOptions = useCallback(
-    async (options: CompanyExportOptions): Promise<{ success: boolean; error?: string }> => {
-      setIsExporting(true);
-      const result = await exportWithOptions(options);
-      setIsExporting(false);
-      return result;
-    },
-    [exportWithOptions]
-  );
+    const newFilters = { ...filtersRef.current, search: debouncedSearch.trim() || undefined };
 
-  // ----------------------------------------
-  // Render
-  // ----------------------------------------
+    const doSearch = async () => {
+      try {
+        await loadReservationsRef.current(newFilters, { page: 1, pageSize: pageSizeRef.current });
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    void doSearch();
+  }, [debouncedSearch]);
+
+  // ============================================
+  // DONNÉES DÉRIVÉES
+  // ============================================
+
+  const isDebouncing = searchInput !== debouncedSearch;
+  const columns = columnsLoading ? [] : visibleColumns;
+  const globalLoading = isLoading || columnsLoading;
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  const handleClearSearch = useCallback(() => setSearchInput(''), []);
+  const handleRefresh = useCallback(() => void loadReservations(), [loadReservations]);
+
+  // Handler export
+  const handleExportWithOptions = useCallback(async (options: CompanyExportOptions): Promise<{ success: boolean; error?: string }> => {
+    setIsExporting(true);
+    const result = await exportWithOptions(options);
+    setIsExporting(false);
+    return result;
+  }, [exportWithOptions]);
+
+  // Handler colonnes
+  const handleSaveColumns = useCallback(async (newPreference: CompanyReservationColumnsPreference): Promise<{ success: boolean; error?: string }> => {
+    setIsProcessing(true);
+    const result = await setColumnsPreference(newPreference);
+    setIsProcessing(false);
+    if (result.success) {
+      setColumnsDialogOpen(false);
+      toast.success('Préférences enregistrées');
+    } else {
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+    return result;
+  }, [setColumnsPreference]);
+
+  // Handler reset filtres avec clear search
+  const handleResetAllFilters = useCallback(() => {
+    setSearchInput('');
+    filtersHook.handleResetFilters();
+  }, [filtersHook]);
+
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Header */}
-      <HeaderActions
-        isLoading={isLoading}
-        hasReservations={reservations.length > 0}
-        onRefresh={handleRefresh}
-        onExport={handleExport}
-      />
+      {/* Titre (optionnel - si pas de header compagnie existant) */}
+      <div>
+        <h1 className="text-2xl font-bold text-derviche-dark">Réservations</h1>
+        <p className="text-muted-foreground">Consultez les réservations sur vos spectacles</p>
+      </div>
 
       {/* Statistiques */}
       {stats && <CompanyStatsCards stats={stats} />}
 
-      {/* Filtres */}
-      <FiltersSection
-        filtersExpanded={filtersHook.filtersExpanded}
-        onToggleExpanded={filtersHook.handleToggleExpanded}
+      {/* Barre d'actions et filtres */}
+      <div className="space-y-3">
+        <SearchAndActions
+          searchInput={searchInput}
+          onSearchChange={setSearchInput}
+          onClearSearch={handleClearSearch}
+          appliedSearch={filters.search}
+          totalResults={total}
+          isSearching={isSearching}
+          isDebouncing={isDebouncing}
+          isLoading={isLoading}
+          isExporting={isExporting}
+          reservationsCount={reservations.length}
+          onRefresh={handleRefresh}
+          onOpenColumns={() => setColumnsDialogOpen(true)}
+          onOpenExport={() => setExportDialogOpen(true)}
+        />
+
+        <FiltersSection
+          filters={filters}
+          showsOptions={shows}
+          filtersExpanded={filtersHook.filtersExpanded}
+          activeFiltersCount={filtersHook.activeFiltersCount}
+          datePreset={filtersHook.datePreset as DatePreset | null}
+          dateFrom={filtersHook.dateFrom}
+          dateTo={filtersHook.dateTo}
+          onToggleExpanded={filtersHook.handleToggleExpanded}
+          onShowFilter={filtersHook.handleShowFilter}
+          onStatusFilter={filtersHook.handleStatusFilter}
+          onCheckinFilter={filtersHook.handleCheckinFilter}
+          onSortChange={filtersHook.handleSortChange}
+          onPeriodFilter={filtersHook.handlePeriodFilter}
+          onDatePreset={filtersHook.handleDatePreset as (preset: DatePreset) => void}
+          onDateFromChange={filtersHook.handleDateFromChange}
+          onDateToChange={filtersHook.handleDateToChange}
+          onResetFilters={handleResetAllFilters}
+        />
+      </div>
+
+      {/* Contenu principal */}
+      <ReservationsContent
+        reservations={reservations}
+        columns={columns}
+        currentSort={filters.sortBy as SortOption | undefined}
+        isLoading={globalLoading}
+        error={error}
         activeFiltersCount={filtersHook.activeFiltersCount}
-        searchInput={filtersHook.searchInput}
-        onSearchChange={filtersHook.handleSearchChange}
-        onClearSearch={filtersHook.handleClearSearch}
-        isSearching={filtersHook.isSearching}
-        isDebouncing={filtersHook.isDebouncing}
-        filters={filters}
-        shows={shows}
-        onShowFilter={filtersHook.handleShowFilter}
-        onStatusFilter={filtersHook.handleStatusFilter}
-        onCheckinFilter={filtersHook.handleCheckinFilter}
-        onPeriodFilter={filtersHook.handlePeriodFilter}
+        onRetry={handleRefresh}
+        onResetFilters={handleResetAllFilters}
         onSortChange={filtersHook.handleSortChange}
-        datePreset={filtersHook.datePreset}
-        dateFrom={filtersHook.dateFrom}
-        dateTo={filtersHook.dateTo}
-        onDatePreset={filtersHook.handleDatePreset}
-        onDateFromChange={filtersHook.handleDateFromChange}
-        onDateToChange={filtersHook.handleDateToChange}
-        onResetFilters={filtersHook.handleResetFilters}
       />
 
-      {/* Erreur */}
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="p-4 flex items-center gap-3 text-red-700">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            <p>{error}</p>
-          </CardContent>
-        </Card>
+      {/* Pagination */}
+      {!globalLoading && !error && reservations.length > 0 && (
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       )}
 
-      {/* Tableau + Pagination */}
-      <Card className="bg-card/80">
-        <CardContent className="p-0">
-          {/* Info résultats + sélecteur taille */}
-          <PaginationControls
-            page={page}
-            totalPages={totalPages}
-            total={total}
-            pageSize={pageSize}
-            isLoading={isLoading}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-          />
+      {/* Dialogs */}
+      <CompanyColumnSelectorDialog
+        open={columnsDialogOpen}
+        onOpenChange={setColumnsDialogOpen}
+        preference={columnsPreference}
+        onSave={handleSaveColumns}
+        isSaving={isProcessing}
+      />
 
-          {/* Tableau */}
-          <ReservationsTable
-            reservations={reservations}
-            visibleColumns={visibleColumns}
-            isLoading={isLoading}
-            activeFiltersCount={filtersHook.activeFiltersCount}
-            currentSort={filters.sortBy as SortOption | undefined}
-            onSortChange={filtersHook.handleSortChange}
-            onResetFilters={filtersHook.handleResetFilters}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Dialog Export */}
       <CompanyExportDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}
         reservations={reservations}
         filters={filters}
-        visibleColumns={visibleColumns}
+        visibleColumns={columns}
         onExport={handleExportWithOptions}
         isExporting={isExporting}
       />

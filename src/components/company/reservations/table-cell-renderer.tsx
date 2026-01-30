@@ -2,18 +2,19 @@
  * Rendu des cellules du tableau des réservations compagnie
  * Derviche Diffusion
  * 
- * Note: Sans checkinInternalNotes (notes internes réservées à l'admin)
+ * Version compagnie - Sans notes internes (checkinInternalNotes)
  */
 
 'use client';
 
 import React from 'react';
-import type { CompanyExportColumn, CompanyReservation } from '@/lib/services/company-reservations';
+import type { CompanyReservationColumn } from '@/hooks/useUserPreferences';
+import type { CompanyReservation } from '@/lib/services/company-reservations';
 import { ReservationStatusBadge, ReservationCheckinBadge } from '@/components/admin/reservations/reservation-badges';
-import { formatDateFr, formatDateTimeFr } from './company-reservation-helpers';
+import { formatDateFr, formatDateTimeFr } from './reservation-helpers';
 
 /** Rendu d'une cellule du tableau selon la colonne */
-export function renderCompanyTableCell(col: CompanyExportColumn, r: CompanyReservation): React.ReactNode {
+export function renderCompanyTableCell(col: CompanyReservationColumn, r: CompanyReservation): React.ReactNode {
   switch (col) {
     case 'date':
       return r.slot ? (

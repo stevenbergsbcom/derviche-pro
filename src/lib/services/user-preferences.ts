@@ -22,6 +22,7 @@ export type PreferenceKey =
   | 'admin_reservations_columns'
   | 'admin_reservations_page_size'
   | 'admin_shows_columns'
+  | 'company_reservations_columns'
   | 'theme'
   | string; // Extensible
 

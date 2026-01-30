@@ -1,10 +1,11 @@
 /**
  * Barrel export des composants réservations compagnie
- * Derviche Diffusion - Session 117
+ * Structure identique à admin/reservations
+ * Derviche Diffusion - Session 119
  */
 
-export { HeaderActions } from './header-actions';
 export { CompanyStatsCards } from './stats-cards';
-export { FiltersSection } from './filters-section';
-export { ReservationsTable } from './reservations-table';
-export { PaginationControls } from './pagination-controls';
+export { SearchAndActions, type SearchAndActionsProps } from './search-and-actions';
+export { FiltersSection, type FiltersSectionProps, type ShowOption } from './filters-section';
+export { ReservationsContent, type ReservationsContentProps } from './reservations-content';
+export { PaginationControls, type PaginationControlsProps } from './pagination-controls';

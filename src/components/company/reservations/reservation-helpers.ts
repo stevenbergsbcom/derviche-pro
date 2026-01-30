@@ -3,7 +3,7 @@
  * Derviche Diffusion
  */
 
-import type { CompanyExportColumn } from '@/lib/services/company-reservations';
+import type { CompanyReservationColumn } from '@/hooks/useUserPreferences';
 
 // ============================================
 // TYPES
@@ -22,8 +22,8 @@ export const SORT_OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'name_desc', label: 'Nom Z→A' },
 ];
 
-/** Labels des colonnes pour le header du tableau (sans checkinInternalNotes) */
-export const COLUMN_HEADERS: Record<CompanyExportColumn, string> = {
+/** Labels des colonnes pour le header du tableau */
+export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   date: 'Date',
   spectacle: 'Spectacle',
   venue: 'Lieu',
@@ -52,6 +52,7 @@ export const COLUMN_HEADERS: Record<CompanyExportColumn, string> = {
 
 /**
  * Formate une date en YYYY-MM-DD en utilisant la timezone locale
+ * Évite le problème de décalage UTC avec toISOString()
  */
 export function formatLocalDate(date: Date): string {
   const year = date.getFullYear();
@@ -65,9 +66,10 @@ export function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dat
   
   switch (preset) {
     case 'this_week': {
+      // Lundi de cette semaine à dimanche
       const monday = new Date(today);
       const dayOfWeek = today.getDay();
-      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Lundi = 1, Dimanche = 0
       monday.setDate(today.getDate() + diff);
       
       const sunday = new Date(monday);
@@ -123,7 +125,7 @@ export function formatDateTimeFr(dateStr: string): string {
 // HELPERS TRI COLONNES
 // ============================================
 
-/** Colonnes qui peuvent être triées */
+/** Colonnes qui peuvent être triées et leur mapping vers les options de tri */
 type SortableColumn = 'date' | 'lastName' | 'createdAt';
 
 export const SORTABLE_COLUMNS: Record<SortableColumn, { asc: SortOption; desc: SortOption }> = {
@@ -133,7 +135,7 @@ export const SORTABLE_COLUMNS: Record<SortableColumn, { asc: SortOption; desc: S
 };
 
 /** Vérifie si une colonne est triable */
-export function isSortableColumn(col: CompanyExportColumn): col is SortableColumn {
+export function isSortableColumn(col: CompanyReservationColumn): col is SortableColumn {
   return col in SORTABLE_COLUMNS;
 }
 
