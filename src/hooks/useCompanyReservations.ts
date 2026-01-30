@@ -24,6 +24,9 @@ import {
   type CompanyReservationStats,
   type CompanyExportColumn,
 } from '@/lib/services/company-reservations';
+
+// Re-export du type pour usage externe
+export type { CompanyExportColumn } from '@/lib/services/company-reservations';
 import { logger } from '@/lib/logger';
 
 // ============================================
