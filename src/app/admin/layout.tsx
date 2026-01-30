@@ -1,49 +1,43 @@
 'use client';
 
-import { useState } from 'react';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 import { AdminBar } from '@/components/admin/admin-bar';
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
 export default function AdminLayout({
-    children,
+  children,
 }: {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  return (
+    <>
+      {/* Barre admin (visible uniquement pour les admins connectés) */}
+      <AdminBar />
 
-    return (
-        <>
-            {/* Barre admin (visible uniquement pour les admins connectés) */}
-            <AdminBar />
-            
-            <div className="flex min-h-screen">
-                {/* Sidebar */}
-                <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <SidebarProvider>
+        {/* Sidebar */}
+        <AdminSidebar />
 
-                {/* Contenu principal */}
-                <main className="flex-1 lg:ml-[260px] bg-muted min-h-screen overflow-x-hidden">
-                    {/* Header mobile avec bouton hamburger */}
-                    <div className="lg:hidden sticky top-0 z-30 bg-white border-b px-4 py-3 flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setSidebarOpen(true)}
-                            className="h-9 w-9"
-                        >
-                            <Menu className="w-5 h-5" />
-                            <span className="sr-only">Ouvrir le menu</span>
-                        </Button>
-                        <h1 className="text-lg font-semibold text-derviche-dark">Administration</h1>
-                    </div>
+        {/* Contenu principal */}
+        <SidebarInset>
+          {/* Header avec trigger sidebar */}
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 lg:px-6">
+            <SidebarTrigger className="-ml-1" aria-label="Ouvrir/fermer le menu" />
+            <Separator orientation="vertical" className="h-6" />
+            <h1 className="text-lg font-semibold text-derviche-dark lg:hidden">
+              Administration
+            </h1>
+          </header>
 
-                    {/* Contenu */}
-                    <div className="p-4 lg:p-8 max-w-full">
-                        {children}
-                    </div>
-                </main>
-            </div>
-        </>
-    );
+          {/* Contenu */}
+          <div className="flex-1 p-4 lg:p-8">{children}</div>
+        </SidebarInset>
+      </SidebarProvider>
+    </>
+  );
 }

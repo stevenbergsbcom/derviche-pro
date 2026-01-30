@@ -149,7 +149,7 @@ export function ReservationsContent({
       </div>
 
       {/* Vue Tableau (desktop) */}
-      <div className="hidden lg:block w-full">
+      <div className="hidden lg:block w-full overflow-hidden">
         <Card className="py-0">
           <CardContent className="p-0">
             <div className="max-h-[70vh] overflow-auto">
