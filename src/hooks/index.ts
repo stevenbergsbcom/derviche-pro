@@ -63,6 +63,9 @@ export {
   type GetSlotsOptions,
 } from '@/lib/services/checkin';
 
+// Hooks Supabase - Dashboard Admin
+export { useUserFirstName } from './useUserFirstName';
+
 // Hooks Utilitaires
 export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
 export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';
