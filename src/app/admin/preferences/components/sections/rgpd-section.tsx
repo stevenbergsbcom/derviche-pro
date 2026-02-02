@@ -1,0 +1,184 @@
+/**
+ * Section RGPD - Paramètres de conservation des données
+ * Derviche Diffusion - Admin Preferences
+ */
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Shield } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SettingsCard } from '../shared';
+
+import { useRgpdSettings } from '@/hooks/useAppSettings';
+import type { RgpdSettings } from '@/lib/services/app-settings';
+
+// ============================================
+// VALIDATION SCHEMA
+// ============================================
+
+const rgpdSchema = z.object({
+  rgpd_data_retention_months: z
+    .number({ error: 'Nombre requis' })
+    .min(1, 'Minimum 1 mois')
+    .max(120, 'Maximum 120 mois (10 ans)'),
+  rgpd_inactive_account_months: z
+    .number({ error: 'Nombre requis' })
+    .min(1, 'Minimum 1 mois')
+    .max(120, 'Maximum 120 mois (10 ans)'),
+});
+
+type RgpdFormData = z.infer<typeof rgpdSchema>;
+
+// ============================================
+// PROPS
+// ============================================
+
+interface RgpdSectionProps {
+  /** Utilisateur peut modifier (super-admin) */
+  canEdit: boolean;
+}
+
+// ============================================
+// COMPONENT
+// ============================================
+
+export function RgpdSection({ canEdit }: RgpdSectionProps) {
+  const { data, isLoading, isSaving, error, update } = useRgpdSettings();
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<RgpdFormData>({
+    resolver: zodResolver(rgpdSchema),
+    defaultValues: {
+      rgpd_data_retention_months: 36,
+      rgpd_inactive_account_months: 24,
+    },
+  });
+
+  // Mettre à jour le formulaire quand les données arrivent
+  useEffect(() => {
+    if (data) {
+      reset({
+        rgpd_data_retention_months: data.rgpd_data_retention_months,
+        rgpd_inactive_account_months: data.rgpd_inactive_account_months,
+      });
+    }
+  }, [data, reset]);
+
+  // Suivre les changements
+  useEffect(() => {
+    setHasChanges(isDirty);
+  }, [isDirty]);
+
+  // Soumission du formulaire
+  const onSubmit = async (formData: RgpdFormData) => {
+    const cleanedData: Partial<RgpdSettings> = {
+      rgpd_data_retention_months: formData.rgpd_data_retention_months,
+      rgpd_inactive_account_months: formData.rgpd_inactive_account_months,
+    };
+
+    const result = await update(cleanedData);
+
+    if (result.success) {
+      toast.success('Paramètres RGPD enregistrés');
+      setHasChanges(false);
+    } else {
+      toast.error(result.error || 'Erreur lors de la sauvegarde');
+    }
+  };
+
+  // Erreur de chargement
+  if (error) {
+    return (
+      <SettingsCard
+        icon={Shield}
+        title="RGPD"
+        description="Conservation des données personnelles"
+        canEdit={false}
+      >
+        <p className="text-sm text-destructive">Erreur : {error}</p>
+      </SettingsCard>
+    );
+  }
+
+  return (
+    <SettingsCard
+      icon={Shield}
+      title="RGPD"
+      description="Paramètres de conservation et suppression des données personnelles"
+      isLoading={isLoading}
+      isSaving={isSaving}
+      canEdit={canEdit}
+      hasChanges={hasChanges}
+      onSubmit={handleSubmit(onSubmit)}
+    >
+      {/* Durée de conservation des données */}
+      <div className="space-y-2">
+        <Label htmlFor="rgpd_data_retention_months">
+          Durée de conservation des données <span className="text-destructive">*</span>
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="rgpd_data_retention_months"
+            type="number"
+            min={1}
+            max={120}
+            className="w-24"
+            disabled={!canEdit}
+            {...register('rgpd_data_retention_months', { valueAsNumber: true })}
+          />
+          <span className="text-sm text-muted-foreground">mois</span>
+        </div>
+        {errors.rgpd_data_retention_months && (
+          <p className="text-sm text-destructive">{errors.rgpd_data_retention_months.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Durée pendant laquelle les réservations et données associées sont conservées après la
+          représentation.
+        </p>
+      </div>
+
+      {/* Durée avant suppression compte inactif */}
+      <div className="space-y-2">
+        <Label htmlFor="rgpd_inactive_account_months">
+          Compte inactif <span className="text-destructive">*</span>
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="rgpd_inactive_account_months"
+            type="number"
+            min={1}
+            max={120}
+            className="w-24"
+            disabled={!canEdit}
+            {...register('rgpd_inactive_account_months', { valueAsNumber: true })}
+          />
+          <span className="text-sm text-muted-foreground">mois</span>
+        </div>
+        {errors.rgpd_inactive_account_months && (
+          <p className="text-sm text-destructive">{errors.rgpd_inactive_account_months.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Durée d&apos;inactivité après laquelle un compte utilisateur peut être supprimé
+          automatiquement.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <strong>Important :</strong> Ces paramètres doivent être conformes à votre politique de
+        confidentialité et aux réglementations RGPD en vigueur.
+      </div>
+    </SettingsCard>
+  );
+}
