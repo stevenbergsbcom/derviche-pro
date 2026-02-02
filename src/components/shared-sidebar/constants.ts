@@ -3,8 +3,11 @@
  * @module shared-sidebar/constants
  */
 
-/** Chemin du logo Derviche Diffusion */
-export const LOGO_PATH = '/images/logos/logo-derviche-blanc-transparent.png';
+/** Chemin du logo par défaut (version blanche pour fonds sombres) */
+export const LOGO_PATH = '/images/logos/logo-theatre-blanc.svg';
+
+/** Chemin du logo par défaut (version sombre pour fonds clairs) */
+export const LOGO_PATH_DARK = '/images/logos/logo-theatre-noir.svg';
 
 /** Dimensions du logo */
 export const LOGO_DIMENSIONS = {
@@ -13,7 +16,7 @@ export const LOGO_DIMENSIONS = {
 } as const;
 
 /** Alt text du logo */
-export const LOGO_ALT = 'Derviche Diffusion';
+export const LOGO_ALT = 'Logo de l\'organisation';
 
 /** Label par défaut pour le lien externe */
 export const EXTERNAL_LINK_LABEL = 'Voir le site';
