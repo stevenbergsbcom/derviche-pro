@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -56,15 +56,26 @@ type OrganizationFormData = z.infer<typeof organizationSchema>;
 interface OrganizationSectionProps {
   /** Utilisateur peut modifier (super-admin) */
   canEdit: boolean;
+  /** Callback pour notifier le parent des changements non sauvegardés */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function OrganizationSection({ canEdit }: OrganizationSectionProps) {
+export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSectionProps) {
   const { data, isLoading, isSaving, error, update } = useOrganizationSettings();
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Flag pour savoir si l'initialisation est faite
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ref pour la callback (évite les boucles infinies)
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
 
   const {
     register,
@@ -82,9 +93,9 @@ export function OrganizationSection({ canEdit }: OrganizationSectionProps) {
     },
   });
 
-  // Mettre à jour le formulaire quand les données arrivent
+  // Initialiser le formulaire quand les données arrivent
   useEffect(() => {
-    if (data) {
+    if (data && !isInitialized) {
       reset({
         organization_name: data.organization_name || '',
         organization_logo_url: data.organization_logo_url || '',
@@ -92,13 +103,17 @@ export function OrganizationSection({ canEdit }: OrganizationSectionProps) {
         organization_contact_phone: data.organization_contact_phone || '',
         organization_address: data.organization_address || '',
       });
+      setIsInitialized(true);
     }
-  }, [data, reset]);
+  }, [data, reset, isInitialized]);
 
-  // Suivre les changements
+  // Suivre les changements seulement après initialisation
   useEffect(() => {
+    if (!isInitialized) return;
+    
     setHasChanges(isDirty);
-  }, [isDirty]);
+    onDirtyChangeRef.current?.(isDirty);
+  }, [isDirty, isInitialized]);
 
   // Soumission du formulaire
   const onSubmit = async (formData: OrganizationFormData) => {
@@ -115,6 +130,7 @@ export function OrganizationSection({ canEdit }: OrganizationSectionProps) {
     if (result.success) {
       toast.success('Paramètres enregistrés');
       setHasChanges(false);
+      onDirtyChange?.(false);
     } else {
       toast.error(result.error || 'Erreur lors de la sauvegarde');
     }

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,15 +37,26 @@ type EmailFormData = z.infer<typeof emailSchema>;
 interface EmailSectionProps {
   /** Utilisateur peut modifier (super-admin) */
   canEdit: boolean;
+  /** Callback pour notifier le parent des changements non sauvegardés */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function EmailSection({ canEdit }: EmailSectionProps) {
+export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
   const { data, isLoading, isSaving, error, update } = useEmailSettings();
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Flag pour savoir si l'initialisation est faite
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ref pour la callback (évite les boucles infinies)
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
 
   const {
     register,
@@ -60,20 +71,24 @@ export function EmailSection({ canEdit }: EmailSectionProps) {
     },
   });
 
-  // Mettre à jour le formulaire quand les données arrivent
+  // Initialiser le formulaire quand les données arrivent (une seule fois)
   useEffect(() => {
-    if (data) {
+    if (data && !isInitialized) {
       reset({
         email_from_name: data.email_from_name || '',
         email_from_address: data.email_from_address || '',
       });
+      setIsInitialized(true);
     }
-  }, [data, reset]);
+  }, [data, reset, isInitialized]);
 
-  // Suivre les changements
+  // Suivre les changements seulement après initialisation
   useEffect(() => {
+    if (!isInitialized) return;
+    
     setHasChanges(isDirty);
-  }, [isDirty]);
+    onDirtyChangeRef.current?.(isDirty);
+  }, [isDirty, isInitialized]);
 
   // Soumission du formulaire
   const onSubmit = async (formData: EmailFormData) => {
@@ -87,6 +102,7 @@ export function EmailSection({ canEdit }: EmailSectionProps) {
     if (result.success) {
       toast.success('Paramètres email enregistrés');
       setHasChanges(false);
+      onDirtyChange?.(false);
     } else {
       toast.error(result.error || 'Erreur lors de la sauvegarde');
     }

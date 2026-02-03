@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -23,15 +23,23 @@ import type { ReminderSettings } from '@/lib/services/app-settings';
 interface RemindersSectionProps {
   /** Utilisateur peut modifier (super-admin) */
   canEdit: boolean;
+  /** Callback pour notifier le parent des changements non sauvegardés */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function RemindersSection({ canEdit }: RemindersSectionProps) {
+export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionProps) {
   const { data, isLoading, isSaving, error, update } = useReminderSettings();
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Ref pour la callback (évite les boucles infinies)
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
 
   // État local pour les switches
   const [formData, setFormData] = useState<ReminderSettings>({
@@ -41,7 +49,10 @@ export function RemindersSection({ canEdit }: RemindersSectionProps) {
   });
 
   // État initial pour détecter les changements
+  // Note : initialData !== null joue le rôle de isInitialized dans les autres sections.
+  // On ne notifie le parent qu'une fois les données initiales chargées.
   const [initialData, setInitialData] = useState<ReminderSettings | null>(null);
+  const hasInitialData = initialData !== null;
 
   // Mettre à jour quand les données arrivent
   useEffect(() => {
@@ -51,16 +62,18 @@ export function RemindersSection({ canEdit }: RemindersSectionProps) {
     }
   }, [data]);
 
-  // Détecter les changements
+  // Détecter les changements et notifier le parent (sans onDirtyChange dans les deps)
   useEffect(() => {
-    if (initialData) {
-      const changed =
-        formData.reminder_enabled_7d !== initialData.reminder_enabled_7d ||
-        formData.reminder_enabled_2d !== initialData.reminder_enabled_2d ||
-        formData.reminder_enabled_12h !== initialData.reminder_enabled_12h;
-      setHasChanges(changed);
-    }
-  }, [formData, initialData]);
+    // Ne rien faire tant que les données initiales ne sont pas chargées
+    if (!hasInitialData || !initialData) return;
+
+    const changed =
+      formData.reminder_enabled_7d !== initialData.reminder_enabled_7d ||
+      formData.reminder_enabled_2d !== initialData.reminder_enabled_2d ||
+      formData.reminder_enabled_12h !== initialData.reminder_enabled_12h;
+    setHasChanges(changed);
+    onDirtyChangeRef.current?.(changed);
+  }, [formData, initialData, hasInitialData]);
 
   // Toggle un switch
   const handleToggle = (key: keyof ReminderSettings) => {
@@ -78,6 +91,7 @@ export function RemindersSection({ canEdit }: RemindersSectionProps) {
       toast.success('Paramètres de rappels enregistrés');
       setInitialData(formData);
       setHasChanges(false);
+      onDirtyChange?.(false);
     } else {
       toast.error(result.error || 'Erreur lors de la sauvegarde');
     }
