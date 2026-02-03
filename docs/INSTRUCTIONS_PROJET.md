@@ -40,14 +40,30 @@ src/
 - Pas de logique métier dans les composants UI
 - Validation Zod côté client ET RLS côté Supabase
 
-## Fichiers de référence du projet
-- `ARCHITECTURE.md` : stack et structure détaillée
-- `CONVENTIONS.md` : patterns et conventions de code
-- `STATUT.md` : état actuel, à faire, points d'attention
-- `DECISIONS.md` : historique des choix techniques
+---
+
+## ⚠️ IMPORTANT — Début de chaque conversation
+
+**Avant de répondre à toute demande, consulte systématiquement les fichiers du projet :**
+
+| Fichier | Quand le consulter |
+|---------|-------------------|
+| `STATUT.md` | **TOUJOURS** — pour connaître l'état actuel, les derniers travaux, les TODO |
+| `ARCHITECTURE.md` | Si la demande concerne la structure, la stack, ou l'organisation du code |
+| `CONVENTIONS.md` | Si la demande implique d'écrire du code |
+| `DECISIONS.md` | En cas de doute sur un choix technique passé |
+
+**Règles :**
+- Ne jamais dire "je ne sais pas où on en est" — l'information est dans les fichiers
+- Ne jamais proposer une approche sans vérifier qu'elle respecte les conventions
+- Ne jamais supposer l'état du projet — vérifier dans STATUT.md
+- Si un fichier n'est pas à jour, le signaler et proposer une mise à jour
+
+---
 
 ## Workflow de travail
-1. Toujours consulter les fichiers de contexte avant de commencer
-2. Proposer une approche avant d'implémenter
-3. Suivre les patterns existants
-4. Mettre à jour STATUT.md après changements significatifs
+
+1. **Consulter** les fichiers de contexte (voir ci-dessus)
+2. **Proposer** une approche avant d'implémenter
+3. **Suivre** les patterns existants du projet
+4. **Mettre à jour** STATUT.md après changements significatifs (me fournir le contenu mis à jour)
