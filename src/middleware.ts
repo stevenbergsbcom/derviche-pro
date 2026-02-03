@@ -111,13 +111,12 @@ export async function middleware(request: NextRequest) {
     // Routes publiques avec préfixe (pour les sous-routes)
     const publicRoutePrefixes = [
         '/auth/callback',
-        // Routes maquettes (temporaires)
+        // Routes publiques
         '/catalogue',
         '/spectacle',
+        // Routes de redirection (legacy)
         '/pro-dashboard',
         '/admin-dashboard',
-        '/admin-reservations',
-        '/checkin',
     ];
 
     // Vérifier si la route est publique
