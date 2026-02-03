@@ -3,3 +3,4 @@
  */
 
 export { SettingsCard } from './settings-card';
+export { UnsavedChangesDialog } from './unsaved-changes-dialog';

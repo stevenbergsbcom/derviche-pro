@@ -26,17 +26,34 @@ import { cn } from '@/lib/utils';
 interface AppearanceSectionProps {
   /** Utilisateur peut modifier (super-admin) */
   canEdit: boolean;
+  /** Callback pour notifier le parent des changements non sauvegardés */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function AppearanceSection({ canEdit }: AppearanceSectionProps) {
+export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionProps) {
   const { data, isLoading, isSaving, error, update } = useThemeSettings();
+
+  // Détection des changements
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Flag pour savoir si l'initialisation est faite
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ref pour la callback (évite les boucles infinies)
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
 
   // État local pour le thème
   const [selectedTheme, setSelectedTheme] = useState<string>('classic');
+
+  // Ref pour stocker la valeur initiale du thème (pour comparaison)
+  const initialThemeRef = useRef<string | null>(null);
 
   // État local pour les logos (fichiers à uploader)
   const [logoWhiteFile, setLogoWhiteFile] = useState<File | null>(null);
@@ -50,31 +67,34 @@ export function AppearanceSection({ canEdit }: AppearanceSectionProps) {
   const [logoWhiteError, setLogoWhiteError] = useState<string | null>(null);
   const [logoDarkError, setLogoDarkError] = useState<string | null>(null);
 
-  // Détection des changements
-  const [hasChanges, setHasChanges] = useState(false);
-
   // Ref pour les URLs originales des logos
   const originalLogoWhiteUrl = useRef<string | null>(null);
   const originalLogoDarkUrl = useRef<string | null>(null);
 
-  // Mettre à jour quand les données arrivent
+  // Initialiser quand les données arrivent (une seule fois)
   useEffect(() => {
-    if (data) {
+    if (data && !isInitialized) {
       setSelectedTheme(data.theme_preset);
+      initialThemeRef.current = data.theme_preset;
       originalLogoWhiteUrl.current = data.logo_white_url;
       originalLogoDarkUrl.current = data.logo_dark_url;
+      setIsInitialized(true);
     }
-  }, [data]);
+  }, [data, isInitialized]);
 
-  // Détecter les changements
+  // Détecter les changements seulement après initialisation
   useEffect(() => {
-    if (data) {
-      const themeChanged = selectedTheme !== data.theme_preset;
-      const logoWhiteChanged = logoWhiteFile !== null || logoWhiteDeleted;
-      const logoDarkChanged = logoDarkFile !== null || logoDarkDeleted;
-      setHasChanges(themeChanged || logoWhiteChanged || logoDarkChanged);
-    }
-  }, [selectedTheme, data, logoWhiteFile, logoDarkFile, logoWhiteDeleted, logoDarkDeleted]);
+    // Ne rien faire tant que l'initialisation n'est pas terminée
+    if (!isInitialized || initialThemeRef.current === null) return;
+
+    const themeChanged = selectedTheme !== initialThemeRef.current;
+    const logoWhiteChanged = logoWhiteFile !== null || logoWhiteDeleted;
+    const logoDarkChanged = logoDarkFile !== null || logoDarkDeleted;
+    const changed = themeChanged || logoWhiteChanged || logoDarkChanged;
+
+    setHasChanges(changed);
+    onDirtyChangeRef.current?.(changed);
+  }, [isInitialized, selectedTheme, logoWhiteFile, logoDarkFile, logoWhiteDeleted, logoDarkDeleted]);
 
   // Changement de thème
   const handleThemeChange = (themeId: string) => {
@@ -121,7 +141,7 @@ export function AppearanceSection({ canEdit }: AppearanceSectionProps) {
     } = {};
 
     // 1. Mettre à jour le thème si changé
-    if (selectedTheme !== data?.theme_preset) {
+    if (selectedTheme !== initialThemeRef.current) {
       updates.theme_preset = selectedTheme;
     }
 
@@ -171,15 +191,19 @@ export function AppearanceSection({ canEdit }: AppearanceSectionProps) {
 
       if (result.success) {
         toast.success('Apparence enregistrée');
+        // Mettre à jour les valeurs initiales
+        if (updates.theme_preset) {
+          initialThemeRef.current = updates.theme_preset;
+        }
         // Réinitialiser les états locaux
         setLogoWhiteFile(null);
         setLogoDarkFile(null);
         setLogoWhiteDeleted(false);
         setLogoDarkDeleted(false);
         setHasChanges(false);
+        onDirtyChange?.(false);
 
         // Notifier les autres composants du changement de logo ou de thème
-        // (le changement de thème affecte aussi le choix du logo blanc/noir)
         if (
           updates.logo_white_url !== undefined ||
           updates.logo_dark_url !== undefined ||

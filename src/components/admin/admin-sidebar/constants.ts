@@ -77,7 +77,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/preferences',
     icon: Settings,
     tooltip: 'Paramètres',
-    allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
+    allowedRoles: ['super-admin'], // Visible uniquement pour super-admin
   },
 ];
 

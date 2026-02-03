@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -43,15 +43,26 @@ type RgpdFormData = z.infer<typeof rgpdSchema>;
 interface RgpdSectionProps {
   /** Utilisateur peut modifier (super-admin) */
   canEdit: boolean;
+  /** Callback pour notifier le parent des changements non sauvegardés */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 // ============================================
 // COMPONENT
 // ============================================
 
-export function RgpdSection({ canEdit }: RgpdSectionProps) {
+export function RgpdSection({ canEdit, onDirtyChange }: RgpdSectionProps) {
   const { data, isLoading, isSaving, error, update } = useRgpdSettings();
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Flag pour savoir si l'initialisation est faite
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Ref pour la callback (évite les boucles infinies)
+  const onDirtyChangeRef = useRef(onDirtyChange);
+  useEffect(() => {
+    onDirtyChangeRef.current = onDirtyChange;
+  });
 
   const {
     register,
@@ -66,20 +77,24 @@ export function RgpdSection({ canEdit }: RgpdSectionProps) {
     },
   });
 
-  // Mettre à jour le formulaire quand les données arrivent
+  // Initialiser le formulaire quand les données arrivent (une seule fois)
   useEffect(() => {
-    if (data) {
+    if (data && !isInitialized) {
       reset({
         rgpd_data_retention_months: data.rgpd_data_retention_months,
         rgpd_inactive_account_months: data.rgpd_inactive_account_months,
       });
+      setIsInitialized(true);
     }
-  }, [data, reset]);
+  }, [data, reset, isInitialized]);
 
-  // Suivre les changements
+  // Suivre les changements seulement après initialisation
   useEffect(() => {
+    if (!isInitialized) return;
+    
     setHasChanges(isDirty);
-  }, [isDirty]);
+    onDirtyChangeRef.current?.(isDirty);
+  }, [isDirty, isInitialized]);
 
   // Soumission du formulaire
   const onSubmit = async (formData: RgpdFormData) => {
@@ -93,6 +108,7 @@ export function RgpdSection({ canEdit }: RgpdSectionProps) {
     if (result.success) {
       toast.success('Paramètres RGPD enregistrés');
       setHasChanges(false);
+      onDirtyChange?.(false);
     } else {
       toast.error(result.error || 'Erreur lors de la sauvegarde');
     }
