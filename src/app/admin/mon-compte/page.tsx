@@ -35,11 +35,11 @@ function formatRole(role: string): string {
             return 'Super Admin';
         case 'admin':
             return 'Admin';
-        case 'externe-dd':
+        case 'externe':
             return 'Externe DD';
-        case 'programmateur':
+        case 'professional':
             return 'Programmateur';
-        case 'compagnie':
+        case 'company':
             return 'Compagnie';
         default:
             return role;
@@ -53,11 +53,11 @@ function getRoleBadgeClass(role: string): string {
             return 'bg-purple-500/10 text-purple-700 border-purple-500/20';
         case 'admin':
             return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
-        case 'externe-dd':
+        case 'externe':
             return 'bg-orange-500/10 text-orange-700 border-orange-500/20';
-        case 'programmateur':
+        case 'professional':
             return 'bg-green-500/10 text-green-700 border-green-500/20';
-        case 'compagnie':
+        case 'company':
             return 'bg-gold/10 text-gold border-gold/20';
         default:
             return 'bg-muted text-muted-foreground';
