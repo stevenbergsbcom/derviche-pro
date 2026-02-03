@@ -26,3 +26,7 @@ export * from './admin-dashboard';
 
 // Services Check-in (PWA)
 export * from './checkin';
+
+// Services Préférences
+export * from './app-settings';
+export * from './storage';

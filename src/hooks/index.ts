@@ -69,3 +69,16 @@ export { useUserFirstName } from './useUserFirstName';
 // Hooks Utilitaires
 export { useDebounce, useDebounceCallback, useDebounceState } from './useDebounce';
 export type { DebouncedFunction, UseDebounceStateReturn } from './useDebounce';
+
+// Hooks Préférences (App Settings)
+export {
+  useOrganizationSettings,
+  useEmailSettings,
+  useReminderSettings,
+  useRgpdSettings,
+  useThemeSettings,
+} from './useAppSettings';
+export type { UseAppSettingsReturn } from './useAppSettings';
+
+// Hooks UX
+export { useUnsavedChangesWarning } from './useUnsavedChangesWarning';

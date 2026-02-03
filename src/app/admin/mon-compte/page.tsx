@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -104,6 +105,7 @@ export default function MonComptePage() {
             phone: formData.phone,
         }));
         setIsEditing(false);
+        toast.success('Profil mis à jour avec succès');
     };
 
     // Annuler les modifications
@@ -138,14 +140,14 @@ export default function MonComptePage() {
             return;
         }
 
-        // Simulation de succès
+        // Succès
         setIsPasswordDialogOpen(false);
         setPasswordData({
             currentPassword: '',
             newPassword: '',
             confirmPassword: '',
         });
-        // TODO: Afficher une notification de succès
+        toast.success('Mot de passe modifié avec succès');
     };
 
     return (
