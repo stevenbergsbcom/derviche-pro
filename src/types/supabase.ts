@@ -143,8 +143,10 @@ export type Database = {
         Row: {
           address: string | null
           afc_number: string | null
+          city: string | null
           comments: string | null
           company_id: string | null
+          country: string | null
           created_at: string
           deleted_at: string | null
           disabled_at: string | null
@@ -161,14 +163,17 @@ export type Database = {
           must_change_password: boolean | null
           phone: string | null
           phone2: string | null
+          postal_code: string | null
           structure: string | null
           updated_at: string
         }
         Insert: {
           address?: string | null
           afc_number?: string | null
+          city?: string | null
           comments?: string | null
           company_id?: string | null
+          country?: string | null
           created_at?: string
           deleted_at?: string | null
           disabled_at?: string | null
@@ -185,14 +190,17 @@ export type Database = {
           must_change_password?: boolean | null
           phone?: string | null
           phone2?: string | null
+          postal_code?: string | null
           structure?: string | null
           updated_at?: string
         }
         Update: {
           address?: string | null
           afc_number?: string | null
+          city?: string | null
           comments?: string | null
           company_id?: string | null
+          country?: string | null
           created_at?: string
           deleted_at?: string | null
           disabled_at?: string | null
@@ -209,6 +217,7 @@ export type Database = {
           must_change_password?: boolean | null
           phone?: string | null
           phone2?: string | null
+          postal_code?: string | null
           structure?: string | null
           updated_at?: string
         }
@@ -238,6 +247,7 @@ export type Database = {
           guest_address: string | null
           guest_afc_number: string | null
           guest_city: string | null
+          guest_country: string | null
           guest_email: string | null
           guest_email_secondary: string | null
           guest_first_name: string | null
@@ -271,6 +281,7 @@ export type Database = {
           guest_address?: string | null
           guest_afc_number?: string | null
           guest_city?: string | null
+          guest_country?: string | null
           guest_email?: string | null
           guest_email_secondary?: string | null
           guest_first_name?: string | null
@@ -304,6 +315,7 @@ export type Database = {
           guest_address?: string | null
           guest_afc_number?: string | null
           guest_city?: string | null
+          guest_country?: string | null
           guest_email?: string | null
           guest_email_secondary?: string | null
           guest_first_name?: string | null
@@ -947,8 +959,10 @@ export type Database = {
       create_public_reservation: {
         Args: {
           p_address?: string
+          p_afc_number?: string
           p_city?: string
           p_comment?: string
+          p_country?: string
           p_email: string
           p_email_secondary?: string
           p_first_name: string
