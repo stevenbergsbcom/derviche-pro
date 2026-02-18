@@ -25,6 +25,8 @@ import type { ReservationConfirmation } from '@/types';
 import { formatDateFR, formatTimeFR } from '@/types';
 import { usePublicShow } from '@/hooks/usePublicShow';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
+import { createClient } from '@/lib/supabase/client';
+import type { UserRole } from '@/types/database';
 import type { PublicShow } from '@/lib/services/public-catalog';
 
 // ============================================
@@ -88,6 +90,28 @@ function ConfirmationContent() {
   const [isMounted, setIsMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<ReservationConfirmation | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  // Charger le rôle de l'utilisateur connecté (pour afficher ou non le bouton dashboard)
+  useEffect(() => {
+    const loadRole = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      if (roles && roles.length > 0) {
+        const priority: UserRole[] = ['super-admin', 'admin', 'externe', 'company', 'professional'];
+        const found = priority.find(r => roles.some(row => row.role === r));
+        setUserRole(found ?? null);
+      }
+    };
+    void loadRole();
+  }, []);
 
   // Charger les données du spectacle depuis Supabase
   const { show, isLoading: showLoading, error: showError } = usePublicShow(slug);
@@ -237,12 +261,15 @@ function ConfirmationContent() {
 
         {/* Boutons de navigation — visibles sans scroller */}
         <div className="max-w-3xl mx-auto mb-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Button asChild size="lg" className="bg-derviche hover:bg-derviche-dark w-full sm:w-auto">
-            <Link href="/professional/reservations">
-              <LayoutDashboard className="w-4 h-4 mr-2" />
-              Mes réservations
-            </Link>
-          </Button>
+          {/* Uniquement pour les professionnels authentifiés */}
+          {userRole === 'professional' && (
+            <Button asChild size="lg" className="bg-derviche hover:bg-derviche-dark w-full sm:w-auto">
+              <Link href="/professional/reservations">
+                <LayoutDashboard className="w-4 h-4 mr-2" />
+                Mes réservations
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
             <Link href="/">
               <Home className="w-4 h-4 mr-2" />
