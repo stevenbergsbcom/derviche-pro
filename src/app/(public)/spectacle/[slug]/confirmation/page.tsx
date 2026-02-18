@@ -19,6 +19,7 @@ import {
   Home,
   Loader2,
   Drama,
+  LayoutDashboard,
 } from 'lucide-react';
 import type { ReservationConfirmation } from '@/types';
 import { formatDateFR, formatTimeFR } from '@/types';
@@ -234,6 +235,22 @@ function ConfirmationContent() {
           </div>
         </div>
 
+        {/* Boutons de navigation — visibles sans scroller */}
+        <div className="max-w-3xl mx-auto mb-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Button asChild size="lg" className="bg-derviche hover:bg-derviche-dark w-full sm:w-auto">
+            <Link href="/professional/reservations">
+              <LayoutDashboard className="w-4 h-4 mr-2" />
+              Mes réservations
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+            <Link href="/">
+              <Home className="w-4 h-4 mr-2" />
+              Retour à l&apos;accueil
+            </Link>
+          </Button>
+        </div>
+
         {/* Carte récapitulative */}
         <div className="max-w-3xl mx-auto mb-8">
           <Card className="overflow-hidden p-0">
@@ -368,16 +385,6 @@ function ConfirmationContent() {
             </div>
           </div>
         )}
-
-        {/* Bouton retour accueil */}
-        <div className="max-w-3xl mx-auto mt-12 text-center">
-          <Button asChild variant="outline" size="lg">
-            <Link href="/">
-              <Home className="w-4 h-4 mr-2" />
-              Retour à l&apos;accueil
-            </Link>
-          </Button>
-        </div>
       </main>
 
       <Footer />

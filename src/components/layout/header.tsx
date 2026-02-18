@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, CalendarDays } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { UserRole } from '@/types/database';
@@ -141,6 +141,15 @@ export function Header() {
           ) : user ? (
             // Utilisateur connecté
             <>
+              {userRole === 'professional' && (
+                <Link
+                  href="/professional/reservations"
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Mes réservations
+                </Link>
+              )}
               <Link
                 href={accountUrl}
                 className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
@@ -203,6 +212,16 @@ export function Header() {
             ) : user ? (
               // Utilisateur connecté - Mobile
               <>
+                {userRole === 'professional' && (
+                  <Link
+                    href="/professional/reservations"
+                    className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <CalendarDays className="w-5 h-5" />
+                    Mes réservations
+                  </Link>
+                )}
                 <Link
                   href={accountUrl}
                   className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
