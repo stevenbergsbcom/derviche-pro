@@ -37,9 +37,10 @@ function formatDate(dateStr: string): string {
 }
 
 function formatTime(timeStr: string): string {
-  // timeStr format : "14:00:00" ou "14:00"
+  // timeStr format : "14:00:00" ou "14:00" (issu de sl.time::TEXT côté RPC)
+  if (!timeStr || !timeStr.includes(':')) return '—';
   const [hours, minutes] = timeStr.split(':');
-  return `${hours}h${minutes}`;
+  return `${hours ?? '—'}h${minutes ?? '00'}`;
 }
 
 // ============================================
@@ -182,6 +183,7 @@ export function GuestReservationsBanner({ onClaimSuccess }: GuestReservationsBan
           type="button"
           className="text-xs text-amber-700 underline underline-offset-2 hover:text-amber-900"
           onClick={toggleAll}
+          aria-label={allSelected ? 'Tout décocher les réservations' : 'Tout sélectionner les réservations'}
         >
           {allSelected ? 'Tout décocher' : 'Tout sélectionner'}
         </button>

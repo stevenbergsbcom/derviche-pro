@@ -50,7 +50,11 @@ export interface UseGuestReservationsClaimResult {
 // ============================================
 
 export function useGuestReservationsClaim(
-  /** Callback appelé après un rapatriement réussi pour déclencher un refresh de la liste principale */
+  /**
+   * Callback appelé après un rapatriement réussi pour déclencher un refresh de la liste principale.
+   * IMPORTANT : doit être une référence stable (useCallback ou fonction définie hors du render)
+   * pour éviter de recréer claimSelected à chaque render du parent.
+   */
   onClaimSuccess?: (count: number) => void
 ): UseGuestReservationsClaimResult {
   const [guestReservations, setGuestReservations] = useState<GuestReservation[]>([]);

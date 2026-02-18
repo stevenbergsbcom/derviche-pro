@@ -141,7 +141,11 @@ export default function ProfessionalReservationsPage() {
       {error && !isLoading && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Une erreur est survenue lors du chargement de vos réservations.{' '}
-          <button onClick={refresh} className="underline font-medium">
+          <button
+            onClick={refresh}
+            className="underline font-medium"
+            aria-label="Réessayer de charger les réservations"
+          >
             Réessayer
           </button>
         </div>
