@@ -12,26 +12,31 @@ import Image from 'next/image';
 import { SidebarHeader, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { LOGO_PATH, LOGO_PATH_DARK, LOGO_DIMENSIONS, LOGO_ALT } from '../constants';
 import type { SidebarLogoProps } from '../types';
-import { getCurrentTheme, onLogoChange } from '@/lib/theme';
+import { onLogoChange } from '@/lib/theme';
 import { getThemeSettings, getOrganizationSettings } from '@/lib/services/app-settings';
 
 /**
  * Logo Derviche Diffusion pour la sidebar
- * Utilise le logo approprié (blanc ou sombre) selon le thème actif
- * S'adapte au mode collapsed (affiche une version réduite centrée)
+ * Utilise le logo approprié (blanc ou sombre) selon la couleur réelle de la sidebar.
+ * S'adapte au mode collapsed (affiche une version réduite centrée).
+ *
+ * Stratégie de sélection du logo :
+ * On lit directement la variable CSS --sidebar pour détecter la luminosité réelle.
+ * Cette approche est robuste : elle fonctionne quel que soit le thème configuré,
+ * que les settings Supabase soient accessibles ou non (RLS bloquant pour les
+ * rôles non-admin comme les professionnels), et avec les valeurs par défaut
+ * de globals.css (sidebar bleue foncée = thème theatre).
  */
 function SidebarLogoComponent({ baseHref, subtitle }: SidebarLogoProps) {
   const { state } = useSidebar();
   const isCollapsed = state === 'collapsed';
 
-  // État pour les logos personnalisés, le thème et le nom de l'organisation
+  // Logos personnalisés et nom d'organisation depuis Supabase
   const [logoWhiteUrl, setLogoWhiteUrl] = useState<string | null>(null);
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
-  const [themePreset, setThemePreset] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Charger les logos personnalisés, le thème et le nom de l'organisation
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -43,45 +48,58 @@ function SidebarLogoComponent({ baseHref, subtitle }: SidebarLogoProps) {
         if (themeResult.data) {
           setLogoWhiteUrl(themeResult.data.logo_white_url);
           setLogoDarkUrl(themeResult.data.logo_dark_url);
-          setThemePreset(themeResult.data.theme_preset);
         }
 
         if (orgResult.data) {
           setOrganizationName(orgResult.data.organization_name);
         }
       } catch (error) {
-        console.error('Erreur chargement settings:', error);
+        console.error('Erreur chargement settings sidebar logo:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadSettings();
+    void loadSettings();
 
-    // Écouter les changements de logo depuis les préférences
+    // Écouter les changements de logo depuis les préférences admin
     const unsubscribe = onLogoChange(() => {
-      loadSettings();
+      void loadSettings();
     });
 
     return unsubscribe;
   }, []);
 
-  // Déterminer le chemin du logo à utiliser
+  /**
+   * Détermine le logo à afficher en lisant directement la luminosité OKLCH
+   * de la variable CSS --sidebar active dans le document.
+   * Luminosité < 0.5 → sidebar sombre → logo blanc
+   * Luminosité >= 0.5 → sidebar claire → logo noir
+   */
   const getLogoPath = (): string => {
-    // Utiliser le thème chargé depuis les settings (pas le DOM)
-    const themeId = themePreset || getCurrentTheme();
+    if (typeof window !== 'undefined') {
+      const sidebarBg = getComputedStyle(document.documentElement)
+        .getPropertyValue('--sidebar')
+        .trim();
 
-    // Seul le thème "theatre" a une sidebar foncée nécessitant le logo blanc
-    // Tous les autres thèmes ont une sidebar claire et utilisent le logo noir
-    if (themeId === 'theatre') {
-      return logoWhiteUrl || LOGO_PATH;
+      const match = sidebarBg.match(/oklch\(([0-9.]+)/);
+      if (match) {
+        const lightness = parseFloat(match[1]);
+        if (lightness < 0.5) {
+          // Sidebar sombre → logo blanc
+          return logoWhiteUrl || LOGO_PATH;
+        }
+        // Sidebar claire → logo noir
+        return logoDarkUrl || LOGO_PATH_DARK;
+      }
     }
 
-    return logoDarkUrl || LOGO_PATH_DARK;
+    // Fallback SSR : globals.css définit une sidebar sombre par défaut
+    return logoWhiteUrl || LOGO_PATH;
   };
 
   // Ne pas afficher de logo tant que les settings ne sont pas chargés
-  // pour éviter le flash du logo par défaut
+  // pour éviter le flash du mauvais logo
   const currentLogoPath = isLoading ? null : getLogoPath();
   const isExternalUrl = currentLogoPath?.startsWith('http') ?? false;
 

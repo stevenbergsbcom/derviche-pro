@@ -11,13 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { AuthDialog } from '@/components/auth';
+import type { AuthSuccessData } from '@/components/auth';
 import {
     Clock,
     MapPin,
@@ -30,8 +25,6 @@ import {
     ChevronUp,
     Info,
     Calendar,
-    LogIn,
-    UserPlus,
     Minus,
     Plus,
     Loader2,
@@ -1180,42 +1173,27 @@ export default function SpectacleDetailPage() {
             </div>
 
             {/* Modale d'authentification */}
-            <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Créer un compte ou continuer</DialogTitle>
-                        <DialogDescription>
-                            Pour faciliter vos futures réservations, vous pouvez créer un compte ou vous connecter.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-3 mt-4">
-                        <Button
-                            className="w-full bg-derviche hover:bg-derviche-dark text-white"
-                            onClick={() => router.push('/login')}
-                        >
-                            <LogIn className="w-4 h-4 mr-2" />
-                            Se connecter
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => router.push('/register')}
-                        >
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Créer un compte
-                        </Button>
-                        <button
-                            onClick={() => {
-                                setShowAuthModal(false);
-                                setCurrentStep('form');
-                            }}
-                            className="text-sm text-muted-foreground hover:text-derviche text-center mt-2 cursor-pointer"
-                        >
-                            Continuer sans compte
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <AuthDialog
+                open={showAuthModal}
+                onOpenChange={setShowAuthModal}
+                title="Gérez vos réservations facilement"
+                description="Connectez-vous ou créez un compte pour retrouver toutes vos réservations. Vous pouvez aussi continuer sans compte."
+                onSuccess={(data: AuthSuccessData) => {
+                    setFormData((prev) => ({
+                        ...prev,
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        email: data.email,
+                        phone: data.phone,
+                    }));
+                    setShowAuthModal(false);
+                    setCurrentStep('form');
+                }}
+                onContinueAsGuest={() => {
+                    setShowAuthModal(false);
+                    setCurrentStep('form');
+                }}
+            />
 
             <Footer />
         </div>

@@ -28,6 +28,9 @@ const COMPANY_ROLES: UserRole[] = ['company'];
 // Rôles autorisés pour l'interface check-in (accueil)
 const ACCUEIL_ROLES: UserRole[] = ['super-admin', 'admin', 'externe', 'company'];
 
+// Rôles autorisés pour l'interface professionnelle
+const PROFESSIONAL_ROLES: UserRole[] = ['professional'];
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -171,9 +174,10 @@ export async function middleware(request: NextRequest) {
     const isAdminRoute = pathname.startsWith('/admin');
     const isCompanyRoute = pathname.startsWith('/company');
     const isAccueilRoute = pathname.startsWith('/accueil');
+    const isProfessionalRoute = pathname.startsWith('/professional');
 
     // Si c'est une route protégée par rôle et que l'utilisateur est connecté
-    if (user && (isAdminRoute || isCompanyRoute || isAccueilRoute)) {
+    if (user && (isAdminRoute || isCompanyRoute || isAccueilRoute || isProfessionalRoute)) {
         // Récupérer le rôle de l'utilisateur
         const { data: roleData, error: roleError } = await supabase
             .from('user_roles')
@@ -222,6 +226,14 @@ export async function middleware(request: NextRequest) {
         if (isAccueilRoute && !ACCUEIL_ROLES.includes(userRole)) {
             const url = request.nextUrl.clone();
             url.pathname = '/';
+            url.searchParams.set('error', 'unauthorized');
+            return NextResponse.redirect(url);
+        }
+
+        // Vérification pour les routes /professional/*
+        if (isProfessionalRoute && !PROFESSIONAL_ROLES.includes(userRole)) {
+            const url = request.nextUrl.clone();
+            url.pathname = '/catalogue';
             url.searchParams.set('error', 'unauthorized');
             return NextResponse.redirect(url);
         }
