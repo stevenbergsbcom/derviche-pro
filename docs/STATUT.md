@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 120
+> Dernière mise à jour : Session 121
 
 ---
 
@@ -35,7 +35,7 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Utilisateurs | ✅ Liste, filtres, CRUD, rôle, statut, API |
-| Préférences | ✅ Organisation, Apparence (thème + logos), Email, Rappels, RGPD |
+| Préférences | ✅ Organisation, Apparence (thème + logos), Email, Rappels, RGPD + badges statut |
 
 ### ✅ Company (100%)
 - Dashboard compagnie
@@ -52,7 +52,24 @@
 
 ---
 
-## Dernier travail (Session 120)
+## Dernier travail (Session 121)
+
+**Préférences admin — indicateurs de statut :**
+- Badges de statut (Actif / Partiel / Non connecté) sur chaque onglet
+- Composant `InactiveSectionBanner` créé et intégré dans Email, Rappels, RGPD
+- Dette documentée dans STATUT.md
+
+**Admin mon-compte — suppression des données mock :**
+- Page connectée à Supabase (profil + rôle chargés en parallèle)
+- Sauvegarde réelle en base de données
+- Changement de mot de passe fonctionnel via `/api/auth/verify-password`
+- Skeleton de chargement + gestion des erreurs
+
+**Commit :** `fix(admin): connecter mon-compte à Supabase, suppression données mock`
+
+---
+
+## Travail précédent (Session 120)
 
 **Nettoyage technique :**
 - Regénération types Supabase
