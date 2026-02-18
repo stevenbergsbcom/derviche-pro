@@ -90,7 +90,11 @@ export function ProReservationCard({
       toast.success('Réservation annulée avec succès.');
       setCancelOpen(false);
     } else {
+      // On affiche le toast d'erreur puis on lève une exception
+      // pour signaler l'échec au ProCancelDialog, qui conservera
+      // ainsi le motif saisi par l'utilisateur sans le vider.
       toast.error(result.error ?? 'Une erreur est survenue lors de l\'annulation.');
+      throw new Error(result.error ?? 'Annulation échouée');
     }
   };
 

@@ -46,8 +46,16 @@ export function ProCancelDialog({
   const [reason, setReason] = useState('');
 
   const handleConfirm = async () => {
-    await onConfirm(reason.trim() || undefined);
-    setReason('');
+    try {
+      await onConfirm(reason.trim() || undefined);
+      // On ne vide le champ que si l'annulation a réussi.
+      // En cas d'erreur, onConfirm lève une exception et on conserve
+      // le motif saisi pour éviter à l'utilisateur de le retaper.
+      setReason('');
+    } catch {
+      // L'erreur est déjà gérée (toast) dans le parent.
+      // On ne fait rien ici : le dialog reste ouvert, le motif est conservé.
+    }
   };
 
   const handleClose = (newOpen: boolean) => {
