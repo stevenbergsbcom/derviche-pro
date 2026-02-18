@@ -47,6 +47,42 @@ function ReservationSkeleton() {
 }
 
 // ============================================
+// COMPOSANT LISTE AVEC EN-TÊTE DESKTOP
+// ============================================
+
+interface ReservationListProps {
+  reservations: ProReservation[];
+  onCancel: (id: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
+  isCancelling: boolean;
+}
+
+function ReservationList({ reservations, onCancel, isCancelling }: ReservationListProps) {
+  return (
+    <div className="space-y-2">
+      {/* En-tête colonnes — desktop uniquement */}
+      <div className="hidden lg:flex items-center gap-4 px-5 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+        <div className="w-1 shrink-0" />{/* placeholder barre statut */}
+        <div className="flex-1">Spectacle</div>
+        <div className="w-52 shrink-0">Date &amp; heure</div>
+        <div className="w-44 shrink-0">Lieu</div>
+        <div className="w-20 shrink-0">Places</div>
+        <div className="w-28 shrink-0 text-center">Statut</div>
+        <div className="w-24 shrink-0" />{/* placeholder actions */}
+      </div>
+      {/* Liste */}
+      {reservations.map((reservation) => (
+        <ProReservationCard
+          key={reservation.id}
+          reservation={reservation}
+          onCancel={onCancel}
+          isCancelling={isCancelling}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================
 // COMPOSANT LISTE VIDE
 // ============================================
 
@@ -137,16 +173,11 @@ export default function ProfessionalReservationsPage() {
             {upcoming.length === 0 ? (
               <EmptyState type="upcoming" />
             ) : (
-              <div className="space-y-3">
-                {upcoming.map((reservation) => (
-                  <ProReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                    onCancel={cancelReservation}
-                    isCancelling={isCancelling}
-                  />
-                ))}
-              </div>
+              <ReservationList
+                reservations={upcoming}
+                onCancel={cancelReservation}
+                isCancelling={isCancelling}
+              />
             )}
           </TabsContent>
 
@@ -155,16 +186,11 @@ export default function ProfessionalReservationsPage() {
             {history.length === 0 ? (
               <EmptyState type="history" />
             ) : (
-              <div className="space-y-3">
-                {history.map((reservation) => (
-                  <ProReservationCard
-                    key={reservation.id}
-                    reservation={reservation}
-                    onCancel={cancelReservation}
-                    isCancelling={isCancelling}
-                  />
-                ))}
-              </div>
+              <ReservationList
+                reservations={history}
+                onCancel={cancelReservation}
+                isCancelling={isCancelling}
+              />
             )}
           </TabsContent>
         </Tabs>

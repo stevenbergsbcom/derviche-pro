@@ -25,8 +25,10 @@ export interface PublicReservationFormData {
   address?: string;
   postalCode?: string;
   city?: string;
+  country?: string;
   organization?: string;
   function?: string;
+  afcNumber?: string;
   comment?: string;
 }
 
@@ -147,8 +149,10 @@ export async function createReservation(
         p_address: formData.address?.trim() || undefined,
         p_postal_code: formData.postalCode?.trim() || undefined,
         p_city: formData.city?.trim() || undefined,
+        p_country: formData.country?.trim() || undefined,
         p_organization: formData.organization?.trim() || undefined,
         p_function: formData.function?.trim() || undefined,
+        p_afc_number: formData.afcNumber?.trim() || undefined,
         p_comment: formData.comment?.trim() || undefined,
       });
 
@@ -209,6 +213,91 @@ export async function createReservation(
       success: false,
       error: 'Une erreur inattendue est survenue. Veuillez réessayer.',
     };
+  }
+}
+
+/**
+ * Enrichit le profil de l'utilisateur connecté avec les données du formulaire de réservation.
+ * Ne met à jour que les champs encore vides dans profiles (jamais d'écrasement).
+ * Appelé de manière non-bloquante après une réservation réussie.
+ *
+ * @param formData - Données saisies dans le formulaire de réservation
+ */
+export async function enrichUserProfile(
+  formData: PublicReservationFormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Guest : rien à faire
+    if (!user) return { success: false };
+
+    // Lire le profil actuel
+    const { data: profile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('phone, email2, phone2, address, postal_code, city, country, structure, function, afc_number')
+      .eq('id', user.id)
+      .single();
+
+    if (fetchError || !profile) {
+      logger.warn('[enrichUserProfile] Profil introuvable', { userId: user.id });
+      return { success: false };
+    }
+
+    // Construire les mises à jour : champ vide en BDD + non vide dans le formulaire
+    const updates: Record<string, string> = {};
+
+    if (!profile.phone && formData.phone?.trim())
+      updates.phone = formData.phone.trim();
+    if (!profile.email2 && formData.emailSecondary?.trim())
+      updates.email2 = formData.emailSecondary.trim();
+    if (!profile.phone2 && formData.phoneSecondary?.trim())
+      updates.phone2 = formData.phoneSecondary.trim();
+    if (!profile.address && formData.address?.trim())
+      updates.address = formData.address.trim();
+    if (!profile.postal_code && formData.postalCode?.trim())
+      updates.postal_code = formData.postalCode.trim();
+    if (!profile.city && formData.city?.trim())
+      updates.city = formData.city.trim();
+    if (!profile.country && formData.country?.trim())
+      updates.country = formData.country.trim();
+    if (!profile.structure && formData.organization?.trim())
+      updates.structure = formData.organization.trim();
+    if (!profile.function && formData.function?.trim())
+      updates.function = formData.function.trim();
+    if (!profile.afc_number && formData.afcNumber?.trim())
+      updates.afc_number = formData.afcNumber.trim();
+
+    if (Object.keys(updates).length === 0) {
+      logger.info('[enrichUserProfile] Aucun champ à enrichir', { userId: user.id });
+      return { success: true };
+    }
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', user.id);
+
+    if (updateError) {
+      logger.error('[enrichUserProfile] Erreur mise à jour profil', {
+        error: updateError.message,
+      });
+      return { success: false, error: updateError.message };
+    }
+
+    logger.info('[enrichUserProfile] Profil enrichi', {
+      userId: user.id,
+      updatedFields: Object.keys(updates),
+    });
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('[enrichUserProfile] Exception', { message });
+    return { success: false };
   }
 }
 
