@@ -11,13 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+import { AuthDialog } from '@/components/auth';
+import type { AuthSuccessData } from '@/components/auth';
 import {
     Clock,
     MapPin,
@@ -30,8 +25,6 @@ import {
     ChevronUp,
     Info,
     Calendar,
-    LogIn,
-    UserPlus,
     Minus,
     Plus,
     Loader2,
@@ -42,7 +35,8 @@ import {
 import { usePublicShow } from '@/hooks/usePublicShow';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import type { PublicSlot } from '@/lib/services/public-catalog';
-import { createReservation } from '@/lib/services/reservations';
+import { createReservation, enrichUserProfile } from '@/lib/services/reservations';
+import { createClient } from '@/lib/supabase/client';
 
 // ============================================
 // TYPES
@@ -240,8 +234,10 @@ export default function SpectacleDetailPage() {
         address: '',
         postalCode: '',
         city: '',
+        country: 'France',
         organization: '',
         function: '',
+        afcNumber: '',
         comment: '',
     });
 
@@ -282,11 +278,53 @@ export default function SpectacleDetailPage() {
             address: '',
             postalCode: '',
             city: '',
+            country: 'France',
             organization: '',
             function: '',
+            afcNumber: '',
             comment: '',
         });
     }, [slug]);
+
+    // Pré-remplissage du formulaire depuis le profil si l'utilisateur est connecté
+    useEffect(() => {
+        if (currentStep !== 'form') return;
+
+        const prefillFromProfile = async () => {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, email, phone, email2, phone2, address, postal_code, city, country, structure, function, afc_number')
+                .eq('id', user.id)
+                .single();
+
+            if (!profile) return;
+
+            setFormData((prev) => ({
+                ...prev,
+                firstName:      prev.firstName      || profile.first_name  || '',
+                lastName:       prev.lastName       || profile.last_name   || '',
+                email:          prev.email          || profile.email       || '',
+                phone:          prev.phone          || profile.phone       || '',
+                emailSecondary: prev.emailSecondary || profile.email2      || '',
+                phoneSecondary: prev.phoneSecondary || profile.phone2      || '',
+                address:        prev.address        || profile.address     || '',
+                postalCode:     prev.postalCode     || profile.postal_code || '',
+                city:           prev.city           || profile.city        || '',
+                country:        prev.country        || profile.country     || 'France',
+                organization:   prev.organization   || profile.structure   || '',
+                function:       prev.function       || profile.function    || '',
+                afcNumber:      prev.afcNumber      || profile.afc_number  || '',
+            }));
+        };
+
+        void prefillFromProfile();
+    }, [currentStep]);
 
     // Vérifier si le spectacle est "bientôt réservable"
     const isComingSoon = show?.status === 'draft' || (show?.status === 'published' && timeSlots.length === 0);
@@ -471,6 +509,19 @@ export default function SpectacleDetailPage() {
         });
     };
 
+    // Gérer le clic sur "Continuer" à l'étape participants
+    // Si déjà connecté → aller directement au formulaire
+    // Sinon → ouvrir la modale d'authentification
+    const handleContinueToForm = async () => {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            setCurrentStep('form');
+        } else {
+            setShowAuthModal(true);
+        }
+    };
+
     // Gérer la soumission du formulaire
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -498,8 +549,10 @@ export default function SpectacleDetailPage() {
                     address: formData.address || undefined,
                     postalCode: formData.postalCode || undefined,
                     city: formData.city || undefined,
+                    country: formData.country || undefined,
                     organization: formData.organization || undefined,
                     function: formData.function || undefined,
+                    afcNumber: formData.afcNumber || undefined,
                     comment: formData.comment || undefined,
                 },
                 // userId: null pour l'instant (guest)
@@ -526,6 +579,9 @@ export default function SpectacleDetailPage() {
                 name: `${formData.firstName} ${formData.lastName}`,
                 email: formData.email,
             }).toString();
+
+            // Enrichir le profil si l'utilisateur est connecté (Option C - non-bloquant)
+            void enrichUserProfile(formData);
 
             // Rediriger vers la page de confirmation
             router.push(confirmationUrl);
@@ -826,7 +882,7 @@ export default function SpectacleDetailPage() {
             {/* Bouton continuer */}
             <Button
                 className="w-full bg-derviche hover:bg-derviche-dark text-white"
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => { void handleContinueToForm(); }}
             >
                 Continuer
             </Button>
@@ -941,7 +997,7 @@ export default function SpectacleDetailPage() {
                     />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="postalCode">Code postal</Label>
                         <Input
@@ -956,6 +1012,14 @@ export default function SpectacleDetailPage() {
                             id="city"
                             value={formData.city}
                             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                        />
+                    </div>
+                    <div className="space-y-2 col-span-2 sm:col-span-1">
+                        <Label htmlFor="country">Pays</Label>
+                        <Input
+                            id="country"
+                            value={formData.country}
+                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                         />
                     </div>
                 </div>
@@ -977,6 +1041,16 @@ export default function SpectacleDetailPage() {
                             onChange={(e) => setFormData({ ...formData, function: e.target.value })}
                         />
                     </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="afcNumber">Numéro AFC</Label>
+                    <Input
+                        id="afcNumber"
+                        value={formData.afcNumber}
+                        onChange={(e) => setFormData({ ...formData, afcNumber: e.target.value })}
+                        placeholder="Ex: 12345"
+                    />
                 </div>
 
                 <div className="space-y-2">
@@ -1180,42 +1254,27 @@ export default function SpectacleDetailPage() {
             </div>
 
             {/* Modale d'authentification */}
-            <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Créer un compte ou continuer</DialogTitle>
-                        <DialogDescription>
-                            Pour faciliter vos futures réservations, vous pouvez créer un compte ou vous connecter.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex flex-col gap-3 mt-4">
-                        <Button
-                            className="w-full bg-derviche hover:bg-derviche-dark text-white"
-                            onClick={() => router.push('/login')}
-                        >
-                            <LogIn className="w-4 h-4 mr-2" />
-                            Se connecter
-                        </Button>
-                        <Button
-                            variant="outline"
-                            className="w-full"
-                            onClick={() => router.push('/register')}
-                        >
-                            <UserPlus className="w-4 h-4 mr-2" />
-                            Créer un compte
-                        </Button>
-                        <button
-                            onClick={() => {
-                                setShowAuthModal(false);
-                                setCurrentStep('form');
-                            }}
-                            className="text-sm text-muted-foreground hover:text-derviche text-center mt-2 cursor-pointer"
-                        >
-                            Continuer sans compte
-                        </button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            <AuthDialog
+                open={showAuthModal}
+                onOpenChange={setShowAuthModal}
+                title="Gérez vos réservations facilement"
+                description="Connectez-vous ou créez un compte pour retrouver toutes vos réservations. Vous pouvez aussi continuer sans compte."
+                onSuccess={(data: AuthSuccessData) => {
+                    setFormData((prev) => ({
+                        ...prev,
+                        firstName: data.firstName,
+                        lastName: data.lastName,
+                        email: data.email,
+                        phone: data.phone,
+                    }));
+                    setShowAuthModal(false);
+                    setCurrentStep('form');
+                }}
+                onContinueAsGuest={() => {
+                    setShowAuthModal(false);
+                    setCurrentStep('form');
+                }}
+            />
 
             <Footer />
         </div>

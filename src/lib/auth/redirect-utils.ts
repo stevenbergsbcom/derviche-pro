@@ -47,6 +47,7 @@ export function getRedirectUrlByRole(role: UserRole | null): string {
         case 'company':
             return '/company';
         case 'professional':
+            return '/professional';
         default:
             return '/catalogue';
     }

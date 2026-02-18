@@ -104,6 +104,9 @@ export interface ProfileRow {
   structure: string | null;
   afc_number: string | null;
   address: string | null;
+  postal_code: string | null;
+  city: string | null;
+  country: string | null;
   comments: string | null;
   company_id: string | null;
   gdpr_consent: boolean;
@@ -129,6 +132,9 @@ export interface ProfileInsert {
   structure?: string | null;
   afc_number?: string | null;
   address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  country?: string | null;
   comments?: string | null;
   company_id?: string | null;
   gdpr_consent?: boolean;
@@ -148,6 +154,9 @@ export interface ProfileUpdate {
   structure?: string | null;
   afc_number?: string | null;
   address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
+  country?: string | null;
   comments?: string | null;
   company_id?: string | null;
   gdpr_consent?: boolean;

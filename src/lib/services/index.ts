@@ -30,3 +30,6 @@ export * from './checkin';
 // Services Préférences
 export * from './app-settings';
 export * from './storage';
+
+// Services Professionnel (espace programmateur)
+export * from './pro-reservations';

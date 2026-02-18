@@ -82,3 +82,10 @@ export type { UseAppSettingsReturn } from './useAppSettings';
 
 // Hooks UX
 export { useUnsavedChangesWarning } from './useUnsavedChangesWarning';
+
+// Hooks Professionnel
+export { useProReservations } from './useProReservations';
+export type { UseProReservationsResult } from './useProReservations';
+
+export { useGuestReservationsClaim } from './useGuestReservationsClaim';
+export type { UseGuestReservationsClaimResult } from './useGuestReservationsClaim';
