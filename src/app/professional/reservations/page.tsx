@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProReservations } from '@/hooks';
-import { ProReservationCard } from './components';
+import { ProReservationCard, GuestReservationsBanner } from './components';
 import type { ProReservation } from '@/lib/services/pro-reservations';
 
 // ============================================
@@ -133,6 +133,9 @@ export default function ProfessionalReservationsPage() {
           <span className="hidden sm:inline ml-2">Actualiser</span>
         </Button>
       </div>
+
+      {/* Bannière rapatriement réservations guest */}
+      <GuestReservationsBanner onClaimSuccess={refresh} />
 
       {/* Erreur */}
       {error && !isLoading && (

@@ -42,6 +42,26 @@ export type CancelResult =
   | { success: true }
   | { success: false; error: string };
 
+// Réservation guest orpheline (user_id IS NULL, liée à un email)
+export interface GuestReservation {
+  reservation_id: string;
+  show_title: string;
+  slot_date: string;
+  slot_time: string;
+  venue_name: string | null;
+  num_places: number;
+  status: string;
+  created_at: string;
+}
+
+export type GetGuestReservationsResult =
+  | { data: GuestReservation[]; error: null }
+  | { data: null; error: string };
+
+export type ClaimReservationsResult =
+  | { claimed: number; error: null }
+  | { claimed: 0; error: string };
+
 // ============================================
 // QUERY
 // ============================================
@@ -212,5 +232,67 @@ export async function cancelMyReservation(
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception cancelMyReservation', { id, message });
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Récupère les réservations guest orphelines associées à l'email de l'utilisateur connecté
+ * Appelle la RPC get_guest_reservations qui vérifie que l'email correspond bien au compte
+ */
+export async function getGuestReservations(email: string): Promise<GetGuestReservationsResult> {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase.rpc('get_guest_reservations', {
+      p_email: email,
+    });
+
+    if (error) {
+      logger.error('Erreur récupération réservations guest', { error: error.message });
+      return { data: null, error: error.message };
+    }
+
+    return { data: (data as unknown as GuestReservation[]) ?? [], error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception getGuestReservations', { message });
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Rapatrie les réservations guest sélectionnées vers le compte de l'utilisateur connecté
+ * La RPC vérifie que l'email et le user_id correspondent bien au compte authentifié
+ *
+ * @param userId - UUID de l'utilisateur connecté
+ * @param email - Email de l'utilisateur (doit correspondre à son compte)
+ * @param reservationIds - Liste des IDs de réservations à rapatrier
+ */
+export async function claimSelectedReservations(
+  userId: string,
+  email: string,
+  reservationIds: string[]
+): Promise<ClaimReservationsResult> {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase.rpc('claim_selected_reservations', {
+      p_user_id: userId,
+      p_email: email,
+      p_reservation_ids: reservationIds,
+    });
+
+    if (error) {
+      logger.error('Erreur rapatriement réservations guest', { error: error.message });
+      return { claimed: 0, error: error.message };
+    }
+
+    const claimed = typeof data === 'number' ? data : 0;
+    logger.info('Réservations guest rapatriées', { userId, count: claimed });
+    return { claimed, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception claimSelectedReservations', { message });
+    return { claimed: 0, error: message };
   }
 }

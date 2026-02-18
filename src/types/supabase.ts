@@ -933,6 +933,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_selected_reservations: {
+        Args: {
+          p_email: string
+          p_reservation_ids: string[]
+          p_user_id: string
+        }
+        Returns: number
+      }
       create_admin_reservation: {
         Args: {
           p_address?: string
@@ -1014,6 +1022,19 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_guest_reservations: {
+        Args: { p_email: string }
+        Returns: {
+          created_at: string
+          num_places: number
+          reservation_id: string
+          show_title: string
+          slot_date: string
+          slot_time: string
+          status: string
+          venue_name: string
+        }[]
       }
       has_role: { Args: { role_name: string }; Returns: boolean }
       is_admin_or_super: { Args: never; Returns: boolean }
