@@ -65,7 +65,14 @@
 - Changement de mot de passe fonctionnel via `/api/auth/verify-password`
 - Skeleton de chargement + gestion des erreurs
 
-**Commit :** `fix(admin): connecter mon-compte à Supabase, suppression données mock`
+**Correction rôles — audit Cursor :**
+- Valeur `'professional'` restituée (erreur introduite : `'programmateur'`)
+- `useCurrentUserRole.ts` corrigé : `UserRole` type alignié sur contrainte SQL migration 038
+- Règle confirmée : source de vérité = migrations SQL (pas les fichiers TypeScript)
+
+**Commits :**
+- `fix(admin): connecter mon-compte à Supabase, suppression données mock`
+- `fix: corriger valeur rôle 'professional' d'après contrainte SQL`
 
 ---
 

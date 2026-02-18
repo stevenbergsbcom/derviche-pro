@@ -9,9 +9,10 @@ import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
 // Types de rôles possibles
-export type UserRole = 'super-admin' | 'admin' | 'externe' | 'programmateur' | 'company' | null;
+export type UserRole = 'super-admin' | 'admin' | 'externe' | 'professional' | 'company' | null;
 
 // Rôles considérés comme "admin" (ne doivent pas réserver côté public)
+// Rôles internes qui ne peuvent pas réserver côté public
 const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin', 'externe'];
 
 interface UseCurrentUserRoleReturn {
