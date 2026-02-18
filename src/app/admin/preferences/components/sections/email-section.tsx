@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SettingsCard } from '../shared';
+import { SettingsCard, InactiveSectionBanner } from '../shared';
 
 import { useEmailSettings } from '@/hooks/useAppSettings';
 import type { EmailSettings } from '@/lib/services/app-settings';
@@ -123,6 +123,8 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
   }
 
   return (
+    <div className="space-y-4">
+    <InactiveSectionBanner message="Les paramètres d'expéditeur sont sauvegardés mais aucun système d'envoi d'email n'est encore connecté. Ces valeurs seront utilisées lors de l'implémentation des emails transactionnels." />
     <SettingsCard
       icon={Mail}
       title="Email"
@@ -172,5 +174,6 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         </p>
       </div>
     </SettingsCard>
+    </div>
   );
 }
