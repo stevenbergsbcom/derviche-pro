@@ -21,6 +21,8 @@ export interface PreferenceTab {
   id: string;
   label: string;
   icon: LucideIcon;
+  status: 'active' | 'partial' | 'inactive';
+  statusLabel: string;
 }
 
 // ============================================
@@ -28,12 +30,18 @@ export interface PreferenceTab {
 // ============================================
 
 export const PREFERENCE_TABS: PreferenceTab[] = [
-  { id: 'organization', label: 'Organisation', icon: Building2 },
-  { id: 'appearance', label: 'Apparence', icon: Palette },
-  { id: 'email', label: 'Email', icon: Mail },
-  { id: 'reminders', label: 'Rappels', icon: Bell },
-  { id: 'rgpd', label: 'RGPD', icon: Shield },
+  { id: 'organization', label: 'Organisation', icon: Building2, status: 'partial', statusLabel: 'Partiel' },
+  { id: 'appearance', label: 'Apparence', icon: Palette, status: 'active', statusLabel: 'Actif' },
+  { id: 'email', label: 'Email', icon: Mail, status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'reminders', label: 'Rappels', icon: Bell, status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'rgpd', label: 'RGPD', icon: Shield, status: 'inactive', statusLabel: 'Non connecté' },
 ];
+
+const STATUS_STYLES: Record<PreferenceTab['status'], string> = {
+  active: 'bg-green-100 text-green-700',
+  partial: 'bg-orange-100 text-orange-700',
+  inactive: 'bg-gray-100 text-gray-500',
+};
 
 export const DEFAULT_TAB = 'organization';
 
@@ -63,12 +71,22 @@ export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps
               key={tab.id}
               value={tab.id}
               className={cn(
-                'flex items-center gap-2',
+                'flex flex-col items-center gap-0.5 py-2',
                 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
               )}
             >
-              <Icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <div className="flex items-center gap-1.5">
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+              </div>
+              <span
+                className={cn(
+                  'hidden sm:inline-block rounded-full px-1.5 py-0 text-[10px] font-medium leading-4',
+                  STATUS_STYLES[tab.status]
+                )}
+              >
+                {tab.statusLabel}
+              </span>
             </TabsTrigger>
           );
         })}

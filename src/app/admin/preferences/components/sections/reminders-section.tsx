@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { SettingsCard } from '../shared';
+import { SettingsCard, InactiveSectionBanner } from '../shared';
 
 import { useReminderSettings } from '@/hooks/useAppSettings';
 import type { ReminderSettings } from '@/lib/services/app-settings';
@@ -112,6 +112,8 @@ export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionPro
   }
 
   return (
+    <div className="space-y-4">
+    <InactiveSectionBanner message="Les rappels automatiques ne sont pas encore actifs. Ces paramètres seront appliqués lors de l'implémentation du système de notifications (Vercel Cron ou Supabase pg_cron)." />
     <SettingsCard
       icon={Bell}
       title="Rappels automatiques"
@@ -180,5 +182,6 @@ export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionPro
         Les rappels sont envoyés uniquement aux réservations confirmées.
       </p>
     </SettingsCard>
+    </div>
   );
 }

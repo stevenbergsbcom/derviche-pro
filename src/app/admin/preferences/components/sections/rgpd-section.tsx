@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { SettingsCard } from '../shared';
+import { SettingsCard, InactiveSectionBanner } from '../shared';
 
 import { useRgpdSettings } from '@/hooks/useAppSettings';
 import type { RgpdSettings } from '@/lib/services/app-settings';
@@ -129,6 +129,8 @@ export function RgpdSection({ canEdit, onDirtyChange }: RgpdSectionProps) {
   }
 
   return (
+    <div className="space-y-4">
+    <InactiveSectionBanner message="Les durées de conservation sont sauvegardées mais aucune purge automatique n'est encore implémentée. Ces valeurs seront utilisées lors de l'activation du job de purge RGPD." />
     <SettingsCard
       icon={Shield}
       title="RGPD"
@@ -196,5 +198,6 @@ export function RgpdSection({ canEdit, onDirtyChange }: RgpdSectionProps) {
         confidentialité et aux réglementations RGPD en vigueur.
       </div>
     </SettingsCard>
+    </div>
   );
 }

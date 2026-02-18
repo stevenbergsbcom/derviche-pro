@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 119
+> Dernière mise à jour : Session 120
 
 ---
 
@@ -52,22 +52,22 @@
 
 ---
 
-## Dernier travail (Session 118)
+## Dernier travail (Session 120)
 
-**Page /admin/preferences complète :**
-- 5 sections : Organisation, Apparence, Email, Rappels, RGPD
-- Accès restreint aux super-admins
-- Dialog de confirmation avant quitter avec modifications non sauvegardées
-- Pattern `isInitialized` + `onDirtyChangeRef` appliqué partout
+**Nettoyage technique :**
+- Regénération types Supabase
+- Ajout exports manquants dans `lib/services/index.ts` (app-settings, storage)
+- Ajout exports manquants dans `hooks/index.ts` (useAppSettings, useUnsavedChangesWarning)
+- Complétion barrel `storage/index.ts` (logoStorage)
+- Nettoyage middleware (suppression routes fantômes /admin-reservations, /checkin)
+- Ajout toast notifications dans mon-compte (profil + mot de passe)
+- Correction rôles UserRole dans mon-compte (externe, professional, company)
 
-**Commit :** `feat(preferences): ajout confirmation avant quitter avec modifications non sauvegardées`
+**Commit :** `chore: nettoyage technique Session 120`
 
 ---
 
 ## À faire
-
-### Priorité immédiate
-- [ ] Merger dev → main
 
 ### Améliorations possibles (Préférences)
 Liste de 20 améliorations identifiées (à prioriser)
@@ -247,18 +247,33 @@ PrioritéAméliorationEffortImpact🔴 Haute#1 Confirmation avant quitterFaible�
 
 ---
 
+## ⚠️ DETTE TECHNIQUE — Section Préférences Admin
+
+**Date d'audit :** 18 février 2026  
+**Statut :** Données sauvegardées mais non consommées
+
+### Sections et leur état réel
+
+| Section | Données stockées | Utilisées | Bloquant |
+|---|---|---|---|
+| Apparence | Thème + logos | ✅ Sidebar admin | Non |
+| Organisation | Nom, email, tél, adresse | ⚠️ Seulement `organization_name` (alt logo sidebar) | Non |
+| Email | `email_from_name`, `email_from_address` | ❌ Aucun système email existant | Oui |
+| Rappels | `reminder_enabled_7d/2d/12h` | ❌ Aucun job planifié | Oui |
+| RGPD | Durées de conservation | ❌ Aucune purge automatique | Oui |
+
+### Fonctionnalités à construire pour activer ces sections
+- [ ] Système d'envoi d'emails transactionnels (confirmation réservation, annulation)
+- [ ] Affichage de `organization_name` dans les emails et le catalogue public
+- [ ] Job planifié pour les rappels automatiques (Vercel Cron ou Supabase pg_cron)
+- [ ] Job de purge RGPD automatique
+
+---
+
 ## Points d'attention techniques
 
 ### TODO dans le code
 | Fichier | Description |
 |---------|-------------|
-| `lib/services/user-preferences.ts` | Regénérer types Supabase après changement schéma |
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
-| `app/admin/mon-compte/page.tsx` (~148) | Afficher notification de succès |
-
-### Exports manquants (optionnel)
-- `lib/services/index.ts` : n'exporte pas `app-settings` ni `storage`
-- `hooks/index.ts` : n'exporte pas `useAppSettings` ni `useUnsavedChangesWarning`
-
-### À vérifier
-- Routes "maquettes" dans le middleware (`/admin-dashboard`, `/admin-reservations`, `/checkin`) : clarifier si anciennes routes ou alias
+| `app/admin/mon-compte/page.tsx` | Connecter à Supabase (actuellement données mock) |
