@@ -293,4 +293,4 @@ PrioritéAméliorationEffortImpact🔴 Haute#1 Confirmation avant quitterFaible�
 | Fichier | Description |
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
-| `app/admin/mon-compte/page.tsx` | ✅ Connecté à Supabase (Session 121) |
+| `app/admin/mon-compte/page.tsx` | ✅ Connecté à Supabase, mock supprimé, rôles corrigés (Session 121) |
