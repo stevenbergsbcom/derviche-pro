@@ -10,12 +10,6 @@
 
 import { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Columns2, Download, Loader2 } from 'lucide-react';
 import { AdminPageHeader, LoadingState, ErrorState } from '@/components/admin';
@@ -151,30 +145,19 @@ export default function AdminProfessionnelsPage() {
               <span className="hidden sm:inline">Colonnes</span>
             </Button>
 
-            {/* Bouton export */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isExporting || filteredProfessionals.length === 0}
-                  className="gap-1.5"
-                >
-                  {isExporting
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : <Download className="h-4 w-4" />}
-                  <span className="hidden sm:inline">Exporter</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => void handleExport('csv')}>
-                  CSV (.csv)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void handleExport('xlsx')}>
-                  Excel (.xlsx)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Bouton export CSV */}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isExporting || filteredProfessionals.length === 0}
+              onClick={() => void handleExport('csv')}
+              className="gap-1.5"
+            >
+              {isExporting
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <Download className="h-4 w-4" />}
+              <span className="hidden sm:inline">Exporter CSV</span>
+            </Button>
           </div>
         </div>
 

@@ -1,9 +1,6 @@
 /**
  * Composant ProfessionalModal - Modal détail d'un professionnel
  * Derviche Diffusion
- *
- * Remplace ProfessionalDrawer pour cohérence avec le reste de l'interface admin
- * (même pattern Dialog que edit-reservation-dialog, compagnies, etc.)
  */
 
 'use client';
@@ -44,7 +41,31 @@ import {
 } from '@/app/admin/professionnels/constants';
 
 // ============================================
-// COMPOSANT UTILITAIRE : LIGNE D'INFO
+// COMPOSANT UTILITAIRE : AVATAR INITIALES
+// ============================================
+
+function ProfessionalAvatar({ name }: { name: string }) {
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+
+  return (
+    <div
+      className="w-12 h-12 rounded-full bg-derviche flex items-center justify-center shrink-0"
+      aria-hidden="true"
+    >
+      <span className="text-white font-semibold text-base leading-none">
+        {initials || '?'}
+      </span>
+    </div>
+  );
+}
+
+// ============================================
+// COMPOSANT UTILITAIRE : LIGNE D'INFO (layout horizontal)
 // ============================================
 
 function InfoRow({
@@ -60,63 +81,28 @@ function InfoRow({
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-start gap-3 py-2 border-b border-muted/50 last:border-0">
-      <Icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        {isEmail ? (
-          <a
-            href={`mailto:${value}`}
-            className="text-sm font-medium hover:underline text-derviche"
-          >
-            {value}
-          </a>
-        ) : (
-          <p className="text-sm font-medium break-words">{value}</p>
-        )}
-      </div>
+    <div className="flex items-center gap-3 py-1.5 border-b border-muted/40 last:border-0">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      <span className="text-xs text-muted-foreground w-28 shrink-0">{label}</span>
+      {isEmail ? (
+        <a
+          href={`mailto:${value}`}
+          className="text-sm font-medium hover:underline text-derviche truncate"
+        >
+          {value}
+        </a>
+      ) : (
+        <span className="text-sm font-medium break-words">{value}</span>
+      )}
     </div>
   );
 }
 
 // ============================================
-// SOUS-COMPOSANT : ONGLET INFORMATIONS
+// SOUS-COMPOSANT : ONGLET INFORMATIONS (lecture seule)
 // ============================================
 
-function ProfessionalInfoTab({
-  professional,
-  onUpdate,
-  isSubmitting,
-}: {
-  professional: Professional;
-  onUpdate: (id: string, data: UpdateProfessionalData) => Promise<void>;
-  isSubmitting: boolean;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  const handleUpdate = async (data: UpdateProfessionalData) => {
-    setFormError(null);
-    try {
-      await onUpdate(professional.id, data);
-      setIsEditing(false);
-    } catch {
-      setFormError('Erreur lors de la mise à jour');
-    }
-  };
-
-  if (isEditing) {
-    return (
-      <ProfessionalEditForm
-        professional={professional}
-        onSubmit={async (data) => { await handleUpdate(data); }}
-        onCancel={() => setIsEditing(false)}
-        isSubmitting={isSubmitting}
-        formError={formError}
-      />
-    );
-  }
-
+function ProfessionalInfoTab({ professional }: { professional: Professional }) {
   const address = [
     professional.address,
     [professional.postal_code, professional.city].filter(Boolean).join(' '),
@@ -129,23 +115,12 @@ function ProfessionalInfoTab({
 
   return (
     <div className="space-y-5">
-      {/* Bouton Modifier */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => setIsEditing(true)}
-      >
-        <Pencil className="h-3.5 w-3.5 mr-1.5" />
-        {LABELS.EDIT}
-      </Button>
-
       {/* Bloc : informations professionnelles */}
       <div>
         <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-2">
           Professionnel
         </p>
-        <div className="space-y-0.5">
+        <div>
           <InfoRow icon={Building2} label="Structure" value={professional.structure} />
           <InfoRow icon={IdCard} label="Fonction" value={professional.function} />
           <InfoRow icon={IdCard} label="N° AFC" value={professional.afc_number} />
@@ -157,16 +132,11 @@ function ProfessionalInfoTab({
         <p className="text-xs font-semibold uppercase text-muted-foreground tracking-wider mb-2">
           Contact
         </p>
-        <div className="space-y-0.5">
+        <div>
           <InfoRow icon={Mail} label="Email" value={professional.email} isEmail />
-          <InfoRow
-            icon={Mail}
-            label="Email secondaire"
-            value={professional.email2}
-            isEmail
-          />
+          <InfoRow icon={Mail} label="Email secondaire" value={professional.email2} isEmail />
           <InfoRow icon={Phone} label="Téléphone" value={professional.phone} />
-          <InfoRow icon={Phone} label="Téléphone secondaire" value={professional.phone2} />
+          <InfoRow icon={Phone} label="Tél. secondaire" value={professional.phone2} />
         </div>
       </div>
 
@@ -208,6 +178,9 @@ export function ProfessionalModal({
   onUpdate,
   isSubmitting,
 }: ProfessionalDrawerProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
   if (!professional) return null;
 
   const isActive = professional.disabled_at === null;
@@ -218,25 +191,60 @@ export function ProfessionalModal({
   const fullName = [professional.first_name, professional.last_name]
     .filter(Boolean)
     .join(' ');
+  const displayName = fullName || professional.email;
+
+  const handleUpdate = async (data: UpdateProfessionalData) => {
+    setFormError(null);
+    try {
+      await onUpdate(professional.id, data);
+      setIsEditing(false);
+    } catch {
+      setFormError('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleClose = () => {
+    setIsEditing(false);
+    setFormError(null);
+    onClose();
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto [&>button]:cursor-pointer">
+
         {/* ---- En-tête ---- */}
         <DialogHeader className="pb-4 border-b">
-          <div className="flex items-start justify-between gap-3">
+
+          {/* Ligne principale : avatar + identité + crayon */}
+          <div className="flex items-start gap-3">
+            <ProfessionalAvatar name={displayName} />
+
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg truncate">
-                {fullName || professional.email}
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Détails du professionnel {fullName || professional.email}
-              </DialogDescription>
-              {fullName && (
-                <p className="text-sm text-muted-foreground truncate mt-0.5">
-                  {professional.email}
-                </p>
-              )}
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <DialogTitle className="text-base font-semibold truncate leading-tight">
+                    {displayName}
+                  </DialogTitle>
+                  <DialogDescription className="sr-only">
+                    Détails du professionnel {displayName}
+                  </DialogDescription>
+                  {fullName && (
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {professional.email}
+                    </p>
+                  )}
+                  {professional.structure && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {professional.structure}
+                    </p>
+                  )}
+                </div>
+
+
+              </div>
+
+              {/* Badge statut */}
               <Badge className={`text-xs mt-2 ${statusClass}`} variant="outline">
                 {statusLabel}
               </Badge>
@@ -244,7 +252,17 @@ export function ProfessionalModal({
           </div>
 
           {/* Actions rapides */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-derviche border-derviche/30 hover:bg-derviche/5 hover:text-derviche"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pencil className="h-3.5 w-3.5 mr-1.5" />
+              {LABELS.EDIT}
+            </Button>
+
             <Button variant="outline" size="sm" className="flex-1" asChild>
               <a href={`mailto:${professional.email}`}>
                 <Mail className="h-3.5 w-3.5 mr-1.5" />
@@ -291,7 +309,7 @@ export function ProfessionalModal({
 
         {/* ---- Corps ---- */}
         <div className="pt-4">
-          <Tabs defaultValue="info">
+          <Tabs defaultValue="info" onValueChange={() => setIsEditing(false)}>
             <TabsList className="w-full mb-4">
               <TabsTrigger value="info" className="flex-1">
                 {DRAWER_TABS.info}
@@ -307,17 +325,23 @@ export function ProfessionalModal({
             </TabsList>
 
             <TabsContent value="info">
-              <ProfessionalInfoTab
-                professional={professional}
-                onUpdate={onUpdate}
-                isSubmitting={isSubmitting}
-              />
+              {isEditing ? (
+                <ProfessionalEditForm
+                  professional={professional}
+                  onSubmit={handleUpdate}
+                  onCancel={() => { setIsEditing(false); setFormError(null); }}
+                  isSubmitting={isSubmitting}
+                  formError={formError}
+                />
+              ) : (
+                <ProfessionalInfoTab professional={professional} />
+              )}
             </TabsContent>
 
             <TabsContent value="reservations">
               <ProfessionalReservations
                 professionalId={professional.id}
-                professionalName={fullName || professional.email}
+                professionalName={displayName}
               />
             </TabsContent>
           </Tabs>

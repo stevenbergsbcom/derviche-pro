@@ -136,12 +136,20 @@ function AdminReservationsContent() {
   useEffect(() => { loadReservationsRef.current = loadReservations; }, [loadReservations]);
 
   // Deep-link : ouvre une réservation spécifique si ?reservationId=xxx dans l'URL
+  // Dépendance sur searchParams pour réagir aux changements d'URL en navigation client
+  const reservationIdParam = searchParams.get('reservationId');
   useEffect(() => {
-    const reservationId = searchParams.get('reservationId');
-    if (!reservationId) return;
+    if (!reservationIdParam) return;
+
+    // Validation UUID basique avant d'appeler l'API
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(reservationIdParam)) {
+      toast.error('Identifiant de réservation invalide');
+      return;
+    }
 
     const openFromUrl = async () => {
-      const result = await getAdminReservationById(reservationId);
+      const result = await getAdminReservationById(reservationIdParam);
       if (result.data) {
         setSelectedReservation(result.data);
         setEditDialogOpen(true);
@@ -155,8 +163,7 @@ function AdminReservationsContent() {
     };
 
     void openFromUrl();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reservationIdParam]);
 
   // Effet de recherche avec debounce
   useEffect(() => {

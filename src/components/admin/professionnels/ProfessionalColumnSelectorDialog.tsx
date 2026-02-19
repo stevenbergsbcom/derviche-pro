@@ -67,7 +67,7 @@ export function ProfessionalColumnSelectorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm [&>button]:cursor-pointer">
         <DialogHeader>
           <DialogTitle>Colonnes du tableau</DialogTitle>
           <DialogDescription>

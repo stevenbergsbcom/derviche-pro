@@ -1,9 +1,10 @@
 /**
- * Utilitaire d'export des professionnels (CSV / XLSX)
+ * Utilitaire d'export des professionnels (CSV uniquement)
  * Derviche Diffusion
  *
- * Exporte la liste des professionnels filtrée dans le format choisi.
- * Utilise SheetJS (xlsx) pour XLSX, génération native pour CSV.
+ * Exporte la liste des professionnels filtrée au format CSV.
+ * Le CSV inclut un BOM UTF-8 pour un affichage correct dans Excel.
+ * Note: xlsx et exceljs ont été exclus car sans alternative sécurisée sur npm.
  */
 
 import type { Professional } from '@/lib/services/professionals';
@@ -14,7 +15,7 @@ import { PROFESSIONAL_COLUMNS_ORDER, PROFESSIONAL_COLUMNS_CONFIG } from '@/hooks
 // TYPES
 // ============================================
 
-export type ExportFormat = 'csv' | 'xlsx';
+export type ExportFormat = 'csv';
 
 export interface ExportProfessionalsOptions {
   format: ExportFormat;
@@ -90,9 +91,9 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
-function generateFilename(format: ExportFormat): string {
+function generateFilename(): string {
   const date = new Date().toISOString().split('T')[0];
-  return `professionnels_${date}.${format}`;
+  return `professionnels_${date}.csv`;
 }
 
 // ============================================
@@ -103,19 +104,17 @@ function buildExportData(
   professionals: Professional[],
   visibleColumns: ProfessionalColumn[]
 ): { headers: string[]; rows: string[][] } {
-  // En-têtes : fixes + optionnelles dans l'ordre + colonnes trailing
   const optionalCols = PROFESSIONAL_COLUMNS_ORDER.filter((col) =>
     visibleColumns.includes(col)
   );
 
-  const allColumns = [
+  const allColumns: Array<{ key: keyof Professional; label: string }> = [
     ...FIXED_COLUMNS,
     ...optionalCols.map((col) => COLUMN_TO_FIELD[col]),
     ...TRAILING_COLUMNS,
   ];
 
   const headers = allColumns.map((c) => c.label);
-
   const rows = professionals.map((pro) =>
     allColumns.map((c) => formatValue(pro[c.key]))
   );
@@ -124,10 +123,10 @@ function buildExportData(
 }
 
 // ============================================
-// EXPORT CSV
+// GÉNÉRATION CSV
 // ============================================
 
-function exportCsv(professionals: Professional[], visibleColumns: ProfessionalColumn[]): void {
+function buildCsvContent(professionals: Professional[], visibleColumns: ProfessionalColumn[]): string {
   const { headers, rows } = buildExportData(professionals, visibleColumns);
 
   const escape = (v: string): string => {
@@ -142,33 +141,7 @@ function exportCsv(professionals: Professional[], visibleColumns: ProfessionalCo
     ...rows.map((row) => row.map(escape).join(',')),
   ];
 
-  const bom = '\uFEFF'; // BOM UTF-8 pour Excel
-  const content = bom + lines.join('\r\n');
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  downloadBlob(blob, generateFilename('csv'));
-}
-
-// ============================================
-// EXPORT XLSX
-// ============================================
-
-async function exportXlsx(
-  professionals: Professional[],
-  visibleColumns: ProfessionalColumn[]
-): Promise<void> {
-  const XLSX = await import('xlsx');
-  const { headers, rows } = buildExportData(professionals, visibleColumns);
-
-  const wsData = [headers, ...rows];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Largeur des colonnes auto
-  ws['!cols'] = headers.map(() => ({ wch: 20 }));
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Professionnels');
-
-  XLSX.writeFile(wb, generateFilename('xlsx'));
+  return '\uFEFF' + lines.join('\r\n'); // BOM UTF-8 pour Excel
 }
 
 // ============================================
@@ -191,7 +164,7 @@ function downloadBlob(blob: Blob, filename: string): void {
 // ============================================
 
 /**
- * Exporte la liste des professionnels au format demandé.
+ * Exporte la liste des professionnels au format CSV.
  *
  * @param professionals - Liste filtrée à exporter
  * @param options - Format et colonnes à inclure
@@ -205,11 +178,9 @@ export async function exportProfessionals(
       options.visibleColumns ??
       (Object.keys(PROFESSIONAL_COLUMNS_CONFIG) as ProfessionalColumn[]);
 
-    if (options.format === 'csv') {
-      exportCsv(professionals, visibleColumns);
-    } else {
-      await exportXlsx(professionals, visibleColumns);
-    }
+    const content = buildCsvContent(professionals, visibleColumns);
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(blob, generateFilename());
 
     return { success: true };
   } catch (err) {
