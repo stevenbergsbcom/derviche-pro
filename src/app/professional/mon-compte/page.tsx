@@ -440,6 +440,8 @@ export default function ProfessionalMonComptePage() {
         );
     }
 
+    if (!profile) return null;
+
     return (
         <div className="space-y-6 max-w-4xl">
             {/* En-tête */}
