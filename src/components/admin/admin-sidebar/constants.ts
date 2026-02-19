@@ -10,6 +10,7 @@ import {
   MapPin,
   Users,
   UserCog,
+  UserCheck,
   Settings,
 } from 'lucide-react';
 import type { InternalRole } from '@/types/database';
@@ -63,6 +64,13 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/compagnies',
     icon: Users,
     tooltip: 'Gérer les compagnies',
+    allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
+  },
+  {
+    label: 'Professionnels',
+    href: '/admin/professionnels',
+    icon: UserCheck,
+    tooltip: 'Gérer les professionnels',
     allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
   },
   {

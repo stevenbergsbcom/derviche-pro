@@ -85,6 +85,8 @@ ses réservations n'apparaissaient pas dans son dashboard. Désormais :
 - `src/app/professional/reservations/page.tsx` — intégration bannière
 - `src/hooks/index.ts` — export useGuestReservationsClaim
 
+**Fix post-audit :** `if (!profile) return null` ajouté pour le narrowing TypeScript (`profile possibly null` sur 14 lignes)
+
 **Commits :**
 - `feat(pro): rapatriement réservations guest — migrations 046/047, service, hook, bannière`
 - `fix(pro): corrections audit — formatTime, aria-labels, doc onClaimSuccess`

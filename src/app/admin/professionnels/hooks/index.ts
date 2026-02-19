@@ -1,0 +1,1 @@
+export { useProfessionalsPage } from './useProfessionalsPage';
