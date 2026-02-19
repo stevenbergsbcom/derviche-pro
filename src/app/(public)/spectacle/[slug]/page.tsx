@@ -316,7 +316,7 @@ export default function SpectacleDetailPage() {
                 address:        prev.address        || profile.address     || '',
                 postalCode:     prev.postalCode     || profile.postal_code || '',
                 city:           prev.city           || profile.city        || '',
-                country:        prev.country        || profile.country     || 'France',
+                country:        profile.country     || prev.country        || 'France',
                 organization:   prev.organization   || profile.structure   || '',
                 function:       prev.function       || profile.function    || '',
                 afcNumber:      prev.afcNumber      || profile.afc_number  || '',
