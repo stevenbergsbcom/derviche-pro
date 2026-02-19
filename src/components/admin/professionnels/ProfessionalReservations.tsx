@@ -256,16 +256,10 @@ export function ProfessionalReservations({
   }
 
   // ---- Tri : futures d'abord, passées ensuite ----
-  const upcoming = reservations.filter((r) => r.slot && isUpcoming(r.slot.date));
-  const past = reservations.filter((r) => !r.slot || !isUpcoming(r.slot.date));
-
-  // Tri interne : futures par date ASC, passées par date DESC
-  upcoming.sort((a, b) =>
-    (a.slot?.date ?? '').localeCompare(b.slot?.date ?? '')
-  );
-  past.sort((a, b) =>
-    (b.slot?.date ?? '').localeCompare(a.slot?.date ?? '')
-  );
+  const upcoming = [...reservations.filter((r) => r.slot && isUpcoming(r.slot.date))]
+    .sort((a, b) => (a.slot?.date ?? '').localeCompare(b.slot?.date ?? ''));
+  const past = [...reservations.filter((r) => !r.slot || !isUpcoming(r.slot.date))]
+    .sort((a, b) => (b.slot?.date ?? '').localeCompare(a.slot?.date ?? ''));
 
   // Résumé
   const totalPlaces = reservations
@@ -294,7 +288,7 @@ export function ProfessionalReservations({
       {upcoming.length > 0 && (
         <div className="space-y-1.5">
           {past.length > 0 && (
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2" aria-label="Réservations à venir">
               À venir
             </p>
           )}
@@ -308,7 +302,7 @@ export function ProfessionalReservations({
       {past.length > 0 && (
         <div className="space-y-1.5">
           {upcoming.length > 0 && (
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2" aria-label="Réservations passées">
               Passées
             </p>
           )}

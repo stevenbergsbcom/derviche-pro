@@ -111,6 +111,7 @@ export function ProfessionalColumnSelectorDialog({
             variant="ghost"
             onClick={handleReset}
             className="w-full sm:w-auto sm:mr-auto"
+            aria-label="Réinitialiser les colonnes par défaut"
           >
             Réinitialiser
           </Button>
