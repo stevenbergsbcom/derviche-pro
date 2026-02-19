@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 125
+> Dernière mise à jour : Session 127
 
 ---
 
@@ -44,72 +44,87 @@
 ### ✅ Company (100%)
 - Dashboard, liste/filtres réservations, stats, export, mon compte
 
-### 🟡 Professional (70%) — Sessions 122-125
+### 🟡 Professional (80%) — Sessions 122-126
 - ✅ Middleware, layout, sidebar
 - ✅ Redirect post-login → `/professional`
 - ✅ Page "Mes réservations" (onglets À venir / Historique)
 - ✅ Annulation réservation avec dialog confirmation
 - ✅ UX desktop : layout horizontal avec colonnes — Session 125
-- ❌ Mon compte (édition profil pro)
-- ❌ Rapatriement réservations guest (matching par `guest_email`) → Session 126
+- ✅ Rapatriement réservations guest — Session 126
+- ✅ Mon compte (édition profil complet) — Session 127
+
+### 🟡 RGPD (0%) — à planifier
+- Consent utilisateur, droit à l'effacement, purge automatique
+- Reporté après Session 127
 
 ### ✅ Autres (100%)
 - Thème & logos dynamiques, PWA, export Excel/CSV, sidebar partagée
 
 ---
 
-## Dernier travail (Session 125)
+## Dernier travail (Session 126)
 
-### Corrections critiques
-- **Migration 042** : RPC `create_public_reservation` fixée → `user_id = auth.uid()` (réservations visibles dans le dashboard pro)
-- **Migration 043** : Trigger `handle_new_user` corrigé → `first_name`, `last_name`, `phone` copiés depuis `raw_user_meta_data`
-- **Migration 044** : Ajout `postal_code`, `city`, `country` dans `profiles` + `guest_afc_number`, `guest_country` dans `reservations`
-- **Migration 045** : RPC définitive — réintègre TOUTES les validations perdues (R-RESA-04 unicité email/slot, bloc admin/externe, validation champs obligatoires, format email, longueurs, nombre de places) + `user_id`, `country`, `afc_number`
+### Rapatriement des réservations guest
+Quand un professionnel réservait en guest (user_id IS NULL) avant d'avoir un compte,
+ses réservations n'apparaissaient pas dans son dashboard. Désormais :
 
-### Nouvelles fonctionnalités
-- **Option C** : pré-remplissage formulaire réservation depuis profil Supabase (useEffect sur `currentStep === 'form'`)
-- **Enrichissement profil** : après réservation, les champs NULL du profil sont remplis avec les données du formulaire (non-bloquant, `void`)
-- **Détection connexion** : `handleContinueToForm()` → si connecté, bypass modale auth
-- **Champs formulaire** : ajout `country` (défaut "France") et `afcNumber` dans le formulaire et dans la RPC
-- **UX desktop réservations pro** : layout horizontal avec colonnes (barre statut colorée, colonnes fixes, en-tête)
+**Architecture retenue : Hybride détection automatique + sélection manuelle**
+- Détection silencieuse au montage (une seule fois via `useRef hasDetected`)
+- Bannière amber dismissible si des réservations orphelines existent
+- L'utilisateur choisit lesquelles récupérer (tout coché par défaut)
+- Toast de confirmation, refresh automatique de la liste principale
+- `guest_email` conservé après rapatriement (historique/audit)
 
-### Types mis à jour
-- `src/types/database.ts` : `ProfileRow`, `ProfileInsert`, `ProfileUpdate` → ajout `postal_code`, `city`, `country`
-- `src/types/supabase.ts` : régénéré depuis Supabase après migration 044
+**Fichiers créés/modifiés :**
+- `supabase/migrations/046_claim_guest_reservations.sql` — RPC `get_guest_reservations` + `claim_selected_reservations`
+- `supabase/migrations/047_fix_get_guest_reservations.sql` — correctif ambiguïté colonne `id` → `reservation_id` (DROP + CREATE)
+- `src/lib/services/pro-reservations/index.ts` — `getGuestReservations()` + `claimSelectedReservations()` + types
+- `src/hooks/useGuestReservationsClaim.ts` — hook dédié (détection, sélection, claim, dismiss)
+- `src/app/professional/reservations/components/GuestReservationsBanner.tsx` — composant bannière
+- `src/app/professional/reservations/components/index.ts` — export GuestReservationsBanner
+- `src/app/professional/reservations/page.tsx` — intégration bannière
+- `src/hooks/index.ts` — export useGuestReservationsClaim
+
+**Commits :**
+- `feat(pro): rapatriement réservations guest — migrations 046/047, service, hook, bannière`
+- `fix(pro): corrections audit — formatTime, aria-labels, doc onClaimSuccess`
+
+**Audit : 8,8/10** — corrections appliquées (formatTime, aria-labels, doc stabilité onClaimSuccess)
+
+### Leçons SQL apprises
+- Ne jamais nommer `id` une colonne dans un `RETURNS TABLE` avec des JOINs → ambiguïté PostgreSQL garantie
+- PostgreSQL interdit `CREATE OR REPLACE` si le type de retour change → toujours `DROP` d'abord
+- Ne jamais modifier un fichier de migration déjà appliqué en base → créer une nouvelle migration
+
+### Config Git
+- `git config --global merge.ff false` appliqué → merge toujours avec commit de merge (pas de fast-forward)
 
 ---
 
-## Prochaine session : 126 — Rapatriement réservations guest
+## Dernier travail (Session 127)
 
-### Objectif
-Quand un guest (non connecté) fait une réservation avec son email, puis crée un compte ou se connecte avec ce même email → ses réservations guest doivent apparaître dans son dashboard `/professional/reservations`.
+### Étape A — Correction bug `country` pré-remplissage ✅
+**Fichier :** `src/app/(public)/spectacle/[slug]/page.tsx` ligne ~319
+**Bug :** `country: prev.country || profile.country || 'France'` → `prev.country` valant `'France'`
+(défaut initial, truthy), le pays du profil n'était jamais lu.
+**Fix :** `country: profile.country || prev.country || 'France'` — le profil est maintenant prioritaire.
 
-### Approche recommandée
-**Option A — Rapatriement automatique en base (trigger ou RPC)**
-Au moment de la connexion / création de compte, une RPC ou un trigger `handle_new_user` fait :
-```sql
-UPDATE reservations
-SET user_id = auth.uid()
-WHERE guest_email = LOWER(user.email)
-  AND user_id IS NULL
-  AND status != 'cancelled';
-```
+### Étape B — Page `/professional/mon-compte` ✅
+Création de la page Mon compte pour l'espace professionnel.
 
-**Option B — Rapatriement côté client au chargement du dashboard**
-Dans `useProReservations`, si l'utilisateur est connecté, appeler une RPC qui rapatrie d'abord, puis fetch les réservations.
+**Fichier créé :** `src/app/professional/mon-compte/page.tsx`
 
-**Option C — Bannière de rapatriement manuel**
-Afficher une bannière dans le dashboard pro avec un bouton "Retrouver mes réservations" qui déclenche le rapatriement à la demande.
+**4 sections indépendantes :**
+- Informations personnelles : prénom, nom, téléphone, téléphone secondaire, email secondaire (éditable)
+- Informations professionnelles : structure, fonction, numéro AFC
+- Adresse : adresse, code postal, ville, pays
+- Compte & sécurité : email principal (lecture seule), date inscription, changement mot de passe
 
-### Réflexion à faire avec Steven
-- Option A (trigger) : automatique, invisible, mais moins contrôlable
-- Option B (hook) : transparent, mais appel à chaque chargement
-- Option C (bannière) : UX explicite mais friction
-
-### Fichiers concernés
-- `supabase/migrations/046_claim_guest_reservations.sql` (nouvelle RPC)
-- `src/hooks/useProReservations.ts` (appel RPC avant fetch)
-- `src/app/professional/reservations/page.tsx` (bannière éventuelle)
+**Décisions :**
+- Email secondaire (`email2`) placé dans "Informations personnelles" (modifiable, pas lié à Supabase Auth)
+- Email principal non modifiable (lié à l'auth Supabase)
+- RGPD reporté à une session dédiée ultérieure
+- Pattern identique à admin/mon-compte (single-file, pas de hook séparé)
 
 ---
 
@@ -119,7 +134,6 @@ Afficher une bannière dans le dashboard pro avec un bouton "Retrouver mes rése
   - `aria-expanded` sur bouton "Lire la suite"
   - `role="grid"` + `aria-selected` sur le calendrier
 - `ProReservationCard.tsx` : `aria-label` sur le bouton "Annuler"
-- `professional/reservations/page.tsx` : `aria-label` sur bouton "Réessayer"
 
 ## Refactoring à planifier
 - `src/app/(public)/spectacle/[slug]/page.tsx` (~860 lignes) → extraire sous-composants et hooks
@@ -146,3 +160,4 @@ Afficher une bannière dans le dashboard pro avec un bouton "Retrouver mes rése
 | Fichier | Description |
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
+| `app/(public)/spectacle/[slug]/page.tsx` (~319) | ✅ Bug pré-remplissage country corrigé (Session 127) |
