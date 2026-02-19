@@ -227,20 +227,21 @@ export function useProfessionalsPage(): UseProfessionalsPageReturn {
       if (result.success) {
         setDrawerEditing(false);
         toast.success(MESSAGES.UPDATE_SUCCESS);
-        // Rafraîchir le professionnel affiché dans le drawer
-        const updated = professionals.find((p) => p.id === id);
-        if (updated) {
-          setDrawerState((prev) => ({
+        // Merge les données dans le drawer via le state fonctionnel
+        // (évite la stale closure sur `professionals`)
+        setDrawerState((prev) => {
+          if (!prev.professional || prev.professional.id !== id) return prev;
+          return {
             ...prev,
-            professional: { ...updated, ...data },
-          }));
-        }
+            professional: { ...prev.professional, ...data },
+          };
+        });
       } else {
         setFormError(result.error ?? 'Erreur lors de la mise à jour');
         toast.error(result.error ?? 'Erreur lors de la mise à jour');
       }
     },
-    [update, setDrawerEditing, professionals]
+    [update, setDrawerEditing]
   );
 
   // ============================================
