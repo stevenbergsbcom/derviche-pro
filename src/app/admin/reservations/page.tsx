@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'react';
 import { AdminPageHeader } from '@/components/admin';
 import { useAdminReservations } from '@/hooks/useAdminReservations';
 import { useShows } from '@/hooks/useShows';
@@ -24,7 +24,8 @@ import {
   CreateReservationDialog,
 } from '@/components/admin/reservations';
 import type { AdminReservation, UpdateReservationData, CreateAdminReservationData } from '@/lib/services/admin-reservations';
-import { createAdminReservation } from '@/lib/services/admin-reservations';
+import { createAdminReservation, getAdminReservationById } from '@/lib/services/admin-reservations';
+import { useSearchParams } from 'next/navigation';
 import type { CheckinStatus } from '@/types/database';
 import { toast } from 'sonner';
 
@@ -44,11 +45,17 @@ import { useReservationFilters } from './hooks';
 // COMPOSANT PAGE
 // ============================================
 
-export default function AdminReservationsPage() {
+// ============================================
+// COMPOSANT INTERNE (nécessite Suspense pour useSearchParams)
+// ============================================
+
+function AdminReservationsContent() {
   // ============================================
   // HOOKS EXTERNES
   // ============================================
-  
+
+  const searchParams = useSearchParams();
+
   const {
     reservations,
     total,
@@ -127,6 +134,36 @@ export default function AdminReservationsPage() {
   useEffect(() => { filtersRef.current = filters; }, [filters]);
   useEffect(() => { pageSizeRef.current = pageSize; }, [pageSize]);
   useEffect(() => { loadReservationsRef.current = loadReservations; }, [loadReservations]);
+
+  // Deep-link : ouvre une réservation spécifique si ?reservationId=xxx dans l'URL
+  // Dépendance sur searchParams pour réagir aux changements d'URL en navigation client
+  const reservationIdParam = searchParams.get('reservationId');
+  useEffect(() => {
+    if (!reservationIdParam) return;
+
+    // Validation UUID basique avant d'appeler l'API
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!UUID_REGEX.test(reservationIdParam)) {
+      toast.error('Identifiant de réservation invalide');
+      return;
+    }
+
+    const openFromUrl = async () => {
+      const result = await getAdminReservationById(reservationIdParam);
+      if (result.data) {
+        setSelectedReservation(result.data);
+        setEditDialogOpen(true);
+        // Nettoyer l'URL sans recharger la page
+        const url = new URL(window.location.href);
+        url.searchParams.delete('reservationId');
+        window.history.replaceState({}, '', url.toString());
+      } else {
+        toast.error('Réservation introuvable');
+      }
+    };
+
+    void openFromUrl();
+  }, [reservationIdParam]);
 
   // Effet de recherche avec debounce
   useEffect(() => {
@@ -412,5 +449,17 @@ export default function AdminReservationsPage() {
         isExporting={isExporting}
       />
     </div>
+  );
+}
+
+// ============================================
+// EXPORT PAR DÉFAUT - Wrapper Suspense requis pour useSearchParams
+// ============================================
+
+export default function AdminReservationsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminReservationsContent />
+    </Suspense>
   );
 }

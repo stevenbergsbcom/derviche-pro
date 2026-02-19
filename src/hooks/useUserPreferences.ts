@@ -274,6 +274,78 @@ export function useReservationColumnsPreference() {
 }
 
 // ============================================
+// PRÉFÉRENCES ADMIN - COLONNES PROFESSIONNELS
+// ============================================
+
+/**
+ * Colonnes configurables du tableau des professionnels
+ * Les colonnes "name", "email", "status", "actions" sont toujours visibles.
+ */
+export type ProfessionalColumn =
+  | 'structure'
+  | 'phone'
+  | 'email2'
+  | 'phone2'
+  | 'function'
+  | 'city'
+  | 'reservations';
+
+/** Configuration des colonnes professionnels */
+export const PROFESSIONAL_COLUMNS_CONFIG: Record<ProfessionalColumn, { label: string; defaultVisible: boolean }> = {
+  structure:    { label: 'Structure',          defaultVisible: true  },
+  phone:        { label: 'Téléphone',          defaultVisible: true  },
+  email2:       { label: 'Email secondaire',   defaultVisible: false },
+  phone2:       { label: 'Tél. secondaire',    defaultVisible: false },
+  function:     { label: 'Fonction',           defaultVisible: true  },
+  city:         { label: 'Ville',              defaultVisible: true  },
+  reservations: { label: 'Réservations',       defaultVisible: true  },
+};
+
+/** Ordre fixe des colonnes professionnels */
+export const PROFESSIONAL_COLUMNS_ORDER: ProfessionalColumn[] = [
+  'structure',
+  'phone',
+  'email2',
+  'phone2',
+  'function',
+  'city',
+  'reservations',
+];
+
+/** Colonnes visibles par défaut */
+export const DEFAULT_PROFESSIONAL_VISIBLE_COLUMNS: ProfessionalColumn[] = Object.entries(
+  PROFESSIONAL_COLUMNS_CONFIG
+)
+  .filter(([, config]) => config.defaultVisible)
+  .map(([key]) => key as ProfessionalColumn);
+
+/**
+ * Hook spécialisé pour les colonnes du tableau professionnels
+ */
+export function useProfessionalsColumnsPreference() {
+  const {
+    value,
+    isLoading,
+    setValue: setPreference,
+  } = useUserPreference<ProfessionalColumn[]>(
+    'admin_professionals_columns',
+    DEFAULT_PROFESSIONAL_VISIBLE_COLUMNS
+  );
+
+  // Garantit que les nouvelles colonnes ajoutées sont incluses
+  const visible = Array.isArray(value) ? value : DEFAULT_PROFESSIONAL_VISIBLE_COLUMNS;
+
+  return {
+    /** Colonnes visibles (préférences sauvegardées) */
+    visibleColumns: visible,
+    /** Chargement en cours */
+    isLoading,
+    /** Sauvegarder les colonnes visibles */
+    setVisibleColumns: setPreference,
+  };
+}
+
+// ============================================
 // PRÉFÉRENCES COMPAGNIE - COLONNES RÉSERVATIONS
 // ============================================
 
