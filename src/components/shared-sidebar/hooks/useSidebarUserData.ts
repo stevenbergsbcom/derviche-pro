@@ -60,7 +60,7 @@ export function useSidebarUserData<T extends BaseSidebarUserData>(
           .from('profiles')
           .select(selectQuery)
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           logger.error(`Erreur chargement profil sidebar ${contextName}`, {

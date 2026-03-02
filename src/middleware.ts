@@ -84,21 +84,40 @@ export async function middleware(request: NextRequest) {
 
     const { pathname, searchParams } = request.nextUrl;
 
-    // Vérifier si l'utilisateur est désactivé
+    // Vérifier si l'utilisateur est désactivé ou supprimé
+    // On utilise le service role key pour bypasser les RLS policies
+    // (une RLS filtrée sur deleted_at IS NULL rendrait le check inopérant)
     if (user) {
-        const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('disabled_at')
-            .eq('id', user.id)
-            .single();
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (serviceRoleKey) {
+            const { createClient: createAdminSupabase } = await import('@supabase/supabase-js');
+            const adminClient = createAdminSupabase(
+                NEXT_PUBLIC_SUPABASE_URL,
+                serviceRoleKey,
+                { auth: { autoRefreshToken: false, persistSession: false } }
+            );
+            const { data: profile } = await adminClient
+                .from('profiles')
+                .select('disabled_at, deleted_at')
+                .eq('id', user.id)
+                .maybeSingle();
 
-        // Si erreur lors de la récupération du profil ou compte désactivé, déconnecter
-        if (profileError || profile?.disabled_at) {
-            await supabase.auth.signOut();
-            const url = request.nextUrl.clone();
-            url.pathname = '/login';
-            url.searchParams.set('error', profileError ? 'profile_error' : 'account_disabled');
-            return NextResponse.redirect(url);
+            // Bloquer si supprimé (soft delete)
+            if (profile?.deleted_at) {
+                await supabase.auth.signOut();
+                const url = request.nextUrl.clone();
+                url.pathname = '/login';
+                url.searchParams.set('error', 'account_deleted');
+                return NextResponse.redirect(url);
+            }
+            // Bloquer si désactivé
+            if (profile?.disabled_at) {
+                await supabase.auth.signOut();
+                const url = request.nextUrl.clone();
+                url.pathname = '/login';
+                url.searchParams.set('error', 'account_disabled');
+                return NextResponse.redirect(url);
+            }
         }
     }
 
@@ -145,13 +164,13 @@ export async function middleware(request: NextRequest) {
         }
         
         // 2. Sinon, récupérer le rôle et rediriger vers la destination par défaut
-        const { data: roleData } = await supabase
+        const { data: roleRows } = await supabase
             .from('user_roles')
             .select('role')
             .eq('user_id', user.id)
-            .single();
-        
-        const userRole = roleData?.role as UserRole | null;
+            .limit(1);
+
+        const userRole = (roleRows?.[0]?.role ?? null) as UserRole | null;
         url.pathname = getRedirectUrlByRole(userRole);
         url.searchParams.delete('next');
         return NextResponse.redirect(url);

@@ -89,9 +89,15 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onContinueAsGuest }: 
       // Vérifier si le compte est désactivé
       const { data: profile } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email, phone, disabled_at')
+        .select('first_name, last_name, email, phone, disabled_at, deleted_at')
         .eq('id', authData.user.id)
-        .single();
+        .maybeSingle();
+
+      if (profile?.deleted_at) {
+        await supabase.auth.signOut();
+        setError('Ce compte a été supprimé. Vous pouvez créer un nouveau compte.');
+        return;
+      }
 
       if (profile?.disabled_at) {
         await supabase.auth.signOut();
