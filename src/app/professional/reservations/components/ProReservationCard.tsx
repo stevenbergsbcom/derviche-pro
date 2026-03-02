@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ProCancelDialog } from './ProCancelDialog';
+import { ProChangeSlotDialog } from './ProChangeSlotDialog';
 import type { ProReservation } from '@/lib/services/pro-reservations';
 
 // ============================================
@@ -83,6 +84,8 @@ interface ProReservationCardProps {
   reservation: ProReservation;
   onCancel: (id: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
   isCancelling: boolean;
+  onChangeSlot: (reservationId: string, newSlotId: string) => Promise<{ success: boolean; error?: string }>;
+  isChangingSlot: boolean;
 }
 
 // ============================================
@@ -93,9 +96,14 @@ export function ProReservationCard({
   reservation,
   onCancel,
   isCancelling,
+  onChangeSlot,
+  isChangingSlot,
 }: ProReservationCardProps) {
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [changeSlotOpen, setChangeSlotOpen] = useState(false);
   const canCancel = isCancellable(reservation);
+  // Peut changer de créneau si la résa est confirmée et future
+  const canChangeSlot = reservation.status === 'confirmed' && isCancellable(reservation);
 
   const handleConfirmCancel = async (reason?: string) => {
     const result = await onCancel(reservation.id, reason);
@@ -105,6 +113,17 @@ export function ProReservationCard({
     } else {
       toast.error(result.error ?? 'Une erreur est survenue lors de l\'annulation.');
       throw new Error(result.error ?? 'Annulation échouée');
+    }
+  };
+
+  const handleConfirmChangeSlot = async (newSlotId: string) => {
+    const result = await onChangeSlot(reservation.id, newSlotId);
+    if (result.success) {
+      toast.success('Créneau modifié avec succès. Un email de confirmation vous a été envoyé.');
+      setChangeSlotOpen(false);
+    } else {
+      toast.error(result.error ?? 'Une erreur est survenue lors de la modification.');
+      throw new Error(result.error ?? 'Modification échouée');
     }
   };
 
@@ -159,11 +178,22 @@ export function ProReservationCard({
           </p>
         )}
 
-        {/* Actions */}
-        <div className="flex flex-wrap gap-2 pt-1">
+        {/* Actions mobile : empilées pleine largeur */}
+        <div className="flex flex-col gap-2 pt-1">
+          {canChangeSlot && (
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full"
+              onClick={() => setChangeSlotOpen(true)}
+              disabled={isChangingSlot || isCancelling}
+            >
+              Modifier la réservation
+            </Button>
+          )}
           {reservation.show_slug && (
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/spectacle/${reservation.show_slug}`} className="gap-1.5">
+            <Button variant="outline" size="sm" asChild className="w-full">
+              <Link href={`/spectacle/${reservation.show_slug}`} className="gap-1.5 justify-center">
                 <ExternalLink className="size-3.5" />
                 Voir le spectacle
               </Link>
@@ -173,11 +203,11 @@ export function ProReservationCard({
             <Button
               variant="ghost"
               size="sm"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
               onClick={() => setCancelOpen(true)}
-              disabled={isCancelling}
+              disabled={isCancelling || isChangingSlot}
             >
-              Annuler
+              Annuler la réservation
             </Button>
           )}
         </div>
@@ -253,19 +283,29 @@ export function ProReservationCard({
               </Link>
             </Button>
           )}
+          {canChangeSlot && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setChangeSlotOpen(true)}
+              disabled={isChangingSlot || isCancelling}
+            >
+              Modifier
+            </Button>
+          )}
           {canCancel && (
             <Button
               variant="ghost"
               size="sm"
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => setCancelOpen(true)}
-              disabled={isCancelling}
+              disabled={isCancelling || isChangingSlot}
             >
               Annuler
             </Button>
           )}
-          {!canCancel && !reservation.show_slug && (
-            <div className="w-16" /> // placeholder pour aligner les colonnes
+          {!canCancel && !canChangeSlot && !reservation.show_slug && (
+            <div className="w-16" />
           )}
         </div>
       </div>
@@ -276,6 +316,17 @@ export function ProReservationCard({
         showTitle={reservation.show_title}
         onConfirm={handleConfirmCancel}
         isCancelling={isCancelling}
+      />
+
+      <ProChangeSlotDialog
+        open={changeSlotOpen}
+        onOpenChange={setChangeSlotOpen}
+        showTitle={reservation.show_title}
+        showId={reservation.show_id}
+        currentSlotId={reservation.slot.id}
+        numPlaces={reservation.num_places}
+        onConfirm={handleConfirmChangeSlot}
+        isChanging={isChangingSlot}
       />
     </>
   );
