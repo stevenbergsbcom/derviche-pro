@@ -160,7 +160,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           .eq('id', payload.reservationId)
           .maybeSingle();
 
-        const slots = reservationDetails?.slots as {
+        const slots = (reservationDetails?.slots as unknown) as {
           date: string;
           time: string;
           venues: { name: string } | null;

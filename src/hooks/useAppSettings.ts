@@ -321,7 +321,10 @@ export function useNotificationSettings(): UseAppSettingsReturn<NotificationSett
       setIsSaving(false);
 
       if (result.error) {
-        setData(previousValue);
+        // Rollback uniquement si on avait des données chargées
+        if (previousValue !== null) {
+          setData(previousValue);
+        }
         return { success: false, error: result.error };
       }
 

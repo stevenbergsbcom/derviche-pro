@@ -533,7 +533,6 @@ function buildAdminNotificationHtml(
 
   const eventStyle = eventLabels[data.eventType];
   const adminReservationsUrl = `${appUrl}/admin/reservations?reservationId=${data.reservationId}`;
-  const safeAdminName = escapeHtml(data.adminName);
   const safeGuestFullName = escapeHtml(data.guestFullName);
   const safeGuestEmail = escapeHtml(data.guestEmail);
   const safeGuestStructure = escapeHtml(data.guestStructure);
