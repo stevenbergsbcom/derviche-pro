@@ -1,52 +1,55 @@
 'use server';
 
+/**
+ * Server Action - Vérification du statut d'un compte
+ * Utilise le service role key pour bypasser les RLS (deleted_at IS NULL)
+ * Appelée côté client après signInWithPassword avec l'access_token de la session
+ */
+
+import { logger } from '@/lib/logger';
+import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+
 export type AccountStatus = 'ok' | 'disabled' | 'deleted' | 'not_found';
 
 export async function checkAccountStatus(
   userId: string,
   accessToken: string
 ): Promise<AccountStatus> {
-  console.log('[checkAccountStatus] Appelé', { userId, hasToken: !!accessToken });
-
   try {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-    if (!serviceRoleKey || !supabaseUrl) {
-      console.error('[checkAccountStatus] Variables manquantes', { serviceRoleKey: !!serviceRoleKey, supabaseUrl: !!supabaseUrl });
-      return 'ok';
+    if (!serviceRoleKey) {
+      logger.error('[checkAccountStatus] SUPABASE_SERVICE_ROLE_KEY manquant');
+      return 'ok'; // fail-open, le middleware prendra le relais
     }
 
     // Import dynamique pour éviter les problèmes de module loading
     const { createClient } = await import('@supabase/supabase-js');
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Vérifier le token
+    // Vérifier que le token appartient bien à cet userId
     const { data: { user }, error: userError } = await adminClient.auth.getUser(accessToken);
-    console.log('[checkAccountStatus] getUser', { userId: user?.id, error: userError?.message });
 
     if (userError || !user || user.id !== userId) {
+      logger.warn('[checkAccountStatus] Token invalide ou userId ne correspond pas');
       return 'not_found';
     }
 
-    // Lire le profil
+    // Lire le profil (service role bypasse RLS deleted_at IS NULL)
     const { data: profile, error: profileError } = await adminClient
       .from('profiles')
       .select('disabled_at, deleted_at')
       .eq('id', userId)
       .maybeSingle();
 
-    console.log('[checkAccountStatus] profile', {
-      found: !!profile,
-      deleted: !!profile?.deleted_at,
-      disabled: !!profile?.disabled_at,
-      error: profileError?.message,
-    });
+    if (profileError) {
+      logger.error('[checkAccountStatus] Erreur lecture profil', { error: profileError.message });
+      return 'ok';
+    }
 
-    if (profileError) return 'ok';
     if (!profile) return 'not_found';
     if (profile.deleted_at) return 'deleted';
     if (profile.disabled_at) return 'disabled';
@@ -54,7 +57,7 @@ export async function checkAccountStatus(
     return 'ok';
 
   } catch (err) {
-    console.error('[checkAccountStatus] Exception', err);
-    return 'ok';
+    logger.error('[checkAccountStatus] Exception non gérée', { err });
+    return 'ok'; // fail-open
   }
 }

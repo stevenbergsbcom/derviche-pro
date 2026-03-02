@@ -89,9 +89,25 @@
 - `result.data` possibly undefined dans `spectacle/[slug]/page.tsx`
 - `reply_to` → `replyTo` dans `email.ts`
 
-**Scores audit Cursor :** à compléter
+**Corrections post-audit (3 priorités) :**
 
-**Commits :** à compléter après audit
+- API `POST /api/emails/send-confirmation` : vérification réservation en base + correspondance email (service role)
+- `confirmation/page.tsx` : suppression fallbacks de démo (Jean Dupont, UUID fictif), écran "Lien invalide" si params manquants
+- `useSidebarUserData` : `transformData` exclu des deps `useEffect` (stable via `useCallback`), commentaire explicatif
+
+**Correction sécurité post-audit : check statut compte (deleted_at invisible aux RLS) :**
+
+- Nouveau Server Action `src/lib/actions/auth.ts` : `checkAccountStatus(userId, accessToken)` — utilise service role + valide l'access_token, bypasse RLS `deleted_at IS NULL`
+- Nouvelle API route `POST /api/auth/check-account-status` (backup)
+- `login/page.tsx` + `LoginForm.tsx` : appelent le Server Action après `signInWithPassword`, avec try-catch fail-open (middleware prend le relais si échec)
+- `not_found` traité comme `deleted` → même message "Ce compte a été supprimé"
+
+**À faire (dette mineure) :**
+- Flash "Accès interdit/refusé" au moment de la déconnexion — à investiguer
+
+**Scores audit Cursor :** 7,8/10 → estimé 8,5/10 après corrections
+
+**Commits :** à compléter
 
 ---
 

@@ -56,11 +56,10 @@ export default function CompanyLayout({
     return <LoadingScreen />;
   }
 
-  // Non authentifié
+  // Non authentifié → on est en train de rediriger vers /login (useEffect)
+  // On affiche LoadingScreen pour éviter le flash "Accès refusé" pendant la navigation
   if (!isAuthenticated) {
-    return (
-      <AccessDenied message="Vous devez être connecté pour accéder à cet espace." />
-    );
+    return <LoadingScreen />;
   }
 
   // Erreur de récupération du rôle (fail-secure)

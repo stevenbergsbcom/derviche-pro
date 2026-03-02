@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
@@ -22,7 +21,6 @@ export function LogoutButton({
     className,
     children = 'Se déconnecter',
 }: LogoutButtonProps) {
-    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
 
     const handleLogout = async () => {
@@ -34,17 +32,19 @@ export function LogoutButton({
 
             if (error) {
                 toast.error('Une erreur est survenue lors de la déconnexion');
+                setIsLoading(false);
                 return;
             }
 
-            toast.success('Déconnexion réussie');
-
-            // Rediriger vers la page de connexion
-            router.push('/login');
+            // Navigation dure pour éviter le flash d'erreur :
+            // router.push() (navigation client-side) peut déclencher
+            // une re-validation de la route courante avant de naviguer
+            // vers /login, ce qui fait flasher brièvement la page d'erreur.
+            // window.location.href force un rechargement complet avec cookies vides.
+            window.location.href = '/login';
         } catch (error) {
             logger.error('[Logout] Erreur lors de la déconnexion', error as Error);
             toast.error('Une erreur est survenue lors de la déconnexion');
-        } finally {
             setIsLoading(false);
         }
     };
