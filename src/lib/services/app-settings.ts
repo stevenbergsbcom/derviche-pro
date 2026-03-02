@@ -29,6 +29,12 @@ export type OrganizationSettingKey =
 /** Clés de paramètres email */
 export type EmailSettingKey = 'email_from_name' | 'email_from_address';
 
+/** Clés de paramètres notifications email admin */
+export type NotificationSettingKey =
+  | 'email_notification_new_reservation'
+  | 'email_notification_cancellation'
+  | 'email_notification_modification';
+
 /** Clés de paramètres rappels */
 export type ReminderSettingKey =
   | 'reminder_enabled_7d'
@@ -80,6 +86,13 @@ export interface EmailSettings {
   email_from_address: string | null;
 }
 
+/** Paramètres notifications email admin groupés */
+export interface NotificationSettings {
+  email_notification_new_reservation: boolean;
+  email_notification_cancellation: boolean;
+  email_notification_modification: boolean;
+}
+
 /** Paramètres rappels groupés */
 export interface ReminderSettings {
   reminder_enabled_7d: boolean;
@@ -115,6 +128,13 @@ export const ORGANIZATION_SETTING_KEYS: OrganizationSettingKey[] = [
 
 /** Clés des paramètres email */
 export const EMAIL_SETTING_KEYS: EmailSettingKey[] = ['email_from_name', 'email_from_address'];
+
+/** Clés des paramètres notifications email admin */
+export const NOTIFICATION_SETTING_KEYS: NotificationSettingKey[] = [
+  'email_notification_new_reservation',
+  'email_notification_cancellation',
+  'email_notification_modification',
+];
 
 /** Clés des paramètres rappels */
 export const REMINDER_SETTING_KEYS: ReminderSettingKey[] = [
@@ -368,6 +388,43 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
     data: {
       email_from_name: (result.data?.email_from_name as string) || null,
       email_from_address: (result.data?.email_from_address as string) || null,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Récupère les paramètres de notifications email admin
+ */
+export async function getNotificationSettings(): Promise<AppSettingResult<NotificationSettings>> {
+  const result = await getAppSettings(NOTIFICATION_SETTING_KEYS);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  // Convertit proprement les valeurs JSONB (boolean ou string 'true'/'false')
+  const parseBool = (val: unknown, fallback: boolean): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return fallback;
+  };
+
+  return {
+    data: {
+      email_notification_new_reservation: parseBool(
+        result.data?.email_notification_new_reservation,
+        true
+      ),
+      email_notification_cancellation: parseBool(
+        result.data?.email_notification_cancellation,
+        true
+      ),
+      email_notification_modification: parseBool(
+        result.data?.email_notification_modification,
+        false
+      ),
     },
     error: null,
   };

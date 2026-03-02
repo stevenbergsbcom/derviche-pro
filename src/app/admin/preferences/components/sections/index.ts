@@ -7,3 +7,4 @@ export { AppearanceSection } from './appearance-section';
 export { EmailSection } from './email-section';
 export { RemindersSection } from './reminders-section';
 export { RgpdSection } from './rgpd-section';
+export { NotificationsSection } from './notifications-section';

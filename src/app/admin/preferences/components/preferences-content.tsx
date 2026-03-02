@@ -22,6 +22,7 @@ import {
   OrganizationSection,
   AppearanceSection,
   EmailSection,
+  NotificationsSection,
   RemindersSection,
   RgpdSection,
 } from './sections';
@@ -117,6 +118,11 @@ function PreferencesInnerContent({
     [onDirtyChange]
   );
 
+  const handleNotificationsDirty = useCallback(
+    (isDirty: boolean) => onDirtyChange('notifications', isDirty),
+    [onDirtyChange]
+  );
+
   const handleRemindersDirty = useCallback(
     (isDirty: boolean) => onDirtyChange('reminders', isDirty),
     [onDirtyChange]
@@ -150,6 +156,12 @@ function PreferencesInnerContent({
           <EmailSection
             canEdit={canEdit}
             onDirtyChange={handleEmailDirty}
+          />
+        )}
+        {activeTab === 'notifications' && (
+          <NotificationsSection
+            canEdit={canEdit}
+            onDirtyChange={handleNotificationsDirty}
           />
         )}
         {activeTab === 'reminders' && (

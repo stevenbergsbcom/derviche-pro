@@ -83,6 +83,19 @@ export function useProReservations(): UseProReservationsResult {
           )
         );
         setIsCancelling(false);
+
+        // Envoyer l'email d'annulation de façon non-bloquante
+        fetch('/api/emails/send-cancellation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reservationId: id }),
+        }).catch((err) => {
+          logger.warn('useProReservations: échec envoi email annulation (non-bloquant)', {
+            id,
+            error: err instanceof Error ? err.message : 'Erreur inconnue',
+          });
+        });
+
         return { success: true };
       } else {
         logger.error('useProReservations: erreur annulation', { id, error: result.error });

@@ -244,6 +244,18 @@ export function useAdminReservations(
       setReservations((prev) => prev.map((r) => (r.id === id ? result.data! : r)));
       toast.success('Réservation annulée');
 
+      // Envoyer l'email d'annulation de façon non-bloquante
+      fetch('/api/emails/send-cancellation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reservationId: id }),
+      }).catch((err) => {
+        logger.warn('useAdminReservations: échec envoi email annulation (non-bloquant)', {
+          id,
+          error: err instanceof Error ? err.message : 'Erreur inconnue',
+        });
+      });
+
       return { success: true, data: result.data };
     },
     []

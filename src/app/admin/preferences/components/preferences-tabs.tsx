@@ -32,7 +32,8 @@ export interface PreferenceTab {
 export const PREFERENCE_TABS: PreferenceTab[] = [
   { id: 'organization', label: 'Organisation', icon: Building2, status: 'partial', statusLabel: 'Partiel' },
   { id: 'appearance', label: 'Apparence', icon: Palette, status: 'active', statusLabel: 'Actif' },
-  { id: 'email', label: 'Email', icon: Mail, status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'email', label: 'Email', icon: Mail, status: 'active', statusLabel: 'Actif' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, status: 'active', statusLabel: 'Actif' },
   { id: 'reminders', label: 'Rappels', icon: Bell, status: 'inactive', statusLabel: 'Non connecté' },
   { id: 'rgpd', label: 'RGPD', icon: Shield, status: 'inactive', statusLabel: 'Non connecté' },
 ];
@@ -63,7 +64,7 @@ interface PreferencesTabsProps {
 export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+      <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
         {PREFERENCE_TABS.map((tab) => {
           const Icon = tab.icon;
           return (
