@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CompanySidebar } from '@/components/company/company-sidebar';
 import {
@@ -26,39 +26,53 @@ export default function CompanyLayout({
     useCurrentUserRole();
   const router = useRouter();
 
+  // Filet de secours : si la navigation SPA ne se déclenche pas dans les 4s,
+  // on passe redirectTimeout à true pour afficher un lien manuel vers /login
+  const [redirectTimeout, setRedirectTimeout] = useState(false);
+
   // Vérification de l'accès côté client (double sécurité avec middleware)
   useEffect(() => {
-    // Attendre la fin du chargement
     if (isLoading) return;
 
-    // Non authentifié → redirection vers login (normalement géré par middleware)
     if (!isAuthenticated) {
       logger.warn('Accès company layout sans authentification');
       router.push('/login?next=/company');
+
+      const timer = setTimeout(() => {
+        setRedirectTimeout(true);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+
+    if (hasRoleFetchError) {
+      logger.error('Erreur récupération rôle dans company layout');
       return;
     }
 
-    // Erreur de récupération du rôle → fail-secure
-    if (hasRoleFetchError) {
-      logger.error('Erreur récupération rôle dans company layout');
-      return; // Afficher l'erreur
-    }
-
-    // Rôle incorrect → refuser l'accès (normalement géré par middleware)
     if (role !== 'company') {
       logger.warn('Accès company layout avec mauvais rôle', { role });
-      return; // Afficher l'erreur
+      return;
     }
   }, [isLoading, isAuthenticated, role, hasRoleFetchError, router]);
 
-  // Affichage pendant le chargement
   if (isLoading) {
     return <LoadingScreen />;
   }
 
-  // Non authentifié → on est en train de rediriger vers /login (useEffect)
-  // On affiche LoadingScreen pour éviter le flash "Accès refusé" pendant la navigation
+  // Non authentifié → redirection en cours vers /login (useEffect)
+  // On affiche LoadingScreen pour éviter le flash "Accès refusé" pendant la navigation.
+  // Si la navigation SPA échoue, le timeout affiche un lien de secours.
   if (!isAuthenticated) {
+    if (redirectTimeout) {
+      return (
+        <AccessDenied
+          title="Redirection en cours…"
+          message="La redirection automatique n'a pas fonctionné."
+          returnUrl="/login"
+          returnLabel="Aller à la page de connexion"
+        />
+      );
+    }
     return <LoadingScreen />;
   }
 
