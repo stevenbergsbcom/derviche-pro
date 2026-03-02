@@ -16,7 +16,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
-import { sendReservationConfirmationEmail } from '@/lib/services/email';
+import {
+  sendReservationConfirmationEmail,
+  sendAdminNotificationEmail,
+  type AdminNotificationEmailData,
+} from '@/lib/services/email';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 
@@ -110,7 +114,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'Email invalide' }, { status: 200 });
     }
 
-    // 3. Envoyer l'email
+    // 3. Envoyer l'email de confirmation au professionnel
     const result = await sendReservationConfirmationEmail(payload);
 
     if (!result.success) {
@@ -122,6 +126,93 @@ export async function POST(request: Request): Promise<NextResponse> {
         { success: false, error: "Erreur lors de l'envoi" },
         { status: 200 } // 200 intentionnel : la réservation est déjà créée
       );
+    }
+
+    // 4. Notifier le manager Derviche lié au spectacle (si préférence activée)
+    try {
+      const { data: notifPrefData } = await adminClient
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'email_notification_new_reservation')
+        .maybeSingle();
+
+      const notifEnabled =
+        notifPrefData?.value === true ||
+        notifPrefData?.value === 'true' ||
+        String(notifPrefData?.value) === 'true';
+
+      if (notifEnabled) {
+        // Récupérer le derviche_manager_id depuis le spectacle via la réservation
+        const { data: reservationDetails } = await adminClient
+          .from('reservations')
+          .select(`
+            guest_structure,
+            slots!inner (
+              date,
+              time,
+              venues ( name ),
+              shows!inner (
+                title,
+                derviche_manager_id
+              )
+            )
+          `)
+          .eq('id', payload.reservationId)
+          .maybeSingle();
+
+        const slots = reservationDetails?.slots as {
+          date: string;
+          time: string;
+          venues: { name: string } | null;
+          shows: { title: string; derviche_manager_id: string | null };
+        } | null;
+
+        const managerId = slots?.shows?.derviche_manager_id;
+
+        if (managerId) {
+          const { data: managerProfile } = await adminClient
+            .from('profiles')
+            .select('email, first_name, last_name')
+            .eq('id', managerId)
+            .maybeSingle();
+
+          if (managerProfile?.email) {
+            const managerFullName =
+              `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() ||
+              managerProfile.email;
+
+            const notifData: AdminNotificationEmailData = {
+              to: managerProfile.email,
+              adminName: managerFullName,
+              eventType: 'new_reservation',
+              guestFullName: payload.guestFullName,
+              guestEmail: payload.to,
+              guestStructure: (reservationDetails as { guest_structure?: string | null } | null)?.guest_structure ?? null,
+              showTitle: payload.showTitle,
+              slotDateFormatted: payload.slotDateFormatted,
+              slotTimeFormatted: payload.slotTimeFormatted,
+              venueName: payload.venueName,
+              numPlaces: payload.numPlaces,
+              reservationId: payload.reservationId,
+            };
+
+            await sendAdminNotificationEmail(notifData).catch((err) => {
+              logger.error('[API /emails/send-confirmation] Erreur notif manager', {
+                managerEmail: managerProfile.email,
+                err,
+              });
+            });
+          }
+        } else {
+          logger.warn('[API /emails/send-confirmation] Notification activée mais aucun manager assigné au spectacle', {
+            showTitle: payload.showTitle,
+            reservationId: payload.reservationId,
+          });
+        }
+      }
+    } catch (notifErr) {
+      // La notif manager ne doit jamais bloquer la réponse
+      logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
     }
 
     return NextResponse.json({ success: true, messageId: result.messageId });

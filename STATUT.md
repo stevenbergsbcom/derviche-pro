@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 127
+> Dernière mise à jour : Session 131
 
 ---
 
@@ -9,20 +9,16 @@
 ### ✅ Auth & Rôles (100%)
 - Login, register, forgot/reset password
 - Callback OAuth Supabase
-- Middleware : protection par rôle, redirection, compte désactivé
-- Vérification mot de passe (API)
-- Confirmation email désactivée (Supabase Dashboard)
+- Middleware : protection par rôle, redirection, compte désactivé/supprimé
+- Service role key pour bypasser RLS `deleted_at IS NULL`
+- `.maybeSingle()` partout sur les appels `profiles`
+- `checkAccountStatus` Server Action (`src/lib/actions/auth.ts`)
+- Fix flash "Accès refusé" à la déconnexion — Session 130
 
 ### ✅ Public - Catalogue & Réservation (100%)
-- Liste des spectacles (public)
-- Détail spectacle par slug
-- Formulaire réservation (guest ou connecté)
-- Confirmation de réservation
-- AuthDialog embarqué dans la page spectacle (sans router.push)
-- Pré-remplissage formulaire depuis profil (Option C) — Session 125
-- Enrichissement profil post-réservation (Option C) — Session 125
-- Détection connexion pro → bypass modale auth — Session 125
-- Champs Pays et Numéro AFC dans le formulaire — Session 125
+- Liste des spectacles, détail par slug, formulaire réservation, confirmation
+- AuthDialog embarqué, pré-remplissage profil, enrichissement post-résa
+- Champs Pays et Numéro AFC dans le formulaire
 
 ### ✅ Check-in PWA (100%)
 - Flux : spectacles → créneaux → liste réservations
@@ -38,107 +34,104 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Utilisateurs | ✅ Liste, filtres, CRUD, rôle, statut, API |
-| Préférences | ✅ Organisation, Apparence (thème + logos), Email, Rappels, RGPD |
+| Préférences | ✅ Organisation, Apparence (thème + logos), Email, Notifications, Rappels, RGPD |
 | Mon compte | ✅ Connecté Supabase (profil + rôle, sauvegarde, changement mdp) |
 
 ### ✅ Company (100%)
 - Dashboard, liste/filtres réservations, stats, export, mon compte
 
-### 🟡 Professional (80%) — Sessions 122-126
-- ✅ Middleware, layout, sidebar
-- ✅ Redirect post-login → `/professional`
-- ✅ Page "Mes réservations" (onglets À venir / Historique)
-- ✅ Annulation réservation avec dialog confirmation
-- ✅ UX desktop : layout horizontal avec colonnes — Session 125
-- ✅ Rapatriement réservations guest — Session 126
-- ✅ Mon compte (édition profil complet) — Session 127
+### ✅ Professional (100%)
+- Middleware, layout, sidebar
+- Redirect post-login → `/professional`
+- Page "Mes réservations" (onglets À venir / Historique)
+- Annulation réservation avec dialog confirmation
+- UX desktop : layout horizontal avec colonnes
+- Rapatriement réservations guest (GuestReservationsBanner)
+- Mon compte (édition profil complet)
+- UX modale refonte (avatar, InfoRow, cards résa) — S128
+
+### ✅ Emails transactionnels — Sessions 129-131
+- Service Resend, domaine derviche-pro.fr vérifié (DKIM/SPF/DMARC O2switch)
+- Expéditeur : `reservations@derviche-pro.fr`
+- Template HTML branding Derviche dans `src/lib/services/email.ts`
+- Route API `POST /api/emails/send-confirmation` — confirmation pro
+- Route API `POST /api/emails/send-cancellation` — annulation pro + notification admin
+- Notification admin avec vérification préférences (`email_notification_cancellation`)
+- Config lue depuis `app_settings` (from_name, from_address, reply_to, subjects, catalogue_url)
+- Migrations `048_add_email_settings.sql` + `049_add_notification_settings.sql` ✅
+- ⚠️ URL catalogue hardcodée : `https://derviche-pro.vercel.app/catalogue` (clé `email_catalogue_url` en DB) — **à mettre à jour lors du custom domaine derviche-pro.fr**
 
 ### 🟡 RGPD (0%) — à planifier
 - Consent utilisateur, droit à l'effacement, purge automatique
-- Reporté après Session 127
 
 ### ✅ Autres (100%)
 - Thème & logos dynamiques, PWA, export Excel/CSV, sidebar partagée
+- Export CSV natif (sans xlsx/exceljs — vulnérabilités)
+- Deep-link réservations, colonnes configurables avec persistance Supabase
 
 ---
 
-## Dernier travail (Session 126)
+## Dernier travail (Session 130)
 
-### Rapatriement des réservations guest
-Quand un professionnel réservait en guest (user_id IS NULL) avant d'avoir un compte,
-ses réservations n'apparaissaient pas dans son dashboard. Désormais :
+### Tâche 1 — Migration 049
+**Non nécessaire.** Vérification en base confirmée : les valeurs `app_settings` email sont correctes.
+Le format `'"valeur"'` dans le SQL de la migration 048 est du JSONB string valide.
 
-**Architecture retenue : Hybride détection automatique + sélection manuelle**
-- Détection silencieuse au montage (une seule fois via `useRef hasDetected`)
-- Bannière amber dismissible si des réservations orphelines existent
-- L'utilisateur choisit lesquelles récupérer (tout coché par défaut)
-- Toast de confirmation, refresh automatique de la liste principale
-- `guest_email` conservé après rapatriement (historique/audit)
+### Tâche 2 — Fix flash "Accès refusé" à la déconnexion
 
-**Fichiers créés/modifiés :**
-- `supabase/migrations/046_claim_guest_reservations.sql` — RPC `get_guest_reservations` + `claim_selected_reservations`
-- `supabase/migrations/047_fix_get_guest_reservations.sql` — correctif ambiguïté colonne `id` → `reservation_id` (DROP + CREATE)
-- `src/lib/services/pro-reservations/index.ts` — `getGuestReservations()` + `claimSelectedReservations()` + types
-- `src/hooks/useGuestReservationsClaim.ts` — hook dédié (détection, sélection, claim, dismiss)
-- `src/app/professional/reservations/components/GuestReservationsBanner.tsx` — composant bannière
-- `src/app/professional/reservations/components/index.ts` — export GuestReservationsBanner
-- `src/app/professional/reservations/page.tsx` — intégration bannière
-- `src/hooks/index.ts` — export useGuestReservationsClaim
+**Cause identifiée :** Lors du `signOut()`, `useCurrentUserRole` détectait `isAuthenticated = false`
+et le layout rendait `<AccessDenied title="Accès refusé">` pendant ~200ms, avant que
+`window.location.href` navigue vers `/login`.
 
-**Fix post-audit :** `if (!profile) return null` ajouté pour le narrowing TypeScript (`profile possibly null` sur 14 lignes)
+**Fichiers modifiés :**
+
+`src/components/auth/logout-button.tsx`
+- `router.push('/login')` → `window.location.href = '/login'` (navigation dure, évite re-validation de route)
+- Ajout ref `isMounted` : `setIsLoading`/`toast` ne sont appelés qu'si composant encore monté
+- `error as Error` → `err instanceof Error ? err : new Error(String(err))` dans catch
+
+`src/app/professional/layout.tsx` + `src/app/company/layout.tsx`
+- `!isAuthenticated` → `<LoadingScreen />` au lieu de `<AccessDenied>` (redirection en cours)
+- Timeout 4 secondes : si navigation SPA échoue → `<AccessDenied>` avec lien "Aller à la page de connexion"
+- `AccessDenied` réservé aux utilisateurs **connectés** avec mauvais rôle
 
 **Commits :**
-- `feat(pro): rapatriement réservations guest — migrations 046/047, service, hook, bannière`
-- `fix(pro): corrections audit — formatTime, aria-labels, doc onClaimSuccess`
+- `fix(auth): suppression flash Accès refusé à la déconnexion`
+- `fix(auth): corrections post-audit S130`
+- `merge(S130): fix flash logout + corrections post-audit` → **main**
 
-**Audit : 8,8/10** — corrections appliquées (formatTime, aria-labels, doc stabilité onClaimSuccess)
-
-### Leçons SQL apprises
-- Ne jamais nommer `id` une colonne dans un `RETURNS TABLE` avec des JOINs → ambiguïté PostgreSQL garantie
-- PostgreSQL interdit `CREATE OR REPLACE` si le type de retour change → toujours `DROP` d'abord
-- Ne jamais modifier un fichier de migration déjà appliqué en base → créer une nouvelle migration
-
-### Config Git
-- `git config --global merge.ff false` appliqué → merge toujours avec commit de merge (pas de fast-forward)
+**Audit : 8/10**
 
 ---
 
-## Dernier travail (Session 127)
+## Travail précédent (Session 129)
 
-### Étape A — Correction bug `country` pré-remplissage ✅
-**Fichier :** `src/app/(public)/spectacle/[slug]/page.tsx` ligne ~319
-**Bug :** `country: prev.country || profile.country || 'France'` → `prev.country` valant `'France'`
-(défaut initial, truthy), le pays du profil n'était jamais lu.
-**Fix :** `country: profile.country || prev.country || 'France'` — le profil est maintenant prioritaire.
-
-### Étape B — Page `/professional/mon-compte` ✅
-Création de la page Mon compte pour l'espace professionnel.
-
-**Fichier créé :** `src/app/professional/mon-compte/page.tsx`
-
-**4 sections indépendantes :**
-- Informations personnelles : prénom, nom, téléphone, téléphone secondaire, email secondaire (éditable)
-- Informations professionnelles : structure, fonction, numéro AFC
-- Adresse : adresse, code postal, ville, pays
-- Compte & sécurité : email principal (lecture seule), date inscription, changement mot de passe
-
-**Décisions :**
-- Email secondaire (`email2`) placé dans "Informations personnelles" (modifiable, pas lié à Supabase Auth)
-- Email principal non modifiable (lié à l'auth Supabase)
-- RGPD reporté à une session dédiée ultérieure
-- Pattern identique à admin/mon-compte (single-file, pas de hook séparé)
+**Emails transactionnels + corrections sécurité auth :**
+- Resend configuré, DNS O2switch, domaine vérifié
+- `.single()` → `.maybeSingle()` (middleware, login, LoginForm, useSidebarUserData)
+- Service role key dans middleware pour bypasser RLS `deleted_at IS NULL`
+- `checkAccountStatus` Server Action dans `src/lib/actions/auth.ts`
+- API email sécurisée : vérif résa en base + correspondance email
+- `confirmation/page.tsx` : suppression fallbacks de démo
+- Fix double envoi email (suppression envoi parasite dans confirmation/page.tsx)
+- Audit estimé 8,5/10
 
 ---
 
-## Points d'accessibilité à traiter (dette technique légère)
-- `src/app/(public)/spectacle/[slug]/page.tsx` :
-  - `aria-label` sur boutons "mois précédant" / "mois suivant"
-  - `aria-expanded` sur bouton "Lire la suite"
-  - `role="grid"` + `aria-selected` sur le calendrier
-- `ProReservationCard.tsx` : `aria-label` sur le bouton "Annuler"
+## À faire (prochaines sessions)
 
-## Refactoring à planifier
-- `src/app/(public)/spectacle/[slug]/page.tsx` (~860 lignes) → extraire sous-composants et hooks
+### Priorité haute
+- [x] Email d'annulation de réservation ✅ Session 131
+- [ ] Rappels automatiques (Vercel Cron ou Supabase pg_cron)
+
+### Priorité moyenne
+- [ ] Affichage `organization_name` dans les emails et le catalogue public
+- [ ] Amélioration template email (logo Derviche, footer légal, lien désabonnement)
+- [ ] RGPD : suppression complète compte — `supabase.auth.admin.deleteUser(userId)` quand `deleted_at` est posé
+
+### Priorité basse
+- [ ] Refactoring `src/app/(public)/spectacle/[slug]/page.tsx` (~860 lignes)
+- [ ] Accessibilité : aria-labels calendrier, boutons navigation
 
 ---
 
@@ -149,17 +142,13 @@ Création de la page Mon compte pour l'espace professionnel.
 |---|---|---|---|
 | Apparence | Thème + logos | ✅ Sidebar admin | Non |
 | Organisation | Nom, email, tél, adresse | ⚠️ Seulement `organization_name` | Non |
-| Email | `email_from_name`, `email_from_address` | ❌ Aucun système email | Oui |
+| Email | `email_from_name`, `email_from_address` | ✅ Confirmation réservation | Partiel |
 | Rappels | `reminder_enabled_7d/2d/12h` | ❌ Aucun job planifié | Oui |
 | RGPD | Durées de conservation | ❌ Aucune purge automatique | Oui |
-
-**Fonctionnalités à construire :**
-- [ ] Emails transactionnels (confirmation, annulation)
-- [ ] Job rappels automatiques (Vercel Cron ou pg_cron)
-- [ ] Job purge RGPD automatique
 
 ### TODO dans le code
 | Fichier | Description |
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
-| `app/(public)/spectacle/[slug]/page.tsx` (~319) | ✅ Bug pré-remplissage country corrigé (Session 127) |
+| `app/(public)/spectacle/[slug]/page.tsx` | Refactoring prévu (860 lignes) |
+| `admin/preferences/.../email-section.tsx` | Contient encore la bannière "non connecté" alors que Resend est actif — à supprimer |
