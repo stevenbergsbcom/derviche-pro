@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProfessionalSidebar } from '@/components/professional';
 import {
@@ -26,6 +26,10 @@ export default function ProfessionalLayout({
     useCurrentUserRole();
   const router = useRouter();
 
+  // Filet de secours : si la navigation SPA ne se déclenche pas dans les 4s,
+  // on passe redirectTimeout à true pour afficher un lien manuel vers /login
+  const [redirectTimeout, setRedirectTimeout] = useState(false);
+
   // Vérification de l'accès côté client (double sécurité avec middleware)
   useEffect(() => {
     if (isLoading) return;
@@ -33,7 +37,11 @@ export default function ProfessionalLayout({
     if (!isAuthenticated) {
       logger.warn('Accès professional layout sans authentification');
       router.push('/login?next=/professional');
-      return;
+
+      const timer = setTimeout(() => {
+        setRedirectTimeout(true);
+      }, 4000);
+      return () => clearTimeout(timer);
     }
 
     if (hasRoleFetchError) {
@@ -51,10 +59,21 @@ export default function ProfessionalLayout({
     return <LoadingScreen />;
   }
 
+  // Non authentifié → redirection en cours vers /login (useEffect)
+  // On affiche LoadingScreen pour éviter le flash "Accès refusé" pendant la navigation.
+  // Si la navigation SPA échoue, le timeout affiche un lien de secours.
   if (!isAuthenticated) {
-    return (
-      <AccessDenied message="Vous devez être connecté pour accéder à cet espace." />
-    );
+    if (redirectTimeout) {
+      return (
+        <AccessDenied
+          title="Redirection en cours…"
+          message="La redirection automatique n'a pas fonctionné."
+          returnUrl="/login"
+          returnLabel="Aller à la page de connexion"
+        />
+      );
+    }
+    return <LoadingScreen />;
   }
 
   if (hasRoleFetchError) {

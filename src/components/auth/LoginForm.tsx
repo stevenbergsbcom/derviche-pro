@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { checkAccountStatus } from '@/lib/actions/auth';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,18 +87,34 @@ export function LoginForm({ onSuccess, onSwitchToRegister, onContinueAsGuest }: 
         return;
       }
 
-      // Vérifier si le compte est désactivé
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email, phone, disabled_at')
-        .eq('id', authData.user.id)
-        .single();
+      // Vérifier le statut du compte via Server Action (service role, bypasse RLS)
+      // En cas d'échec du Server Action, on continue — le middleware prend le relais
+      const accessToken = authData.session?.access_token ?? '';
+      let accountStatus: string = 'ok';
+      try {
+        accountStatus = await checkAccountStatus(authData.user.id, accessToken);
+      } catch {
+        logger.warn('[LoginForm] Server Action check-account-status a échoué, middleware prend le relais');
+      }
 
-      if (profile?.disabled_at) {
+      if (accountStatus === 'deleted' || accountStatus === 'not_found') {
+        await supabase.auth.signOut();
+        setError('Ce compte a été supprimé. Vous pouvez créer un nouveau compte.');
+        return;
+      }
+
+      if (accountStatus === 'disabled') {
         await supabase.auth.signOut();
         setError('Votre compte a été désactivé. Contactez un administrateur.');
         return;
       }
+
+      // Récupérer les données profil pour le callback (sans les champs de statut)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, email, phone')
+        .eq('id', authData.user.id)
+        .maybeSingle();
 
       logger.info('[LoginForm] Connexion réussie', { userId: authData.user.id });
 

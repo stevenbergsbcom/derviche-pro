@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
@@ -22,8 +21,17 @@ export function LogoutButton({
     className,
     children = 'Se déconnecter',
 }: LogoutButtonProps) {
-    const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
+
+    // Ref pour éviter les appels à setState / toast après démontage du composant
+    // (ex : l'utilisateur navigue pendant que signOut() est en cours)
+    const isMounted = useRef(true);
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
 
     const handleLogout = async () => {
         setIsLoading(true);
@@ -33,19 +41,26 @@ export function LogoutButton({
             const { error } = await supabase.auth.signOut();
 
             if (error) {
-                toast.error('Une erreur est survenue lors de la déconnexion');
+                if (isMounted.current) {
+                    toast.error('Une erreur est survenue lors de la déconnexion');
+                    setIsLoading(false);
+                }
                 return;
             }
 
-            toast.success('Déconnexion réussie');
-
-            // Rediriger vers la page de connexion
-            router.push('/login');
-        } catch (error) {
-            logger.error('[Logout] Erreur lors de la déconnexion', error as Error);
-            toast.error('Une erreur est survenue lors de la déconnexion');
-        } finally {
-            setIsLoading(false);
+            // Navigation dure pour éviter le flash d'erreur :
+            // router.push() (navigation client-side) peut déclencher
+            // une re-validation de la route courante avant de naviguer
+            // vers /login, ce qui fait flasher brièvement la page d'erreur.
+            // window.location.href force un rechargement complet avec cookies vides.
+            window.location.href = '/login';
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            logger.error('[Logout] Erreur lors de la déconnexion', error);
+            if (isMounted.current) {
+                toast.error('Une erreur est survenue lors de la déconnexion');
+                setIsLoading(false);
+            }
         }
     };
 
@@ -61,4 +76,3 @@ export function LogoutButton({
         </Button>
     );
 }
-

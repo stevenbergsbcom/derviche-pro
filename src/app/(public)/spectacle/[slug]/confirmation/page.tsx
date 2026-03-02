@@ -91,6 +91,7 @@ function ConfirmationContent() {
   const [confirmation, setConfirmation] = useState<ReservationConfirmation | null>(null);
   const [imageError, setImageError] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [invalidLink, setInvalidLink] = useState(false);
 
   // Charger le rôle de l'utilisateur connecté (pour afficher ou non le bouton dashboard)
   useEffect(() => {
@@ -143,12 +144,19 @@ function ConfirmationContent() {
     if (!isMounted || !show) return;
 
     // Récupérer les données de la réservation depuis les query params
-    const reservationId = searchParams.get('id') || 'a7f3k9b2-1234-5678-9abc-def012345678';
-    const numPlaces = parseInt(searchParams.get('places') || '2', 10);
-    const slotDate = searchParams.get('date') || '2026-01-15';
-    const slotTime = searchParams.get('time') || '11:00';
-    const guestName = searchParams.get('name') || 'Jean Dupont';
-    const guestEmail = searchParams.get('email') || 'jean.dupont@theatre.fr';
+    const reservationId = searchParams.get('id');
+    const numPlaces = parseInt(searchParams.get('places') ?? '1', 10);
+    const slotDate = searchParams.get('date');
+    const slotTime = searchParams.get('time');
+    const guestName = searchParams.get('name');
+    const guestEmail = searchParams.get('email');
+
+    // Paramètres obligatoires manquants → lien invalide
+    if (!reservationId || !slotDate || !slotTime || !guestName || !guestEmail) {
+      setConfirmation(null);
+      setInvalidLink(true);
+      return;
+    }
 
     // Trouver le slot correspondant pour le lieu (matcher date ET heure)
     const matchingSlot = show.slots.find(slot => slot.date === slotDate && slot.time === slotTime);
@@ -193,6 +201,30 @@ function ConfirmationContent() {
         <Header />
         <div className="container mx-auto px-4 py-12 text-center">
           <div className="animate-pulse text-muted-foreground">Chargement...</div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Lien de confirmation invalide (params manquants)
+  if (invalidLink) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-24 text-center">
+          <div className="max-w-md mx-auto">
+            <h1 className="text-2xl font-bold text-foreground mb-4">
+              Lien de confirmation invalide
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              Ce lien est incomplet ou a expiré. Si vous avez bien effectué une réservation,
+              consultez votre email de confirmation.
+            </p>
+            <Button asChild>
+              <Link href="/catalogue">Retour au catalogue</Link>
+            </Button>
+          </div>
         </div>
         <Footer />
       </div>

@@ -10,6 +10,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
+import { checkAccountStatus } from '@/lib/actions/auth';
 import { createClient } from '@/lib/supabase/client';
 import { getUserRole } from '@/lib/auth/get-user-role';
 import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
@@ -53,9 +54,11 @@ function LoginErrorHandler() {
 
     useEffect(() => {
         const error = searchParams.get('error');
-        if (error === 'account_disabled') {
+        if (error === 'account_deleted') {
+            toast.error('Ce compte a été supprimé. Vous pouvez créer un nouveau compte.');
+            router.replace('/login');
+        } else if (error === 'account_disabled') {
             toast.error('Votre compte a été désactivé. Contactez un administrateur.');
-            // Nettoyer l'URL
             router.replace('/login');
         }
     }, [searchParams, router]);
@@ -113,27 +116,40 @@ function LoginForm() {
                 return;
             }
 
-            // Vérifier si le compte est désactivé
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('disabled_at')
-                .eq('id', userId)
-                .single();
+            // Vérifier le statut du compte via Server Action (service role, bypasse RLS)
+            // En cas d'échec du Server Action, on continue — le middleware prend le relais
+            const accessToken = authData.session?.access_token ?? '';
+            let accountStatus: string = 'ok';
+            try {
+                accountStatus = await checkAccountStatus(userId, accessToken);
+            } catch {
+                logger.warn('[Login] Server Action check-account-status a échoué, middleware prend le relais');
+            }
 
-            if (profile?.disabled_at) {
-                // Déconnecter immédiatement
+            if (accountStatus === 'deleted' || accountStatus === 'not_found') {
+                await supabase.auth.signOut();
+                toast.error('Ce compte a été supprimé. Vous pouvez créer un nouveau compte.');
+                return;
+            }
+
+            if (accountStatus === 'disabled') {
                 await supabase.auth.signOut();
                 toast.error('Votre compte a été désactivé. Contactez un administrateur.');
                 return;
             }
 
-            toast.success('Connexion réussie !');
-            
-            // Rediriger vers l'URL demandée (si sécurisée) ou selon le rôle
+            // Récupérer le rôle avant toute redirection
+            const role = await getUserRole(userId);
+            if (!role) {
+                await supabase.auth.signOut();
+                toast.error('Aucun accès associé à ce compte. Contactez un administrateur.');
+                return;
+            }
+
+            // Pas de toast ici — la redirection réussie EST le feedback
             if (nextUrl && isSafeRedirectUrl(nextUrl)) {
                 router.push(nextUrl);
             } else {
-                const role = await getUserRole(userId);
                 const redirectUrl = getRedirectUrlByRole(role);
                 router.push(redirectUrl);
             }

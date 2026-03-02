@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 121
+> Dernière mise à jour : Session 129
 
 ---
 
@@ -34,8 +34,13 @@
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
-| Utilisateurs | ✅ Liste, filtres, CRUD, rôle, statut, API |
+| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, deep-link réservations, modale UX refonte |
 | Préférences | ✅ Organisation, Apparence (thème + logos), Email, Rappels, RGPD + badges statut |
+
+### ✅ Espace Professionnel (100%)
+- /professional/mon-compte : profil perso, pro, adresse, sécurité
+- Fix bug country prefill
+- Rapatriement réservations guest (GuestReservationsBanner)
 
 ### ✅ Company (100%)
 - Dashboard compagnie
@@ -48,241 +53,160 @@
 - Thème & logos dynamiques (presets, upload Supabase)
 - PWA : service worker, manifest
 - Export Excel/CSV (admin + company)
+- Export CSV natif pour professionnels (sans dépendance xlsx/exceljs)
 - Sidebar partagée (logo dynamique, logout)
 
 ---
 
-## Dernier travail (Session 121)
+## Dernier travail (Session 129)
 
-**Préférences admin — indicateurs de statut :**
-- Badges de statut (Actif / Partiel / Non connecté) sur chaque onglet
-- Composant `InactiveSectionBanner` créé et intégré dans Email, Rappels, RGPD
-- Dette documentée dans STATUT.md
+**Emails transactionnels — Confirmation de réservation (Resend) :**
 
-**Admin mon-compte — suppression des données mock :**
-- Page connectée à Supabase (profil + rôle chargés en parallèle)
-- Sauvegarde réelle en base de données
-- Changement de mot de passe fonctionnel via `/api/auth/verify-password`
-- Skeleton de chargement + gestion des erreurs
+- Achat domaine `derviche-pro.fr` (O2switch) + DNS configurés (DKIM, SPF MX, SPF TXT, DMARC)
+- Domaine vérifié dans Resend (région EU Frankfurt — RGPD)
+- Service `src/lib/services/email.ts` : `sendReservationConfirmationEmail()` avec template HTML complet
+- Template branding Derviche (bleu #1e3a5f, or #c9a84c), responsive, variables dynamiques
+- Route API `POST /api/emails/send-confirmation` avec validation Zod
+- Envoi déclenché **uniquement** à la soumission du formulaire (`spectacle/[slug]/page.tsx`), non-bloquant
+- Configuration expéditeur lue depuis `app_settings` (DB) : `email_from_name`, `email_from_address`, `email_reply_to`
+- Expéditeur : `reservations@derviche-pro.fr` | Réponse : `contact@derviche-pro.fr`
+- Fix `reply_to` → `replyTo` (API Resend v2)
+- Fix double envoi : suppression de l'envoi parasite dans `confirmation/page.tsx`
 
-**Correction rôles — audit Cursor :**
-- Valeur `'professional'` restituée (erreur introduite : `'programmateur'`)
-- `useCurrentUserRole.ts` corrigé : `UserRole` type alignié sur contrainte SQL migration 038
-- Règle confirmée : source de vérité = migrations SQL (pas les fichiers TypeScript)
+**Corrections sécurité auth :**
 
-**Commits :**
-- `fix(admin): connecter mon-compte à Supabase, suppression données mock`
-- `fix: corriger valeur rôle 'professional' d'après contrainte SQL`
+- `.single()` → `.maybeSingle()` sur tous les appels `profiles` (middleware, login, LoginForm, useSidebarUserData)
+- Fix middleware : vérification profil désactivé/supprimé via **service role key** (bypasse RLS `deleted_at IS NULL`)
+- Distinction `deleted_at` vs `disabled_at` dans tous les points de contrôle :
+  - `deleted_at` → *"Ce compte a été supprimé. Vous pouvez créer un nouveau compte."*
+  - `disabled_at` → *"Votre compte a été désactivé. Contactez un administrateur."*
+- Suppression du toast "Connexion réussie" prématuré — la redirection vers le dashboard suffit
+- Guard `getUserRole` avant toute redirection (évite redirect sans destination)
+
+**Corrections TypeScript :**
+
+- Import `useRef` manquant dans `confirmation/page.tsx`
+- `result.data` possibly undefined dans `spectacle/[slug]/page.tsx`
+- `reply_to` → `replyTo` dans `email.ts`
+
+**Corrections post-audit (3 priorités) :**
+
+- API `POST /api/emails/send-confirmation` : vérification réservation en base + correspondance email (service role)
+- `confirmation/page.tsx` : suppression fallbacks de démo (Jean Dupont, UUID fictif), écran "Lien invalide" si params manquants
+- `useSidebarUserData` : `transformData` exclu des deps `useEffect` (stable via `useCallback`), commentaire explicatif
+
+**Correction sécurité post-audit : check statut compte (deleted_at invisible aux RLS) :**
+
+- Nouveau Server Action `src/lib/actions/auth.ts` : `checkAccountStatus(userId, accessToken)` — utilise service role + valide l'access_token, bypasse RLS `deleted_at IS NULL`
+- Nouvelle API route `POST /api/auth/check-account-status` (backup)
+- `login/page.tsx` + `LoginForm.tsx` : appelent le Server Action après `signInWithPassword`, avec try-catch fail-open (middleware prend le relais si échec)
+- `not_found` traité comme `deleted` → même message "Ce compte a été supprimé"
+
+**À faire (dette mineure) :**
+- Flash "Accès interdit/refusé" au moment de la déconnexion — à investiguer
+
+**Scores audit Cursor :** 7,8/10 → estimé 8,5/10 après corrections
+
+**Commits :** à compléter
 
 ---
 
-## Travail précédent (Session 120)
+## Travail précédent (Session 128)
 
-**Nettoyage technique :**
-- Regénération types Supabase
-- Ajout exports manquants dans `lib/services/index.ts` (app-settings, storage)
-- Ajout exports manquants dans `hooks/index.ts` (useAppSettings, useUnsavedChangesWarning)
-- Complétion barrel `storage/index.ts` (logoStorage)
-- Nettoyage middleware (suppression routes fantômes /admin-reservations, /checkin)
-- Ajout toast notifications dans mon-compte (profil + mot de passe)
-- Correction rôles UserRole dans mon-compte (externe, professional, company)
+**Refonte UX modale professionnels :**
+- Avatar initiales `bg-derviche` dans le header
+- Structure affichée sous l'email dans le header
+- Bouton Modifier intégré dans la rangée d'actions (plus en pleine largeur dans l'onglet)
+- `isEditing` remonté dans `ProfessionalModal` — reset automatique au changement d'onglet
+- `InfoRow` layout horizontal (label fixe `w-28` + valeur inline) — ~30% moins de scroll
+- `cursor-pointer` sur les boutons ✕ des modales (ProfessionalModal + ProfessionalColumnSelectorDialog)
 
-**Commit :** `chore: nettoyage technique Session 120`
+**Refonte cards réservations (onglet Réservations de la modale) :**
+- Layout 3 colonnes : bloc date (jour/mois) + infos condensées (titre, lieu, places) + badge statut
+- Résumé en haut : nb réservations · places confirmées
+- Tri intelligent : futures (date ASC) en premier, passées (date DESC) atténuées
+- Labels "À venir" / "Passées" avec aria-label
+
+**Deep-link réservations :**
+- Clic sur une card → `/admin/reservations?reservationId=xxx`
+- Auto-ouverture de la dialog de détail, nettoyage URL via `history.replaceState`
+- UUID validation avant appel API
+
+**Colonnes configurables + Export CSV :**
+- `useProfessionalsColumnsPreference` : persistance Supabase (key `admin_professionals_columns`)
+- `ProfessionalColumnSelectorDialog` : 7 colonnes optionnelles
+- Export CSV BOM UTF-8 (compatible Excel), sans dépendance externe
+- `xlsx` et `exceljs` exclus (vulnérabilités sans correctif disponible)
+
+**Mise à jour sécurité :**
+- Next.js → 16.1.6 (fix 3 vulnérabilités DoS)
+- Vulnérabilités restantes : chaîne eslint uniquement (dev, jamais en prod)
+
+**Fix stale closure (détecté par Cursor AI) :**
+- `handleUpdate` dans `useProfessionalsPage.ts` utilisait `professionals.find()` dans une closure potentiellement obsolète
+- Corrigé : `setDrawerState(prev => { ...prev.professional, ...data })` via setter fonctionnel
+- `professionals` retiré des dépendances de `useCallback`
+
+**Scores audit Cursor :**
+- ProfessionalModal : 8,5/10
+- ProfessionalReservations : 8,75/10
+- ProfessionalColumnSelectorDialog : 8,6/10
+- **Score global session : 8,6/10**
+
+**Commits :**
+- `feat(ux): refonte modale professionnels + cards réservations`
+- `fix(audit): corrections post-audit S128 UX`
+- `fix(stale-closure): handleUpdate utilise prev.professional au lieu de professionals.find`
+- `Merge dev → main: S128 complète — UX modale + fix stale closure`
+
+---
+
+## Travail précédent (Session 127)
+
+**Espace professionnel /professional/mon-compte :**
+- 4 sections : Informations personnelles, Informations professionnelles, Adresse, Sécurité
+- Fix bug country prefill (fallback 'France' écrasait la valeur réelle)
+- Pattern `if (!profile) return null` pour TypeScript narrowing
+- RGPD reporté
+
+---
+
+## Travail précédent (Session 126)
+
+**Rapatriement réservations guest :**
+- RPC `get_guest_reservations` + `claim_selected_reservations`
+- Hook `useGuestReservationsClaim`
+- `GuestReservationsBanner` : bannière dismissible dans l'espace pro
+- `profiles` : +postal_code / city / country / email2 / phone2 / afc_number
 
 ---
 
 ## À faire
 
-### Améliorations possibles (Préférences)
-Liste de 20 améliorations identifiées (à prioriser)
+### Fonctionnalités restantes (cahier des charges)
+- [x] ~~Emails transactionnels~~ — **Confirmation réservation ✅ (Session 129)**
+- [ ] Email d'annulation de réservation
+- [ ] Template email : amélioration visuelle (logo Derviche, footer légal, lien désabonnement)
+- [ ] Rappels automatiques (Vercel Cron ou Supabase pg_cron)
+- [ ] Purge RGPD automatique
+- [ ] **Gestion suppression complète compte (RGPD)** : lors d'un `deleted_at`, appeler `supabase.auth.admin.deleteUser(userId)` pour libérer l'email et permettre la réinscription. À implémenter dans une session dédiée RGPD.
+- [ ] Affichage `organization_name` dans les emails et le catalogue public
 
-🚀 AMÉLIORATIONS DE FONCTIONNALITÉS
-1. Confirmation avant de quitter avec des changements non sauvegardés
-Actuellement, si l'utilisateur change d'onglet ou quitte la page avec des modifications non enregistrées, il perd tout sans avertissement.
-Proposition :
-
-Ajouter un useBeforeUnload pour bloquer la fermeture du navigateur
-Ajouter une confirmation lors du changement d'onglet si hasChanges === true
-
-
-2. Bouton "Annuler les modifications"
-L'utilisateur peut modifier des champs mais n'a pas de moyen de revenir à l'état initial sans recharger la page.
-Proposition :
-
-Ajouter un bouton "Annuler" à côté de "Enregistrer" dans SettingsCard
-Appeler reset() de React Hook Form ou refresh() du hook
-
-
-3. Historique des modifications (audit log)
-Pour la traçabilité RGPD et la gestion d'équipe, savoir qui a modifié quoi et quand.
-Proposition :
-
-Afficher "Dernière modification : [date] par [user]" sous chaque section
-Stocker updated_by et updated_at dans app_settings
-
-
-4. Test d'envoi d'email
-Dans la section Email, permettre de tester la configuration.
-Proposition :
-
-Bouton "Envoyer un email de test" qui envoie à l'utilisateur connecté
-Feedback visuel : succès/échec
-
-
-5. Preview du thème en temps réel
-Actuellement le thème est appliqué seulement après sauvegarde.
-Proposition :
-
-Appliquer le thème temporairement au survol ou à la sélection
-Rollback si l'utilisateur annule ou change d'onglet
-
-
-6. Import/Export des paramètres
-Pour faciliter la migration ou le backup.
-Proposition :
-
-Bouton "Exporter en JSON" (super-admin uniquement)
-Bouton "Importer" avec validation
-
-
-7. Notifications par section
-Savoir quelles sections ont été modifiées récemment.
-Proposition :
-
-Badge "Modifié" ou pastille sur l'onglet si modification < 24h
-Utile quand plusieurs super-admins travaillent
-
-
-🎨 AMÉLIORATIONS DE STYLE / UX
-8. Indicateur visuel des changements non sauvegardés
-L'utilisateur ne voit pas clairement qu'il a des modifications en attente.
-Proposition :
-
-Point rouge ou badge sur le bouton "Enregistrer"
-Bordure colorée sur la card modifiée
-Message sticky en haut : "Vous avez des modifications non enregistrées"
-
-
-9. Animation de sauvegarde
-Feedback plus satisfaisant lors de l'enregistrement.
-Proposition :
-
-Animation de check (✓) qui apparaît après succès
-Transition douce sur le bouton (gris → vert → retour)
-
-
-10. Mode sombre pour la preview de thème
-La preview ne montre que le mode light actuellement.
-Proposition :
-
-Toggle "Light / Dark" dans la preview de chaque thème
-Ou afficher les deux côte à côte
-
-
-11. Meilleure hiérarchie visuelle des sections
-Les 5 onglets sont au même niveau visuellement.
-Proposition :
-
-Grouper : "Identité" (Organisation, Apparence) et "Technique" (Email, Rappels, RGPD)
-Ou ajouter des icônes de couleurs différentes par catégorie
-
-
-12. Skeleton plus réaliste
-Le skeleton actuel est générique.
-Proposition :
-
-Skeleton qui imite la vraie structure de chaque section
-Par exemple pour Rappels : 3 rectangles avec switch à droite
-
-
-13. Tooltips d'aide
-Certains paramètres peuvent être confus (RGPD notamment).
-Proposition :
-
-Icône (?) à côté des labels complexes
-Tooltip au survol avec explication détaillée
-
-
-14. Responsive amélioré pour les onglets
-Sur mobile, 2 colonnes avec icônes seules peut être confus.
-Proposition :
-
-Sur mobile : liste verticale avec icône + label
-Ou menu déroulant "Section : Organisation ▼"
-
-
-⚡ AMÉLIORATIONS DE PERFORMANCE
-15. Éviter le re-fetch à chaque changement d'onglet
-Actuellement chaque section fait son propre fetch au montage.
-Proposition :
-
-Créer un useAllAppSettings() qui charge tout en une requête
-Ou utiliser un cache global (React Context ou Zustand)
-Les sections reçoivent les données en props
-
-
-16. Debounce sur la détection des changements
-useEffect sur isDirty se déclenche à chaque frappe.
-Proposition :
-
-Debounce de 300ms pour éviter les re-renders inutiles
-Surtout utile si on ajoute des indicateurs visuels
-
-
-17. Lazy loading des sections
-Charger uniquement la section active.
-Proposition :
-tsxconst OrganizationSection = dynamic(() => import('./sections/organization-section'), {
-  loading: () => <SectionSkeleton />
-});
-
-Réduit le bundle initial
-Charge les autres sections à la demande
-
-
-18. Optimistic UI pour le thème
-Déjà partiellement fait, mais peut être amélioré.
-Proposition :
-
-Appliquer le thème immédiatement au clic (pas au submit)
-Rollback seulement si erreur serveur
-UX plus fluide
-
-
-19. Batch des updates dans setAppSettings
-Actuellement les updates se font en boucle séquentielle.
-Proposition :
-
-Utiliser une transaction Supabase ou une RPC
-CALL update_app_settings_batch(jsonb)
-Une seule requête au lieu de N
-
-
-20. Mémoïsation des composants
-Les sections se re-rendent même si leurs données n'ont pas changé.
-Proposition :
-
-React.memo() sur les sections
-useMemo pour les valeurs dérivées (ex: displayUrl)
-
-
-📋 RÉCAPITULATIF PAR PRIORITÉ
-PrioritéAméliorationEffortImpact🔴 Haute#1 Confirmation avant quitterFaibleÉlevé🔴 Haute#8 Indicateur changementsFaibleÉlevé🔴 Haute#15 Cache global settingsMoyenÉlevé🟠 Moyenne#2 Bouton AnnulerFaibleMoyen🟠 Moyenne#4 Test emailMoyenMoyen🟠 Moyenne#13 Tooltips d'aideFaibleMoyen🟠 Moyenne#19 Batch updatesMoyenMoyen🟢 Basse#5 Preview thème temps réelMoyenFaible🟢 Basse#17 Lazy loadingFaibleFaible🟢 Future#3 Historique auditÉlevéMoyen🟢 Future#6 Import/ExportMoyenFaible
+### Améliorations identifiées (Préférences admin)
+Voir liste de 20 améliorations dans version Session 121.
 
 ---
 
 ## ⚠️ DETTE TECHNIQUE — Section Préférences Admin
 
-**Date d'audit :** 18 février 2026  
+**Date d'audit :** 18 février 2026
 **Statut :** Données sauvegardées mais non consommées
-
-### Sections et leur état réel
 
 | Section | Données stockées | Utilisées | Bloquant |
 |---|---|---|---|
 | Apparence | Thème + logos | ✅ Sidebar admin | Non |
 | Organisation | Nom, email, tél, adresse | ⚠️ Seulement `organization_name` (alt logo sidebar) | Non |
-| Email | `email_from_name`, `email_from_address` | ❌ Aucun système email existant | Oui |
+| Email | `email_from_name`, `email_from_address` | ✅ Confirmation réservation (Session 129) | Partiel |
 | Rappels | `reminder_enabled_7d/2d/12h` | ❌ Aucun job planifié | Oui |
 | RGPD | Durées de conservation | ❌ Aucune purge automatique | Oui |
 
@@ -296,8 +220,7 @@ PrioritéAméliorationEffortImpact🔴 Haute#1 Confirmation avant quitterFaible�
 
 ## Points d'attention techniques
 
-### TODO dans le code
 | Fichier | Description |
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
-| `app/admin/mon-compte/page.tsx` | ✅ Connecté à Supabase, mock supprimé, rôles corrigés (Session 121) |
+| `lib/utils/export-professionals.ts` | Export CSV uniquement — xlsx/exceljs exclus (vulnérabilités sans fix) |
