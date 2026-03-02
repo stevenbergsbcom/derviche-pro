@@ -40,7 +40,7 @@ export function useProReservations(): UseProReservationsResult {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isChangingSlot, setIsChangingSlot] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
 
@@ -49,11 +49,13 @@ export function useProReservations(): UseProReservationsResult {
     if (result.error) {
       logger.error('useProReservations: erreur chargement', { error: result.error });
       setError(result.error);
-    } else {
-      setReservations(result.data ?? []);
+      setIsLoading(false);
+      return false;
     }
 
+    setReservations(result.data ?? []);
     setIsLoading(false);
+    return true;
   }, []);
 
   // Chargement initial
@@ -123,9 +125,14 @@ export function useProReservations(): UseProReservationsResult {
       if (result.success) {
         logger.info('useProReservations: créneau modifié', { reservationId, newSlotId });
 
-        // Rafraîchir la liste pour obtenir les nouvelles données du créneau
-        await load();
+        // Rafraîchir la liste et vérifier que le rechargement a réussi
+        const refreshed = await load();
         setIsChangingSlot(false);
+
+        if (!refreshed) {
+          logger.error('useProReservations: échec rechargement après modification', { reservationId });
+          return { success: false, error: 'La réservation a été modifiée mais la liste n\'a pas pu être rafraîchie. Rechargez la page.' };
+        }
 
         // Envoyer l'email de modification de façon non-bloquante
         if (oldSlotId) {
