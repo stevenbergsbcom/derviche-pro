@@ -19,17 +19,17 @@ VALUES
   ),
   (
     'email_notification_new_reservation',
-    'true',
-    'Notifier les admins par email lors d''une nouvelle réservation (true/false)'
+    'true'::jsonb,
+    'Notifier le manager DD par email lors d''une nouvelle réservation'
   ),
   (
     'email_notification_cancellation',
-    'true',
-    'Notifier les admins par email lors d''une annulation de réservation (true/false)'
+    'true'::jsonb,
+    'Notifier le manager DD par email lors d''une annulation de réservation'
   ),
   (
     'email_notification_modification',
-    'false',
-    'Notifier les admins par email lors d''une modification de réservation (true/false)'
+    'false'::jsonb,
+    'Notifier le manager DD par email lors d''une modification de réservation'
   )
 ON CONFLICT (key) DO NOTHING;

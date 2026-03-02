@@ -136,10 +136,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         .eq('key', 'email_notification_new_reservation')
         .maybeSingle();
 
-      const notifEnabled =
-        notifPrefData?.value === true ||
-        notifPrefData?.value === 'true' ||
-        String(notifPrefData?.value) === 'true';
+      const isBooleanSettingTrue = (val: unknown): boolean =>
+        val === true || val === 'true' || String(val) === 'true';
+
+      const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
 
       if (notifEnabled) {
         // Récupérer le derviche_manager_id depuis le spectacle via la réservation

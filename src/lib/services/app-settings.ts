@@ -403,14 +403,28 @@ export async function getNotificationSettings(): Promise<AppSettingResult<Notifi
     return { data: null, error: result.error };
   }
 
+  // Convertit proprement les valeurs JSONB (boolean ou string 'true'/'false')
+  const parseBool = (val: unknown, fallback: boolean): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return fallback;
+  };
+
   return {
     data: {
-      email_notification_new_reservation:
-        (result.data?.email_notification_new_reservation as boolean) ?? true,
-      email_notification_cancellation:
-        (result.data?.email_notification_cancellation as boolean) ?? true,
-      email_notification_modification:
-        (result.data?.email_notification_modification as boolean) ?? false,
+      email_notification_new_reservation: parseBool(
+        result.data?.email_notification_new_reservation,
+        true
+      ),
+      email_notification_cancellation: parseBool(
+        result.data?.email_notification_cancellation,
+        true
+      ),
+      email_notification_modification: parseBool(
+        result.data?.email_notification_modification,
+        false
+      ),
     },
     error: null,
   };

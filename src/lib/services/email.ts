@@ -129,6 +129,19 @@ interface EmailConfig {
 // ============================================
 
 /**
+ * Échappe les caractères HTML pour éviter les injections dans les templates email
+ */
+function escapeHtml(value: string | null | undefined): string {
+  if (!value) return '';
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
  * Lire la configuration email depuis app_settings
  * Utilise des valeurs par défaut si les clés ne sont pas en DB
  */
@@ -204,6 +217,14 @@ function buildConfirmationHtml(
 ): string {
   const showUrl = `${appUrl}/spectacle/${data.showSlug}`;
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
+  const safeGuestFullName = escapeHtml(data.guestFullName);
+  const safeShowTitle = escapeHtml(data.showTitle);
+  const safeCompanyName = escapeHtml(data.companyName);
+  const safeVenueName = escapeHtml(data.venueName);
+  const safeVenueCity = escapeHtml(data.venueCity);
+  const safeSignature = escapeHtml(config.signature);
+  const safeFooterText = escapeHtml(config.footerText);
+  const safeReservationCode = escapeHtml(data.reservationCode);
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -230,7 +251,7 @@ function buildConfirmationHtml(
           <tr>
             <td style="padding:28px 40px 0 40px;text-align:center;">
               <p style="margin:0;color:#6b7280;font-size:13px;">Code de réservation</p>
-              <p style="margin:8px 0 0 0;font-size:28px;font-weight:700;color:#1e3a5f;letter-spacing:3px;">${data.reservationCode}</p>
+              <p style="margin:8px 0 0 0;font-size:28px;font-weight:700;color:#1e3a5f;letter-spacing:3px;">${safeReservationCode}</p>
             </td>
           </tr>
 
@@ -238,10 +259,10 @@ function buildConfirmationHtml(
           <tr>
             <td style="padding:24px 40px 0 40px;">
               <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
-                Bonjour <strong>${data.guestFullName}</strong>,
+                Bonjour <strong>${safeGuestFullName}</strong>,
               </p>
               <p style="margin:12px 0 0 0;color:#374151;font-size:15px;line-height:1.6;">
-                Votre réservation pour <strong>${data.showTitle}</strong> a bien été enregistrée.
+                Votre réservation pour <strong>${safeShowTitle}</strong> a bien été enregistrée.
                 Nous vous attendons avec plaisir !
               </p>
             </td>
@@ -255,8 +276,8 @@ function buildConfirmationHtml(
                 <tr>
                   <td style="padding:20px 24px;border-bottom:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Spectacle</p>
-                    <p style="margin:6px 0 0 0;font-size:16px;font-weight:700;color:#111827;">${data.showTitle}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${data.companyName}</p>
+                    <p style="margin:6px 0 0 0;font-size:16px;font-weight:700;color:#111827;">${safeShowTitle}</p>
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeCompanyName}</p>
                   </td>
                 </tr>
                 <tr>
@@ -270,8 +291,8 @@ function buildConfirmationHtml(
                         </td>
                         <td width="50%" style="vertical-align:top;">
                           <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                          <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${data.venueName}</p>
-                          <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${data.venueCity}</p>
+                          <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
+                          <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCity}</p>
                         </td>
                       </tr>
                     </table>
@@ -314,7 +335,7 @@ function buildConfirmationHtml(
             <td style="padding:28px 40px;">
               <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
                 À très bientôt,<br />
-                <strong>${config.signature}</strong>
+                <strong>${safeSignature}</strong>
               </p>
             </td>
           </tr>
@@ -322,7 +343,7 @@ function buildConfirmationHtml(
           <!-- Footer -->
           <tr>
             <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;">${config.footerText}</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">${safeFooterText}</p>
             </td>
           </tr>
 
@@ -342,6 +363,17 @@ function buildCancellationHtml(
   config: EmailConfig
 ): string {
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
+  const safeGuestFullName = escapeHtml(data.guestFullName);
+  const safeShowTitle = escapeHtml(data.showTitle);
+  const safeCompanyName = escapeHtml(data.companyName);
+  const safeVenueName = escapeHtml(data.venueName);
+  const safeVenueCity = escapeHtml(data.venueCity);
+  const safeCancellationReason = escapeHtml(data.cancellationReason);
+  const safeManagerName = escapeHtml(data.managerName);
+  const safeManagerEmail = escapeHtml(data.managerEmail);
+  const safeManagerPhone = escapeHtml(data.managerPhone);
+  const safeSignature = escapeHtml(config.signature);
+  const safeFooterText = escapeHtml(config.footerText);
 
   // Bloc contact manager (affiché seulement si les infos sont disponibles)
   const hasManagerContact = data.managerName || data.managerEmail || data.managerPhone;
@@ -352,21 +384,21 @@ function buildCancellationHtml(
             <td style="padding:0 40px 24px 40px;">
               <div style="background-color:#faf9f6;border:1px solid #e5e0d0;border-radius:8px;padding:16px 20px;">
                 <p style="margin:0 0 8px 0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Votre contact Derviche Diffusion</p>
-                ${data.managerName ? `<p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${data.managerName}</p>` : ''}
-                ${data.managerEmail ? `<p style="margin:4px 0 0 0;font-size:13px;color:#374151;">✉ <a href="mailto:${data.managerEmail}" style="color:#1e3a5f;text-decoration:none;">${data.managerEmail}</a></p>` : ''}
-                ${data.managerPhone ? `<p style="margin:4px 0 0 0;font-size:13px;color:#374151;">📞 ${data.managerPhone}</p>` : ''}
+                ${safeManagerName ? `<p style="margin:0;font-size:14px;font-weight:600;color:#111827;">${safeManagerName}</p>` : ''}
+                ${safeManagerEmail ? `<p style="margin:4px 0 0 0;font-size:13px;color:#374151;">✉ <a href="mailto:${safeManagerEmail}" style="color:#1e3a5f;text-decoration:none;">${safeManagerEmail}</a></p>` : ''}
+                ${safeManagerPhone ? `<p style="margin:4px 0 0 0;font-size:13px;color:#374151;">📞 ${safeManagerPhone}</p>` : ''}
               </div>
             </td>
           </tr>`
     : '';
 
   // Bloc motif (affiché seulement si un motif est fourni)
-  const reasonBlock = data.cancellationReason
+  const reasonBlock = safeCancellationReason
     ? `
                 <tr>
                   <td style="padding:16px 24px;border-bottom:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Motif d'annulation</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#374151;">${data.cancellationReason}</p>
+                    <p style="margin:6px 0 0 0;font-size:14px;color:#374151;">${safeCancellationReason}</p>
                   </td>
                 </tr>`
     : '';
@@ -396,10 +428,10 @@ function buildCancellationHtml(
           <tr>
             <td style="padding:28px 40px 0 40px;">
               <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
-                Bonjour <strong>${data.guestFullName}</strong>,
+                Bonjour <strong>${safeGuestFullName}</strong>,
               </p>
               <p style="margin:12px 0 0 0;color:#374151;font-size:15px;line-height:1.6;">
-                L'annulation de votre réservation pour <strong>${data.showTitle}</strong> a bien été prise en compte.
+                L'annulation de votre réservation pour <strong>${safeShowTitle}</strong> a bien été prise en compte.
               </p>
             </td>
           </tr>
@@ -412,8 +444,8 @@ function buildCancellationHtml(
                 <tr>
                   <td style="padding:20px 24px;border-bottom:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Spectacle annulé</p>
-                    <p style="margin:6px 0 0 0;font-size:16px;font-weight:700;color:#111827;">${data.showTitle}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${data.companyName}</p>
+                    <p style="margin:6px 0 0 0;font-size:16px;font-weight:700;color:#111827;">${safeShowTitle}</p>
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeCompanyName}</p>
                   </td>
                 </tr>
                 <tr>
@@ -427,8 +459,8 @@ function buildCancellationHtml(
                         </td>
                         <td width="50%" style="vertical-align:top;">
                           <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                          <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${data.venueName}</p>
-                          <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${data.venueCity}</p>
+                          <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
+                          <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCity}</p>
                         </td>
                       </tr>
                     </table>
@@ -463,7 +495,7 @@ function buildCancellationHtml(
             <td style="padding:28px 40px ${hasManagerContact ? '0' : '28px'} 40px;">
               <p style="margin:0;color:#374151;font-size:15px;line-height:1.6;">
                 Cordialement,<br />
-                <strong>${config.signature}</strong>
+                <strong>${safeSignature}</strong>
               </p>
             </td>
           </tr>
@@ -471,7 +503,7 @@ function buildCancellationHtml(
           <!-- Footer -->
           <tr>
             <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;">${config.footerText}</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;">${safeFooterText}</p>
             </td>
           </tr>
 
@@ -501,6 +533,14 @@ function buildAdminNotificationHtml(
 
   const eventStyle = eventLabels[data.eventType];
   const adminReservationsUrl = `${appUrl}/admin/reservations?reservationId=${data.reservationId}`;
+  const safeAdminName = escapeHtml(data.adminName);
+  const safeGuestFullName = escapeHtml(data.guestFullName);
+  const safeGuestEmail = escapeHtml(data.guestEmail);
+  const safeGuestStructure = escapeHtml(data.guestStructure);
+  const safeShowTitle = escapeHtml(data.showTitle);
+  const safeVenueName = escapeHtml(data.venueName);
+  const safeCancellationReason = escapeHtml(data.cancellationReason);
+  const safeFooterText = escapeHtml(config.footerText);
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -531,9 +571,9 @@ function buildAdminNotificationHtml(
                   <tr>
                     <td>
                       <p style="margin:0;font-size:11px;font-weight:700;color:${eventStyle.color};text-transform:uppercase;letter-spacing:1px;">Professionnel</p>
-                      <p style="margin:4px 0 0 0;font-size:15px;font-weight:600;color:#111827;">${data.guestFullName}</p>
-                      <p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${data.guestEmail}</p>
-                      ${data.guestStructure ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${data.guestStructure}</p>` : ''}
+                      <p style="margin:4px 0 0 0;font-size:15px;font-weight:600;color:#111827;">${safeGuestFullName}</p>
+                      <p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestEmail}</p>
+                      ${safeGuestStructure ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestStructure}</p>` : ''}
                     </td>
                   </tr>
                 </table>
@@ -543,7 +583,7 @@ function buildAdminNotificationHtml(
                 <tr>
                   <td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Spectacle</p>
-                    <p style="margin:4px 0 0 0;font-size:14px;font-weight:600;color:#111827;">${data.showTitle}</p>
+                    <p style="margin:4px 0 0 0;font-size:14px;font-weight:600;color:#111827;">${safeShowTitle}</p>
                   </td>
                 </tr>
                 <tr>
@@ -556,7 +596,7 @@ function buildAdminNotificationHtml(
                         </td>
                         <td width="50%">
                           <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                          <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${data.venueName}</p>
+                          <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${safeVenueName}</p>
                         </td>
                       </tr>
                     </table>
@@ -568,11 +608,11 @@ function buildAdminNotificationHtml(
                     <p style="margin:4px 0 0 0;font-size:13px;color:#111827;font-weight:600;">${placesLabel}</p>
                   </td>
                 </tr>
-                ${data.cancellationReason ? `
+                ${safeCancellationReason ? `
                 <tr>
                   <td style="padding:16px 20px;background-color:#fef2f2;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Motif d'annulation</p>
-                    <p style="margin:4px 0 0 0;font-size:13px;color:#374151;">${data.cancellationReason}</p>
+                    <p style="margin:4px 0 0 0;font-size:13px;color:#374151;">${safeCancellationReason}</p>
                   </td>
                 </tr>` : ''}
               </table>
@@ -592,7 +632,7 @@ function buildAdminNotificationHtml(
           <!-- Footer -->
           <tr>
             <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
-              <p style="margin:0;font-size:11px;color:#9ca3af;">Notification automatique — ${config.footerText}</p>
+              <p style="margin:0;font-size:11px;color:#9ca3af;">Notification automatique — ${safeFooterText}</p>
             </td>
           </tr>
 
