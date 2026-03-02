@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   getMyReservations,
   cancelMyReservation,
+  changeMyReservationSlot,
   type ProReservation,
 } from '@/lib/services/pro-reservations';
 import { logger } from '@/lib/logger';
@@ -22,7 +23,9 @@ export interface UseProReservationsResult {
   isLoading: boolean;
   error: string | null;
   isCancelling: boolean;
+  isChangingSlot: boolean;
   cancelReservation: (id: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
+  changeSlot: (reservationId: string, newSlotId: string) => Promise<{ success: boolean; error?: string }>;
   refresh: () => void;
 }
 
@@ -35,6 +38,7 @@ export function useProReservations(): UseProReservationsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isChangingSlot, setIsChangingSlot] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -106,12 +110,58 @@ export function useProReservations(): UseProReservationsResult {
     []
   );
 
+  const changeSlot = useCallback(
+    async (reservationId: string, newSlotId: string): Promise<{ success: boolean; error?: string }> => {
+      setIsChangingSlot(true);
+
+      // Conserver l'ancien slot_id avant modification (pour l'email)
+      const currentReservation = reservations.find((r) => r.id === reservationId);
+      const oldSlotId = currentReservation?.slot.id;
+
+      const result = await changeMyReservationSlot(reservationId, newSlotId);
+
+      if (result.success) {
+        logger.info('useProReservations: créneau modifié', { reservationId, newSlotId });
+
+        // Rafraîchir la liste pour obtenir les nouvelles données du créneau
+        await load();
+        setIsChangingSlot(false);
+
+        // Envoyer l'email de modification de façon non-bloquante
+        if (oldSlotId) {
+          fetch('/api/emails/send-modification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reservationId, oldSlotId }),
+          }).catch((err) => {
+            logger.warn('useProReservations: échec envoi email modification (non-bloquant)', {
+              reservationId,
+              error: err instanceof Error ? err.message : 'Erreur inconnue',
+            });
+          });
+        }
+
+        return { success: true };
+      } else {
+        logger.error('useProReservations: erreur modification créneau', {
+          reservationId,
+          error: result.error,
+        });
+        setIsChangingSlot(false);
+        return { success: false, error: result.error };
+      }
+    },
+    [reservations, load]
+  );
+
   return {
     reservations,
     isLoading,
     error,
     isCancelling,
+    isChangingSlot,
     cancelReservation,
+    changeSlot,
     refresh,
   };
 }

@@ -1,0 +1,349 @@
+/**
+ * API Route - Envoi d'email de modification de créneau
+ * POST /api/emails/send-modification
+ *
+ * Stratégie : le client envoie le reservationId + le newSlotId.
+ * Le serveur récupère l'ancien créneau (depuis la réservation avant update),
+ * le nouveau créneau, et envoie l'email au pro + notif manager si activée.
+ *
+ * L'envoi est non-bloquant : un échec email ne fait pas échouer la modification.
+ *
+ * Sécurité :
+ * - Validation du payload entrant (Zod)
+ * - Vérification que l'utilisateur connecté est propriétaire de la réservation
+ *   (ou admin/super-admin)
+ * - La clé API Resend reste côté serveur
+ * - Vérification des préférences de notification admin avant envoi
+ */
+
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import {
+  sendReservationModificationEmail,
+  sendAdminNotificationEmail,
+  type ReservationModificationEmailData,
+  type AdminNotificationEmailData,
+} from '@/lib/services/email';
+import { logger } from '@/lib/logger';
+import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+
+// ============================================
+// VALIDATION SCHEMA
+// ============================================
+
+const sendModificationSchema = z.object({
+  reservationId: z.string().uuid('ID de réservation invalide'),
+  oldSlotId: z.string().uuid('ID de créneau invalide'),
+});
+
+type SendModificationPayload = z.infer<typeof sendModificationSchema>;
+
+// ============================================
+// TYPES INTERNES
+// ============================================
+
+interface ReservationWithDetails {
+  id: string;
+  num_places: number;
+  status: string;
+  guest_first_name: string | null;
+  guest_last_name: string | null;
+  guest_email: string | null;
+  guest_structure: string | null;
+  user_id: string | null;
+  profiles: { email: string; first_name: string | null; last_name: string | null } | null;
+  slots: {
+    id: string;
+    date: string;
+    time: string;
+    venues: { name: string; city: string } | null;
+    shows: {
+      title: string;
+      slug: string;
+      derviche_manager_id: string | null;
+      companies: { name: string } | null;
+    };
+  };
+}
+
+interface SlotDetails {
+  id: string;
+  date: string;
+  time: string;
+  venues: { name: string; city: string } | null;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function formatDateFr(dateStr: string): string {
+  try {
+    const date = new Date(`${dateStr}T12:00:00`);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatTimeFr(timeStr: string): string {
+  try {
+    const [hours, minutes] = timeStr.split(':');
+    return `${hours}h${minutes}`;
+  } catch {
+    return timeStr;
+  }
+}
+
+// ============================================
+// ROUTE HANDLER
+// ============================================
+
+export async function POST(request: Request): Promise<NextResponse> {
+  try {
+    // 1. Parser et valider le body
+    const rawBody: unknown = await request.json();
+    const parseResult = sendModificationSchema.safeParse(rawBody);
+
+    if (!parseResult.success) {
+      logger.warn('[API /emails/send-modification] Payload invalide', {
+        errors: parseResult.error.flatten(),
+      });
+      return NextResponse.json(
+        { success: false, error: 'Données invalides' },
+        { status: 400 }
+      );
+    }
+
+    const payload: SendModificationPayload = parseResult.data;
+
+    // 2. Vérifier l'authentification
+    const userClient = await createServerClient();
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+
+    if (authError || !user) {
+      logger.warn('[API /emails/send-modification] Utilisateur non authentifié');
+      return NextResponse.json(
+        { success: false, error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
+    // 3. Client service role
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRoleKey) {
+      logger.error('[API /emails/send-modification] SUPABASE_SERVICE_ROLE_KEY manquant');
+      return NextResponse.json(
+        { success: false, error: 'Configuration serveur manquante' },
+        { status: 500 }
+      );
+    }
+
+    const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // 4. Récupérer la réservation avec le NOUVEAU créneau (déjà mis à jour en DB)
+    const { data: reservationRaw, error: reservationError } = await adminClient
+      .from('reservations')
+      .select(`
+        id,
+        num_places,
+        status,
+        guest_first_name,
+        guest_last_name,
+        guest_email,
+        guest_structure,
+        user_id,
+        profiles:user_id (
+          email,
+          first_name,
+          last_name
+        ),
+        slots!inner (
+          id,
+          date,
+          time,
+          venues (
+            name,
+            city
+          ),
+          shows!inner (
+            title,
+            slug,
+            derviche_manager_id,
+            companies:company_id (
+              name
+            )
+          )
+        )
+      `)
+      .eq('id', payload.reservationId)
+      .maybeSingle();
+
+    if (reservationError || !reservationRaw) {
+      logger.warn('[API /emails/send-modification] Réservation introuvable', {
+        reservationId: payload.reservationId,
+      });
+      return NextResponse.json({ success: false, error: 'Réservation introuvable' });
+    }
+
+    const reservation = reservationRaw as unknown as ReservationWithDetails;
+
+    // 5. Vérifier l'autorisation (propriétaire ou admin)
+    const { data: userRoleData } = await adminClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const userRole = userRoleData?.role as string | undefined;
+    const isAdmin = userRole === 'super-admin' || userRole === 'admin';
+    const isOwner = reservation.user_id === user.id;
+
+    if (!isAdmin && !isOwner) {
+      logger.warn('[API /emails/send-modification] Accès refusé', {
+        reservationId: payload.reservationId,
+        userId: user.id,
+      });
+      return NextResponse.json({ success: false, error: 'Accès refusé' });
+    }
+
+    // 6. Récupérer l'ANCIEN créneau (avant modification)
+    const { data: oldSlotRaw, error: oldSlotError } = await adminClient
+      .from('slots')
+      .select('id, date, time, venues(name, city)')
+      .eq('id', payload.oldSlotId)
+      .maybeSingle();
+
+    if (oldSlotError || !oldSlotRaw) {
+      logger.warn('[API /emails/send-modification] Ancien créneau introuvable', {
+        oldSlotId: payload.oldSlotId,
+      });
+      return NextResponse.json({ success: false, error: 'Ancien créneau introuvable' });
+    }
+
+    const oldSlot = oldSlotRaw as unknown as SlotDetails;
+
+    // 7. Déterminer le destinataire
+    const profileData = Array.isArray(reservation.profiles)
+      ? reservation.profiles[0]
+      : reservation.profiles;
+
+    const recipientEmail = reservation.guest_email ?? profileData?.email;
+    const recipientFirstName = reservation.guest_first_name ?? profileData?.first_name ?? '';
+    const recipientLastName = reservation.guest_last_name ?? profileData?.last_name ?? '';
+    const recipientFullName =
+      `${recipientFirstName} ${recipientLastName}`.trim() || 'Cher professionnel';
+
+    if (!recipientEmail) {
+      logger.warn('[API /emails/send-modification] Aucun email destinataire', {
+        reservationId: payload.reservationId,
+      });
+      return NextResponse.json({ success: false, error: 'Email destinataire introuvable' });
+    }
+
+    // 8. Récupérer le manager Derviche
+    const slots = reservation.slots as ReservationWithDetails['slots'];
+    const show = slots.shows;
+    const newVenue = slots.venues;
+    const company = show.companies;
+
+    let managerName: string | null = null;
+    let managerEmail: string | null = null;
+
+    if (show.derviche_manager_id) {
+      const { data: managerProfile } = await adminClient
+        .from('profiles')
+        .select('first_name, last_name, email')
+        .eq('id', show.derviche_manager_id)
+        .maybeSingle();
+
+      if (managerProfile) {
+        managerName =
+          `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() || null;
+        managerEmail = managerProfile.email ?? null;
+      }
+    }
+
+    // 9. Envoyer l'email de modification au professionnel
+    const modificationData: ReservationModificationEmailData = {
+      to: recipientEmail,
+      guestFullName: recipientFullName,
+      reservationId: reservation.id,
+      showTitle: show.title,
+      showSlug: show.slug,
+      companyName: company?.name ?? '',
+      oldSlotDateFormatted: formatDateFr(oldSlot.date),
+      oldSlotTimeFormatted: formatTimeFr(oldSlot.time),
+      newSlotDateFormatted: formatDateFr(slots.date),
+      newSlotTimeFormatted: formatTimeFr(slots.time),
+      venueName: newVenue?.name ?? '',
+      venueCity: newVenue?.city ?? '',
+      numPlaces: reservation.num_places,
+    };
+
+    const emailResult = await sendReservationModificationEmail(modificationData);
+
+    if (!emailResult.success) {
+      logger.error('[API /emails/send-modification] Échec envoi email pro', {
+        reservationId: payload.reservationId,
+        error: emailResult.error,
+      });
+    }
+
+    // 10. Vérifier les préférences de notification + notifier le manager
+    const { data: notifPrefData } = await adminClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'email_notification_modification')
+      .maybeSingle();
+
+    const isBooleanSettingTrue = (val: unknown): boolean =>
+      val === true || val === 'true' || String(val) === 'true';
+
+    const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
+
+    if (notifEnabled && managerEmail) {
+      const notifData: AdminNotificationEmailData = {
+        to: managerEmail,
+        adminName: managerName ?? managerEmail,
+        eventType: 'modification',
+        guestFullName: recipientFullName,
+        guestEmail: recipientEmail,
+        guestStructure: reservation.guest_structure,
+        showTitle: show.title,
+        slotDateFormatted: formatDateFr(slots.date),
+        slotTimeFormatted: formatTimeFr(slots.time),
+        venueName: newVenue?.name ?? '',
+        numPlaces: reservation.num_places,
+        reservationId: reservation.id,
+      };
+
+      await sendAdminNotificationEmail(notifData).catch((err) => {
+        logger.error('[API /emails/send-modification] Erreur notif manager', {
+          managerEmail,
+          err,
+        });
+      });
+    }
+
+    return NextResponse.json({
+      success: emailResult.success,
+      messageId: emailResult.messageId,
+    });
+  } catch (err) {
+    logger.error('[API /emails/send-modification] Exception', { err });
+    return NextResponse.json(
+      { success: false, error: 'Erreur serveur' },
+      { status: 500 }
+    );
+  }
+}

@@ -22,6 +22,15 @@ export interface ProReservationSlot {
   venue_city: string | null;
 }
 
+export interface ProAvailableSlot {
+  id: string;
+  date: string;
+  time: string;
+  remaining_capacity: number;
+  venue_name: string | null;
+  venue_city: string | null;
+}
+
 export interface ProReservation {
   id: string;
   status: ProReservationStatus;
@@ -31,6 +40,8 @@ export interface ProReservation {
   cancellation_reason: string | null;
   show_title: string;
   show_slug: string | null;
+  show_id: string;
+  show_company_name: string | null;
   slot: ProReservationSlot;
 }
 
@@ -62,6 +73,14 @@ export type ClaimReservationsResult =
   | { claimed: number; error: null }
   | { claimed: 0; error: string };
 
+export type ProAvailableSlotsResult =
+  | { data: ProAvailableSlot[]; error: null }
+  | { data: null; error: string };
+
+export type ChangeSlotResult =
+  | { success: true }
+  | { success: false; error: string };
+
 // ============================================
 // QUERY
 // ============================================
@@ -84,7 +103,10 @@ const PRO_RESERVATION_SELECT = `
     shows!inner (
       id,
       title,
-      slug
+      slug,
+      companies:company_id (
+        name
+      )
     )
   )
 ` as const;
@@ -98,7 +120,7 @@ interface RawSlot {
   date: string;
   time: string;
   venues: { name: string; city: string } | null;
-  shows: { id: string; title: string; slug: string | null };
+  shows: { id: string; title: string; slug: string | null; companies: { name: string } | null };
 }
 
 interface RawReservation {
@@ -125,6 +147,8 @@ function transformReservation(raw: RawReservation): ProReservation {
     cancellation_reason: raw.cancellation_reason,
     show_title: raw.slots.shows.title,
     show_slug: raw.slots.shows.slug,
+    show_id: raw.slots.shows.id,
+    show_company_name: raw.slots.shows.companies?.name ?? null,
     slot: {
       id: raw.slots.id,
       date: raw.slots.date,
@@ -257,6 +281,165 @@ export async function getGuestReservations(email: string): Promise<GetGuestReser
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception getGuestReservations', { message });
     return { data: null, error: message };
+  }
+}
+
+/**
+ * Récupère les créneaux disponibles d'un spectacle (hors créneau actuel de la résa)
+ * Filtre uniquement les créneaux futurs avec de la capacité restante
+ *
+ * @param showId - UUID du spectacle
+ * @param currentSlotId - UUID du créneau actuel (exclu des résultats)
+ * @param numPlaces - Nombre de places nécessaires (filtre sur remaining_capacity)
+ */
+export async function getProAvailableSlotsForShow(
+  showId: string,
+  currentSlotId: string,
+  numPlaces: number
+): Promise<ProAvailableSlotsResult> {
+  try {
+    const supabase = createClient();
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+      .from('slots')
+      .select(`
+        id,
+        date,
+        time,
+        remaining_capacity,
+        venues (
+          name,
+          city
+        )
+      `)
+      .eq('show_id', showId)
+      .neq('id', currentSlotId)
+      .gte('date', today)
+      .gte('remaining_capacity', numPlaces)
+      .order('date', { ascending: true })
+      .order('time', { ascending: true });
+
+    if (error) {
+      logger.error('Erreur chargement créneaux disponibles', { showId, error: error.message });
+      return { data: null, error: error.message };
+    }
+
+    interface RawAvailableSlot {
+      id: string;
+      date: string;
+      time: string;
+      remaining_capacity: number;
+      venues: { name: string; city: string } | null;
+    }
+
+    const slots: ProAvailableSlot[] = ((data ?? []) as unknown as RawAvailableSlot[]).map((s) => ({
+      id: s.id,
+      date: s.date,
+      time: s.time,
+      remaining_capacity: s.remaining_capacity,
+      venue_name: s.venues?.name ?? null,
+      venue_city: s.venues?.city ?? null,
+    }));
+
+    return { data: slots, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception getProAvailableSlotsForShow', { showId, message });
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Change le créneau d'une réservation appartenant au programmateur connecté
+ * Utilise la RPC update_reservation_safe (gère la capacité automatiquement)
+ *
+ * @param reservationId - UUID de la réservation à modifier
+ * @param newSlotId - UUID du nouveau créneau
+ */
+export async function changeMyReservationSlot(
+  reservationId: string,
+  newSlotId: string
+): Promise<ChangeSlotResult> {
+  try {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Vous devez être connecté pour modifier une réservation.' };
+    }
+
+    // Vérifier que la réservation appartient bien au user et est modifiable
+    const { data: existing, error: fetchError } = await supabase
+      .from('reservations')
+      .select('id, status, slot_id')
+      .eq('id', reservationId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !existing) {
+      logger.warn('Tentative modification réservation introuvable ou non autorisée', {
+        reservationId,
+        userId: user.id,
+      });
+      return { success: false, error: 'Réservation introuvable ou accès non autorisé.' };
+    }
+
+    if (existing.status === 'cancelled') {
+      return { success: false, error: 'Impossible de modifier une réservation annulée.' };
+    }
+
+    if (existing.slot_id === newSlotId) {
+      return { success: false, error: 'Vous êtes déjà inscrit sur ce créneau.' };
+    }
+
+    // Appel à la RPC sécurisée qui gère la capacité
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: result, error: rpcError } = await (supabase.rpc as any)('update_reservation_safe', {
+      p_reservation_id: reservationId,
+      p_slot_id: newSlotId,
+      // Tous les autres champs à null = conservés tels quels par la RPC
+      p_first_name: null,
+      p_last_name: null,
+      p_email: null,
+      p_phone: null,
+      p_email_secondary: null,
+      p_phone_secondary: null,
+      p_address: null,
+      p_postal_code: null,
+      p_city: null,
+      p_organization: null,
+      p_function: null,
+      p_afc_number: null,
+      p_num_places: null,
+      p_special_requests: null,
+      p_checkin_comment: null,
+      p_checkin_venue_notes: null,
+      p_checkin_internal_notes: null,
+    });
+
+    if (rpcError) {
+      logger.error('Erreur RPC changeMyReservationSlot', { reservationId, error: rpcError.message });
+      return { success: false, error: rpcError.message };
+    }
+
+    interface RpcResult { success: boolean; error?: string }
+    const rpcResult = result as RpcResult;
+
+    if (!rpcResult.success) {
+      logger.error('RPC update_reservation_safe échouée (pro)', { reservationId, error: rpcResult.error });
+      return { success: false, error: rpcResult.error ?? 'Erreur lors de la modification.' };
+    }
+
+    logger.info('Créneau modifié par le pro', { reservationId, newSlotId, userId: user.id });
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception changeMyReservationSlot', { reservationId, message });
+    return { success: false, error: message };
   }
 }
 

@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 131
+> Dernière mise à jour : Session 131 (clôturée)
 
 ---
 
@@ -55,10 +55,18 @@
 - Expéditeur : `reservations@derviche-pro.fr`
 - Template HTML branding Derviche dans `src/lib/services/email.ts`
 - Route API `POST /api/emails/send-confirmation` — confirmation pro
-- Route API `POST /api/emails/send-cancellation` — annulation pro + notification admin
-- Notification admin avec vérification préférences (`email_notification_cancellation`)
+- Route API `POST /api/emails/send-cancellation` — annulation pro + notif manager DD du spectacle
+- Route API `POST /api/emails/send-confirmation` — confirmation pro + notif manager DD du spectacle
+- Notif envoyée **uniquement au manager Derviche assigné au spectacle** (`derviche_manager_id`)
+- Motif d'annulation inclus dans la notif manager
+- Section "Notifications" dans admin/préférences : 3 toggles (nouvelle résa / annulation / modification)
+- Toggles modifiables super-admin uniquement, persistance `app_settings` en JSONB bool
 - Config lue depuis `app_settings` (from_name, from_address, reply_to, subjects, catalogue_url)
+- `escapeHtml()` appliqué à toutes les interpolations utilisateur dans les 3 templates HTML
+- `isBooleanSettingTrue()` utilitaire dans les routes email
 - Migrations `048_add_email_settings.sql` + `049_add_notification_settings.sql` ✅
+- Bug fix : rollback null guard dans `useNotificationSettings`
+- Bug fix : JSONB bool corrigé en DB (`'true'` string → `true` bool)
 - ⚠️ URL catalogue hardcodée : `https://derviche-pro.vercel.app/catalogue` (clé `email_catalogue_url` en DB) — **à mettre à jour lors du custom domaine derviche-pro.fr**
 
 ### 🟡 RGPD (0%) — à planifier
@@ -71,7 +79,31 @@
 
 ---
 
-## Dernier travail (Session 130)
+## Dernier travail (Session 131)
+
+### Emails — Notif manager uniquement
+- Annulation et nouvelle réservation : notif envoyée au `derviche_manager_id` du spectacle uniquement
+- Motif d'annulation transmis dans la notif manager
+- Fix bug double email : suppression appel parasite dans `mutations.ts`
+
+### Section Notifications dans admin/préférences
+- 3 toggles : nouvelle résa (ON) / annulation (ON) / modification (OFF)
+- Persistance Supabase en JSONB bool
+- Accessible super-admin uniquement
+- Hook `useNotificationSettings` + service `getNotificationSettings()`
+
+### Sécurité & qualité
+- `escapeHtml()` sur toutes les interpolations utilisateur dans les 3 templates email
+- `isBooleanSettingTrue()` utilitaire dans les 2 routes email
+- Fix JSONB : valeurs `'true'` string corrigées en `true` bool en DB (SQL UPDATE)
+- Fix rollback null guard dans `useNotificationSettings`
+- Build propre : 0 erreur TypeScript, 0 warning ESLint
+- **Audit Cursor : 8.7/10**
+- Merge `dev` → `main` ✅
+
+---
+
+## Travail précédent (Session 130)
 
 ### Tâche 1 — Migration 049
 **Non nécessaire.** Vérification en base confirmée : les valeurs `app_settings` email sont correctes.
@@ -122,6 +154,8 @@ et le layout rendait `<AccessDenied title="Accès refusé">` pendant ~200ms, ava
 
 ### Priorité haute
 - [x] Email d'annulation de réservation ✅ Session 131
+- [x] Notif manager nouvelles réservations ✅ Session 131
+- [x] Préférences notifications admin ✅ Session 131
 - [ ] Rappels automatiques (Vercel Cron ou Supabase pg_cron)
 
 ### Priorité moyenne

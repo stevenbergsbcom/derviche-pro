@@ -54,9 +54,11 @@ interface ReservationListProps {
   reservations: ProReservation[];
   onCancel: (id: string, reason?: string) => Promise<{ success: boolean; error?: string }>;
   isCancelling: boolean;
+  onChangeSlot: (reservationId: string, newSlotId: string) => Promise<{ success: boolean; error?: string }>;
+  isChangingSlot: boolean;
 }
 
-function ReservationList({ reservations, onCancel, isCancelling }: ReservationListProps) {
+function ReservationList({ reservations, onCancel, isCancelling, onChangeSlot, isChangingSlot }: ReservationListProps) {
   return (
     <div className="space-y-2">
       {/* En-tête colonnes — desktop uniquement */}
@@ -76,6 +78,8 @@ function ReservationList({ reservations, onCancel, isCancelling }: ReservationLi
           reservation={reservation}
           onCancel={onCancel}
           isCancelling={isCancelling}
+          onChangeSlot={onChangeSlot}
+          isChangingSlot={isChangingSlot}
         />
       ))}
     </div>
@@ -108,7 +112,7 @@ function EmptyState({ type }: { type: 'upcoming' | 'history' }) {
 // ============================================
 
 export default function ProfessionalReservationsPage() {
-  const { reservations, isLoading, error, isCancelling, cancelReservation, refresh } =
+  const { reservations, isLoading, error, isCancelling, isChangingSlot, cancelReservation, changeSlot, refresh } =
     useProReservations();
 
   const upcoming = reservations.filter(isUpcoming);
@@ -184,6 +188,8 @@ export default function ProfessionalReservationsPage() {
                 reservations={upcoming}
                 onCancel={cancelReservation}
                 isCancelling={isCancelling}
+                onChangeSlot={changeSlot}
+                isChangingSlot={isChangingSlot}
               />
             )}
           </TabsContent>
@@ -197,6 +203,8 @@ export default function ProfessionalReservationsPage() {
                 reservations={history}
                 onCancel={cancelReservation}
                 isCancelling={isCancelling}
+                onChangeSlot={changeSlot}
+                isChangingSlot={isChangingSlot}
               />
             )}
           </TabsContent>
