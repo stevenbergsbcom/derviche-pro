@@ -13,8 +13,10 @@ import { Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { SettingsCard, InactiveSectionBanner } from '../shared';
+import { Separator } from '@/components/ui/separator';
+import { SettingsCard } from '../shared';
 
 import { useEmailSettings } from '@/hooks/useAppSettings';
 import type { EmailSettings } from '@/lib/services/app-settings';
@@ -26,9 +28,49 @@ import type { EmailSettings } from '@/lib/services/app-settings';
 const emailSchema = z.object({
   email_from_name: z.string().min(1, 'Le nom est requis').max(100, 'Maximum 100 caractères'),
   email_from_address: z.string().email('Email invalide'),
+  email_reply_to: z
+    .string()
+    .email('Email invalide')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  email_confirmation_subject: z
+    .string()
+    .min(1, 'Requis')
+    .max(200, 'Maximum 200 caractères'),
+  email_cancellation_subject: z
+    .string()
+    .min(1, 'Requis')
+    .max(200, 'Maximum 200 caractères'),
+  email_signature: z
+    .string()
+    .max(200, 'Maximum 200 caractères')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
+  email_footer_text: z
+    .string()
+    .max(300, 'Maximum 300 caractères')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
 });
 
 type EmailFormData = z.infer<typeof emailSchema>;
+
+// ============================================
+// VALEURS PAR DÉFAUT (miroir des fallbacks dans email.ts)
+// ============================================
+
+const DEFAULT_VALUES: EmailFormData = {
+  email_from_name: '',
+  email_from_address: '',
+  email_reply_to: '',
+  email_confirmation_subject: 'Votre réservation est confirmée — Derviche Diffusion',
+  email_cancellation_subject: 'Annulation de votre réservation — Derviche Diffusion',
+  email_signature: "L'équipe Derviche Diffusion",
+  email_footer_text: 'Derviche Diffusion — contact@derviche-pro.fr',
+};
 
 // ============================================
 // PROPS
@@ -65,10 +107,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
     formState: { errors, isDirty },
   } = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
-    defaultValues: {
-      email_from_name: '',
-      email_from_address: '',
-    },
+    defaultValues: DEFAULT_VALUES,
   });
 
   // Initialiser le formulaire quand les données arrivent (une seule fois)
@@ -77,6 +116,15 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
       reset({
         email_from_name: data.email_from_name || '',
         email_from_address: data.email_from_address || '',
+        email_reply_to: data.email_reply_to || '',
+        email_confirmation_subject:
+          data.email_confirmation_subject ||
+          DEFAULT_VALUES.email_confirmation_subject,
+        email_cancellation_subject:
+          data.email_cancellation_subject ||
+          DEFAULT_VALUES.email_cancellation_subject,
+        email_signature: data.email_signature || DEFAULT_VALUES.email_signature,
+        email_footer_text: data.email_footer_text || DEFAULT_VALUES.email_footer_text,
       });
       setIsInitialized(true);
     }
@@ -85,7 +133,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
   // Suivre les changements seulement après initialisation
   useEffect(() => {
     if (!isInitialized) return;
-    
+
     setHasChanges(isDirty);
     onDirtyChangeRef.current?.(isDirty);
   }, [isDirty, isInitialized]);
@@ -95,6 +143,11 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
     const cleanedData: Partial<EmailSettings> = {
       email_from_name: formData.email_from_name || null,
       email_from_address: formData.email_from_address || null,
+      email_reply_to: formData.email_reply_to || null,
+      email_confirmation_subject: formData.email_confirmation_subject || null,
+      email_cancellation_subject: formData.email_cancellation_subject || null,
+      email_signature: formData.email_signature || null,
+      email_footer_text: formData.email_footer_text || null,
     };
 
     const result = await update(cleanedData);
@@ -123,22 +176,25 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
   }
 
   return (
-    <div className="space-y-4">
-    <InactiveSectionBanner message="Les paramètres d'expéditeur sont sauvegardés mais aucun système d'envoi d'email n'est encore connecté. Ces valeurs seront utilisées lors de l'implémentation des emails transactionnels." />
     <SettingsCard
       icon={Mail}
       title="Email"
-      description="Configuration de l'expéditeur pour les emails de confirmation et rappels"
+      description="Configuration de l'expéditeur et du contenu des emails transactionnels"
       isLoading={isLoading}
       isSaving={isSaving}
       canEdit={canEdit}
       hasChanges={hasChanges}
       onSubmit={handleSubmit(onSubmit)}
     >
+      {/* ── Expéditeur ─────────────────────────────── */}
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Expéditeur
+      </p>
+
       {/* Nom de l'expéditeur */}
       <div className="space-y-2">
         <Label htmlFor="email_from_name">
-          Nom de l&apos;expéditeur <span className="text-destructive">*</span>
+          Nom <span className="text-destructive">*</span>
         </Label>
         <Input
           id="email_from_name"
@@ -150,19 +206,19 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
           <p className="text-sm text-destructive">{errors.email_from_name.message}</p>
         )}
         <p className="text-xs text-muted-foreground">
-          Le nom qui apparaîtra comme expéditeur des emails
+          Le nom affiché dans la boîte de réception du destinataire
         </p>
       </div>
 
       {/* Adresse email de l'expéditeur */}
       <div className="space-y-2">
         <Label htmlFor="email_from_address">
-          Adresse email <span className="text-destructive">*</span>
+          Adresse d&apos;envoi <span className="text-destructive">*</span>
         </Label>
         <Input
           id="email_from_address"
           type="email"
-          placeholder="noreply@derviche-diffusion.fr"
+          placeholder="reservations@derviche-pro.fr"
           disabled={!canEdit}
           {...register('email_from_address')}
         />
@@ -170,10 +226,113 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
           <p className="text-sm text-destructive">{errors.email_from_address.message}</p>
         )}
         <p className="text-xs text-muted-foreground">
-          L&apos;adresse email utilisée pour envoyer les notifications
+          Doit être une adresse vérifiée dans Resend
+        </p>
+      </div>
+
+      {/* Adresse de réponse */}
+      <div className="space-y-2">
+        <Label htmlFor="email_reply_to">Adresse de réponse (Reply-To)</Label>
+        <Input
+          id="email_reply_to"
+          type="email"
+          placeholder="contact@derviche-pro.fr"
+          disabled={!canEdit}
+          {...register('email_reply_to')}
+        />
+        {errors.email_reply_to && (
+          <p className="text-sm text-destructive">{errors.email_reply_to.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Adresse utilisée quand le destinataire clique sur &quot;Répondre&quot;. Si vide,
+          l&apos;adresse d&apos;envoi est utilisée.
+        </p>
+      </div>
+
+      <Separator />
+
+      {/* ── Objets des emails ──────────────────────── */}
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Objets des emails
+      </p>
+
+      {/* Objet confirmation */}
+      <div className="space-y-2">
+        <Label htmlFor="email_confirmation_subject">
+          Confirmation de réservation <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="email_confirmation_subject"
+          placeholder="Votre réservation est confirmée — Derviche Diffusion"
+          disabled={!canEdit}
+          {...register('email_confirmation_subject')}
+        />
+        {errors.email_confirmation_subject && (
+          <p className="text-sm text-destructive">
+            {errors.email_confirmation_subject.message}
+          </p>
+        )}
+      </div>
+
+      {/* Objet annulation */}
+      <div className="space-y-2">
+        <Label htmlFor="email_cancellation_subject">
+          Annulation de réservation <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id="email_cancellation_subject"
+          placeholder="Annulation de votre réservation — Derviche Diffusion"
+          disabled={!canEdit}
+          {...register('email_cancellation_subject')}
+        />
+        {errors.email_cancellation_subject && (
+          <p className="text-sm text-destructive">
+            {errors.email_cancellation_subject.message}
+          </p>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* ── Contenu commun ─────────────────────────── */}
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Contenu commun
+      </p>
+
+      {/* Signature */}
+      <div className="space-y-2">
+        <Label htmlFor="email_signature">Signature</Label>
+        <Input
+          id="email_signature"
+          placeholder="L'équipe Derviche Diffusion"
+          disabled={!canEdit}
+          {...register('email_signature')}
+        />
+        {errors.email_signature && (
+          <p className="text-sm text-destructive">{errors.email_signature.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Affiché en bas de chaque email avant le pied de page
+        </p>
+      </div>
+
+      {/* Pied de page */}
+      <div className="space-y-2">
+        <Label htmlFor="email_footer_text">Pied de page</Label>
+        <Textarea
+          id="email_footer_text"
+          placeholder="Derviche Diffusion — contact@derviche-pro.fr"
+          rows={2}
+          disabled={!canEdit}
+          {...register('email_footer_text')}
+        />
+        {errors.email_footer_text && (
+          <p className="text-sm text-destructive">{errors.email_footer_text.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Texte affiché dans la zone grise en bas de tous les emails
         </p>
       </div>
     </SettingsCard>
-    </div>
   );
 }

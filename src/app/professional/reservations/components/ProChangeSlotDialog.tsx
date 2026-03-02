@@ -73,6 +73,7 @@ function SlotItem({ slot, selected, onSelect }: SlotItemProps) {
 
   return (
     <button
+      type="button"
       onClick={onSelect}
       className={`
         w-full text-left rounded-lg border p-4 transition-all
@@ -199,8 +200,10 @@ export function ProChangeSlotDialog({
                 <p className="font-medium">Impossible de charger les créneaux</p>
                 <p className="text-destructive/80 mt-0.5">{error}</p>
                 <button
+                  type="button"
                   onClick={loadSlots}
                   className="mt-2 underline font-medium"
+                  aria-label="Réessayer le chargement des créneaux"
                 >
                   Réessayer
                 </button>

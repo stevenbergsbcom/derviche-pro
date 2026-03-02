@@ -81,6 +81,25 @@ export type ChangeSlotResult =
   | { success: true }
   | { success: false; error: string };
 
+/** Résultat attendu de la RPC update_reservation_safe */
+interface UpdateReservationRpcResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Type guard pour valider le résultat de la RPC update_reservation_safe
+ * Évite un simple cast (result as RpcResult) non vérifié
+ */
+function isUpdateReservationRpcResult(val: unknown): val is UpdateReservationRpcResult {
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    'success' in val &&
+    typeof (val as Record<string, unknown>).success === 'boolean'
+  );
+}
+
 // ============================================
 // QUERY
 // ============================================
@@ -397,8 +416,11 @@ export async function changeMyReservationSlot(
     }
 
     // Appel à la RPC sécurisée qui gère la capacité
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: result, error: rpcError } = await (supabase.rpc as any)('update_reservation_safe', {
+    // update_reservation_safe n'est pas dans les types DB générés — cast via unknown + type guard sur le retour
+    const { data: result, error: rpcError } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: { message: string } | null }>)('update_reservation_safe', {
       p_reservation_id: reservationId,
       p_slot_id: newSlotId,
       // Tous les autres champs à null = conservés tels quels par la RPC
@@ -426,12 +448,15 @@ export async function changeMyReservationSlot(
       return { success: false, error: rpcError.message };
     }
 
-    interface RpcResult { success: boolean; error?: string }
-    const rpcResult = result as RpcResult;
+    // Valider le résultat via type guard au lieu d'un cast aveugle
+    if (!isUpdateReservationRpcResult(result)) {
+      logger.error('RPC update_reservation_safe : réponse inattendue', { reservationId, result });
+      return { success: false, error: 'Réponse serveur inattendue.' };
+    }
 
-    if (!rpcResult.success) {
-      logger.error('RPC update_reservation_safe échouée (pro)', { reservationId, error: rpcResult.error });
-      return { success: false, error: rpcResult.error ?? 'Erreur lors de la modification.' };
+    if (!result.success) {
+      logger.error('RPC update_reservation_safe échouée (pro)', { reservationId, error: result.error });
+      return { success: false, error: result.error ?? 'Erreur lors de la modification.' };
     }
 
     logger.info('Créneau modifié par le pro', { reservationId, newSlotId, userId: user.id });

@@ -135,16 +135,33 @@ export function useProReservations(): UseProReservationsResult {
         }
 
         // Envoyer l'email de modification de façon non-bloquante
+        // Si oldSlotId est absent (liste désynchronisée, double onglet), on skip l'email (best-effort)
         if (oldSlotId) {
           fetch('/api/emails/send-modification', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ reservationId, oldSlotId }),
-          }).catch((err) => {
-            logger.warn('useProReservations: échec envoi email modification (non-bloquant)', {
-              reservationId,
-              error: err instanceof Error ? err.message : 'Erreur inconnue',
+          })
+            .then(async (res) => {
+              // Gérer le cas 200 avec success: false (Resend a échoué mais la modif est faite)
+              if (res.ok) {
+                const body = (await res.json()) as { success: boolean };
+                if (!body.success) {
+                  logger.warn('useProReservations: email modification non envoyé (Resend KO)', {
+                    reservationId,
+                  });
+                }
+              }
+            })
+            .catch((err) => {
+              logger.warn('useProReservations: échec requête email modification (non-bloquant)', {
+                reservationId,
+                error: err instanceof Error ? err.message : 'Erreur inconnue',
+              });
             });
+        } else {
+          logger.warn('useProReservations: oldSlotId introuvable, email de modification non envoyé', {
+            reservationId,
           });
         }
 

@@ -937,6 +937,7 @@ export async function sendReservationModificationEmail(
     const html = buildModificationHtml(data, config, appUrl);
     const resend = new Resend(apiKey);
 
+    // Le sujet est toujours en plain text (pas de rendu HTML) — showTitle n'a pas besoin d'être échappé ici
     const subject = `Modification de votre réservation — ${data.showTitle}`;
 
     const { data: result, error } = await resend.emails.send({

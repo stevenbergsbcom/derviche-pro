@@ -28,6 +28,7 @@ import {
 } from '@/lib/services/email';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import type { UserRole } from '@/types/database';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -204,7 +205,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    const userRole = userRoleData?.role as string | undefined;
+    const userRole = userRoleData?.role as UserRole | undefined;
     const isAdmin = userRole === 'super-admin' || userRole === 'admin';
     const isOwner = reservation.user_id === user.id;
 
