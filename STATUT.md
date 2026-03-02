@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 131 (clôturée)
+> Dernière mise à jour : Session 133 (en cours)
 
 ---
 
@@ -34,7 +34,7 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Utilisateurs | ✅ Liste, filtres, CRUD, rôle, statut, API |
-| Préférences | ✅ Organisation, Apparence (thème + logos), Email, Notifications, Rappels, RGPD |
+| Préférences | ✅ Organisation (+ website), Apparence (thème + logos), Email (7 champs complets), Notifications, Rappels, RGPD |
 | Mon compte | ✅ Connecté Supabase (profil + rôle, sauvegarde, changement mdp) |
 
 ### ✅ Company (100%)
@@ -79,7 +79,48 @@
 
 ---
 
-## Dernier travail (Session 131)
+## Dernier travail (Session 133)
+
+### Audit app_settings + nettoyage préférences
+
+**Bannière email obsolète supprimée**
+- `email-section.tsx` : retrait `<InactiveSectionBanner>` + import nettoyé (Resend actif depuis S129)
+
+**Migration 050 — 4 clés manquantes ajoutées en DB**
+- `theme_preset`, `logo_white_url`, `logo_dark_url` : consommées par `getThemeSettings()` et la sidebar mais jamais migrées
+- `organization_address` : utilisée dans le code depuis S129 mais absente de la DB
+
+**Section Email — 7 champs désormais éditables (était 2)**
+- Ajout : `email_reply_to`, `email_confirmation_subject`, `email_cancellation_subject`, `email_signature`, `email_footer_text`
+- UI organisée en 3 groupes visuels : Expéditeur / Objets des emails / Contenu commun
+- Valeurs par défaut cohérentes avec les fallbacks dans `email.ts`
+
+**Section Organisation — champ `organization_website` ajouté**
+- Clé existait en DB (migration 004) mais aucune UI ne permettait de la modifier
+- Validation Zod URL avec message d'erreur explicite
+
+**Service `app-settings.ts` étendu**
+- `EmailSettingKey` : 2 → 7 clés
+- `OrganizationSettingKey` : 5 → 6 clés
+- `EmailSettings` interface étendue
+- `OrganizationSettings` interface étendue
+- `SETTING_LABELS` complété
+- `getEmailSettings()` et `getOrganizationSettings()` retournent les nouveaux champs
+
+---
+
+## Travail précédent (Session 132)
+
+### Changement de créneau pro self-service
+- `ProChangeSlotDialog` : dialog de changement créneau depuis l'espace pro
+- Route API `POST /api/emails/send-modification` + email de modification (ancien barré / nouveau bleu)
+- UX mobile réservations pro : boutons empilés pleine largeur
+- Fix : `load()` retourne boolean
+- Audit 8.7/10, merge main ✅
+
+---
+
+## Travail précédent (Session 131)
 
 ### Emails — Notif manager uniquement
 - Annulation et nouvelle réservation : notif envoyée au `derviche_manager_id` du spectacle uniquement
@@ -175,14 +216,31 @@ et le layout rendait `<AccessDenied title="Accès refusé">` pendant ~200ms, ava
 | Section | Données stockées | Utilisées | Bloquant |
 |---|---|---|---|
 | Apparence | Thème + logos | ✅ Sidebar admin | Non |
-| Organisation | Nom, email, tél, adresse | ⚠️ Seulement `organization_name` | Non |
-| Email | `email_from_name`, `email_from_address` | ✅ Confirmation réservation | Partiel |
+| Organisation | Nom, email, tél, adresse, website | ⚠️ Seulement `organization_name` (alt logo sidebar) | Non |
+| Email | 7 champs (from, reply-to, subjects, signature, footer) | ✅ Tous consommés par `email.ts` | Non |
 | Rappels | `reminder_enabled_7d/2d/12h` | ❌ Aucun job planifié | Oui |
 | RGPD | Durées de conservation | ❌ Aucune purge automatique | Oui |
+
+### Audit onglet Organisation — champs non consommés (S133)
+| Champ | Utilisé ? | Endroit |
+|-------|-----------|--------|
+| `organization_name` | ✅ Oui | `SidebarLogo.tsx` → attribut `alt` du logo uniquement |
+| `organization_logo_url` | ❌ Non | Doublon inutile — remplacé par les logos de l'onglet Apparence |
+| `organization_contact_email` | ❌ Non | Footer hardcodé, absent des emails |
+| `organization_contact_phone` | ❌ Non | Jamais affiché |
+| `organization_address` | ❌ Non | Jamais affiché |
+| `organization_website` | ❌ Non | Jamais affiché |
+
+**Actions prévues (session future) :**
+- Rendre le footer public dynamique (email, phone, address depuis la DB)
+- Injecter `organization_name` dans les templates email (en-tête, pied de page)
+- Supprimer `organization_logo_url` du formulaire UI (doublon avec onglet Apparence)
+- Utiliser `organization_website` dans le footer ou les emails
 
 ### TODO dans le code
 | Fichier | Description |
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
 | `app/(public)/spectacle/[slug]/page.tsx` | Refactoring prévu (860 lignes) |
-| `admin/preferences/.../email-section.tsx` | Contient encore la bannière "non connecté" alors que Resend est actif — à supprimer |
+| `admin/preferences/.../email-section.tsx` | ✅ Bannière supprimée en S133 |
+| `organization_logo_url` | Champ UI + DB présent mais jamais utilisé — doublon avec onglet Apparence — à supprimer |

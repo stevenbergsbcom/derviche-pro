@@ -23,7 +23,8 @@ import type { ProReservation } from '@/lib/services/pro-reservations';
 // ============================================
 
 function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  // T12:00:00 évite les décalages de fuseau horaire sur une date YYYY-MM-DD pure
+  const date = new Date(`${dateStr}T12:00:00`);
   return date.toLocaleDateString('fr-FR', {
     weekday: 'short',
     day: 'numeric',
@@ -33,7 +34,8 @@ function formatDate(dateStr: string): string {
 }
 
 function formatDateLong(dateStr: string): string {
-  const date = new Date(dateStr);
+  // T12:00:00 évite les décalages de fuseau horaire sur une date YYYY-MM-DD pure
+  const date = new Date(`${dateStr}T12:00:00`);
   return date.toLocaleDateString('fr-FR', {
     weekday: 'long',
     day: 'numeric',
@@ -43,7 +45,9 @@ function formatDateLong(dateStr: string): string {
 }
 
 function formatTime(timeStr: string): string {
-  return timeStr.slice(0, 5);
+  // Format aligné avec ProChangeSlotDialog : "11h00" au lieu de "11:00"
+  const [hours, minutes] = timeStr.slice(0, 5).split(':');
+  return `${hours}h${minutes}`;
 }
 
 /** Retourne true si la réservation peut encore être annulée (date du slot > maintenant + 24h) */
@@ -187,6 +191,7 @@ export function ProReservationCard({
               className="w-full"
               onClick={() => setChangeSlotOpen(true)}
               disabled={isChangingSlot || isCancelling}
+              aria-label={`Modifier la réservation pour ${reservation.show_title}`}
             >
               Modifier la réservation
             </Button>
@@ -206,6 +211,7 @@ export function ProReservationCard({
               className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full"
               onClick={() => setCancelOpen(true)}
               disabled={isCancelling || isChangingSlot}
+              aria-label={`Annuler la réservation pour ${reservation.show_title}`}
             >
               Annuler la réservation
             </Button>
@@ -289,6 +295,7 @@ export function ProReservationCard({
               size="sm"
               onClick={() => setChangeSlotOpen(true)}
               disabled={isChangingSlot || isCancelling}
+              aria-label={`Modifier la réservation pour ${reservation.show_title}`}
             >
               Modifier
             </Button>
@@ -300,6 +307,7 @@ export function ProReservationCard({
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
               onClick={() => setCancelOpen(true)}
               disabled={isCancelling || isChangingSlot}
+              aria-label={`Annuler la réservation pour ${reservation.show_title}`}
             >
               Annuler
             </Button>

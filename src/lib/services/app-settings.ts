@@ -24,10 +24,18 @@ export type OrganizationSettingKey =
   | 'organization_logo_url'
   | 'organization_contact_email'
   | 'organization_contact_phone'
-  | 'organization_address';
+  | 'organization_address'
+  | 'organization_website';
 
 /** Clés de paramètres email */
-export type EmailSettingKey = 'email_from_name' | 'email_from_address';
+export type EmailSettingKey =
+  | 'email_from_name'
+  | 'email_from_address'
+  | 'email_reply_to'
+  | 'email_confirmation_subject'
+  | 'email_cancellation_subject'
+  | 'email_signature'
+  | 'email_footer_text';
 
 /** Clés de paramètres notifications email admin */
 export type NotificationSettingKey =
@@ -78,12 +86,18 @@ export interface OrganizationSettings {
   organization_contact_email: string | null;
   organization_contact_phone: string | null;
   organization_address: string | null;
+  organization_website: string | null;
 }
 
 /** Paramètres email groupés */
 export interface EmailSettings {
   email_from_name: string | null;
   email_from_address: string | null;
+  email_reply_to: string | null;
+  email_confirmation_subject: string | null;
+  email_cancellation_subject: string | null;
+  email_signature: string | null;
+  email_footer_text: string | null;
 }
 
 /** Paramètres notifications email admin groupés */
@@ -124,10 +138,19 @@ export const ORGANIZATION_SETTING_KEYS: OrganizationSettingKey[] = [
   'organization_contact_email',
   'organization_contact_phone',
   'organization_address',
+  'organization_website',
 ];
 
 /** Clés des paramètres email */
-export const EMAIL_SETTING_KEYS: EmailSettingKey[] = ['email_from_name', 'email_from_address'];
+export const EMAIL_SETTING_KEYS: EmailSettingKey[] = [
+  'email_from_name',
+  'email_from_address',
+  'email_reply_to',
+  'email_confirmation_subject',
+  'email_cancellation_subject',
+  'email_signature',
+  'email_footer_text',
+];
 
 /** Clés des paramètres notifications email admin */
 export const NOTIFICATION_SETTING_KEYS: NotificationSettingKey[] = [
@@ -162,9 +185,17 @@ export const SETTING_LABELS: Record<string, string> = {
   organization_logo_url: 'URL du logo',
   organization_contact_email: 'Email de contact',
   organization_contact_phone: 'Téléphone de contact',
-  organization_address: 'Adresse',
+  organization_address: 'Adresse postale',
+  organization_website: 'Site web',
   email_from_name: 'Nom de l\'expéditeur',
   email_from_address: 'Adresse email de l\'expéditeur',
+  email_reply_to: 'Adresse de réponse',
+  email_confirmation_subject: 'Objet email confirmation',
+  email_cancellation_subject: 'Objet email annulation',
+  email_signature: 'Signature',
+  email_footer_text: 'Pied de page',
+  email_catalogue_url: 'URL du catalogue (emails)',
+
   reminder_enabled_7d: 'Rappel J-7',
   reminder_enabled_2d: 'Rappel J-2',
   reminder_enabled_12h: 'Rappel H-12',
@@ -353,6 +384,7 @@ export async function getOrganizationSettings(): Promise<AppSettingResult<Organi
       organization_contact_email: (result.data?.organization_contact_email as string) || null,
       organization_contact_phone: (result.data?.organization_contact_phone as string) || null,
       organization_address: (result.data?.organization_address as string) || null,
+      organization_website: (result.data?.organization_website as string) || null,
     },
     error: null,
   };
@@ -388,6 +420,11 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
     data: {
       email_from_name: (result.data?.email_from_name as string) || null,
       email_from_address: (result.data?.email_from_address as string) || null,
+      email_reply_to: (result.data?.email_reply_to as string) || null,
+      email_confirmation_subject: (result.data?.email_confirmation_subject as string) || null,
+      email_cancellation_subject: (result.data?.email_cancellation_subject as string) || null,
+      email_signature: (result.data?.email_signature as string) || null,
+      email_footer_text: (result.data?.email_footer_text as string) || null,
     },
     error: null,
   };

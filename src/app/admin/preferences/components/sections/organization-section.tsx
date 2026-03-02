@@ -45,6 +45,12 @@ const organizationSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
+  organization_website: z
+    .string()
+    .url('URL invalide (ex: https://derviche-diffusion.fr)')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
 });
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
@@ -90,6 +96,7 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
       organization_contact_email: '',
       organization_contact_phone: '',
       organization_address: '',
+      organization_website: '',
     },
   });
 
@@ -102,6 +109,7 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
         organization_contact_email: data.organization_contact_email || '',
         organization_contact_phone: data.organization_contact_phone || '',
         organization_address: data.organization_address || '',
+        organization_website: data.organization_website || '',
       });
       setIsInitialized(true);
     }
@@ -123,6 +131,7 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
       organization_contact_email: formData.organization_contact_email || null,
       organization_contact_phone: formData.organization_contact_phone || null,
       organization_address: formData.organization_address || null,
+      organization_website: formData.organization_website || null,
     };
 
     const result = await update(cleanedData);
@@ -222,9 +231,9 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
         )}
       </div>
 
-      {/* Adresse */}
+      {/* Adresse postale */}
       <div className="space-y-2">
-        <Label htmlFor="organization_address">Adresse</Label>
+        <Label htmlFor="organization_address">Adresse postale</Label>
         <Textarea
           id="organization_address"
           placeholder="123 rue du Théâtre&#10;75001 Paris"
@@ -235,6 +244,24 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
         {errors.organization_address && (
           <p className="text-sm text-destructive">{errors.organization_address.message}</p>
         )}
+      </div>
+
+      {/* Site web */}
+      <div className="space-y-2">
+        <Label htmlFor="organization_website">Site web</Label>
+        <Input
+          id="organization_website"
+          type="url"
+          placeholder="https://derviche-diffusion.fr"
+          disabled={!canEdit}
+          {...register('organization_website')}
+        />
+        {errors.organization_website && (
+          <p className="text-sm text-destructive">{errors.organization_website.message}</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          URL complète incluant https://
+        </p>
       </div>
     </SettingsCard>
   );
