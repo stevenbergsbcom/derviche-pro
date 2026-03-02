@@ -10,6 +10,7 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
+import { checkAccountStatus } from '@/lib/actions/auth';
 import { createClient } from '@/lib/supabase/client';
 import { getUserRole } from '@/lib/auth/get-user-role';
 import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
@@ -115,20 +116,23 @@ function LoginForm() {
                 return;
             }
 
-            // Vérifier si le compte est désactivé
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('disabled_at, deleted_at')
-                .eq('id', userId)
-                .maybeSingle();
+            // Vérifier le statut du compte via Server Action (service role, bypasse RLS)
+            // En cas d'échec du Server Action, on continue — le middleware prend le relais
+            const accessToken = authData.session?.access_token ?? '';
+            let accountStatus: string = 'ok';
+            try {
+                accountStatus = await checkAccountStatus(userId, accessToken);
+            } catch {
+                logger.warn('[Login] Server Action check-account-status a échoué, middleware prend le relais');
+            }
 
-            if (profile?.deleted_at) {
+            if (accountStatus === 'deleted' || accountStatus === 'not_found') {
                 await supabase.auth.signOut();
                 toast.error('Ce compte a été supprimé. Vous pouvez créer un nouveau compte.');
                 return;
             }
 
-            if (profile?.disabled_at) {
+            if (accountStatus === 'disabled') {
                 await supabase.auth.signOut();
                 toast.error('Votre compte a été désactivé. Contactez un administrateur.');
                 return;

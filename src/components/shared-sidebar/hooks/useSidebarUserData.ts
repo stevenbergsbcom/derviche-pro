@@ -43,6 +43,9 @@ export function useSidebarUserData<T extends BaseSidebarUserData>(
   const [userData, setUserData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // NOTE : selectQuery et contextName doivent être des constantes stables (définis hors du render).
+  // transformData doit être mémoïsé avec useCallback dans le hook appelant.
+  // Sans cela, l'effet se réexécute à chaque render et provoque des refetch inutiles.
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -87,7 +90,8 @@ export function useSidebarUserData<T extends BaseSidebarUserData>(
     };
 
     void fetchUserData();
-  }, [selectQuery, transformData, contextName]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextName, selectQuery]); // transformData volontairement exclu : doit être stable via useCallback
 
   // Formater le nom d'affichage
   const displayName = useMemo(() => {
