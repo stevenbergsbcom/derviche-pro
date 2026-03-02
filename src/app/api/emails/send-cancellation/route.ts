@@ -192,8 +192,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-cancellation] Réservation introuvable', {
         reservationId: payload.reservationId,
       });
-      // 200 intentionnel : ne pas révéler l'existence de la réservation
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' });
+      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 404 });
     }
 
     const reservation = reservationRaw as unknown as ReservationWithDetails;
@@ -214,8 +213,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: payload.reservationId,
         userId: user.id,
       });
-      // 200 intentionnel
-      return NextResponse.json({ success: false, error: 'Accès refusé' });
+      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
     }
 
     // 6. Vérifier que la réservation est bien annulée
@@ -224,7 +222,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: payload.reservationId,
         status: reservation.status,
       });
-      return NextResponse.json({ success: false, error: 'La réservation n\'est pas annulée' });
+      return NextResponse.json({ success: false, error: 'La réservation n\'est pas annulée' }, { status: 422 });
     }
 
     // 7. Déterminer l'email et le nom du destinataire
@@ -242,7 +240,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-cancellation] Aucun email destinataire trouvé', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Email destinataire introuvable' });
+      return NextResponse.json({ success: false, error: 'Email destinataire introuvable' }, { status: 422 });
     }
 
     // 8. Récupérer les infos du manager Derviche (depuis shows.derviche_manager_id)

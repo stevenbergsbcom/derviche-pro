@@ -192,7 +192,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Réservation introuvable', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' });
+      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 404 });
     }
 
     const reservation = reservationRaw as unknown as ReservationWithDetails;
@@ -213,7 +213,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: payload.reservationId,
         userId: user.id,
       });
-      return NextResponse.json({ success: false, error: 'Accès refusé' });
+      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
     }
 
     // 6. Récupérer l'ANCIEN créneau (avant modification)
@@ -227,7 +227,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Ancien créneau introuvable', {
         oldSlotId: payload.oldSlotId,
       });
-      return NextResponse.json({ success: false, error: 'Ancien créneau introuvable' });
+      return NextResponse.json({ success: false, error: 'Ancien créneau introuvable' }, { status: 404 });
     }
 
     const oldSlot = oldSlotRaw as unknown as SlotDetails;

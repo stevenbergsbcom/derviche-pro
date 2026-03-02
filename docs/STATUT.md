@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 129
+> Dernière mise à jour : Session 132
 
 ---
 
@@ -41,6 +41,9 @@
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
 - Fix bug country prefill
 - Rapatriement réservations guest (GuestReservationsBanner)
+- /professional/reservations : liste réservations à venir + historique
+- Changement de créneau en self-service (ProChangeSlotDialog)
+- UX mobile : boutons empilés pleine largeur (Modifier / Voir / Annuler)
 
 ### ✅ Company (100%)
 - Dashboard compagnie
@@ -48,6 +51,16 @@
 - Statistiques
 - Export
 - Mon compte
+
+### ✅ Emails transactionnels (100%)
+| Type | Route API | Statut |
+|------|-----------|--------|
+| Confirmation réservation | POST /api/emails/send-confirmation | ✅ S129 |
+| Annulation réservation | POST /api/emails/send-cancellation | ✅ S131 |
+| Modification créneau | POST /api/emails/send-modification | ✅ S132 |
+| Notification manager (nouvelle résa) | inclus dans send-confirmation | ✅ S131 |
+| Notification manager (annulation) | inclus dans send-cancellation | ✅ S131 |
+| Notification manager (modification) | inclus dans send-modification | ✅ S132 |
 
 ### ✅ Autres (100%)
 - Thème & logos dynamiques (presets, upload Supabase)
@@ -58,163 +71,115 @@
 
 ---
 
-## Dernier travail (Session 129)
+## Dernier travail (Session 132)
+
+**Changement de créneau pro self-service + email de modification :**
+
+- `src/lib/services/pro-reservations/index.ts` : types `ProAvailableSlot`, `ProAvailableSlotsResult`, `ChangeSlotResult` + fonctions `getProAvailableSlotsForShow()` + `changeMyReservationSlot()` (utilise RPC `update_reservation_safe`)
+- `src/lib/services/email.ts` : interface `ReservationModificationEmailData` + template HTML `buildModificationHtml()` (ancien créneau barré en gris, nouveau en bleu) + `sendReservationModificationEmail()`
+- `src/app/api/emails/send-modification/route.ts` : route API complète (validation Zod, vérification ownership, notif manager si toggle `email_notification_modification` ON)
+- `src/app/professional/reservations/components/ProChangeSlotDialog.tsx` : dialog sélection créneau avec radio visuel, chargement async, gestion erreurs
+- `src/app/professional/reservations/components/ProReservationCard.tsx` : boutons mobile empilés pleine largeur (Modifier principal bleu, Voir secondaire outline, Annuler ghost rouge)
+- `src/hooks/useProReservations.ts` : `changeSlot()` + `isChangingSlot` + `load()` retourne `boolean` (fix bug faux succès si refresh échoue)
+- Fix conflit export : types pro renommés avec préfixe `Pro` (vs admin-reservations qui exporte déjà `AvailableSlot`)
+- **Bug détecté et corrigé par audit Cursor** : `changeSlot` retournait `success: true` même si `load()` échouait après la modification
+
+**Score audit Cursor : 8.5/10**
+
+**Commits mergés sur main :**
+- `feat: changement de créneau par le pro + email de modification`
+- `fix: renommer bouton Changer → Modifier, supprimer places restantes dialog`
+- `fix: UX mobile réservations pro - layout boutons + labels cohérents`
+- `fix: boutons mobile réservations pro - option A pleine largeur empilée`
+- `fix: bouton Annuler pleine largeur sur mobile`
+- `fix: changeSlot détecte échec load() après modification créneau`
+
+---
+
+## Travail précédent (Session 131)
+
+**Notifications email manager + préférences :**
+- `sendAdminNotificationEmail()` : notif vers manager DD du spectacle (derviche_manager_id) pour nouvelles résas, annulations, modifications
+- 3 toggles dans préférences admin : `email_notification_new_reservation`, `email_notification_cancellation`, `email_notification_modification`
+- `escapeHtml()` dans tous les templates email
+- `isBooleanSettingTrue()` : utilitaire pour lire les booléens JSONB depuis app_settings
+- Fix JSONB bool : correction stockage/lecture des toggles en DB
+- Section Notifications dans /admin/settings/preferences
+- **Score audit : 8.7/10**
+
+---
+
+## Travail précédent (Session 130)
+
+**Fix flash logout :**
+- `logout-button.tsx` : `window.location.href` (pas `router.push`) + ref `isMounted`
+- Layouts professional + company : `LoadingScreen` si `!isAuthenticated` + timeout 4s → `AccessDenied` avec lien `/login`
+- `AccessDenied` seulement pour utilisateur connecté avec mauvais rôle
+
+---
+
+## Travail précédent (Session 129)
 
 **Emails transactionnels — Confirmation de réservation (Resend) :**
 
 - Achat domaine `derviche-pro.fr` (O2switch) + DNS configurés (DKIM, SPF MX, SPF TXT, DMARC)
 - Domaine vérifié dans Resend (région EU Frankfurt — RGPD)
 - Service `src/lib/services/email.ts` : `sendReservationConfirmationEmail()` avec template HTML complet
-- Template branding Derviche (bleu #1e3a5f, or #c9a84c), responsive, variables dynamiques
 - Route API `POST /api/emails/send-confirmation` avec validation Zod
-- Envoi déclenché **uniquement** à la soumission du formulaire (`spectacle/[slug]/page.tsx`), non-bloquant
 - Configuration expéditeur lue depuis `app_settings` (DB) : `email_from_name`, `email_from_address`, `email_reply_to`
 - Expéditeur : `reservations@derviche-pro.fr` | Réponse : `contact@derviche-pro.fr`
-- Fix `reply_to` → `replyTo` (API Resend v2)
-- Fix double envoi : suppression de l'envoi parasite dans `confirmation/page.tsx`
-
-**Corrections sécurité auth :**
-
-- `.single()` → `.maybeSingle()` sur tous les appels `profiles` (middleware, login, LoginForm, useSidebarUserData)
-- Fix middleware : vérification profil désactivé/supprimé via **service role key** (bypasse RLS `deleted_at IS NULL`)
-- Distinction `deleted_at` vs `disabled_at` dans tous les points de contrôle :
-  - `deleted_at` → *"Ce compte a été supprimé. Vous pouvez créer un nouveau compte."*
-  - `disabled_at` → *"Votre compte a été désactivé. Contactez un administrateur."*
-- Suppression du toast "Connexion réussie" prématuré — la redirection vers le dashboard suffit
-- Guard `getUserRole` avant toute redirection (évite redirect sans destination)
-
-**Corrections TypeScript :**
-
-- Import `useRef` manquant dans `confirmation/page.tsx`
-- `result.data` possibly undefined dans `spectacle/[slug]/page.tsx`
-- `reply_to` → `replyTo` dans `email.ts`
-
-**Corrections post-audit (3 priorités) :**
-
-- API `POST /api/emails/send-confirmation` : vérification réservation en base + correspondance email (service role)
-- `confirmation/page.tsx` : suppression fallbacks de démo (Jean Dupont, UUID fictif), écran "Lien invalide" si params manquants
-- `useSidebarUserData` : `transformData` exclu des deps `useEffect` (stable via `useCallback`), commentaire explicatif
-
-**Correction sécurité post-audit : check statut compte (deleted_at invisible aux RLS) :**
-
-- Nouveau Server Action `src/lib/actions/auth.ts` : `checkAccountStatus(userId, accessToken)` — utilise service role + valide l'access_token, bypasse RLS `deleted_at IS NULL`
-- Nouvelle API route `POST /api/auth/check-account-status` (backup)
-- `login/page.tsx` + `LoginForm.tsx` : appelent le Server Action après `signInWithPassword`, avec try-catch fail-open (middleware prend le relais si échec)
-- `not_found` traité comme `deleted` → même message "Ce compte a été supprimé"
-
-**À faire (dette mineure) :**
-- Flash "Accès interdit/refusé" au moment de la déconnexion — à investiguer
-
-**Scores audit Cursor :** 7,8/10 → estimé 8,5/10 après corrections
-
-**Commits :** à compléter
 
 ---
 
 ## Travail précédent (Session 128)
 
 **Refonte UX modale professionnels :**
-- Avatar initiales `bg-derviche` dans le header
-- Structure affichée sous l'email dans le header
-- Bouton Modifier intégré dans la rangée d'actions (plus en pleine largeur dans l'onglet)
-- `isEditing` remonté dans `ProfessionalModal` — reset automatique au changement d'onglet
-- `InfoRow` layout horizontal (label fixe `w-28` + valeur inline) — ~30% moins de scroll
-- `cursor-pointer` sur les boutons ✕ des modales (ProfessionalModal + ProfessionalColumnSelectorDialog)
-
-**Refonte cards réservations (onglet Réservations de la modale) :**
-- Layout 3 colonnes : bloc date (jour/mois) + infos condensées (titre, lieu, places) + badge statut
-- Résumé en haut : nb réservations · places confirmées
-- Tri intelligent : futures (date ASC) en premier, passées (date DESC) atténuées
-- Labels "À venir" / "Passées" avec aria-label
-
-**Deep-link réservations :**
-- Clic sur une card → `/admin/reservations?reservationId=xxx`
-- Auto-ouverture de la dialog de détail, nettoyage URL via `history.replaceState`
-- UUID validation avant appel API
-
-**Colonnes configurables + Export CSV :**
-- `useProfessionalsColumnsPreference` : persistance Supabase (key `admin_professionals_columns`)
-- `ProfessionalColumnSelectorDialog` : 7 colonnes optionnelles
-- Export CSV BOM UTF-8 (compatible Excel), sans dépendance externe
-- `xlsx` et `exceljs` exclus (vulnérabilités sans correctif disponible)
-
-**Mise à jour sécurité :**
-- Next.js → 16.1.6 (fix 3 vulnérabilités DoS)
-- Vulnérabilités restantes : chaîne eslint uniquement (dev, jamais en prod)
-
-**Fix stale closure (détecté par Cursor AI) :**
-- `handleUpdate` dans `useProfessionalsPage.ts` utilisait `professionals.find()` dans une closure potentiellement obsolète
-- Corrigé : `setDrawerState(prev => { ...prev.professional, ...data })` via setter fonctionnel
-- `professionals` retiré des dépendances de `useCallback`
-
-**Scores audit Cursor :**
-- ProfessionalModal : 8,5/10
-- ProfessionalReservations : 8,75/10
-- ProfessionalColumnSelectorDialog : 8,6/10
-- **Score global session : 8,6/10**
-
-**Commits :**
-- `feat(ux): refonte modale professionnels + cards réservations`
-- `fix(audit): corrections post-audit S128 UX`
-- `fix(stale-closure): handleUpdate utilise prev.professional au lieu de professionals.find`
-- `Merge dev → main: S128 complète — UX modale + fix stale closure`
-
----
-
-## Travail précédent (Session 127)
-
-**Espace professionnel /professional/mon-compte :**
-- 4 sections : Informations personnelles, Informations professionnelles, Adresse, Sécurité
-- Fix bug country prefill (fallback 'France' écrasait la valeur réelle)
-- Pattern `if (!profile) return null` pour TypeScript narrowing
-- RGPD reporté
-
----
-
-## Travail précédent (Session 126)
-
-**Rapatriement réservations guest :**
-- RPC `get_guest_reservations` + `claim_selected_reservations`
-- Hook `useGuestReservationsClaim`
-- `GuestReservationsBanner` : bannière dismissible dans l'espace pro
-- `profiles` : +postal_code / city / country / email2 / phone2 / afc_number
+- Avatar initiales, InfoRow horizontal, cards réservations 3 colonnes
+- Deep-link réservations (`/admin/reservations?reservationId=xxx`)
+- Colonnes configurables avec persistance Supabase
+- Export CSV BOM UTF-8 natif (sans xlsx/exceljs)
+- Fix stale closure dans `useProfessionalsPage.ts`
+- **Score global : 8.6/10**
 
 ---
 
 ## À faire
 
-### Fonctionnalités restantes (cahier des charges)
-- [x] ~~Emails transactionnels~~ — **Confirmation réservation ✅ (Session 129)**
-- [ ] Email d'annulation de réservation
-- [ ] Template email : amélioration visuelle (logo Derviche, footer légal, lien désabonnement)
-- [ ] Rappels automatiques (Vercel Cron ou Supabase pg_cron)
-- [ ] Purge RGPD automatique
-- [ ] **Gestion suppression complète compte (RGPD)** : lors d'un `deleted_at`, appeler `supabase.auth.admin.deleteUser(userId)` pour libérer l'email et permettre la réinscription. À implémenter dans une session dédiée RGPD.
-- [ ] Affichage `organization_name` dans les emails et le catalogue public
+### Sessions planifiées
 
-### Améliorations identifiées (Préférences admin)
-Voir liste de 20 améliorations dans version Session 121.
+| Session | Objectif | Priorité |
+|---------|----------|----------|
+| **S133** | Audit préférences admin (app_settings consommées vs stockées) + suppression bannière "non connecté" dans `email-section.tsx` | 🔴 Haute |
+| **S134** | Affichage `organization_name` dans emails + catalogue public | 🟠 Moyenne |
+| **S135** | Rappels automatiques J-7/J-2 (Vercel Cron ou Supabase pg_cron) | 🟠 Moyenne |
+| **S136** | Système notifications admin (badge lu/non-lu, table `admin_notifications`) | 🟡 Basse |
+| **S137** | RGPD suppression compte (`supabase.auth.admin.deleteUser` quand `deleted_at`) | 🟡 Basse |
+
+### Fonctionnalités restantes (cahier des charges)
+- [x] ~~Emails transactionnels~~ — Confirmation ✅ S129 / Annulation ✅ S131 / Modification ✅ S132
+- [ ] Rappels automatiques (Vercel Cron ou Supabase pg_cron) — S135
+- [ ] Purge RGPD automatique — S137
+- [ ] Suppression compte RGPD (`supabase.auth.admin.deleteUser`) — S137
+- [ ] Affichage `organization_name` dans emails et catalogue public — S134
+- [ ] Bannière "non connecté" à supprimer dans `email-section.tsx` (Resend actif depuis S129) — S133
+- [ ] ⚠️ `email_catalogue_url` en DB pointe encore Vercel (pas derviche-pro.fr) — corriger en S133
 
 ---
 
 ## ⚠️ DETTE TECHNIQUE — Section Préférences Admin
 
-**Date d'audit :** 18 février 2026
-**Statut :** Données sauvegardées mais non consommées
+**Date d'audit :** 18 février 2026 (mis à jour S132)
+**Statut :** Données sauvegardées mais partiellement consommées
 
 | Section | Données stockées | Utilisées | Bloquant |
 |---|---|---|---|
 | Apparence | Thème + logos | ✅ Sidebar admin | Non |
-| Organisation | Nom, email, tél, adresse | ⚠️ Seulement `organization_name` (alt logo sidebar) | Non |
-| Email | `email_from_name`, `email_from_address` | ✅ Confirmation réservation (Session 129) | Partiel |
+| Organisation | Nom, email, tél, adresse | ⚠️ `organization_name` = alt logo sidebar seulement | Non |
+| Email | `email_from_name`, `email_from_address`, `email_reply_to` | ✅ Tous les emails transactionnels | ✅ OK |
+| Notifications | 3 toggles new/cancellation/modification | ✅ Lus dans les 3 routes email | ✅ OK |
 | Rappels | `reminder_enabled_7d/2d/12h` | ❌ Aucun job planifié | Oui |
 | RGPD | Durées de conservation | ❌ Aucune purge automatique | Oui |
-
-### Fonctionnalités à construire pour activer ces sections
-- [ ] Système d'envoi d'emails transactionnels (confirmation réservation, annulation)
-- [ ] Affichage de `organization_name` dans les emails et le catalogue public
-- [ ] Job planifié pour les rappels automatiques (Vercel Cron ou Supabase pg_cron)
-- [ ] Job de purge RGPD automatique
+| `email_catalogue_url` | URL catalogue dans les emails | ⚠️ Pointe encore Vercel pas derviche-pro.fr | Mineur |
 
 ---
 
@@ -224,3 +189,4 @@ Voir liste de 20 améliorations dans version Session 121.
 |---------|-------------|
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
 | `lib/utils/export-professionals.ts` | Export CSV uniquement — xlsx/exceljs exclus (vulnérabilités sans fix) |
+| `app_settings` (DB) | `email_catalogue_url` pointe Vercel → à corriger vers derviche-pro.fr |
