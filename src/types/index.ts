@@ -8,3 +8,6 @@ export * from './database';
 
 // Types métier pour les réservations
 export * from './reservation';
+
+// Types pour les templates email
+export * from './email-templates';

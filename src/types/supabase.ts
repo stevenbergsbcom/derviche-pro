@@ -139,6 +139,63 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          body_text: string
+          contact_block_title: string
+          created_at: string
+          cta_text: string
+          header_title: string
+          id: string
+          info_text: string
+          intro_text: string
+          is_active: boolean
+          name: string
+          salutation: string
+          show_contact_block: boolean
+          show_reservation_code: boolean
+          subject: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          body_text?: string
+          contact_block_title?: string
+          created_at?: string
+          cta_text?: string
+          header_title?: string
+          id?: string
+          info_text?: string
+          intro_text?: string
+          is_active?: boolean
+          name: string
+          salutation?: string
+          show_contact_block?: boolean
+          show_reservation_code?: boolean
+          subject: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          body_text?: string
+          contact_block_title?: string
+          created_at?: string
+          cta_text?: string
+          header_title?: string
+          id?: string
+          info_text?: string
+          intro_text?: string
+          is_active?: boolean
+          name?: string
+          salutation?: string
+          show_contact_block?: boolean
+          show_reservation_code?: boolean
+          subject?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null

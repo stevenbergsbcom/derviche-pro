@@ -34,14 +34,6 @@ const emailSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
-  email_confirmation_subject: z
-    .string()
-    .min(1, 'Requis')
-    .max(200, 'Maximum 200 caractères'),
-  email_cancellation_subject: z
-    .string()
-    .min(1, 'Requis')
-    .max(200, 'Maximum 200 caractères'),
   email_signature: z
     .string()
     .max(200, 'Maximum 200 caractères')
@@ -66,8 +58,6 @@ const DEFAULT_VALUES: EmailFormData = {
   email_from_name: '',
   email_from_address: '',
   email_reply_to: '',
-  email_confirmation_subject: 'Votre réservation est confirmée — Derviche Diffusion',
-  email_cancellation_subject: 'Annulation de votre réservation — Derviche Diffusion',
   email_signature: "L'équipe Derviche Diffusion",
   email_footer_text: 'Derviche Diffusion — contact@derviche-pro.fr',
 };
@@ -117,12 +107,6 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         email_from_name: data.email_from_name || '',
         email_from_address: data.email_from_address || '',
         email_reply_to: data.email_reply_to || '',
-        email_confirmation_subject:
-          data.email_confirmation_subject ||
-          DEFAULT_VALUES.email_confirmation_subject,
-        email_cancellation_subject:
-          data.email_cancellation_subject ||
-          DEFAULT_VALUES.email_cancellation_subject,
         email_signature: data.email_signature || DEFAULT_VALUES.email_signature,
         email_footer_text: data.email_footer_text || DEFAULT_VALUES.email_footer_text,
       });
@@ -144,8 +128,6 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
       email_from_name: formData.email_from_name || null,
       email_from_address: formData.email_from_address || null,
       email_reply_to: formData.email_reply_to || null,
-      email_confirmation_subject: formData.email_confirmation_subject || null,
-      email_cancellation_subject: formData.email_cancellation_subject || null,
       email_signature: formData.email_signature || null,
       email_footer_text: formData.email_footer_text || null,
     };
@@ -251,50 +233,9 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
 
       <Separator />
 
-      {/* ── Objets des emails ──────────────────────── */}
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Objets des emails
-      </p>
-
-      {/* Objet confirmation */}
-      <div className="space-y-2">
-        <Label htmlFor="email_confirmation_subject">
-          Confirmation de réservation <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="email_confirmation_subject"
-          placeholder="Votre réservation est confirmée — Derviche Diffusion"
-          disabled={!canEdit}
-          {...register('email_confirmation_subject')}
-        />
-        {errors.email_confirmation_subject && (
-          <p className="text-sm text-destructive">
-            {errors.email_confirmation_subject.message}
-          </p>
-        )}
-      </div>
-
-      {/* Objet annulation */}
-      <div className="space-y-2">
-        <Label htmlFor="email_cancellation_subject">
-          Annulation de réservation <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="email_cancellation_subject"
-          placeholder="Annulation de votre réservation — Derviche Diffusion"
-          disabled={!canEdit}
-          {...register('email_cancellation_subject')}
-        />
-        {errors.email_cancellation_subject && (
-          <p className="text-sm text-destructive">
-            {errors.email_cancellation_subject.message}
-          </p>
-        )}
-      </div>
-
-      <Separator />
-
       {/* ── Contenu commun ─────────────────────────── */}
+      {/* Note : les objets des emails sont désormais éditables
+          dans l'onglet "Templates" (migration 051 — S134B) */}
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         Contenu commun
       </p>

@@ -115,7 +115,45 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 3. Envoyer l'email de confirmation au professionnel
-    const result = await sendReservationConfirmationEmail(payload);
+    // Récupérer le manager Derviche pour le bloc contact
+    let confirmManagerName: string | null = null;
+    let confirmManagerEmail: string | null = null;
+    let confirmManagerPhone: string | null = null;
+
+    try {
+      const { data: showData } = await adminClient
+        .from('reservations')
+        .select('slots!inner(shows!inner(derviche_manager_id))')
+        .eq('id', payload.reservationId)
+        .maybeSingle();
+
+      const managerId = (showData as unknown as {
+        slots: { shows: { derviche_manager_id: string | null } };
+      } | null)?.slots?.shows?.derviche_manager_id;
+
+      if (managerId) {
+        const { data: mgr } = await adminClient
+          .from('profiles')
+          .select('first_name, last_name, email, phone')
+          .eq('id', managerId)
+          .maybeSingle();
+
+        if (mgr) {
+          confirmManagerName  = `${mgr.first_name ?? ''} ${mgr.last_name ?? ''}`.trim() || null;
+          confirmManagerEmail = mgr.email ?? null;
+          confirmManagerPhone = (mgr as unknown as { phone?: string | null }).phone ?? null;
+        }
+      }
+    } catch (mgrErr) {
+      logger.warn('[API /emails/send-confirmation] Erreur récupération manager (non-bloquant)', { mgrErr });
+    }
+
+    const result = await sendReservationConfirmationEmail({
+      ...payload,
+      managerName:  confirmManagerName,
+      managerEmail: confirmManagerEmail,
+      managerPhone: confirmManagerPhone,
+    });
 
     if (!result.success) {
       logger.error('[API /emails/send-confirmation] Échec envoi', {
