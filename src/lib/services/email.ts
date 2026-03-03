@@ -794,7 +794,7 @@ function getFallbackTemplate(key: string): EmailTemplate {
       contact_block_title: 'Votre contact Derviche Diffusion', show_contact_block: true, show_reservation_code: false,
     },
     admin_notification: {
-      header_title: 'Notification Admin', subject: '[{{organisation}}] {{spectacle}}',
+      header_title: 'Notification Admin', subject: '[{{organisation}}] {{événement}} — {{nom}} / {{spectacle}}',
       intro_text: '', body_text: '', info_text: '',
       salutation: '', cta_text: 'Voir dans l\'admin →',
       contact_block_title: '', show_contact_block: false, show_reservation_code: false,
@@ -909,10 +909,18 @@ export async function sendAdminNotificationEmail(
     const html     = buildAdminNotificationHtml(data, config, template, appUrl);
 
     // Sujet lu depuis le template DB (comme les autres emails)
-    // Variables disponibles : {{spectacle}}, {{organisation}}
+    // Variables disponibles : {{spectacle}}, {{organisation}}, {{prénom}}, {{nom}}, {{événement}}
+    const eventLabels: Record<typeof data.eventType, string> = {
+      new_reservation: 'Nouvelle réservation',
+      cancellation:    'Annulation',
+      modification:    'Modification',
+    };
     const rawSubjectVars: EmailTemplateVariables = {
-      spectacle: data.showTitle,
+      spectacle:    data.showTitle,
       organisation: config.organizationName,
+      prénom:       data.guestFullName.trim().split(' ')[0] ?? data.guestFullName,
+      nom:          data.guestFullName,
+      événement:    eventLabels[data.eventType],
     };
     const subject = resolveTemplateVariables(template.subject, rawSubjectVars);
 
