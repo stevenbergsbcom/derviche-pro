@@ -7,7 +7,7 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Building2, Mail, Bell, Shield, Palette } from 'lucide-react';
+import { Building2, Mail, Bell, Shield, Palette, FileText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,17 +30,18 @@ export interface PreferenceTab {
 // ============================================
 
 export const PREFERENCE_TABS: PreferenceTab[] = [
-  { id: 'organization', label: 'Organisation', icon: Building2, status: 'partial', statusLabel: 'Partiel' },
-  { id: 'appearance', label: 'Apparence', icon: Palette, status: 'active', statusLabel: 'Actif' },
-  { id: 'email', label: 'Email', icon: Mail, status: 'active', statusLabel: 'Actif' },
-  { id: 'notifications', label: 'Notifications', icon: Bell, status: 'active', statusLabel: 'Actif' },
-  { id: 'reminders', label: 'Rappels', icon: Bell, status: 'inactive', statusLabel: 'Non connecté' },
-  { id: 'rgpd', label: 'RGPD', icon: Shield, status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'organization',  label: 'Organisation',  icon: Building2, status: 'partial',  statusLabel: 'Partiel' },
+  { id: 'appearance',    label: 'Apparence',      icon: Palette,   status: 'active',   statusLabel: 'Actif' },
+  { id: 'email',         label: 'Email',          icon: Mail,      status: 'active',   statusLabel: 'Actif' },
+  { id: 'templates',     label: 'Templates',      icon: FileText,  status: 'active',   statusLabel: 'Actif' },
+  { id: 'notifications', label: 'Notifications',  icon: Bell,      status: 'active',   statusLabel: 'Actif' },
+  { id: 'reminders',     label: 'Rappels',        icon: Bell,      status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'rgpd',          label: 'RGPD',           icon: Shield,    status: 'inactive', statusLabel: 'Non connecté' },
 ];
 
 const STATUS_STYLES: Record<PreferenceTab['status'], string> = {
-  active: 'bg-green-100 text-green-700',
-  partial: 'bg-orange-100 text-orange-700',
+  active:   'bg-green-100 text-green-700',
+  partial:  'bg-orange-100 text-orange-700',
   inactive: 'bg-gray-100 text-gray-500',
 };
 
@@ -51,9 +52,7 @@ export const DEFAULT_TAB = 'organization';
 // ============================================
 
 interface PreferencesTabsProps {
-  /** Onglet actif */
   activeTab: string;
-  /** Callback de changement d'onglet */
   onTabChange: (tab: string) => void;
 }
 
@@ -64,7 +63,8 @@ interface PreferencesTabsProps {
 export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps) {
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-      <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+      {/* h-auto pour ne pas clipper les triggers flex-col à 2 lignes */}
+      <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto gap-0.5 p-1">
         {PREFERENCE_TABS.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -72,7 +72,7 @@ export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps
               key={tab.id}
               value={tab.id}
               className={cn(
-                'flex flex-col items-center gap-0.5 py-2',
+                'flex flex-col items-center gap-0.5 py-2 h-auto cursor-pointer',
                 'data-[state=active]:bg-primary data-[state=active]:text-primary-foreground'
               )}
             >
@@ -100,13 +100,10 @@ export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps
 // HOOK
 // ============================================
 
-/**
- * Hook pour gérer l'onglet actif via query params
- */
 export function usePreferencesTab() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+  const router       = useRouter();
+  const pathname     = usePathname();
 
   const activeTab = searchParams.get('tab') || DEFAULT_TAB;
 
