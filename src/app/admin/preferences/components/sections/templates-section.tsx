@@ -100,18 +100,15 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
         )
       );
 
-      const loaded: EmailTemplate[] = [];
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        if (result?.success && result.data) {
-          loaded.push(result.data);
-        } else {
-          setLoadError(`Erreur lors du chargement du template "${TEMPLATE_KEYS[i]}"`);
-          setIsLoading(false);
-          return;
-        }
+      // Traitement après résolution complète de Promise.all
+      // (on n'interrompt pas la boucle pour traiter toutes les réponses)
+      const firstError = results.findIndex((r) => !r?.success || !r.data);
+      if (firstError !== -1) {
+        setLoadError(`Erreur lors du chargement du template "${TEMPLATE_KEYS[firstError]}"`);
+        return;
       }
 
+      const loaded = results.map((r) => r.data as EmailTemplate);
       setTemplates(loaded);
     } catch {
       setLoadError('Erreur réseau — impossible de charger les templates');

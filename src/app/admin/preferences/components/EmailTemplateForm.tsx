@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/tooltip';
 
 import { EmailPreviewModal } from './EmailPreviewModal';
+import { logger } from '@/lib/logger';
 import { EMAIL_TEMPLATE_VARIABLES } from '@/types/email-templates';
 import type { EmailTemplate } from '@/types/email-templates';
 
@@ -204,7 +205,8 @@ export function EmailTemplateForm({
       toast.success('Template sauvegardé');
       reset(values);
       onSaved?.();
-    } catch {
+    } catch (error) {
+      logger.error('EmailTemplateForm submit error', { error });
       toast.error('Erreur réseau — veuillez réessayer');
     } finally {
       setIsSaving(false);
@@ -242,7 +244,7 @@ export function EmailTemplateForm({
 
         {/* Bandeau modifications non sauvegardées */}
         {isDirty && (
-          <div className="flex items-center gap-2 rounded-md bg-orange-50 border border-orange-200 px-3 py-2">
+          <div role="alert" className="flex items-center gap-2 rounded-md bg-orange-50 border border-orange-200 px-3 py-2">
             <AlertCircle className="h-4 w-4 text-orange-500 shrink-0" />
             <span className="text-xs text-orange-700">Modifications non sauvegardées</span>
           </div>
