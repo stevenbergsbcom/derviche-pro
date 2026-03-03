@@ -104,6 +104,9 @@ export function buildAdminNotificationHtml(
         ${buildCtaBlock(safeCtaText, detailUrl)}
 
         <tr>
+          <td style="height:24px;"></td>
+        </tr>
+        <tr>
           <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:16px 40px;text-align:center;">
             <p style="margin:0;font-size:11px;color:#9ca3af;">Notification automatique — ${safeFooterText}</p>
           </td>

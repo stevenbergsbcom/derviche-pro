@@ -112,8 +112,9 @@ export function buildSignatureBlock(safeSalutation: string, safeSignature: strin
 
 /**
  * Bloc CTA conditionnel.
- * @param safeCtaText Texte du bouton (déjà échappé)
- * @param href        URL du bouton
+ * @param safeCtaText Texte du bouton (déjà échappé via escapeHtml)
+ * @param href        URL du bouton — doit être contrôlée côté serveur (appUrl, catalogueUrl, detailUrl).
+ *                    Ne jamais passer une URL fournie directement par l'utilisateur.
  * @param color       Couleur de fond du bouton (hex)
  */
 export function buildCtaBlock(safeCtaText: string, href: string, color = '#1e3a5f'): string {
@@ -134,6 +135,9 @@ export function buildCtaBlock(safeCtaText: string, href: string, color = '#1e3a5
  */
 export function buildFooterRow(safeFooterText: string): string {
   return `
+          <tr>
+            <td style="height:24px;"></td>
+          </tr>
           <tr>
             <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">${safeFooterText}</p>

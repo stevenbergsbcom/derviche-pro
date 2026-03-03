@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 134B — 3 mars 2026
+> Dernière mise à jour : Session 134B-suite — 3 mars 2026
 
 ---
 
@@ -39,17 +39,13 @@
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
-- Fix bug country prefill
 - Rapatriement réservations guest (GuestReservationsBanner)
 - /professional/reservations : liste réservations à venir + historique
 - Changement de créneau en self-service (ProChangeSlotDialog)
-- UX mobile : boutons empilés pleine largeur (Modifier / Voir / Annuler)
 
 ### ✅ Company (100%)
 - Dashboard compagnie
-- Liste/filtres réservations
-- Statistiques
-- Export
+- Liste/filtres réservations, statistiques, export
 - Mon compte
 
 ### ✅ Emails transactionnels (100%)
@@ -62,131 +58,84 @@
 | Notification manager (annulation) | inclus dans send-cancellation | ✅ S131 |
 | Notification manager (modification) | inclus dans send-modification | ✅ S132 |
 
-### ✅ Templates email dynamiques (100%) — S134A + S134B
+### ✅ Templates email dynamiques (100%) — S134A + S134B + S134B-suite
 - Table `email_templates` (migration 051) avec 4 templates en DB
 - Champs éditables : `subject`, `intro_text`, `body_text`, `info_text`, `header_title`, `salutation`, `cta_text`, `contact_block_title`
 - Champs booléens : `show_contact_block`, `show_reservation_code`, `is_active`
 - Service `email-templates.ts` : `getEmailTemplate()`, `resolveTemplateVariables()`, `textToHtml()`
-- Service `email.ts` : refonte complète — tous les builders lisent les champs depuis DB
-- **UI admin : onglet "Templates" dans /admin/preferences — S134B** ✅
-- **Score audit S134A : 10/10**
-- **⚠️ Audit S134B : NON ENCORE FAIT — à faire en priorité en début de session suivante**
-
-### ✅ Autres (100%)
-- Thème & logos dynamiques (presets, upload Supabase)
-- PWA : service worker, manifest
-- Export CSV natif pour professionnels (sans dépendance xlsx/exceljs)
-- Sidebar partagée (logo dynamique, logout)
+- **Service email refactorisé → 8 modules** (`src/lib/services/email/`) — score audit 9/10
+- **UI admin : onglet "Templates" dans /admin/preferences** ✅
+- **⚠️ Relecture des templates en DB souhaitée** — voir section "À faire"
 
 ---
 
-## Dernier travail (Session 134B)
+## Dernier travail (Session 134B-suite — 3 mars 2026)
 
-**UI admin édition templates email :**
+### Corrections post-audit S134B
 
-### Nouveaux fichiers créés
-- `src/app/admin/preferences/components/EmailPreviewModal.tsx` — Dialog avec iframe pour aperçu HTML live du template via route API
-- `src/app/admin/preferences/components/EmailTemplateForm.tsx` — Formulaire Zod/RHF complet : objet, en-tête, intro, corps, info, CTA, toggles, salutation (en dernier = avant signature). Badges variables cliquables avec insertion au curseur.
-- `src/app/admin/preferences/components/sections/templates-section.tsx` — 4 accordéons dépliables (1 par template), badge "Non sauvegardé", chargement parallèle via Promise.all
+| Fichier | Bug | Fix |
+|---------|-----|-----|
+| `EmailPreviewModal.tsx` | Pas de timeout si iframe silencieuse | Timeout 10s + `role="alert"` |
+| `EmailTemplateForm.tsx` | Double `register()` sur 4 champs RHF | Destructuration avant `return` |
+| `EmailTemplateForm.tsx` | `focusProps` typé `string` | Typé `keyof TemplateFormValues` ✅ |
+| `templates-section.tsx` | `res.json()` sans vérifier `res.ok` | Vérification `if (!res.ok)` |
+| `preview/route.ts` | Regex `\$&` invalide → variables non substituées | `escapeRegExp()` avec callback arrow |
+| `email-templates.ts` | `{{événement}}` absent des badges UI | Ajout dans `EMAIL_TEMPLATE_VARIABLES` |
 
-### Fichiers modifiés
-- `src/app/admin/preferences/components/preferences-tabs.tsx` — Ajout onglet "Templates" (FileText icon, statut Actif) positionné **après Email** (4ème), 7 onglets total, grille `lg:grid-cols-7`, `h-auto` sur TabsList, `cursor-pointer` sur triggers
-- `src/app/admin/preferences/components/preferences-content.tsx` — Import + rendu `EmailTemplatesSection`, callback `handleTemplatesDirty`
-- `src/app/admin/preferences/components/sections/index.ts` — Export `EmailTemplatesSection`
-- `src/components/ui/accordion.tsx` — Ajout `cursor-pointer` sur `AccordionTrigger` (Radix UI écrasait cursor-default sinon)
-- `src/app/api/admin/email-templates/[key]/route.ts` — Fix Zod `.issues` (pas `.errors`)
-- `src/lib/services/email-templates.ts` — Ajout champ `événement?` dans `EmailTemplateVariables` + `resolveTemplateVariables`
-- `src/app/api/admin/email-templates/[key]/preview/route.ts` — Suppression import `NextResponse` inutilisé, ajout `{{événement}}` dans PREVIEW_VARS, salutation rendue **juste avant la signature** (pas avant l'intro)
+### Refactoring `email.ts` → 8 modules (score audit 9/10)
 
-### Routes API (créées en S134B Tâche 1)
-- `GET /api/admin/email-templates/[key]` — Lecture d'un template par clé
-- `PATCH /api/admin/email-templates/[key]` — Mise à jour des champs éditables
-- `GET /api/admin/email-templates/[key]/preview` — Génération HTML avec données fictives (query params pour preview live)
+```
+src/lib/services/email/
+├── index.ts              ← 4 fonctions send...() + re-exports types
+├── types.ts              ← toutes les interfaces
+├── config.ts             ← getEmailConfig() depuis app_settings
+├── html-helpers.ts       ← escapeHtml, extractFirstName, build*Block
+├── fallbacks.ts          ← getFallbackTemplate()
+└── builders/
+    ├── confirmation.ts
+    ├── cancellation.ts
+    ├── modification.ts
+    └── admin-notification.ts
+```
 
-### Composants installés
-- `shadcn/ui accordion` — installé via `npx shadcn@latest add accordion`
-
-### Bugs UX corrigés
-- Onglet Templates déplacé après Email (était après Notifications)
-- `cursor-pointer` sur accordéons (fix dans `accordion.tsx` shadcn)
-- Dernier accordéon sans border-b → `last:!border-b` (écrase `last:border-b-0` de shadcn)
-- `h-auto` sur TabsList pour éviter le clipping des triggers sur 2 lignes
-- 2 croix de fermeture dans EmailPreviewModal → supprimé le bouton X manuel (DialogContent en fournit un natif)
-- Salutation placée en dernier dans le formulaire ET dans le HTML preview (juste avant signature)
-
-**Commits mergés sur main :**
-- `feat(S134B): UI admin édition templates email`
-
----
-
-## Travail précédent (Session 134A)
-
-**Templates email dynamiques depuis DB :**
-- Migration 051, service `email-templates.ts`, refonte `email.ts`, module `format-date.ts`
-- **Score audit : 10/10**
-
----
-
-## Travail précédent (Session 133)
-
-**Audit app_settings + nettoyage préférences :**
-- Migration 050 : `theme_preset`, `logo_white_url`, `logo_dark_url`, `organization_address`
-- Section Email : 7 champs
-- **Score audit : 8.3/10**
+**Règle respectée :** imports depuis `@/lib/services/email` inchangés (résolution via `index.ts`).
+**Build :** ✅ `type-check && lint && build` passent.
 
 ---
 
 ## À faire (prochaines sessions)
 
-### ⚡ IMMÉDIAT — Début de prochaine session
+### ⚡ IMMÉDIAT — Début de S135
 
-1. **Faire l'audit Cursor** sur le travail S134B (UI Templates) — pas encore fait
-2. **Refactoring `email.ts`** — fichier de **46 Ko / ~850 lignes** à découper en modules
+1. **Relecture des templates email en DB** — Après le refactoring des builders HTML,
+   il faut vérifier que le contenu par défaut des 4 templates (`subject`, `intro_text`, etc.)
+   est cohérent avec la nouvelle structure et les nouvelles variables disponibles.
+   → Ouvrir `/admin/preferences` → onglet Templates → passer en revue les 4 templates.
 
-### Plan de refactoring `email.ts` (décidé en S134B)
+2. **S135 : Rappels automatiques J-7/J-2** (Vercel Cron)
 
-Le fichier `src/lib/services/email.ts` est trop volumineux. Structure cible :
-
-```
-src/lib/services/email/
-├── index.ts                    ← point d'entrée, exporte les 4 fonctions send...()
-├── types.ts                    ← toutes les interfaces (ReservationConfirmationEmailData, etc.)
-├── config.ts                   ← getEmailConfig() — lecture app_settings
-├── html-helpers.ts             ← escapeHtml, extractFirstName, build*Block (blocs partagés)
-├── fallbacks.ts                ← getFallbackTemplate() pour les 4 templates
-└── builders/
-    ├── confirmation.ts         ← buildConfirmationHtml()
-    ├── cancellation.ts         ← buildCancellationHtml()
-    ├── modification.ts         ← buildModificationHtml()
-    └── admin-notification.ts   ← buildAdminNotificationHtml()
-```
-
-**Règles du refactoring :**
-- Zéro changement fonctionnel — uniquement découpage
-- Les imports depuis `@/lib/services/email` doivent continuer à fonctionner (via `index.ts`)
-- Vérifier `npm run type-check && npm run lint && npm run build` après
-- Merger sur main après validation
-
-### Sessions planifiées (après refactoring)
+### Sessions planifiées
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S135** | Rappels automatiques J-7/J-2 (Vercel Cron ou Supabase pg_cron) | 🟠 Moyenne |
-| **S136** | Système notifications admin (badge lu/non-lu, table `admin_notifications`) | 🟡 Basse |
+| **S135** | Rappels automatiques J-7/J-2 (Vercel Cron) | 🟠 Haute |
+| **S136** | Système notifications admin (badge lu/non-lu) | 🟡 Moyenne |
 | **S137** | RGPD suppression compte | 🟡 Basse |
 
 ---
 
 ## ⚠️ DETTE TECHNIQUE
 
-| Élément | Description | Priorité |
-|---------|-------------|----------|
-| `email.ts` | Fichier 46 Ko / ~850 lignes — refactoring en modules planifié (prochaine session) | 🔴 Haute |
-| `email_catalogue_url` en DB | Pointe encore Vercel, pas `derviche-pro.fr/catalogue` | 🟠 À corriger |
-| `organization_logo_url` | Doublon à supprimer (remplacé par onglet Apparence migration 050) | 🟡 Basse |
-| Rappels admin | `reminder_enabled_7d/2d/12h` stockés mais aucun job planifié | 🟠 S135 |
-| RGPD | Durées de conservation stockées mais aucune purge automatique | 🟡 S137 |
-| **Audit S134B** | UI Templates — audit Cursor pas encore fait | 🔴 À faire immédiatement |
+| Élément | Fichier | Description | Priorité |
+|---------|---------|-------------|----------|
+| Zod sur query params | `preview/route.ts` | Pas de validation Zod sur les query params (admin uniquement, risque faible) | 🟡 Basse |
+| `email_catalogue_url` en DB | `app_settings` | Pointe encore Vercel, pas `derviche-pro.fr/catalogue` | 🟠 À corriger |
+| `organization_logo_url` | DB | Doublon à supprimer (remplacé par onglet Apparence migration 050) | 🟡 Basse |
+| Rappels auto | — | `reminder_enabled_7d/2d/12h` stockés, aucun job planifié | 🟠 S135 |
+| RGPD | — | Durées de conservation stockées, aucune purge automatique | 🟡 S137 |
+| Relecture templates DB | `/admin/preferences` → Templates | Vérifier cohérence contenu après refactoring builders | 🟠 S135 |
+| Factorisation builders | `src/lib/services/email/builders/` | Pattern résolution template dupliqué entre builders (acceptable, à factoriser si nouveaux types d'emails) | 🟡 Basse |
+| Types variables sujet admin | `types/email-templates.ts` | Interface dédiée pour variables sujet `admin_notification` (actuellement `EmailTemplateVariables` générique) | 🟡 Basse |
 
 ---
 
@@ -194,8 +143,8 @@ src/lib/services/email/
 
 | Fichier | Description |
 |---------|-------------|
-| `src/lib/services/email.ts` | 46 Ko — à refactoriser en `src/lib/services/email/` (plan ci-dessus) |
-| `src/components/ui/accordion.tsx` | `cursor-pointer` ajouté manuellement (shadcn ne l'inclut pas par défaut) |
+| `src/components/ui/accordion.tsx` | `cursor-pointer` ajouté manuellement (shadcn ne l'inclut pas) |
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
 | `lib/utils/export-professionals.ts` | Export CSV uniquement — xlsx/exceljs exclus (vulnérabilités sans fix) |
 | `app_settings` (DB) | `email_catalogue_url` pointe Vercel → à corriger vers `derviche-pro.fr` |
+| `src/lib/services/email/` | `index.ts` re-exporte tous les types de `types.ts` pour compatibilité imports existants |

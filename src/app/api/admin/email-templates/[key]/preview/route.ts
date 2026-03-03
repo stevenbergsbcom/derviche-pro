@@ -2,7 +2,9 @@
  * API Route — Aperçu HTML d'un template email
  * GET /api/admin/email-templates/[key]/preview
  *
- * Génère un rendu HTML d'un template avec des données fictives.
+ * Génère un rendu HTML d'un template avec des données fictives,
+ * en utilisant les VRAIS builders — rendu identique aux emails envoyés.
+ *
  * Les valeurs du formulaire peuvent être passées en query string
  * pour prévisualiser les modifications avant sauvegarde.
  *
@@ -10,8 +12,19 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { getEmailConfig } from '@/lib/services/email/config';
+import { buildConfirmationHtml }    from '@/lib/services/email/builders/confirmation';
+import { buildCancellationHtml }    from '@/lib/services/email/builders/cancellation';
+import { buildModificationHtml }    from '@/lib/services/email/builders/modification';
+import { buildAdminNotificationHtml } from '@/lib/services/email/builders/admin-notification';
 import { logger } from '@/lib/logger';
-import type { EmailTemplateKey } from '@/types/email-templates';
+import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
+import type {
+  ReservationConfirmationEmailData,
+  ReservationCancellationEmailData,
+  ReservationModificationEmailData,
+  AdminNotificationEmailData,
+} from '@/lib/services/email/types';
 
 // ============================================
 // TYPES
@@ -21,64 +34,80 @@ interface RouteContext {
   params: Promise<{ key: string }>;
 }
 
-interface PreviewData {
-  header_title: string;
-  salutation: string;
-  intro_text: string;
-  body_text: string;
-  info_text: string;
-  cta_text: string;
-  contact_block_title: string;
-  show_contact_block: boolean;
-  show_reservation_code: boolean;
-  subject: string;
-}
-
 // ============================================
 // DONNÉES FICTIVES POUR LA PREVIEW
 // ============================================
 
-const PREVIEW_VARS: Record<string, string> = {
-  '{{prénom}}':       'Marie',
-  '{{nom}}':          'Dupont',
-  '{{spectacle}}':    'Le Bal des Âmes',
-  '{{date}}':         'mercredi 15 avril 2026',
-  '{{heure}}':        '19h30',
-  '{{lieu}}':         'Théâtre de la Ville',
-  '{{organisation}}': 'Maison de la Culture de Bordeaux',
-  '{{code}}':         'RES-2026-0042',
-  '{{événement}}':    'Nouvelle réservation',
+const MOCK_CONFIRMATION: ReservationConfirmationEmailData = {
+  to: 'marie.dupont@theatre-ville.fr',
+  guestFullName: 'Marie Dupont',
+  reservationCode: 'RES-2026-0042',
+  reservationId: 'preview-id',
+  showTitle: 'Le Bal des Âmes',
+  showSlug: 'le-bal-des-ames',
+  companyName: 'Compagnie des Miroirs',
+  slotDateFormatted: 'mercredi 15 avril 2026',
+  slotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  numPlaces: 2,
+  managerName: 'Sophie Lefèvre',
+  managerEmail: 'sophie@derviche-pro.fr',
+  managerPhone: '06 12 34 56 78',
 };
 
-// Échappe tous les caractères spéciaux regex dans une chaîne.
-// On utilise une callback pour éviter l'ambiguïté du pattern $& dans
-// les chaînes de remplacement de String.prototype.replace().
-function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, (char) => `\\${char}`);
-}
+const MOCK_CANCELLATION: ReservationCancellationEmailData = {
+  to: 'marie.dupont@theatre-ville.fr',
+  guestFullName: 'Marie Dupont',
+  reservationId: 'preview-id',
+  showTitle: 'Le Bal des Âmes',
+  showSlug: 'le-bal-des-ames',
+  companyName: 'Compagnie des Miroirs',
+  slotDateFormatted: 'mercredi 15 avril 2026',
+  slotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  numPlaces: 2,
+  cancellationReason: 'Indisponibilité imprévue',
+  managerName: 'Sophie Lefèvre',
+  managerEmail: 'sophie@derviche-pro.fr',
+  managerPhone: '06 12 34 56 78',
+};
 
-function resolvePreviewVars(text: string): string {
-  if (!text) return '';
-  return Object.entries(PREVIEW_VARS).reduce(
-    (acc, [variable, value]) =>
-      acc.replace(new RegExp(escapeRegExp(variable), 'g'), value),
-    text
-  );
-}
+const MOCK_MODIFICATION: ReservationModificationEmailData = {
+  to: 'marie.dupont@theatre-ville.fr',
+  guestFullName: 'Marie Dupont',
+  reservationId: 'preview-id',
+  showTitle: 'Le Bal des Âmes',
+  showSlug: 'le-bal-des-ames',
+  companyName: 'Compagnie des Miroirs',
+  oldSlotDateFormatted: 'mardi 14 avril 2026',
+  oldSlotTimeFormatted: '14h00',
+  newSlotDateFormatted: 'mercredi 15 avril 2026',
+  newSlotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  numPlaces: 2,
+  managerName: 'Sophie Lefèvre',
+  managerEmail: 'sophie@derviche-pro.fr',
+  managerPhone: '06 12 34 56 78',
+};
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function textToHtmlLines(text: string): string {
-  if (!text) return '';
-  return escapeHtml(text).replace(/\n/g, '<br />');
-}
+const MOCK_ADMIN_NOTIFICATION: AdminNotificationEmailData = {
+  to: 'manager@derviche-pro.fr',
+  adminName: 'Sophie Lefèvre',
+  eventType: 'new_reservation',
+  guestFullName: 'Marie Dupont',
+  guestEmail: 'marie.dupont@theatre-ville.fr',
+  guestStructure: 'Théâtre de la Ville — Bordeaux',
+  showTitle: 'Le Bal des Âmes',
+  slotDateFormatted: 'mercredi 15 avril 2026',
+  slotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  numPlaces: 2,
+  reservationId: 'preview-id',
+  cancellationReason: null,
+};
 
 // ============================================
 // VALIDATION
@@ -96,121 +125,67 @@ function isValidKey(key: string): key is EmailTemplateKey {
 }
 
 // ============================================
-// GÉNÉRATION DU HTML
+// MAPPING query params → EmailTemplate
 // ============================================
 
-function generatePreviewHtml(data: PreviewData, templateKey: EmailTemplateKey): string {
-  const headerTitle  = resolvePreviewVars(escapeHtml(data.header_title));
-  const salutation   = resolvePreviewVars(escapeHtml(data.salutation));
-  const introText    = resolvePreviewVars(textToHtmlLines(data.intro_text));
-  const bodyText     = resolvePreviewVars(textToHtmlLines(data.body_text));
-  const infoText     = resolvePreviewVars(textToHtmlLines(data.info_text));
-  const ctaText      = resolvePreviewVars(escapeHtml(data.cta_text));
-  const contactTitle = resolvePreviewVars(escapeHtml(data.contact_block_title));
+function buildTemplateFromParams(
+  q: URLSearchParams,
+  key: EmailTemplateKey
+): EmailTemplate {
+  return {
+    id: 'preview',
+    template_key: key,
+    name: key,
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    header_title:          q.get('header_title')          ?? '',
+    subject:               q.get('subject')               ?? '',
+    salutation:            q.get('salutation')            ?? '',
+    intro_text:            q.get('intro_text')            ?? '',
+    body_text:             q.get('body_text')             ?? '',
+    info_text:             q.get('info_text')             ?? '',
+    cta_text:              q.get('cta_text')              ?? '',
+    contact_block_title:   q.get('contact_block_title')   ?? '',
+    show_contact_block:    q.get('show_contact_block')    === 'true',
+    show_reservation_code: q.get('show_reservation_code') === 'true',
+  };
+}
 
-  const isConfirmation = templateKey === 'reservation_confirmation';
+// ============================================
+// GÉNÉRATION HTML via les vrais builders
+// ============================================
 
-  const summaryBlock = `
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:6px;border:1px solid #e0e0e0;margin:20px 0;">
-      <tr>
-        <td style="padding:20px;">
-          <p style="margin:0 0 10px;font-size:14px;color:#555;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;">Récapitulatif</p>
-          <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding:6px 0;color:#333;font-size:14px;width:40%;font-weight:600;">Spectacle</td><td style="padding:6px 0;color:#333;font-size:14px;">Le Bal des Âmes</td></tr>
-            <tr><td style="padding:6px 0;color:#333;font-size:14px;font-weight:600;">Date</td><td style="padding:6px 0;color:#333;font-size:14px;">mercredi 15 avril 2026</td></tr>
-            <tr><td style="padding:6px 0;color:#333;font-size:14px;font-weight:600;">Heure</td><td style="padding:6px 0;color:#333;font-size:14px;">19h30</td></tr>
-            <tr><td style="padding:6px 0;color:#333;font-size:14px;font-weight:600;">Lieu</td><td style="padding:6px 0;color:#333;font-size:14px;">Théâtre de la Ville</td></tr>
-            <tr><td style="padding:6px 0;color:#333;font-size:14px;font-weight:600;">Places</td><td style="padding:6px 0;color:#333;font-size:14px;">2 place(s)</td></tr>
-            ${isConfirmation && data.show_reservation_code
-              ? `<tr><td style="padding:6px 0;color:#333;font-size:14px;font-weight:600;">Code</td><td style="padding:6px 0;color:#333;font-size:14px;font-family:monospace;background:#eee;padding:2px 6px;border-radius:4px;">RES-2026-0042</td></tr>`
-              : ''}
-          </table>
-        </td>
-      </tr>
-    </table>`;
+function generatePreviewHtml(
+  template: EmailTemplate,
+  config: Awaited<ReturnType<typeof getEmailConfig>>,
+  appUrl: string
+): string {
+  switch (template.template_key) {
+    case 'reservation_confirmation':
+      return buildConfirmationHtml(MOCK_CONFIRMATION, config, template, appUrl);
+    case 'reservation_cancellation':
+      return buildCancellationHtml(MOCK_CANCELLATION, config, template);
+    case 'reservation_modification':
+      return buildModificationHtml(MOCK_MODIFICATION, config, template, appUrl);
+    case 'admin_notification':
+      return buildAdminNotificationHtml(MOCK_ADMIN_NOTIFICATION, config, template, appUrl);
+  }
+}
 
-  const infoBlock = infoText ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">
-      <tr>
-        <td style="padding:16px;background:#fff8e1;border-left:4px solid #f59e0b;border-radius:0 6px 6px 0;">
-          <p style="margin:0;font-size:14px;color:#78350f;">${infoText}</p>
-        </td>
-      </tr>
-    </table>` : '';
+// ============================================
+// BANNIÈRE DE PREVIEW (injectée dans le <body>)
+// ============================================
 
-  const ctaBlock = ctaText ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;text-align:center;">
-      <tr>
-        <td align="center">
-          <a href="#" style="display:inline-block;background:#1e3a5f;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;">${ctaText}</a>
-        </td>
-      </tr>
-    </table>` : '';
-
-  const contactBlock = data.show_contact_block ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #e0e0e0;padding-top:20px;">
-      <tr>
-        <td>
-          <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#1e3a5f;">${contactTitle || "Besoin d'aide ?"}</p>
-          <p style="margin:0;font-size:13px;color:#555;">contact@derviche-pro.fr &bull; derviche-pro.fr</p>
-        </td>
-      </tr>
-    </table>` : '';
-
-  const signatureBlock = salutation
-    ? `<p style="margin:24px 0 0;font-size:14px;color:#555;">${salutation}<br /><strong>L'équipe Derviche Diffusion</strong></p>`
-    : `<p style="margin:24px 0 0;font-size:14px;color:#555;font-style:italic;"><strong>L'équipe Derviche Diffusion</strong></p>`;
-
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Aperçu email — ${headerTitle}</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { margin: 0; padding: 20px; background: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: #333; }
-    .preview-banner { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 6px; padding: 8px 16px; margin-bottom: 16px; font-size: 12px; color: #92400e; text-align: center; }
-    .email-wrapper { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  </style>
-</head>
-<body>
-  <div class="preview-banner">
-    ⚠️ Aperçu avec données fictives — Les variables <code>{{prénom}}</code>, <code>{{spectacle}}</code>... sont remplacées par des exemples
-  </div>
-  <div class="email-wrapper">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e3a5f;">
-      <tr>
-        <td style="padding:28px 32px;text-align:center;">
-          <p style="margin:0;font-size:13px;color:#a8c0d6;text-transform:uppercase;letter-spacing:1px;font-weight:500;">Derviche Diffusion</p>
-          <h1 style="margin:8px 0 0;font-size:22px;color:#ffffff;font-weight:700;">${headerTitle}</h1>
-        </td>
-      </tr>
-    </table>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <tr>
-        <td style="padding:32px;">
-          ${introText  ? `<p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.6;">${introText}</p>` : ''}
-          ${summaryBlock}
-          ${infoBlock}
-          ${bodyText   ? `<p style="margin:20px 0;font-size:15px;color:#333;line-height:1.6;">${bodyText}</p>` : ''}
-          ${ctaBlock}
-          ${signatureBlock}
-          ${contactBlock}
-        </td>
-      </tr>
-    </table>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;border-top:1px solid #e0e0e0;">
-      <tr>
-        <td style="padding:16px 32px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#888;">Derviche Diffusion — contact@derviche-pro.fr</p>
-          <p style="margin:4px 0 0;font-size:11px;color:#aaa;">Vous recevez cet email car vous avez un compte sur derviche-pro.fr</p>
-        </td>
-      </tr>
-    </table>
-  </div>
-</body>
-</html>`;
+function injectPreviewBanner(html: string): string {
+  const banner = `
+  <div style="background:#fef3c7;border-bottom:2px solid #f59e0b;padding:10px 20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#92400e;">
+    ⚠️ <strong>Aperçu avec données fictives</strong> — Les variables sont remplacées par des exemples. Le rendu est identique à l'email réellement envoyé.
+  </div>`;
+  return html.replace(
+    /(<body[^>]*>)/,
+    `$1${banner}`
+  );
 }
 
 // ============================================
@@ -249,27 +224,20 @@ export async function GET(
       return new Response('Droits insuffisants', { status: 403 });
     }
 
-    const url = new URL(request.url);
-    const q   = url.searchParams;
+    const url    = new URL(request.url);
+    const q      = url.searchParams;
+    const appUrl = `${url.protocol}//${url.host}`;
 
-    let previewData: PreviewData;
+    // Charger la config email depuis app_settings (même source que les vrais envois)
+    const config = await getEmailConfig();
+
+    let template: EmailTemplate;
 
     if (q.has('subject')) {
-      // Données depuis le formulaire (preview live)
-      previewData = {
-        header_title:          q.get('header_title')          ?? '',
-        subject:               q.get('subject')               ?? '',
-        salutation:            q.get('salutation')            ?? '',
-        intro_text:            q.get('intro_text')            ?? '',
-        body_text:             q.get('body_text')             ?? '',
-        info_text:             q.get('info_text')             ?? '',
-        cta_text:              q.get('cta_text')              ?? '',
-        contact_block_title:   q.get('contact_block_title')   ?? '',
-        show_contact_block:    q.get('show_contact_block')    === 'true',
-        show_reservation_code: q.get('show_reservation_code') === 'true',
-      };
+      // Preview live depuis le formulaire admin (avant sauvegarde)
+      template = buildTemplateFromParams(q, key);
     } else {
-      // Données depuis la base de données (template sauvegardé)
+      // Preview du template sauvegardé en DB
       const { data: dbTemplate, error } = await supabase
         .from('email_templates')
         .select('*')
@@ -281,13 +249,21 @@ export async function GET(
         return new Response('Template introuvable', { status: 404 });
       }
 
-      previewData = {
+      // Mapping explicite depuis la forme Supabase vers EmailTemplate
+      // (évite des champs undefined si le schéma DB diverge)
+      template = {
+        id:                    dbTemplate.id                    ?? 'unknown',
+        template_key:          dbTemplate.template_key          as EmailTemplateKey,
+        name:                  dbTemplate.name                  ?? '',
+        is_active:             dbTemplate.is_active             ?? true,
+        created_at:            dbTemplate.created_at            ?? '',
+        updated_at:            dbTemplate.updated_at            ?? '',
         header_title:          dbTemplate.header_title          ?? '',
         subject:               dbTemplate.subject               ?? '',
-        salutation:            dbTemplate.salutation            ?? '',
         intro_text:            dbTemplate.intro_text            ?? '',
         body_text:             dbTemplate.body_text             ?? '',
         info_text:             dbTemplate.info_text             ?? '',
+        salutation:            dbTemplate.salutation            ?? '',
         cta_text:              dbTemplate.cta_text              ?? '',
         contact_block_title:   dbTemplate.contact_block_title   ?? '',
         show_contact_block:    dbTemplate.show_contact_block    ?? false,
@@ -295,9 +271,10 @@ export async function GET(
       };
     }
 
-    const html = generatePreviewHtml(previewData, key);
+    const rawHtml   = generatePreviewHtml(template, config, appUrl);
+    const finalHtml = injectPreviewBanner(rawHtml);
 
-    return new Response(html, {
+    return new Response(finalHtml, {
       status: 200,
       headers: {
         'Content-Type': 'text/html; charset=utf-8',

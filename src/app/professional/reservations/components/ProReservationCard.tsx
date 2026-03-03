@@ -46,14 +46,25 @@ function formatDateLong(dateStr: string): string {
 
 function formatTime(timeStr: string): string {
   // Format aligné avec ProChangeSlotDialog : "11h00" au lieu de "11:00"
-  const [hours, minutes] = timeStr.slice(0, 5).split(':');
+  // timeStr attendu : HH:MM ou HH:MM:SS (format Supabase time)
+  const parts = timeStr.slice(0, 5).split(':');
+  const hours   = parts[0] ?? '00';
+  const minutes = parts[1] ?? '00';
   return `${hours}h${minutes}`;
 }
 
-/** Retourne true si la réservation peut encore être annulée (date du slot > maintenant + 24h) */
+/**
+ * Retourne true si la réservation peut encore être annulée (date du slot > maintenant + 24h).
+ * slot.date : YYYY-MM-DD, slot.time : HH:MM ou HH:MM:SS (format Supabase)
+ * On normalise à HH:MM:SS pour garantir un ISO 8601 valide.
+ */
 function isCancellable(reservation: ProReservation): boolean {
   if (reservation.status === 'cancelled' || reservation.status === 'no_show') return false;
-  const slotDateTime = new Date(`${reservation.slot.date}T${reservation.slot.time}`);
+  // Normalisation : HH:MM → HH:MM:00 pour éviter une Date invalide
+  const rawTime     = reservation.slot.time ?? '00:00:00';
+  const normalTime  = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+  const slotDateTime = new Date(`${reservation.slot.date}T${normalTime}`);
+  if (isNaN(slotDateTime.getTime())) return false; // date invalide → sécurité fail-closed
   const now = new Date();
   const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   return slotDateTime > cutoff;
@@ -116,7 +127,7 @@ export function ProReservationCard({
       setCancelOpen(false);
     } else {
       toast.error(result.error ?? 'Une erreur est survenue lors de l\'annulation.');
-      throw new Error(result.error ?? 'Annulation échouée');
+      // Pas de throw : le toast suffit, le dialog reste ouvert pour permettre de réessayer
     }
   };
 
@@ -127,7 +138,7 @@ export function ProReservationCard({
       setChangeSlotOpen(false);
     } else {
       toast.error(result.error ?? 'Une erreur est survenue lors de la modification.');
-      throw new Error(result.error ?? 'Modification échouée');
+      // Pas de throw : le toast suffit, le dialog reste ouvert pour permettre de réessayer
     }
   };
 
@@ -313,7 +324,7 @@ export function ProReservationCard({
             </Button>
           )}
           {!canCancel && !canChangeSlot && !reservation.show_slug && (
-            <div className="w-16" />
+            <div className="w-16" aria-hidden="true" />
           )}
         </div>
       </div>
