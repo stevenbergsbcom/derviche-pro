@@ -908,8 +908,13 @@ export async function sendAdminNotificationEmail(
     const template = tplResult.data ?? getFallbackTemplate('admin_notification');
     const html     = buildAdminNotificationHtml(data, config, template, appUrl);
 
-    const eventLabels = { new_reservation: 'Nouvelle réservation', cancellation: 'Annulation', modification: 'Modification' };
-    const subject = `[${config.organizationName}] ${eventLabels[data.eventType]} — ${data.guestFullName} pour ${data.showTitle}`;
+    // Sujet lu depuis le template DB (comme les autres emails)
+    // Variables disponibles : {{spectacle}}, {{organisation}}
+    const rawSubjectVars: EmailTemplateVariables = {
+      spectacle: data.showTitle,
+      organisation: config.organizationName,
+    };
+    const subject = resolveTemplateVariables(template.subject, rawSubjectVars);
 
     const { data: result, error } = await new Resend(apiKey).emails.send({
       from: `${config.fromName} <${config.fromAddress}>`, to: data.to, replyTo: config.replyTo, subject, html,
