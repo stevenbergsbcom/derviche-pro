@@ -32,10 +32,10 @@ export type EmailSettingKey =
   | 'email_from_name'
   | 'email_from_address'
   | 'email_reply_to'
-  | 'email_confirmation_subject'
-  | 'email_cancellation_subject'
   | 'email_signature'
   | 'email_footer_text';
+// Note: email_confirmation_subject et email_cancellation_subject
+// ont été migrés vers la table email_templates (migration 051)
 
 /** Clés de paramètres notifications email admin */
 export type NotificationSettingKey =
@@ -94,8 +94,6 @@ export interface EmailSettings {
   email_from_name: string | null;
   email_from_address: string | null;
   email_reply_to: string | null;
-  email_confirmation_subject: string | null;
-  email_cancellation_subject: string | null;
   email_signature: string | null;
   email_footer_text: string | null;
 }
@@ -146,8 +144,6 @@ export const EMAIL_SETTING_KEYS: EmailSettingKey[] = [
   'email_from_name',
   'email_from_address',
   'email_reply_to',
-  'email_confirmation_subject',
-  'email_cancellation_subject',
   'email_signature',
   'email_footer_text',
 ];
@@ -190,8 +186,6 @@ export const SETTING_LABELS: Record<string, string> = {
   email_from_name: 'Nom de l\'expéditeur',
   email_from_address: 'Adresse email de l\'expéditeur',
   email_reply_to: 'Adresse de réponse',
-  email_confirmation_subject: 'Objet email confirmation',
-  email_cancellation_subject: 'Objet email annulation',
   email_signature: 'Signature',
   email_footer_text: 'Pied de page',
   email_catalogue_url: 'URL du catalogue (emails)',
@@ -421,8 +415,6 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
       email_from_name: (result.data?.email_from_name as string) || null,
       email_from_address: (result.data?.email_from_address as string) || null,
       email_reply_to: (result.data?.email_reply_to as string) || null,
-      email_confirmation_subject: (result.data?.email_confirmation_subject as string) || null,
-      email_cancellation_subject: (result.data?.email_cancellation_subject as string) || null,
       email_signature: (result.data?.email_signature as string) || null,
       email_footer_text: (result.data?.email_footer_text as string) || null,
     },

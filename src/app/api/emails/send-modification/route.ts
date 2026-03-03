@@ -275,6 +275,17 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 9. Envoyer l'email de modification au professionnel
+    // Récupérer le téléphone du manager si disponible
+    let managerPhone: string | null = null;
+    if (show.derviche_manager_id) {
+      const { data: mgrFull } = await adminClient
+        .from('profiles')
+        .select('phone')
+        .eq('id', show.derviche_manager_id)
+        .maybeSingle();
+      managerPhone = (mgrFull as unknown as { phone?: string | null } | null)?.phone ?? null;
+    }
+
     const modificationData: ReservationModificationEmailData = {
       to: recipientEmail,
       guestFullName: recipientFullName,
@@ -289,6 +300,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       venueName: newVenue?.name ?? '',
       venueCity: newVenue?.city ?? '',
       numPlaces: reservation.num_places,
+      managerName:  managerName,
+      managerEmail: managerEmail,
+      managerPhone: managerPhone,
     };
 
     const emailResult = await sendReservationModificationEmail(modificationData);
