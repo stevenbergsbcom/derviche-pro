@@ -46,6 +46,9 @@ export interface EmailTemplateUpdateResult {
  * Variables de substitution pour le rendu des textes éditables.
  * Toutes les valeurs doivent être déjà échappées (escapeHtml) avant
  * d'être passées à resolveTemplateVariables.
+ *
+ * Note : `événement` est spécifique au template admin_notification
+ * (ex: "Nouvelle réservation", "Annulation", "Modification").
  */
 export interface EmailTemplateVariables {
   prénom?: string;
@@ -56,6 +59,8 @@ export interface EmailTemplateVariables {
   lieu?: string;
   code?: string;
   organisation?: string;
+  /** Spécifique au template admin_notification : libellé de l'événement déclencheur */
+  événement?: string;
 }
 
 // ============================================
@@ -204,7 +209,8 @@ export function resolveTemplateVariables(
     .replace(/\{\{heure\}\}/g,        variables.heure        ?? '{{heure}}')
     .replace(/\{\{lieu\}\}/g,         variables.lieu         ?? '{{lieu}}')
     .replace(/\{\{code\}\}/g,         variables.code         ?? '{{code}}')
-    .replace(/\{\{organisation\}\}/g, variables.organisation ?? '{{organisation}}');
+    .replace(/\{\{organisation\}\}/g, variables.organisation ?? '{{organisation}}')
+    .replace(/\{\{événement\}\}/g,    variables.événement    ?? '{{événement}}');
 }
 
 /**

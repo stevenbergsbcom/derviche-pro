@@ -25,6 +25,7 @@ import {
   NotificationsSection,
   RemindersSection,
   RgpdSection,
+  EmailTemplatesSection,
 } from './sections';
 
 // ============================================
@@ -69,116 +70,68 @@ function PreferencesInnerContent({
   onResetAllDirty,
 }: PreferencesInnerContentProps) {
   const { activeTab, setActiveTab } = usePreferencesTab();
-
-  // État pour le dialog de confirmation
   const [pendingTab, setPendingTab] = useState<string | null>(null);
 
-  // Handler de changement d'onglet avec confirmation si nécessaire
   const handleTabChange = useCallback(
     (newTab: string) => {
       if (hasUnsavedChanges) {
-        // Stocker l'onglet cible et ouvrir le dialog
         setPendingTab(newTab);
       } else {
-        // Pas de modifications, changer directement
         setActiveTab(newTab);
       }
     },
     [hasUnsavedChanges, setActiveTab]
   );
 
-  // Quand l'utilisateur confirme le changement d'onglet (abandonne les modifications)
   const handleConfirmTabChange = useCallback(() => {
     if (pendingTab) {
-      // Réinitialiser l'état dirty avant de changer d'onglet
       onResetAllDirty();
       setActiveTab(pendingTab);
       setPendingTab(null);
     }
   }, [pendingTab, setActiveTab, onResetAllDirty]);
 
-  // Quand l'utilisateur annule le changement d'onglet
   const handleCancelTabChange = useCallback(() => {
     setPendingTab(null);
   }, []);
 
-  // Callbacks stables pour chaque section (évite les re-renders infinis)
-  const handleOrganizationDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('organization', isDirty),
-    [onDirtyChange]
-  );
-
-  const handleAppearanceDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('appearance', isDirty),
-    [onDirtyChange]
-  );
-
-  const handleEmailDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('email', isDirty),
-    [onDirtyChange]
-  );
-
-  const handleNotificationsDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('notifications', isDirty),
-    [onDirtyChange]
-  );
-
-  const handleRemindersDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('reminders', isDirty),
-    [onDirtyChange]
-  );
-
-  const handleRgpdDirty = useCallback(
-    (isDirty: boolean) => onDirtyChange('rgpd', isDirty),
-    [onDirtyChange]
-  );
+  // Callbacks stables par section
+  const handleOrganizationDirty  = useCallback((d: boolean) => onDirtyChange('organization',  d), [onDirtyChange]);
+  const handleAppearanceDirty    = useCallback((d: boolean) => onDirtyChange('appearance',    d), [onDirtyChange]);
+  const handleEmailDirty         = useCallback((d: boolean) => onDirtyChange('email',         d), [onDirtyChange]);
+  const handleNotificationsDirty = useCallback((d: boolean) => onDirtyChange('notifications', d), [onDirtyChange]);
+  const handleRemindersDirty     = useCallback((d: boolean) => onDirtyChange('reminders',     d), [onDirtyChange]);
+  const handleTemplatesDirty     = useCallback((d: boolean) => onDirtyChange('templates',     d), [onDirtyChange]);
+  const handleRgpdDirty          = useCallback((d: boolean) => onDirtyChange('rgpd',          d), [onDirtyChange]);
 
   return (
     <>
-      {/* Navigation par onglets */}
       <PreferencesTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
-      {/* Contenu de l'onglet actif */}
       <div className="mt-6">
         {activeTab === 'organization' && (
-          <OrganizationSection
-            canEdit={canEdit}
-            onDirtyChange={handleOrganizationDirty}
-          />
+          <OrganizationSection  canEdit={canEdit} onDirtyChange={handleOrganizationDirty} />
         )}
         {activeTab === 'appearance' && (
-          <AppearanceSection
-            canEdit={canEdit}
-            onDirtyChange={handleAppearanceDirty}
-          />
+          <AppearanceSection    canEdit={canEdit} onDirtyChange={handleAppearanceDirty} />
         )}
         {activeTab === 'email' && (
-          <EmailSection
-            canEdit={canEdit}
-            onDirtyChange={handleEmailDirty}
-          />
+          <EmailSection         canEdit={canEdit} onDirtyChange={handleEmailDirty} />
         )}
         {activeTab === 'notifications' && (
-          <NotificationsSection
-            canEdit={canEdit}
-            onDirtyChange={handleNotificationsDirty}
-          />
+          <NotificationsSection canEdit={canEdit} onDirtyChange={handleNotificationsDirty} />
         )}
         {activeTab === 'reminders' && (
-          <RemindersSection
-            canEdit={canEdit}
-            onDirtyChange={handleRemindersDirty}
-          />
+          <RemindersSection     canEdit={canEdit} onDirtyChange={handleRemindersDirty} />
+        )}
+        {activeTab === 'templates' && (
+          <EmailTemplatesSection canEdit={canEdit} onDirtyChange={handleTemplatesDirty} />
         )}
         {activeTab === 'rgpd' && (
-          <RgpdSection
-            canEdit={canEdit}
-            onDirtyChange={handleRgpdDirty}
-          />
+          <RgpdSection          canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
         )}
       </div>
 
-      {/* Dialog de confirmation pour modifications non sauvegardées */}
       <UnsavedChangesDialog
         open={pendingTab !== null}
         onCancel={handleCancelTabChange}
@@ -195,37 +148,25 @@ function PreferencesInnerContent({
 export function PreferencesContent() {
   const { role, isLoading } = useCurrentUserRole();
 
-  // Suivi des modifications par section
   const [dirtyState, setDirtyState] = useState<Record<string, boolean>>({});
+  const hasUnsavedChanges = Object.values(dirtyState).some((d) => d);
 
-  // Calcul de l'état global
-  const hasUnsavedChanges = Object.values(dirtyState).some((isDirty) => isDirty);
-
-  // Avertissement navigateur si modifications non sauvegardées
   useUnsavedChangesWarning(hasUnsavedChanges);
 
-  // Callback pour mettre à jour l'état dirty d'une section
   const handleDirtyChange = useCallback((sectionId: string, isDirty: boolean) => {
-    setDirtyState((prev) => ({
-      ...prev,
-      [sectionId]: isDirty,
-    }));
+    setDirtyState((prev) => ({ ...prev, [sectionId]: isDirty }));
   }, []);
 
-  // Callback pour réinitialiser tout l'état dirty (quand on abandonne les modifications)
   const handleResetAllDirty = useCallback(() => {
     setDirtyState({});
   }, []);
 
-  // L'utilisateur peut modifier si super-admin
   const canEdit = role === 'super-admin';
 
-  // État de chargement du rôle
   if (isLoading) {
     return <PreferencesSkeleton />;
   }
 
-  // Seuls les super-admins ont accès
   if (role !== 'super-admin') {
     return (
       <div className="space-y-6">
@@ -244,8 +185,6 @@ export function PreferencesContent() {
   return (
     <div className="space-y-6">
       <AdminPageHeader title="Préférences" />
-
-      {/* Contenu avec Suspense pour useSearchParams */}
       <Suspense fallback={<Skeleton className="h-10 w-full" />}>
         <PreferencesInnerContent
           canEdit={canEdit}
