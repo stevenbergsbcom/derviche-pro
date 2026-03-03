@@ -114,11 +114,11 @@ export function EmailTemplateForm({
   const [isSaving, setIsSaving]       = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  // Refs pour insérer les variables dans le textarea focalisé
-  const introRef   = useRef<HTMLTextAreaElement>(null);
-  const bodyRef    = useRef<HTMLTextAreaElement>(null);
-  const infoRef    = useRef<HTMLTextAreaElement>(null);
-  const subjectRef = useRef<HTMLInputElement>(null);
+  // Refs DOM pour insérer les variables dans le champ focalisé
+  const introRef       = useRef<HTMLTextAreaElement>(null);
+  const bodyRef        = useRef<HTMLTextAreaElement>(null);
+  const infoRef        = useRef<HTMLTextAreaElement>(null);
+  const subjectRef     = useRef<HTMLInputElement>(null);
   const lastFocusedRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
 
   // Ref pour la callback dirty (évite les boucles infinies)
@@ -148,6 +148,13 @@ export function EmailTemplateForm({
       show_reservation_code: template.show_reservation_code ?? false,
     },
   });
+
+  // Destructuration des refs RHF — une seule fois, avant le return.
+  // Évite le double register() qui corromprait l'état interne de RHF.
+  const { ref: subjectRhfRef, ...subjectRegisterProps } = register('subject');
+  const { ref: introRhfRef,   ...introRegisterProps   } = register('intro_text');
+  const { ref: bodyRhfRef,    ...bodyRegisterProps    } = register('body_text');
+  const { ref: infoRhfRef,    ...infoRegisterProps    } = register('info_text');
 
   const showContactBlock = watch('show_contact_block');
   const isConfirmation   = template.template_key === 'reservation_confirmation';
@@ -230,9 +237,10 @@ export function EmailTemplateForm({
     };
   };
 
+  // Props communes pour les champs avec insertion de variables
   const focusProps = (
     ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>,
-    fieldName: string
+    fieldName: keyof TemplateFormValues
   ) => ({
     onFocus: () => { lastFocusedRef.current = ref.current; },
     'data-field': fieldName,
@@ -258,12 +266,9 @@ export function EmailTemplateForm({
           <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Input
             id={`subject-${template.template_key}`}
-            {...register('subject')}
+            {...subjectRegisterProps}
             {...focusProps(subjectRef, 'subject')}
-            ref={(el) => {
-              (register('subject') as { ref: (el: HTMLInputElement | null) => void }).ref(el);
-              (subjectRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
-            }}
+            ref={(el) => { subjectRhfRef(el); subjectRef.current = el; }}
             disabled={!canEdit}
             placeholder="Ex: Votre réservation est confirmée — {{organisation}}"
             className="font-mono text-sm"
@@ -294,12 +299,9 @@ export function EmailTemplateForm({
           <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Textarea
             id={`intro_text-${template.template_key}`}
-            {...register('intro_text')}
+            {...introRegisterProps}
             {...focusProps(introRef, 'intro_text')}
-            ref={(el) => {
-              (register('intro_text') as { ref: (el: HTMLTextAreaElement | null) => void }).ref(el);
-              (introRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-            }}
+            ref={(el) => { introRhfRef(el); introRef.current = el; }}
             disabled={!canEdit}
             rows={3}
             placeholder="Texte affiché en début d'email."
@@ -318,12 +320,9 @@ export function EmailTemplateForm({
           <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Textarea
             id={`body_text-${template.template_key}`}
-            {...register('body_text')}
+            {...bodyRegisterProps}
             {...focusProps(bodyRef, 'body_text')}
-            ref={(el) => {
-              (register('body_text') as { ref: (el: HTMLTextAreaElement | null) => void }).ref(el);
-              (bodyRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-            }}
+            ref={(el) => { bodyRhfRef(el); bodyRef.current = el; }}
             disabled={!canEdit}
             rows={4}
             placeholder="Texte affiché après le récapitulatif."
@@ -342,12 +341,9 @@ export function EmailTemplateForm({
           <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Textarea
             id={`info_text-${template.template_key}`}
-            {...register('info_text')}
+            {...infoRegisterProps}
             {...focusProps(infoRef, 'info_text')}
-            ref={(el) => {
-              (register('info_text') as { ref: (el: HTMLTextAreaElement | null) => void }).ref(el);
-              (infoRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el;
-            }}
+            ref={(el) => { infoRhfRef(el); infoRef.current = el; }}
             disabled={!canEdit}
             rows={3}
             placeholder="Affiché dans un encadré jaune. Laisser vide pour masquer."
@@ -428,7 +424,7 @@ export function EmailTemplateForm({
           </div>
         )}
 
-        {/* ── Formule de salutation (juste avant les boutons = juste avant la signature) ── */}
+        {/* Formule de salutation */}
         <div className="space-y-1.5">
           <Label htmlFor={`salutation-${template.template_key}`}>
             Formule de salutation

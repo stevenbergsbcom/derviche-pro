@@ -107,6 +107,8 @@ export const EMAIL_TEMPLATE_VARIABLES = [
   { key: '{{lieu}}',         description: 'Nom du lieu' },
   { key: '{{code}}',         description: 'Code de réservation' },
   { key: '{{organisation}}', description: 'Nom de l\'organisation' },
+  /** Spécifique au template admin_notification : libellé de l'événement (ex: "Nouvelle réservation") */
+  { key: '{{événement}}',    description: 'Type d\'événement (notification admin)' },
 ] as const;
 
 export type EmailTemplateVariableKey =

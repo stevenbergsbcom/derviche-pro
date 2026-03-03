@@ -94,10 +94,13 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
 
     try {
       const results = await Promise.all(
-        TEMPLATE_KEYS.map((key) =>
-          fetch(`/api/admin/email-templates/${key}`)
-            .then((res) => res.json() as Promise<{ success: boolean; data?: EmailTemplate; error?: string }>)
-        )
+        TEMPLATE_KEYS.map(async (key) => {
+          const res = await fetch(`/api/admin/email-templates/${key}`);
+          if (!res.ok) {
+            return { success: false as const, error: `HTTP ${res.status}` };
+          }
+          return res.json() as Promise<{ success: boolean; data?: EmailTemplate; error?: string }>;
+        })
       );
 
       // Traitement après résolution complète de Promise.all

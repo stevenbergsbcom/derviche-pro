@@ -50,11 +50,18 @@ const PREVIEW_VARS: Record<string, string> = {
   '{{événement}}':    'Nouvelle réservation',
 };
 
+// Échappe tous les caractères spéciaux regex dans une chaîne.
+// On utilise une callback pour éviter l'ambiguïté du pattern $& dans
+// les chaînes de remplacement de String.prototype.replace().
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, (char) => `\\${char}`);
+}
+
 function resolvePreviewVars(text: string): string {
   if (!text) return '';
   return Object.entries(PREVIEW_VARS).reduce(
     (acc, [variable, value]) =>
-      acc.replace(new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g'), value),
+      acc.replace(new RegExp(escapeRegExp(variable), 'g'), value),
     text
   );
 }
@@ -150,7 +157,6 @@ function generatePreviewHtml(data: PreviewData, templateKey: EmailTemplateKey): 
       </tr>
     </table>` : '';
 
-  // Salutation affichée juste avant la signature
   const signatureBlock = salutation
     ? `<p style="margin:24px 0 0;font-size:14px;color:#555;">${salutation}<br /><strong>L'équipe Derviche Diffusion</strong></p>`
     : `<p style="margin:24px 0 0;font-size:14px;color:#555;font-style:italic;"><strong>L'équipe Derviche Diffusion</strong></p>`;
@@ -173,7 +179,6 @@ function generatePreviewHtml(data: PreviewData, templateKey: EmailTemplateKey): 
     ⚠️ Aperçu avec données fictives — Les variables <code>{{prénom}}</code>, <code>{{spectacle}}</code>... sont remplacées par des exemples
   </div>
   <div class="email-wrapper">
-    <!-- HEADER -->
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e3a5f;">
       <tr>
         <td style="padding:28px 32px;text-align:center;">
@@ -182,27 +187,19 @@ function generatePreviewHtml(data: PreviewData, templateKey: EmailTemplateKey): 
         </td>
       </tr>
     </table>
-
-    <!-- BODY -->
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="padding:32px;">
-
           ${introText  ? `<p style="margin:0 0 20px;font-size:15px;color:#333;line-height:1.6;">${introText}</p>` : ''}
           ${summaryBlock}
           ${infoBlock}
           ${bodyText   ? `<p style="margin:20px 0;font-size:15px;color:#333;line-height:1.6;">${bodyText}</p>` : ''}
           ${ctaBlock}
-
-          <!-- Salutation + Signature (juste avant le bloc contact) -->
           ${signatureBlock}
           ${contactBlock}
-
         </td>
       </tr>
     </table>
-
-    <!-- FOOTER -->
     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;border-top:1px solid #e0e0e0;">
       <tr>
         <td style="padding:16px 32px;text-align:center;">
@@ -258,6 +255,7 @@ export async function GET(
     let previewData: PreviewData;
 
     if (q.has('subject')) {
+      // Données depuis le formulaire (preview live)
       previewData = {
         header_title:          q.get('header_title')          ?? '',
         subject:               q.get('subject')               ?? '',
@@ -271,6 +269,7 @@ export async function GET(
         show_reservation_code: q.get('show_reservation_code') === 'true',
       };
     } else {
+      // Données depuis la base de données (template sauvegardé)
       const { data: dbTemplate, error } = await supabase
         .from('email_templates')
         .select('*')
