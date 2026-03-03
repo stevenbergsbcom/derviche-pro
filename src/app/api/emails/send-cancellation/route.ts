@@ -28,6 +28,8 @@ import {
 } from '@/lib/services/email';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
+import type { UserRole } from '@/types/database';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -65,41 +67,6 @@ interface ReservationWithDetails {
       companies: { name: string } | null;
     };
   };
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Formater une date ISO en date lisible en français
- * ex: "2026-01-15" → "Jeudi 15 janvier 2026"
- */
-function formatDateFr(dateStr: string): string {
-  try {
-    const date = new Date(`${dateStr}T12:00:00`);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-/**
- * Formater une heure HH:MM:SS en HHhMM
- * ex: "11:00:00" → "11h00"
- */
-function formatTimeFr(timeStr: string): string {
-  try {
-    const [hours, minutes] = timeStr.split(':');
-    return `${hours}h${minutes}`;
-  } catch {
-    return timeStr;
-  }
 }
 
 // ============================================
@@ -204,7 +171,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    const userRole = userRoleData?.role as string | undefined;
+    const userRole = userRoleData?.role as UserRole | undefined;
     const isAdmin = userRole === 'super-admin' || userRole === 'admin';
     const isOwner = reservation.user_id === user.id;
 

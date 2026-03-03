@@ -333,11 +333,13 @@ function buildConfirmationHtml(
   const safeCompanyName = escapeHtml(data.companyName);
   const safeVenueName   = escapeHtml(data.venueName);
   const safeVenueCity   = escapeHtml(data.venueCity);
-  const safeCode        = escapeHtml(data.reservationCode);
-  const safeSalutation  = escapeHtml(resolvedSalutation);
-  const safeCtaText     = escapeHtml(resolvedCtaText);
-  const safeSignature   = escapeHtml(config.signature);
-  const safeFooterText  = escapeHtml(config.footerText);
+  const safeCode             = escapeHtml(data.reservationCode);
+  const safeDateFormatted    = escapeHtml(data.slotDateFormatted);
+  const safeTimeFormatted    = escapeHtml(data.slotTimeFormatted);
+  const safeSalutation       = escapeHtml(resolvedSalutation);
+  const safeCtaText          = escapeHtml(resolvedCtaText);
+  const safeSignature        = escapeHtml(config.signature);
+  const safeFooterText       = escapeHtml(config.footerText);
 
   const codeBlock = template.show_reservation_code ? `
           <tr>
@@ -389,8 +391,8 @@ function buildConfirmationHtml(
                 <table width="100%" cellpadding="0" cellspacing="0"><tr>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Date &amp; heure</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${data.slotDateFormatted}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${data.slotTimeFormatted}</p>
+                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeDateFormatted}</p>
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${safeTimeFormatted}</p>
                   </td>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
@@ -455,6 +457,8 @@ function buildCancellationHtml(
   const safeVenueName          = escapeHtml(data.venueName);
   const safeVenueCity          = escapeHtml(data.venueCity);
   const safeCancellationReason = escapeHtml(data.cancellationReason);
+  const safeDateFormatted      = escapeHtml(data.slotDateFormatted);
+  const safeTimeFormatted      = escapeHtml(data.slotTimeFormatted);
   const safeSalutation         = escapeHtml(resolvedSalutation);
   const safeCtaText            = escapeHtml(resolvedCtaText);
   const safeSignature          = escapeHtml(config.signature);
@@ -502,8 +506,8 @@ function buildCancellationHtml(
                 <table width="100%" cellpadding="0" cellspacing="0"><tr>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Date &amp; heure</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${data.slotDateFormatted}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${data.slotTimeFormatted}</p>
+                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeDateFormatted}</p>
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${safeTimeFormatted}</p>
                   </td>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
@@ -570,10 +574,14 @@ function buildModificationHtml(
   const safeCompanyName = escapeHtml(data.companyName);
   const safeVenueName   = escapeHtml(data.venueName);
   const safeVenueCity   = escapeHtml(data.venueCity);
-  const safeSalutation  = escapeHtml(resolvedSalutation);
-  const safeCtaText     = escapeHtml(resolvedCtaText);
-  const safeSignature   = escapeHtml(config.signature);
-  const safeFooterText  = escapeHtml(config.footerText);
+  const safeOldDate    = escapeHtml(data.oldSlotDateFormatted);
+  const safeOldTime    = escapeHtml(data.oldSlotTimeFormatted);
+  const safeNewDate    = escapeHtml(data.newSlotDateFormatted);
+  const safeNewTime    = escapeHtml(data.newSlotTimeFormatted);
+  const safeSalutation = escapeHtml(resolvedSalutation);
+  const safeCtaText    = escapeHtml(resolvedCtaText);
+  const safeSignature  = escapeHtml(config.signature);
+  const safeFooterText = escapeHtml(config.footerText);
 
   const bodyBlock = resolvedBody ? `
           <tr><td style="padding:12px 40px 0 40px;">
@@ -602,7 +610,7 @@ function buildModificationHtml(
         <tr><td style="padding:24px 40px 0 40px;">
           <p style="margin:0 0 8px 0;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">Ancien créneau</p>
           <div style="background-color:#f3f4f6;border-radius:8px;border:1px solid #e5e7eb;padding:14px 18px;">
-            <p style="margin:0;font-size:14px;color:#9ca3af;text-decoration:line-through;">${data.oldSlotDateFormatted} à ${data.oldSlotTimeFormatted}</p>
+            <p style="margin:0;font-size:14px;color:#9ca3af;text-decoration:line-through;">${safeOldDate} à ${safeOldTime}</p>
           </div>
         </td></tr>
 
@@ -619,8 +627,8 @@ function buildModificationHtml(
                 <table width="100%" cellpadding="0" cellspacing="0"><tr>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">Date &amp; heure</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${data.newSlotDateFormatted}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${data.newSlotTimeFormatted}</p>
+                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeNewDate}</p>
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">à ${safeNewTime}</p>
                   </td>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
@@ -675,16 +683,18 @@ function buildAdminNotificationHtml(
   const style     = eventStyles[data.eventType];
   const detailUrl = `${appUrl}/admin/reservations?reservationId=${data.reservationId}`;
 
-  const safeOrgName            = escapeHtml(config.organizationName);
-  const safeHeaderPrefix       = escapeHtml(resolvedHeaderPrefix);
-  const safeCtaText            = escapeHtml(resolvedCtaText);
-  const safeGuestFullName      = escapeHtml(data.guestFullName);
-  const safeGuestEmail         = escapeHtml(data.guestEmail);
-  const safeGuestStructure     = escapeHtml(data.guestStructure);
-  const safeShowTitle          = escapeHtml(data.showTitle);
-  const safeVenueName          = escapeHtml(data.venueName);
-  const safeCancellationReason = escapeHtml(data.cancellationReason);
-  const safeFooterText         = escapeHtml(config.footerText);
+  const safeOrgName             = escapeHtml(config.organizationName);
+  const safeHeaderPrefix        = escapeHtml(resolvedHeaderPrefix);
+  const safeCtaText             = escapeHtml(resolvedCtaText);
+  const safeGuestFullName       = escapeHtml(data.guestFullName);
+  const safeGuestEmail          = escapeHtml(data.guestEmail);
+  const safeGuestStructure      = escapeHtml(data.guestStructure);
+  const safeShowTitle           = escapeHtml(data.showTitle);
+  const safeVenueName           = escapeHtml(data.venueName);
+  const safeSlotDateFormatted   = escapeHtml(data.slotDateFormatted);
+  const safeSlotTimeFormatted   = escapeHtml(data.slotTimeFormatted);
+  const safeCancellationReason  = escapeHtml(data.cancellationReason);
+  const safeFooterText          = escapeHtml(config.footerText);
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -718,7 +728,7 @@ function buildAdminNotificationHtml(
               <table width="100%"><tr>
                 <td width="50%">
                   <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Date &amp; heure</p>
-                  <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${data.slotDateFormatted} à ${data.slotTimeFormatted}</p>
+                  <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${safeSlotDateFormatted} à ${safeSlotTimeFormatted}</p>
                 </td>
                 <td width="50%">
                   <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>

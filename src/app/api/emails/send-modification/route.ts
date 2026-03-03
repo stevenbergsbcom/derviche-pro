@@ -28,6 +28,7 @@ import {
 } from '@/lib/services/email';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
 import type { UserRole } from '@/types/database';
 
 // ============================================
@@ -74,33 +75,6 @@ interface SlotDetails {
   date: string;
   time: string;
   venues: { name: string; city: string } | null;
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDateFr(dateStr: string): string {
-  try {
-    const date = new Date(`${dateStr}T12:00:00`);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return dateStr;
-  }
-}
-
-function formatTimeFr(timeStr: string): string {
-  try {
-    const [hours, minutes] = timeStr.split(':');
-    return `${hours}h${minutes}`;
-  } catch {
-    return timeStr;
-  }
 }
 
 // ============================================
@@ -248,7 +222,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Aucun email destinataire', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Email destinataire introuvable' });
+      return NextResponse.json(
+        { success: false, error: 'Email destinataire introuvable' },
+        { status: 422 }
+      );
     }
 
     // 8. Récupérer le manager Derviche
@@ -259,11 +236,13 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     let managerName: string | null = null;
     let managerEmail: string | null = null;
+    let managerPhone: string | null = null;
 
+    // Requête unique pour toutes les infos du manager
     if (show.derviche_manager_id) {
       const { data: managerProfile } = await adminClient
         .from('profiles')
-        .select('first_name, last_name, email')
+        .select('first_name, last_name, email, phone')
         .eq('id', show.derviche_manager_id)
         .maybeSingle();
 
@@ -271,20 +250,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         managerName =
           `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() || null;
         managerEmail = managerProfile.email ?? null;
+        managerPhone = (managerProfile as { phone?: string | null }).phone ?? null;
       }
     }
 
     // 9. Envoyer l'email de modification au professionnel
-    // Récupérer le téléphone du manager si disponible
-    let managerPhone: string | null = null;
-    if (show.derviche_manager_id) {
-      const { data: mgrFull } = await adminClient
-        .from('profiles')
-        .select('phone')
-        .eq('id', show.derviche_manager_id)
-        .maybeSingle();
-      managerPhone = (mgrFull as unknown as { phone?: string | null } | null)?.phone ?? null;
-    }
 
     const modificationData: ReservationModificationEmailData = {
       to: recipientEmail,
