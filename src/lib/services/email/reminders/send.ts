@@ -13,7 +13,7 @@ import { getFallbackTemplate } from '../fallbacks';
 import { buildReminder7dHtml }  from '../builders/reminder-7d';
 import { buildReminder2dHtml }  from '../builders/reminder-2d';
 import { buildReminder12hHtml } from '../builders/reminder-12h';
-import { logReminderSent } from './queries';
+import { tryClaimReminder, updateReminderMessageId, releaseReminderClaim } from './queries';
 import { logger } from '@/lib/logger';
 import type { ReminderType, ReminderEmailData, ReminderResult } from './types';
 
@@ -74,28 +74,42 @@ export async function sendReminderEmail(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://derviche-pro.vercel.app';
 
   try {
-    // 1. Récupérer config + template en parallèle
+    // 1. Claim du slot avant envoi (optimistic lock anti race condition)
+    //    Si une autre instance cron a déjà pris ce slot → on saute proprement.
+    const claimed = await tryClaimReminder(data.reservationId, type, data.to);
+    if (!claimed) {
+      logger.info('[reminders/send] Slot déjà réclamé — envoi ignoré', {
+        type, reservationId: data.reservationId,
+      });
+      // On retourne success:true car ce n'est pas une erreur — l'email sera/a été envoyé
+      return {
+        reservationId: data.reservationId,
+        email: data.to,
+        success: true,
+        messageId: 'skipped-already-claimed',
+      };
+    }
+
+    // 2. Récupérer config + template en parallèle
     const [config, template] = await Promise.all([
       getEmailConfig(),
       resolveTemplate(type),
     ]);
 
-    // 2. Construire le HTML
+    // 3. Construire le HTML
     const html = buildHtml(type, data, config, template, appUrl);
 
-    // 3. Résoudre le subject (les variables sont déjà substituées dans le builder,
-    //    mais le subject est résolu séparément dans chaque builder via resolvedSubject.
-    //    On le re-résout ici pour l'objet Resend.)
+    // 4. Résoudre le subject
     const subject = template.subject
-      .replace(/\{\{prénom\}\}/g,    data.guestFullName.split(' ')[0] ?? '')
-      .replace(/\{\{nom\}\}/g,        data.guestFullName)
-      .replace(/\{\{spectacle\}\}/g,  data.showTitle)
-      .replace(/\{\{date\}\}/g,       data.slotDateFormatted)
-      .replace(/\{\{heure\}\}/g,      data.slotTimeFormatted)
-      .replace(/\{\{lieu\}\}/g,       data.venueName)
+      .replace(/\{\{prénom\}\}/g,      data.guestFullName.split(' ')[0] ?? '')
+      .replace(/\{\{nom\}\}/g,          data.guestFullName)
+      .replace(/\{\{spectacle\}\}/g,    data.showTitle)
+      .replace(/\{\{date\}\}/g,         data.slotDateFormatted)
+      .replace(/\{\{heure\}\}/g,        data.slotTimeFormatted)
+      .replace(/\{\{lieu\}\}/g,         data.venueName)
       .replace(/\{\{organisation\}\}/g, config.organizationName);
 
-    // 4. Envoyer via Resend
+    // 5. Envoyer via Resend
     const resend = new Resend(resendApiKey);
     const { data: resendData, error: resendError } = await resend.emails.send({
       from:    `${config.fromName} <${config.fromAddress}>`,
@@ -107,12 +121,11 @@ export async function sendReminderEmail(
 
     if (resendError || !resendData?.id) {
       const errMsg = resendError?.message ?? 'Erreur Resend inconnue';
-      logger.error('[reminders/send] Échec Resend', {
-        type,
-        reservationId: data.reservationId,
-        email: data.to,
-        error: errMsg,
+      logger.error('[reminders/send] Échec Resend — libération du slot', {
+        type, reservationId: data.reservationId, email: data.to, error: errMsg,
       });
+      // Libérer le claim pour permettre un retry au prochain cron
+      await releaseReminderClaim(data.reservationId, type);
       return {
         reservationId: data.reservationId,
         email: data.to,
@@ -121,14 +134,11 @@ export async function sendReminderEmail(
       };
     }
 
-    // 5. Logger dans sent_notifications (anti-doublon futur)
-    await logReminderSent(data.reservationId, type, data.to, resendData.id);
+    // 6. Mettre à jour le messageId Resend (remplace 'pending')
+    await updateReminderMessageId(data.reservationId, type, resendData.id);
 
     logger.info('[reminders/send] Rappel envoyé', {
-      type,
-      reservationId: data.reservationId,
-      email: data.to,
-      messageId: resendData.id,
+      type, reservationId: data.reservationId, email: data.to, messageId: resendData.id,
     });
 
     return {

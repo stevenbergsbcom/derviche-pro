@@ -349,24 +349,29 @@ async function enrichWithManagers(
 }
 
 // ============================================
-// LOGGING DES ENVOIS
+// OPTIMISTIC LOCK — ANTI RACE CONDITION
 // ============================================
 
 /**
- * Enregistre un rappel envoyé dans sent_notifications.
- * Appelé après chaque envoi réussi pour garantir l'anti-doublon.
+ * Tente de "réclamer" le slot d'un rappel avant l'envoi (optimistic lock).
  *
- * @param reservationId - ID de la réservation
- * @param type - Type de rappel ('reminder_7d' | 'reminder_2d' | 'reminder_12h')
- * @param recipientEmail - Email du destinataire
- * @param emailProviderId - ID du message Resend (optionnel)
+ * Insère une ligne dans sent_notifications avec email_provider_id = 'pending'.
+ * Si une contrainte unique (reservation_id, type) existe, l'insert échoue
+ * silencieusement → une autre instance a déjà pris ce slot → on saute l'envoi.
+ *
+ * Flux recommandé :
+ *   1. tryClaimReminder() → false = déjà pris, true = on continue
+ *   2. sendReminderEmail() → succès ou échec
+ *   3. Si succès : updateReminderMessageId()
+ *   4. Si échec  : releaseReminderClaim() (pour permettre un retry)
+ *
+ * @returns true si le slot a été réclamé, false si déjà pris
  */
-export async function logReminderSent(
+export async function tryClaimReminder(
   reservationId: string,
   type: ReminderType,
   recipientEmail: string,
-  emailProviderId?: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const supabase = getServiceClient();
 
@@ -376,14 +381,110 @@ export async function logReminderSent(
         reservation_id:    reservationId,
         type,
         recipient_email:   recipientEmail,
-        email_provider_id: emailProviderId ?? null,
+        email_provider_id: 'pending', // Marqueur temporaire — remplacé après l'envoi
       });
 
     if (error) {
-      logger.error('[reminders/queries] Erreur log sent_notifications', {
-        error: error.message,
-        reservationId,
+      // Code 23505 = unique_violation (PostgreSQL)
+      // → une autre instance a déjà inséré cette ligne → on saute
+      if (error.code === '23505') {
+        logger.info('[reminders/queries] Slot déjà réclamé par une autre instance', {
+          reservationId, type,
+        });
+        return false;
+      }
+      // Autre erreur DB : on saute aussi par sécurité
+      logger.error('[reminders/queries] Erreur tryClaimReminder', {
+        error: error.message, reservationId, type,
+      });
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    logger.error('[reminders/queries] Exception tryClaimReminder', { err, reservationId, type });
+    return false;
+  }
+}
+
+/**
+ * Met à jour email_provider_id avec le vrai ID Resend après un envoi réussi.
+ * Remplace la valeur temporaire 'pending' insérée par tryClaimReminder().
+ */
+export async function updateReminderMessageId(
+  reservationId: string,
+  type: ReminderType,
+  messageId: string,
+): Promise<void> {
+  try {
+    const supabase = getServiceClient();
+    const { error } = await supabase
+      .from('sent_notifications')
+      .update({ email_provider_id: messageId })
+      .eq('reservation_id', reservationId)
+      .eq('type', type);
+
+    if (error) {
+      // Non-bloquant : l'email est envoyé, seul le tracking est incomplet
+      logger.warn('[reminders/queries] Erreur mise à jour messageId (non-bloquant)', {
+        error: error.message, reservationId, type,
+      });
+    }
+  } catch (err) {
+    logger.warn('[reminders/queries] Exception updateReminderMessageId', { err, reservationId, type });
+  }
+}
+
+/**
+ * Libère un slot réclamé si l'envoi a échoué.
+ * Supprime la ligne 'pending' pour permettre un retry lors du prochain cron.
+ */
+export async function releaseReminderClaim(
+  reservationId: string,
+  type: ReminderType,
+): Promise<void> {
+  try {
+    const supabase = getServiceClient();
+    const { error } = await supabase
+      .from('sent_notifications')
+      .delete()
+      .eq('reservation_id', reservationId)
+      .eq('type', type)
+      .eq('email_provider_id', 'pending');
+
+    if (error) {
+      logger.warn('[reminders/queries] Erreur releaseReminderClaim', {
+        error: error.message, reservationId, type,
+      });
+    }
+  } catch (err) {
+    logger.warn('[reminders/queries] Exception releaseReminderClaim', { err, reservationId, type });
+  }
+}
+
+/**
+ * @deprecated Utiliser tryClaimReminder + updateReminderMessageId à la place.
+ * Conservé pour compatibilité — sera supprimé en S137.
+ */
+export async function logReminderSent(
+  reservationId: string,
+  type: ReminderType,
+  recipientEmail: string,
+  emailProviderId?: string
+): Promise<void> {
+  try {
+    const supabase = getServiceClient();
+    const { error } = await supabase
+      .from('sent_notifications')
+      .insert({
+        reservation_id:    reservationId,
         type,
+        recipient_email:   recipientEmail,
+        email_provider_id: emailProviderId ?? null,
+      });
+    if (error) {
+      logger.error('[reminders/queries] Erreur logReminderSent', {
+        error: error.message, reservationId, type,
       });
     }
   } catch (err) {

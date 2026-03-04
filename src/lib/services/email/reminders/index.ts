@@ -7,7 +7,13 @@
 
 export { processReminders, processMultipleReminders } from './process';
 export { sendReminderEmail } from './send';
-export { getEligibleReservations, logReminderSent } from './queries';
+export {
+  getEligibleReservations,
+  tryClaimReminder,
+  updateReminderMessageId,
+  releaseReminderClaim,
+  logReminderSent,
+} from './queries';
 export type {
   ReminderType,
   ReminderToggleKey,
