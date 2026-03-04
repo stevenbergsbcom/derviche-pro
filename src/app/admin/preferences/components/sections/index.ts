@@ -9,3 +9,4 @@ export { RemindersSection } from './reminders-section';
 export { RgpdSection } from './rgpd-section';
 export { NotificationsSection } from './notifications-section';
 export { EmailTemplatesSection } from './templates-section';
+export { GoogleCalendarSection } from './google-calendar-section';

@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 137 (validé build prod) — 4 mars 2026
+> Dernière mise à jour : Session 138 (complète + validée build) — 4 mars 2026
 
 ---
 
@@ -32,8 +32,8 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV |
-| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (7), RGPD |
-| Notifications | ✅ Badge cloche sidebar + Sheet paginé + marquage lu individuel — S137 |
+| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (7), Google Calendar, RGPD |
+| Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -66,63 +66,85 @@
 | H-12 | GitHub Actions toutes les heures | `[H-11h30, H-12h30]` | Bleu DD `#1e3a5f` | ✅ **Testé prod** |
 
 **Architecture :**
-- **GitHub Actions** : `cron-daily.yml` (J-7+J-2) + `cron-hourly.yml` (H-12) — contournement limite Hobby Vercel
+- **GitHub Actions** : `cron-daily.yml` (J-7+J-2) + `cron-hourly.yml` (H-12)
 - **Anti-doublon** : `sent_notifications` avec contrainte unique `(reservation_id, type)`
 - **Anti race condition** : pattern optimistic lock — `tryClaimReminder()` avant envoi
-- **Toggles** : lus via service role Supabase (bypass RLS — pas de session en contexte cron)
 - **Sécurité** : `CRON_SECRET` dans GitHub Secrets + exclu du middleware Next.js
-- **Middleware** : `api/cron` exclu du matcher → plus de redirection 307 vers `/login`
 
 ### ✅ Notifications admin (100%) — S137
-- **Badge cloche** dans le footer de la sidebar admin (polling 30s)
-- **Sheet latéral** : liste paginée (20/page), skeleton, état vide, erreur
-- **Marquage lu individuel** : chaque admin gère ses propres notifications lues
-- **"Tout marquer lu"** : upsert batch optimiste
-- **Mutations optimistes** : is_read mis à jour immédiatement côté UI
-- **3 types** : nouvelle réservation (vert), annulation (rouge), modification (ambre)
-- **Déclenchement** : après chaque envoi email confirmation/annulation/modification
+
+**Fonctionnalités :**
+- Badge cloche dans le header admin (polling 30s), badge rouge avec compteur
+- Sheet latéral : liste paginée (20/page), skeleton, état vide, erreur
+- Marquage lu individuel : chaque admin gère ses propres lectures
+- "Tout marquer lu" : upsert batch optimiste
+- "Vider" : soft delete individuel par timestamp (dismissed_at)
+- Mutations optimistes avec resync badge en cas d'échec
+- 3 types : nouvelle réservation (vert), annulation (rouge), modification (ambre)
+- Clic notification → fermeture Sheet + navigation vers la réservation (query param)
 
 **Architecture :**
-- 2 tables : `admin_notifications` + `admin_notification_reads` (PK composite)
+- 3 tables : `admin_notifications` + `admin_notification_reads` + `admin_notification_dismissals`
+- **Dismiss par timestamp** : `dismissed_at` = "j'ai vidé à cet instant" → filtre `created_at > dismissed_at`
 - RLS : INSERT uniquement service role — SELECT/UPDATE admin + super-admin
-- API : GET `/api/admin/notifications` + POST `[id]/read` + POST `read-all`
-- Service : `src/lib/services/notifications/` (types + queries + index)
-- Hook : `use-notifications.ts` — polling 30s, pagination, mutations
+- `getDismissedAt()` mutualisé (passé en paramètre à `getAdminUnreadCount` pour éviter double appel DB)
+- Notifications créées **uniquement sur actions PRO** (send-confirmation/cancellation/modification)
+- Cloche dans `src/app/admin/layout.tsx` (header, pas sidebar)
+- Page `/admin/reservations` utilise query param `?reservationId=` (pas segment dynamique)
+- Click-through corrigé : `stopPropagation` + `setTimeout(350ms)` avant `router.push`
+
+### ✅ Google Calendar (100%) — S138
+
+**Fonctionnalités :**
+- Création automatique d'un événement Calendar à chaque confirmation de réservation
+- Mise à jour de l'événement lors d'un changement de créneau
+- Suppression de l'événement lors d'une annulation
+- Invitation email Google envoyée au professionnel (création toujours, annulation/modification selon préférences)
+- Préférences admin : switch principal + 2 switches email (annulation, modification)
+- Non-bloquant : une erreur Calendar n'interrompt jamais le flux de réservation
+
+**Architecture :**
+- Auth : OAuth2 refresh token (`reservation.derviche@gmail.com`)
+- Service : `src/lib/services/google-calendar/` (4 modules : types, auth, queries, index)
+- Calcul heure de fin en temps local Paris (pas UTC) pour éviter le double décalage
+- `google_calendar_event_id` stocké dans `reservations` après création
+- Migration 062 : 3 clés `app_settings` (enabled, notify_on_cancellation, notify_on_modification)
+
+**Variables d'environnement requises :**
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`  
+- `GOOGLE_OAUTH_REFRESH_TOKEN`
+- `GOOGLE_CALENDAR_ID` (`reservation.derviche@gmail.com`)
 
 ---
 
-## Dernier travail (Session 137 — 4 mars 2026)
+## Dernier travail (Session 138 — 4 mars 2026)
 
-### Fichiers clés créés/modifiés
+### Fichiers clés créés/modifiés S138
 
 | Fichier | Modification |
 |---------|-------------|
-| `migration 057` | Table `admin_notifications` + index + RLS |
-| `migration 058` | Table `admin_notification_reads` + RLS |
-| `reminders/queries.ts` | Suppression `logReminderSent` @deprecated |
-| `reminders/index.ts` | Export `logReminderSent` supprimé |
-| `services/notifications/types.ts` | Types `NotificationType`, `AdminNotification`, etc. |
-| `services/notifications/queries.ts` | 5 fonctions CRUD notifications |
-| `services/notifications/index.ts` | Barrel exports |
-| `services/index.ts` | Module notifications enregistré |
-| `api/admin/notifications/route.ts` | GET liste paginée + unreadCount |
-| `api/admin/notifications/[id]/read/route.ts` | POST marquer une notif lue |
-| `api/admin/notifications/read-all/route.ts` | POST tout marquer lu |
-| `api/emails/send-confirmation/route.ts` | + `createAdminNotification('new_reservation')` |
-| `api/emails/send-cancellation/route.ts` | + `createAdminNotification('cancellation')` |
-| `api/emails/send-modification/route.ts` | + `createAdminNotification('modification')` |
-| `hooks/use-notifications.ts` | Hook polling 30s + pagination + mutations optimistes |
-| `components/admin/notifications/notification-item.tsx` | Ligne notif : icône + message + date relative |
-| `components/admin/notifications/notification-badge.tsx` | Cloche + badge rouge |
-| `components/admin/notifications/notification-sheet.tsx` | Sheet paginé complet |
-| `components/admin/admin-sidebar/index.tsx` | Intégration badge + sheet |
+| `migration 062` | 3 clés `app_settings` Google Calendar |
+| `src/lib/env.ts` | Variables Google Calendar optionnelles dans serverEnvSchema |
+| `src/lib/services/app-settings.ts` | Types + constantes + `getGoogleCalendarSettings()` |
+| `src/hooks/useAppSettings.ts` | Hook `useGoogleCalendarSettings()` |
+| `src/lib/services/google-calendar/types.ts` | `CalendarEventData` + `CalendarResult` |
+| `src/lib/services/google-calendar/auth.ts` | `getGoogleAuthClient()` — OAuth2 refresh token |
+| `src/lib/services/google-calendar/queries.ts` | `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent` |
+| `src/lib/services/google-calendar/index.ts` | Barrel exports |
+| `src/app/admin/preferences/components/sections/google-calendar-section.tsx` | Section UI préférences |
+| `src/app/admin/preferences/components/sections/index.ts` | Export `GoogleCalendarSection` |
+| `src/app/admin/preferences/components/preferences-tabs.tsx` | Onglet Calendar (badge Actif) |
+| `src/app/admin/preferences/components/preferences-content.tsx` | Rendu conditionnel onglet Calendar |
+| `api/emails/send-confirmation/route.ts` | + `createCalendarEvent` (non-bloquant) |
+| `api/emails/send-cancellation/route.ts` | + `deleteCalendarEvent` (non-bloquant) |
+| `api/emails/send-modification/route.ts` | + `updateCalendarEvent` (non-bloquant) |
 
-### Points techniques notables S137
-- **Marquage lu individuel** : table de jonction `admin_notification_reads` (PK composite) — plus propre qu'un array `UUID[]` dénormalisé.
-- **is_read via LEFT JOIN** : calculé côté Supabase, filtré automatiquement par RLS (`user_id = auth.uid()`) — pas de requête supplémentaire.
-- **Mutations optimistes** : `markAsRead` et `markAllAsRead` mettent à jour l'UI immédiatement, l'appel API est non-bloquant.
-- **Sheet vs Popover** : Sheet choisi car Popover n'est pas dans le projet shadcn — évite une nouvelle dépendance.
-- **`slot_date` null dans send-confirmation** : payload ne contient que la date formatée FR, pas l'ISO. Dette légère, non bloquant.
+### Points techniques notables S138
+- **OAuth2 vs Service Account** : les Service Accounts Gmail ne peuvent pas inviter des participants sans Google Workspace. OAuth2 refresh token résout le problème sur un compte Gmail personnel.
+- **Calcul heure de fin** : ne pas utiliser `toISOString()` (UTC) puis repasser dans `buildDateTimeWithParisTz` — double décalage qui inverse start/end (`time range is empty`). Calculer directement en temps local.
+- **Non-bloquant** : chaque appel Calendar est dans un `try/catch` indépendant — une erreur Google n'interrompt jamais la réservation.
+- **Routes debug/auth temporaires** supprimées après récupération du refresh token.
 
 ---
 
@@ -130,7 +152,7 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S138** | RGPD suppression compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
+| **S139** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
 
 ---
 
@@ -138,12 +160,11 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
-| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau — notif créée sans `slot_date` | 🟡 Basse |
-| Timezone crons | `reminders/queries.ts` | UTC naïf — stocker en `timestamptz` si précision accrue | 🟡 Basse |
-| Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et des emails | 🟡 Basse |
+| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
+| Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées par le code (remplacées par 061) | 🟡 Basse |
+| Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
+| Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
 | RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S138 |
-| Footer admin codé en dur | `builders/admin-notification.ts` | N'utilise pas `buildFooterRow` | 🟡 Basse |
-| Zod query params | `preview/route.ts` | Pas de validation Zod (admin only, risque faible) | 🟡 Basse |
 
 ---
 
@@ -152,11 +173,12 @@
 | Fichier | Description |
 |---------|-------------|
 | `src/components/ui/accordion.tsx` | `cursor-pointer` ajouté manuellement |
+| `src/components/ui/sheet.tsx` | `cursor-pointer` ajouté sur bouton fermeture |
 | `lib/utils/export-professionals.ts` | CSV uniquement — xlsx/exceljs exclus (vulnérabilités) |
-| `buildCtaBlock` | `href` contrôlé côté serveur — ne jamais passer une URL utilisateur |
 | `api/cron/*/route.ts` | En dev sans `CRON_SECRET` : routes accessibles librement (warning loggé) |
-| `middleware.ts` | `api/cron` exclu du matcher — authentification par `CRON_SECRET` uniquement |
-| `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role (pas de policy RLS authenticated) |
+| `middleware.ts` | `api/cron` exclu du matcher — auth par `CRON_SECRET` uniquement |
+| `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role |
+| `app/admin/layout.tsx` | Hook `useNotifications` instancié ici (header) — pas dans la sidebar |
 
 ---
 
@@ -172,3 +194,6 @@
 | 056 | `056_add_reminder_app_settings.sql` | 3 toggles `reminder_enabled_*` (défaut : true) |
 | 057 | `057_create_admin_notifications.sql` | Table `admin_notifications` + index + RLS |
 | 058 | `058_create_admin_notification_reads.sql` | Table `admin_notification_reads` + RLS |
+| 059 | `059_add_dismissed_to_notification_reads.sql` | ~~Colonne dismissed~~ — abandonné, remplacé par 061 |
+| 060 | `060_add_update_policy_notification_reads.sql` | ~~Policy UPDATE reads~~ — abandonné |
+| 061 | `061_create_admin_notification_dismissals.sql` | Table `admin_notification_dismissals` — architecture finale |

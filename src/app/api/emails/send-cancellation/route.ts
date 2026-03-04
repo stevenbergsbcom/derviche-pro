@@ -27,6 +27,7 @@ import {
   type AdminNotificationEmailData,
 } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
+import { deleteCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
@@ -55,6 +56,7 @@ interface ReservationWithDetails {
   guest_last_name: string | null;
   guest_email: string | null;
   guest_structure: string | null;
+  google_calendar_event_id: string | null;
   user_id: string | null;
   profiles: { email: string; first_name: string | null; last_name: string | null } | null;
   slots: {
@@ -130,6 +132,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         guest_last_name,
         guest_email,
         guest_structure,
+        google_calendar_event_id,
         user_id,
         profiles:user_id (
           email,
@@ -310,7 +313,33 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
-    // 12. Créer la notification admin en base (badge sidebar)
+    // 12. Supprimer l'événement Google Calendar (non-bloquant)
+    try {
+      const isBoolTrue = (v: unknown) => v === true || v === 'true';
+
+      const { data: calPref } = await adminClient
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'google_calendar_enabled')
+        .maybeSingle();
+
+      if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
+        const { data: notifPref } = await adminClient
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'google_calendar_notify_on_cancellation')
+          .maybeSingle();
+
+        await deleteCalendarEvent(
+          reservation.google_calendar_event_id,
+          isBoolTrue(notifPref?.value)
+        );
+      }
+    } catch (calErr) {
+      logger.error('[API /emails/send-cancellation] Exception Calendar (non-bloquant)', { calErr });
+    }
+
+    // 13. Créer la notification admin en base (badge sidebar)
     // Non-bloquant : createAdminNotification gère ses propres erreurs
     await createAdminNotification({
       type: 'cancellation',

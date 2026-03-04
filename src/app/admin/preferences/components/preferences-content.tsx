@@ -26,6 +26,7 @@ import {
   RemindersSection,
   RgpdSection,
   EmailTemplatesSection,
+  GoogleCalendarSection,
 } from './sections';
 
 // ============================================
@@ -100,9 +101,10 @@ function PreferencesInnerContent({
   const handleAppearanceDirty    = useCallback((d: boolean) => onDirtyChange('appearance',    d), [onDirtyChange]);
   const handleEmailDirty         = useCallback((d: boolean) => onDirtyChange('email',         d), [onDirtyChange]);
   const handleNotificationsDirty = useCallback((d: boolean) => onDirtyChange('notifications', d), [onDirtyChange]);
-  const handleRemindersDirty     = useCallback((d: boolean) => onDirtyChange('reminders',     d), [onDirtyChange]);
-  const handleTemplatesDirty     = useCallback((d: boolean) => onDirtyChange('templates',     d), [onDirtyChange]);
-  const handleRgpdDirty          = useCallback((d: boolean) => onDirtyChange('rgpd',          d), [onDirtyChange]);
+  const handleRemindersDirty      = useCallback((d: boolean) => onDirtyChange('reminders',       d), [onDirtyChange]);
+  const handleTemplatesDirty      = useCallback((d: boolean) => onDirtyChange('templates',       d), [onDirtyChange]);
+  const handleGoogleCalendarDirty = useCallback((d: boolean) => onDirtyChange('google-calendar', d), [onDirtyChange]);
+  const handleRgpdDirty           = useCallback((d: boolean) => onDirtyChange('rgpd',            d), [onDirtyChange]);
 
   return (
     <>
@@ -127,8 +129,11 @@ function PreferencesInnerContent({
         {activeTab === 'templates' && (
           <EmailTemplatesSection canEdit={canEdit} onDirtyChange={handleTemplatesDirty} />
         )}
+        {activeTab === 'google-calendar' && (
+          <GoogleCalendarSection canEdit={canEdit} onDirtyChange={handleGoogleCalendarDirty} />
+        )}
         {activeTab === 'rgpd' && (
-          <RgpdSection          canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
+          <RgpdSection           canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
         )}
       </div>
 

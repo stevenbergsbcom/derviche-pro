@@ -43,6 +43,12 @@ export type NotificationSettingKey =
   | 'email_notification_cancellation'
   | 'email_notification_modification';
 
+/** Clés de paramètres Google Calendar */
+export type GoogleCalendarSettingKey =
+  | 'google_calendar_enabled'
+  | 'google_calendar_notify_on_cancellation'
+  | 'google_calendar_notify_on_modification';
+
 /** Clés de paramètres rappels */
 export type ReminderSettingKey =
   | 'reminder_enabled_7d'
@@ -59,6 +65,8 @@ export type ThemeSettingKey = 'theme_preset' | 'logo_white_url' | 'logo_dark_url
 export type AppSettingKey =
   | OrganizationSettingKey
   | EmailSettingKey
+  | NotificationSettingKey
+  | GoogleCalendarSettingKey
   | ReminderSettingKey
   | RgpdSettingKey
   | ThemeSettingKey
@@ -103,6 +111,16 @@ export interface NotificationSettings {
   email_notification_new_reservation: boolean;
   email_notification_cancellation: boolean;
   email_notification_modification: boolean;
+}
+
+/** Paramètres Google Calendar groupés */
+export interface GoogleCalendarSettings {
+  /** Active ou désactive l'intégration Google Calendar */
+  google_calendar_enabled: boolean;
+  /** Envoyer un email Google lors de l'annulation (la création envoie toujours un email) */
+  google_calendar_notify_on_cancellation: boolean;
+  /** Envoyer un email Google lors de la modification */
+  google_calendar_notify_on_modification: boolean;
 }
 
 /** Paramètres rappels groupés */
@@ -155,6 +173,13 @@ export const NOTIFICATION_SETTING_KEYS: NotificationSettingKey[] = [
   'email_notification_modification',
 ];
 
+/** Clés des paramètres Google Calendar */
+export const GOOGLE_CALENDAR_SETTING_KEYS: GoogleCalendarSettingKey[] = [
+  'google_calendar_enabled',
+  'google_calendar_notify_on_cancellation',
+  'google_calendar_notify_on_modification',
+];
+
 /** Clés des paramètres rappels */
 export const REMINDER_SETTING_KEYS: ReminderSettingKey[] = [
   'reminder_enabled_7d',
@@ -190,6 +215,9 @@ export const SETTING_LABELS: Record<string, string> = {
   email_footer_text: 'Pied de page',
   email_catalogue_url: 'URL du catalogue (emails)',
 
+  google_calendar_enabled: 'Activer Google Calendar',
+  google_calendar_notify_on_cancellation: 'Email Google à l’annulation',
+  google_calendar_notify_on_modification: 'Email Google à la modification',
   reminder_enabled_7d: 'Rappel J-7',
   reminder_enabled_2d: 'Rappel J-2',
   reminder_enabled_12h: 'Rappel H-12',
@@ -417,6 +445,33 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
       email_reply_to: (result.data?.email_reply_to as string) || null,
       email_signature: (result.data?.email_signature as string) || null,
       email_footer_text: (result.data?.email_footer_text as string) || null,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Récupère les paramètres Google Calendar
+ */
+export async function getGoogleCalendarSettings(): Promise<AppSettingResult<GoogleCalendarSettings>> {
+  const result = await getAppSettings(GOOGLE_CALENDAR_SETTING_KEYS);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  const parseBool = (val: unknown, fallback: boolean): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return fallback;
+  };
+
+  return {
+    data: {
+      google_calendar_enabled:               parseBool(result.data?.google_calendar_enabled,               false),
+      google_calendar_notify_on_cancellation: parseBool(result.data?.google_calendar_notify_on_cancellation, false),
+      google_calendar_notify_on_modification: parseBool(result.data?.google_calendar_notify_on_modification, false),
     },
     error: null,
   };

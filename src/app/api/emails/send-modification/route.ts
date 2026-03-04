@@ -27,6 +27,7 @@ import {
   type AdminNotificationEmailData,
 } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
+import { updateCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
@@ -55,6 +56,7 @@ interface ReservationWithDetails {
   guest_last_name: string | null;
   guest_email: string | null;
   guest_structure: string | null;
+  google_calendar_event_id: string | null;
   user_id: string | null;
   profiles: { email: string; first_name: string | null; last_name: string | null } | null;
   slots: {
@@ -65,6 +67,7 @@ interface ReservationWithDetails {
     shows: {
       title: string;
       slug: string;
+      duration_minutes: number | null;
       derviche_manager_id: string | null;
       companies: { name: string } | null;
     };
@@ -137,6 +140,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         guest_last_name,
         guest_email,
         guest_structure,
+        google_calendar_event_id,
         user_id,
         profiles:user_id (
           email,
@@ -154,6 +158,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           shows!inner (
             title,
             slug,
+            duration_minutes,
             derviche_manager_id,
             companies:company_id (
               name
@@ -321,7 +326,46 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
-    // 11. Créer la notification admin en base (badge sidebar)
+    // 11. Mettre à jour l'événement Google Calendar (non-bloquant)
+    try {
+      const isBoolTrue = (v: unknown) => v === true || v === 'true';
+
+      const { data: calPref } = await adminClient
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'google_calendar_enabled')
+        .maybeSingle();
+
+      if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
+        const { data: notifPref } = await adminClient
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'google_calendar_notify_on_modification')
+          .maybeSingle();
+
+        await updateCalendarEvent(
+          reservation.google_calendar_event_id,
+          {
+            showTitle:             show.title,
+            guestFullName:         recipientFullName,
+            guestStructure:        reservation.guest_structure,
+            guestEmail:            recipientEmail,
+            reservationId:         reservation.id,
+            numPlaces:             reservation.num_places,
+            slotDate:              slots.date,
+            slotTime:              slots.time,
+            durationMinutes:       show.duration_minutes,
+            venueName:             newVenue?.name ?? '',
+            venueCity:             newVenue?.city ?? '',
+            sendEmailNotification: isBoolTrue(notifPref?.value),
+          }
+        );
+      }
+    } catch (calErr) {
+      logger.error('[API /emails/send-modification] Exception Calendar (non-bloquant)', { calErr });
+    }
+
+    // 12. Créer la notification admin en base (badge sidebar)
     // Non-bloquant : createAdminNotification gère ses propres erreurs
     await createAdminNotification({
       type: 'modification',

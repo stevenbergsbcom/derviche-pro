@@ -13,6 +13,7 @@ import {
   getOrganizationSettings,
   setOrganizationSettings,
   getEmailSettings,
+  getGoogleCalendarSettings,
   getNotificationSettings,
   getReminderSettings,
   getRgpdSettings,
@@ -21,6 +22,7 @@ import {
   setAppSettings,
   type OrganizationSettings,
   type EmailSettings,
+  type GoogleCalendarSettings,
   type NotificationSettings,
   type ReminderSettings,
   type RgpdSettings,
@@ -251,6 +253,79 @@ export function useReminderSettings(): UseAppSettingsReturn<ReminderSettings> {
 
       if (result.error) {
         setData(previousValue);
+        return { success: false, error: result.error };
+      }
+
+      return { success: true };
+    },
+    []
+  );
+
+  return {
+    data,
+    isLoading,
+    isSaving,
+    error,
+    update,
+    refresh: load,
+  };
+}
+
+// ============================================
+// HOOK GOOGLE CALENDAR
+// ============================================
+
+/**
+ * Hook pour gérer les paramètres Google Calendar
+ * Config globale, modifiable par super-admin uniquement
+ */
+export function useGoogleCalendarSettings(): UseAppSettingsReturn<GoogleCalendarSettings> {
+  const [data, setData] = useState<GoogleCalendarSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dataRef = useRef<GoogleCalendarSettings | null>(null);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
+  const load = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    const result = await getGoogleCalendarSettings();
+
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setData(result.data);
+    }
+
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const update = useCallback(
+    async (newValue: Partial<GoogleCalendarSettings>): Promise<{ success: boolean; error?: string }> => {
+      const previousValue = dataRef.current;
+
+      if (previousValue) {
+        setData({ ...previousValue, ...newValue });
+      }
+
+      setIsSaving(true);
+      const result = await setAppSettings(newValue);
+      setIsSaving(false);
+
+      if (result.error) {
+        if (previousValue !== null) {
+          setData(previousValue);
+        }
         return { success: false, error: result.error };
       }
 
