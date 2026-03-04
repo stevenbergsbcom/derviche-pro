@@ -217,8 +217,9 @@ export function GoogleCalendarSection({ canEdit, onDirtyChange }: GoogleCalendar
 
       <p className="text-xs text-muted-foreground">
         Nécessite les variables d&apos;environnement{' '}
-        <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_SERVICE_ACCOUNT_EMAIL</code>,{' '}
-        <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY</code>{' '}
+        <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_OAUTH_CLIENT_ID</code>,{' '}
+        <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_OAUTH_CLIENT_SECRET</code>,{' '}
+        <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_OAUTH_REFRESH_TOKEN</code>{' '}
         et{' '}
         <code className="bg-muted px-1 rounded text-[11px]">GOOGLE_CALENDAR_ID</code>.
         Seul un super-admin peut modifier ces préférences.
