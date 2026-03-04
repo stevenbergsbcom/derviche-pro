@@ -143,6 +143,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         slots!inner (
           date,
           time,
+          hosted_by_id,
           venues (
             name,
             city
@@ -177,16 +178,29 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     const userRole = userRoleData?.role as UserRole | undefined;
-    // Note: 'externe' inclus pour autoriser la PWA check-in (/accueil)
-    const isAdmin = userRole === 'super-admin' || userRole === 'admin' || userRole === 'externe';
+    const isFullAdmin = userRole === 'super-admin' || userRole === 'admin';
     const isOwner = reservation.user_id === user.id;
 
-    if (!isAdmin && !isOwner) {
+    if (!isFullAdmin && !isOwner && userRole !== 'externe') {
       logger.warn('[API /emails/send-cancellation] Accès refusé', {
         reservationId: payload.reservationId,
         userId: user.id,
       });
       return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+    }
+
+    // 5b. Si externe : vérifier qu'il est assigné au spectacle via slots.hosted_by_id
+    if (userRole === 'externe' && !isOwner) {
+      const slotsData = reservation.slots as ReservationWithDetails['slots'];
+      const hostedById = (slotsData as unknown as { hosted_by_id: string | null }).hosted_by_id;
+
+      if (hostedById !== user.id) {
+        logger.warn('[API /emails/send-cancellation] Externe non assigné à ce spectacle', {
+          userId: user.id,
+          reservationId: payload.reservationId,
+        });
+        return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      }
     }
 
     // 6. Vérifier que la réservation est bien annulée

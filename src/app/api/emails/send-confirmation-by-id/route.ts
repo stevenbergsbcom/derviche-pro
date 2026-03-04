@@ -115,7 +115,33 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
     }
 
-    // 5. Récupérer la réservation complète
+    // 5a. Si externe : vérifier qu'il est bien assigné au spectacle de cette réservation
+    if (userRole === 'externe') {
+      // Récupérer le show_id de la réservation via son slot
+      const { data: slotData } = await adminClient
+        .from('reservations')
+        .select('slots!inner ( show_id, hosted_by_id )')
+        .eq('id', reservationId)
+        .maybeSingle();
+
+      type SlotCheck = { show_id: string; hosted_by_id: string | null };
+      const rawSlot = (slotData as unknown as { slots: SlotCheck | SlotCheck[] }).slots;
+      const slot: SlotCheck | null = rawSlot
+        ? (Array.isArray(rawSlot) ? rawSlot[0] : rawSlot)
+        : null;
+
+      const isAssigned = slot?.hosted_by_id === user.id;
+
+      if (!isAssigned) {
+        logger.warn('[API /emails/send-confirmation-by-id] Externe non assigné à ce spectacle', {
+          userId: user.id,
+          reservationId,
+        });
+        return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      }
+    }
+
+    // 5b. Récupérer la réservation complète
     const { data: raw, error: reservationError } = await adminClient
       .from('reservations')
       .select(`
