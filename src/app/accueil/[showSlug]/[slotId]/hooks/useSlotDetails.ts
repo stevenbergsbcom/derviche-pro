@@ -354,6 +354,7 @@ export function useSlotDetails({
         checkinInternalNotes: reservation.checkinInternalNotes,
         specialRequests: reservation.specialRequests,
         status: reservation.status,
+        googleCalendarEventId: reservation.googleCalendarEventId,
       };
       setSelectedReservation(rowData);
       setDrawerOpen(true);

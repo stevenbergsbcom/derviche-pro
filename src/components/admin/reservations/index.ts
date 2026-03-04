@@ -31,3 +31,11 @@ export { renderTableCell } from './table-cell-renderer';
 // Dialogs
 export { EditReservationDialog } from './edit-reservation-dialog';
 export { CreateReservationDialog } from './create-reservation-dialog';
+
+// Notifications
+export {
+  NotificationSwitches,
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+  type NotificationSwitchesProps,
+} from './notification-switches';

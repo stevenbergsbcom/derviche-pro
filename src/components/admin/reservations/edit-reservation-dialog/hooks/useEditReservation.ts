@@ -13,8 +13,10 @@ import type {
   AvailableSlot,
   SlotsResult,
   UseEditReservationReturn,
-  FieldChangeHandler
+  FieldChangeHandler,
+  NotificationOptions,
 } from '../types';
+import { DEFAULT_NOTIFICATION_OPTIONS } from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // PARAMÈTRES DU HOOK
@@ -23,7 +25,7 @@ import type {
 interface UseEditReservationParams {
   reservation: AdminReservation | null;
   open: boolean;
-  onSave: (data: UpdateReservationData) => Promise<void>;
+  onSave: (data: UpdateReservationData & { _notifOptions?: NotificationOptions }) => Promise<void>;
   onCancel: (reservation: AdminReservation) => void;
   onOpenChange: (open: boolean) => void;
   onGetSlots: (showId: string) => Promise<SlotsResult>;
@@ -50,6 +52,7 @@ export function useEditReservation({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // Le formulaire est prêt uniquement quand formData est peuplé
   const isFormReady = formData !== null;
@@ -88,8 +91,9 @@ export function useEditReservation({
   
   useEffect(() => {
     if (reservation && open) {
-      // Reset les erreurs de validation
+      // Reset les erreurs de validation et options de notif
       setValidationErrors([]);
+      setNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
       
       // Initialiser le formulaire
       setFormData(initializeFormData(reservation));
@@ -148,8 +152,9 @@ export function useEditReservation({
     
     if (!formData) return;
     
-    await onSaveRef.current(formData);
-  }, [formData]);
+    // On passe _notifOptions comme champ supplémentaire — stripé dans le handler page.tsx avant la RPC
+    await onSaveRef.current({ ...formData, _notifOptions: notifOptions });
+  }, [formData, notifOptions]);
 
   /**
    * Gère l'annulation de la réservation
@@ -182,6 +187,8 @@ export function useEditReservation({
     slotsError,
     validationErrors,
     isFormReady,
+    notifOptions,
+    setNotifOptions,
     
     // Actions
     handleChange,

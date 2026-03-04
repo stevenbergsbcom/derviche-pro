@@ -20,6 +20,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Ban, Loader2 } from 'lucide-react';
+import {
+  NotificationSwitches,
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+} from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // TYPES
@@ -39,10 +44,15 @@ export interface CancelDialogProps {
   /** Réservation sélectionnée */
   reservation: CancelDialogReservation | null;
   /** Handler pour confirmer l'annulation */
-  onCancel: (reason?: string) => void;
+  onCancel: (reason?: string, notificationOptions?: NotificationOptions) => void;
   /** Indique si une action est en cours */
   isProcessing: boolean;
+  /** Un événement Google Calendar existe-t-il pour cette réservation ? */
+  hasCalendarEvent?: boolean;
 }
+
+// Ré-export pour usage externe
+export type { NotificationOptions };
 
 // ============================================
 // COMPOSANT
@@ -54,18 +64,21 @@ export function CancelDialog({
   reservation,
   onCancel,
   isProcessing,
+  hasCalendarEvent,
 }: CancelDialogProps) {
   const [cancelReason, setCancelReason] = useState('');
+  const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
-  // Reset du motif quand le dialog se ferme
+  // Reset du motif et des options quand le dialog se ferme
   useEffect(() => {
     if (!open) {
       setCancelReason('');
+      setNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
     }
   }, [open]);
 
   const handleConfirm = () => {
-    onCancel(cancelReason || undefined);
+    onCancel(cancelReason || undefined, notifOptions);
   };
 
   const handleClose = () => {
@@ -89,14 +102,24 @@ export function CancelDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-2">
-          <Label className="text-sm">Motif (optionnel)</Label>
-          <Textarea
-            value={cancelReason}
-            onChange={(e) => setCancelReason(e.target.value)}
-            placeholder="Raison de l'annulation..."
-            className="mt-2"
-            rows={3}
+        <div className="py-2 space-y-4">
+          <div>
+            <Label className="text-sm">Motif (optionnel)</Label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Raison de l'annulation..."
+              className="mt-2"
+              rows={3}
+            />
+          </div>
+
+          <NotificationSwitches
+            value={notifOptions}
+            onChange={setNotifOptions}
+            disabled={isProcessing}
+            label="Notifications"
+            hasCalendarEvent={hasCalendarEvent}
           />
         </div>
 

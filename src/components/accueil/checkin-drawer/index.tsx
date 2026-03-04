@@ -75,6 +75,8 @@ export function CheckinDrawer({
             justReactivated={drawer.uiState.justReactivated}
             isSubmitting={drawer.uiState.isSubmitting}
             onReactivate={drawer.handleReactivate}
+            reactivateNotifOptions={drawer.reactivateNotifOptions}
+            onReactivateNotifChange={drawer.setReactivateNotifOptions}
           />
 
           {/* Boutons de statut de présence */}
@@ -131,6 +133,9 @@ export function CheckinDrawer({
           isSubmitting={drawer.uiState.isSubmitting}
           onSave={drawer.handleSave}
           onCancel={drawer.handleCancel}
+          cancelNotifOptions={drawer.cancelNotifOptions}
+          onCancelNotifChange={drawer.setCancelNotifOptions}
+          hasCalendarEvent={drawer.hasCalendarEvent}
         />
       </DrawerContent>
     </Drawer>

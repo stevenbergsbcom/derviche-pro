@@ -39,6 +39,7 @@ import type { UserRole } from '@/types/database';
 
 const sendCancellationSchema = z.object({
   reservationId: z.string().uuid('ID de réservation invalide'),
+  syncCalendar: z.boolean().optional().default(true),
 });
 
 type SendCancellationPayload = z.infer<typeof sendCancellationSchema>;
@@ -176,7 +177,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     const userRole = userRoleData?.role as UserRole | undefined;
-    const isAdmin = userRole === 'super-admin' || userRole === 'admin';
+    // Note: 'externe' inclus pour autoriser la PWA check-in (/accueil)
+    const isAdmin = userRole === 'super-admin' || userRole === 'admin' || userRole === 'externe';
     const isOwner = reservation.user_id === user.id;
 
     if (!isAdmin && !isOwner) {
@@ -314,29 +316,31 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 12. Supprimer l'événement Google Calendar (non-bloquant)
-    try {
-      const isBoolTrue = (v: unknown) => v === true || v === 'true';
+    if (payload.syncCalendar) {
+      try {
+        const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
-      const { data: calPref } = await adminClient
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'google_calendar_enabled')
-        .maybeSingle();
-
-      if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
-        const { data: notifPref } = await adminClient
+        const { data: calPref } = await adminClient
           .from('app_settings')
           .select('value')
-          .eq('key', 'google_calendar_notify_on_cancellation')
+          .eq('key', 'google_calendar_enabled')
           .maybeSingle();
 
-        await deleteCalendarEvent(
-          reservation.google_calendar_event_id,
-          isBoolTrue(notifPref?.value)
-        );
+        if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
+          const { data: notifPref } = await adminClient
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'google_calendar_notify_on_cancellation')
+            .maybeSingle();
+
+          await deleteCalendarEvent(
+            reservation.google_calendar_event_id,
+            isBoolTrue(notifPref?.value)
+          );
+        }
+      } catch (calErr) {
+        logger.error('[API /emails/send-cancellation] Exception Calendar (non-bloquant)', { calErr });
       }
-    } catch (calErr) {
-      logger.error('[API /emails/send-cancellation] Exception Calendar (non-bloquant)', { calErr });
     }
 
     // 13. Créer la notification admin en base (badge sidebar)

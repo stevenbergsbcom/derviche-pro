@@ -18,6 +18,8 @@ import {
 } from '@/hooks/useUserPreferences';
 import { ColumnSelectorDialog } from '@/components/admin/column-selector-dialog';
 import { ExportDialog, type ExportOptions } from '@/components/admin/export-dialog';
+import { type NotificationOptions } from '@/components/admin/reservations/notification-switches';
+import { logger } from '@/lib/logger';
 import {
   type SortOption,
   EditReservationDialog,
@@ -247,34 +249,67 @@ function AdminReservationsContent() {
   }, [selectedReservation, checkin, loadStats]);
 
   // Handler annulation
-  const handleCancel = useCallback(async (reason?: string) => {
+  const handleCancel = useCallback(async (reason?: string, notifOptions?: NotificationOptions) => {
     if (!selectedReservation) return;
     setIsProcessing(true);
     const result = await cancel(selectedReservation.id, reason);
     setIsProcessing(false);
     if (result.success) {
       setCancelDialogOpen(false);
+      // Déclencher l'email d'annulation si demandé (non-bloquant)
+      if (notifOptions?.sendEmail) {
+        void fetch('/api/emails/send-cancellation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: selectedReservation.id,
+            syncCalendar: notifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('[admin/reservations] Email annulation non envoyé', { err })
+        );
+      }
       setSelectedReservation(null);
       void loadStats();
     }
   }, [selectedReservation, cancel, loadStats]);
 
   // Handler modification
-  const handleEdit = useCallback(async (data: UpdateReservationData) => {
+  const handleEdit = useCallback(async (data: UpdateReservationData & { _notifOptions?: NotificationOptions }) => {
     if (!selectedReservation) return;
+    // Extraire les options de notif avant d'envoyer à la RPC
+    const { _notifOptions: notifOptions, ...updateData } = data;
+    const oldSlotId = selectedReservation.slot?.id;
+    const slotChanged = updateData.slotId && updateData.slotId !== oldSlotId;
+
     setIsProcessing(true);
-    const result = await update(selectedReservation.id, data);
+    const result = await update(selectedReservation.id, updateData);
     setIsProcessing(false);
     if (result.success) {
       setEditDialogOpen(false);
+      // Déclencher l'email de modification si le créneau a changé et si demandé (non-bloquant)
+      if (slotChanged && notifOptions?.sendEmail && oldSlotId) {
+        void fetch('/api/emails/send-modification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: selectedReservation.id,
+            oldSlotId,
+            syncCalendar: notifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('[admin/reservations] Email modification non envoyé', { err })
+        );
+      }
       setSelectedReservation(null);
       void loadStats();
     }
   }, [selectedReservation, update, loadStats]);
 
   // Handler création
-  const handleCreate = useCallback(async (data: CreateAdminReservationData) => {
-    const result = await createAdminReservation(data);
+  const handleCreate = useCallback(async (data: CreateAdminReservationData & { _notifOptions?: NotificationOptions }) => {
+    const { _notifOptions: notifOptions, ...createData } = data;
+    const result = await createAdminReservation(createData);
     if (result.success) {
       setSearchInput('');
       filtersHook.handleResetFilters();
@@ -282,6 +317,19 @@ function AdminReservationsContent() {
       setFilters(resetFilters);
       void loadReservations(resetFilters);
       void loadStats();
+      // Déclencher l'email de confirmation si demandé et réservation créée (non-bloquant)
+      if (notifOptions?.sendEmail && result.reservationId) {
+        void fetch('/api/emails/send-confirmation-by-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: result.reservationId,
+            syncCalendar: notifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('[admin/reservations] Email confirmation création non envoyé', { err })
+        );
+      }
     }
     return result;
   }, [filtersHook, setFilters, loadReservations, loadStats]);
@@ -411,6 +459,10 @@ function AdminReservationsContent() {
         reservation={selectedReservation}
         onCancel={handleCancel}
         isProcessing={isProcessing}
+        hasCalendarEvent={selectedReservation?.googleCalendarEventId != null
+          ? !!selectedReservation.googleCalendarEventId
+          : undefined
+        }
       />
 
       <ColumnSelectorDialog

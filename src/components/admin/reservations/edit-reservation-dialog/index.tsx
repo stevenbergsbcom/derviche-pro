@@ -10,6 +10,7 @@
 
 import { Loader2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +55,8 @@ export function EditReservationDialog({
     slotsError,
     validationErrors,
     isFormReady,
+    notifOptions,
+    setNotifOptions,
     handleChange,
     handleSubmit,
     handleCancelReservation,
@@ -71,6 +74,8 @@ export function EditReservationDialog({
   if (!reservation) return null;
 
   const isCancelled = reservation.status === 'cancelled';
+  // Afficher les switches de notif seulement si le créneau a changé
+  const slotChanged = formData?.slotId !== undefined && formData.slotId !== reservation.slot?.id;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -154,6 +159,21 @@ export function EditReservationDialog({
               disabled={isSaving}
             />
           </div>
+        )}
+
+        {/* Switches de notification — uniquement si le créneau a changé */}
+        {isFormReady && slotChanged && (
+          <NotificationSwitches
+            value={notifOptions}
+            onChange={setNotifOptions}
+            disabled={isSaving}
+            label="Notifier le professionnel"
+            hasCalendarEvent={
+              reservation.googleCalendarEventId != null
+                ? !!reservation.googleCalendarEventId
+                : undefined
+            }
+          />
         )}
 
         {/* Actions */}

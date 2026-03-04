@@ -90,6 +90,8 @@ export interface CheckinReservation {
   checkinInternalNotes: string | null;
   specialRequests: string | null;
   createdAt: string;
+  /** ID de l'événement Google Calendar (null si jamais créé) */
+  googleCalendarEventId: string | null;
 }
 
 // ============================================

@@ -96,7 +96,7 @@
 ### ✅ Google Calendar (100%) — S138
 
 **Fonctionnalités :**
-- Création automatique d'un événement Calendar à chaque confirmation de réservation
+- Création automatique d'un événement Calendar à chaque confirmation de réservation (actions PRO uniquement — S139 étend aux actions admin)
 - Mise à jour de l'événement lors d'un changement de créneau
 - Suppression de l'événement lors d'une annulation
 - Invitation email Google envoyée au professionnel (création toujours, annulation/modification selon préférences)
@@ -112,7 +112,7 @@
 
 **Variables d'environnement requises :**
 - `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`  
+- `GOOGLE_OAUTH_CLIENT_SECRET`
 - `GOOGLE_OAUTH_REFRESH_TOKEN`
 - `GOOGLE_CALENDAR_ID` (`reservation.derviche@gmail.com`)
 
@@ -132,7 +132,7 @@
 | `src/lib/services/google-calendar/auth.ts` | `getGoogleAuthClient()` — OAuth2 refresh token |
 | `src/lib/services/google-calendar/queries.ts` | `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent` |
 | `src/lib/services/google-calendar/index.ts` | Barrel exports |
-| `src/app/admin/preferences/components/sections/google-calendar-section.tsx` | Section UI préférences |
+| `src/app/admin/preferences/components/sections/google-calendar-section.tsx` | Section UI préférences (variables env corrigées OAuth2) |
 | `src/app/admin/preferences/components/sections/index.ts` | Export `GoogleCalendarSection` |
 | `src/app/admin/preferences/components/preferences-tabs.tsx` | Onglet Calendar (badge Actif) |
 | `src/app/admin/preferences/components/preferences-content.tsx` | Rendu conditionnel onglet Calendar |
@@ -152,7 +152,8 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S139** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
+| **S139** | Emails + Google Calendar pour actions admin/super-admin/externe (création, annulation, modification réservation + app check-in) avec switches configurables | 🔴 Haute |
+| **S140** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
 
 ---
 
@@ -160,11 +161,12 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
+| Emails/Calendar manquants pour actions admin | routes emails + app check-in | Emails et Calendar ne se déclenchent que pour les actions pro. Actions admin/super-admin/externe non couvertes. | 🔴 S139 |
 | `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
-| Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées par le code (remplacées par 061) | 🟡 Basse |
+| Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées (remplacées par 061) | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S138 |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S140 |
 
 ---
 
@@ -179,6 +181,7 @@
 | `middleware.ts` | `api/cron` exclu du matcher — auth par `CRON_SECRET` uniquement |
 | `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role |
 | `app/admin/layout.tsx` | Hook `useNotifications` instancié ici (header) — pas dans la sidebar |
+| `src/lib/services/google-calendar/auth.ts` | Redirect URI localhost en dur — utilisé uniquement pour obtenir le refresh token, pas pour les appels serveur |
 
 ---
 
@@ -197,3 +200,4 @@
 | 059 | `059_add_dismissed_to_notification_reads.sql` | ~~Colonne dismissed~~ — abandonné, remplacé par 061 |
 | 060 | `060_add_update_policy_notification_reads.sql` | ~~Policy UPDATE reads~~ — abandonné |
 | 061 | `061_create_admin_notification_dismissals.sql` | Table `admin_notification_dismissals` — architecture finale |
+| 062 | `062_add_google_calendar_settings.sql` | 3 clés `app_settings` Google Calendar |

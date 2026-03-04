@@ -114,6 +114,9 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
     checkinAt: row.checkin_at,
     checkinBy: row.checkin_by,
     
+    // Google Calendar
+    googleCalendarEventId: row.google_calendar_event_id,
+
     // Timestamps
     createdAt: row.created_at,
     updatedAt: row.updated_at,

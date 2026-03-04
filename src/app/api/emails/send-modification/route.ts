@@ -40,6 +40,7 @@ import type { UserRole } from '@/types/database';
 const sendModificationSchema = z.object({
   reservationId: z.string().uuid('ID de réservation invalide'),
   oldSlotId: z.string().uuid('ID de créneau invalide'),
+  syncCalendar: z.boolean().optional().default(true),
 });
 
 type SendModificationPayload = z.infer<typeof sendModificationSchema>;
@@ -186,7 +187,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     const userRole = userRoleData?.role as UserRole | undefined;
-    const isAdmin = userRole === 'super-admin' || userRole === 'admin';
+    // Note: 'externe' inclus pour autoriser la PWA check-in (/accueil)
+    const isAdmin = userRole === 'super-admin' || userRole === 'admin' || userRole === 'externe';
     const isOwner = reservation.user_id === user.id;
 
     if (!isAdmin && !isOwner) {
@@ -327,42 +329,44 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 11. Mettre à jour l'événement Google Calendar (non-bloquant)
-    try {
-      const isBoolTrue = (v: unknown) => v === true || v === 'true';
+    if (payload.syncCalendar) {
+      try {
+        const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
-      const { data: calPref } = await adminClient
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'google_calendar_enabled')
-        .maybeSingle();
-
-      if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
-        const { data: notifPref } = await adminClient
+        const { data: calPref } = await adminClient
           .from('app_settings')
           .select('value')
-          .eq('key', 'google_calendar_notify_on_modification')
+          .eq('key', 'google_calendar_enabled')
           .maybeSingle();
 
-        await updateCalendarEvent(
-          reservation.google_calendar_event_id,
-          {
-            showTitle:             show.title,
-            guestFullName:         recipientFullName,
-            guestStructure:        reservation.guest_structure,
-            guestEmail:            recipientEmail,
-            reservationId:         reservation.id,
-            numPlaces:             reservation.num_places,
-            slotDate:              slots.date,
-            slotTime:              slots.time,
-            durationMinutes:       show.duration_minutes,
-            venueName:             newVenue?.name ?? '',
-            venueCity:             newVenue?.city ?? '',
-            sendEmailNotification: isBoolTrue(notifPref?.value),
-          }
-        );
+        if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
+          const { data: notifPref } = await adminClient
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'google_calendar_notify_on_modification')
+            .maybeSingle();
+
+          await updateCalendarEvent(
+            reservation.google_calendar_event_id,
+            {
+              showTitle:             show.title,
+              guestFullName:         recipientFullName,
+              guestStructure:        reservation.guest_structure,
+              guestEmail:            recipientEmail,
+              reservationId:         reservation.id,
+              numPlaces:             reservation.num_places,
+              slotDate:              slots.date,
+              slotTime:              slots.time,
+              durationMinutes:       show.duration_minutes,
+              venueName:             newVenue?.name ?? '',
+              venueCity:             newVenue?.city ?? '',
+              sendEmailNotification: isBoolTrue(notifPref?.value),
+            }
+          );
+        }
+      } catch (calErr) {
+        logger.error('[API /emails/send-modification] Exception Calendar (non-bloquant)', { calErr });
       }
-    } catch (calErr) {
-      logger.error('[API /emails/send-modification] Exception Calendar (non-bloquant)', { calErr });
     }
 
     // 12. Créer la notification admin en base (badge sidebar)

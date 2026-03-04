@@ -13,6 +13,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 import { 
   updateCheckinStatus, 
   updateGuestInfo, 
@@ -50,6 +51,10 @@ export interface UseCheckinActionsProps {
   setJustReactivated: (value: boolean) => void;
   /** Réinitialise le statut sélectionné à null */
   setSelectedStatus: () => void;
+  /** Options de notification pour l'annulation */
+  cancelNotifOptions: NotificationOptions;
+  /** Options de notification pour la réactivation */
+  reactivateNotifOptions: NotificationOptions;
 }
 
 export interface UseCheckinActionsReturn {
@@ -77,6 +82,8 @@ export function useCheckinActions({
   setLocalStatus,
   setJustReactivated,
   setSelectedStatus,
+  cancelNotifOptions,
+  reactivateNotifOptions,
 }: UseCheckinActionsProps): UseCheckinActionsReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -246,13 +253,27 @@ export function useCheckinActions({
       );
       onSuccess(updatedReservation);
 
+      // Email de confirmation (non-bloquant)
+      if (reactivateNotifOptions.sendEmail) {
+        void fetch('/api/emails/send-confirmation-by-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: reservation.id,
+            syncCalendar: reactivateNotifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('useCheckinActions - Email réactivation non envoyé', { err })
+        );
+      }
+
     } catch (error) {
       logger.error('useCheckinActions - Erreur réactivation', error as Error);
       toast.error('Erreur lors de la réactivation');
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, userId, role, companyId, onSuccess, setLocalStatus, setJustReactivated]);
+  }, [reservation, userId, role, companyId, reactivateNotifOptions, onSuccess, setLocalStatus, setJustReactivated]);
 
   // ==========================================
   // HANDLER - Annulation
@@ -285,6 +306,20 @@ export function useCheckinActions({
 
       toast.success(`${guestName} : Réservation annulée`);
 
+      // Email d'annulation (non-bloquant)
+      if (cancelNotifOptions.sendEmail) {
+        void fetch('/api/emails/send-cancellation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: reservation.id,
+            syncCalendar: cancelNotifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('useCheckinActions - Email annulation non envoyé', { err })
+        );
+      }
+
       // Mettre à jour l'état local
       setLocalStatus('cancelled');
       setSelectedStatus();
@@ -310,7 +345,7 @@ export function useCheckinActions({
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, userId, role, companyId, onSuccess, onOpenChange, setLocalStatus, setSelectedStatus]);
+  }, [reservation, userId, role, companyId, cancelNotifOptions, onSuccess, onOpenChange, setLocalStatus, setSelectedStatus]);
 
   // ==========================================
   // RETURN

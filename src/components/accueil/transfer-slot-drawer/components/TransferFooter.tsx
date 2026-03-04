@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2, AlertTriangle } from 'lucide-react';
+import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 import type { TransferFooterProps } from '../types';
 
 // ============================================
@@ -25,9 +26,21 @@ export function TransferFooter({
   wouldOverbook,
   isSubmitting,
   onTransfer,
+  notifOptions,
+  onNotifChange,
+  hasCalendarEvent,
 }: TransferFooterProps) {
   return (
-    <DrawerFooter className="border-t pt-4">
+    <DrawerFooter className="border-t pt-4 space-y-3">
+      {/* Switch de notification */}
+      <NotificationSwitches
+        value={notifOptions}
+        onChange={onNotifChange}
+        disabled={isSubmitting}
+        label="Notifier le professionnel"
+        hasCalendarEvent={hasCalendarEvent}
+      />
+
       {/* Avertissement overbooking */}
       {wouldOverbook && selectedSlot && (
         <div 

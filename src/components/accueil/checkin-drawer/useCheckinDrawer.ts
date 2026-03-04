@@ -17,6 +17,10 @@ import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { ReservationRowData } from '../ReservationRow';
 import type { UseCheckinDrawerReturn } from './types';
 import { useGuestForm, useCheckinForm, useCheckinActions } from './hooks';
+import {
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+} from '@/components/admin/reservations/notification-switches';
 import { getFullName } from './constants';
 
 // ============================================
@@ -78,6 +82,8 @@ export function useCheckinDrawer({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [justReactivated, setJustReactivated] = useState(false);
   const [localStatus, setLocalStatus] = useState<'confirmed' | 'cancelled' | 'no_show'>('confirmed');
+  const [cancelNotifOptions, setCancelNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
+  const [reactivateNotifOptions, setReactivateNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // ==========================================
   // COMPUTED VALUES
@@ -113,6 +119,8 @@ export function useCheckinDrawer({
     setLocalStatus,
     setJustReactivated,
     setSelectedStatus: clearSelectedStatus,
+    cancelNotifOptions,
+    reactivateNotifOptions,
   });
 
   // ==========================================
@@ -125,6 +133,8 @@ export function useCheckinDrawer({
       setDetailsOpen(false);
       setJustReactivated(false);
       setLocalStatus(reservation.status);
+      setCancelNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
+      setReactivateNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
     }
   }, [reservation, resetGuestForm, resetCheckinForm]);
 
@@ -178,5 +188,12 @@ export function useCheckinDrawer({
     isCancelled,
     isAdmin,
     accessLoading,
+
+    // Options de notification
+    cancelNotifOptions,
+    setCancelNotifOptions,
+    reactivateNotifOptions,
+    setReactivateNotifOptions,
+    hasCalendarEvent: !!reservation?.googleCalendarEventId,
   };
 }

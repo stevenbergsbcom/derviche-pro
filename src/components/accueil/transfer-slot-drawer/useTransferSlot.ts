@@ -14,6 +14,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import {
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+} from '@/components/admin/reservations/notification-switches';
 import { getFullName } from '@/lib/utils/guest';
 import { 
   getTransferTargetSlots, 
@@ -34,6 +38,8 @@ import { wouldCauseOverbooking } from './helpers';
 
 interface UseTransferSlotProps {
   reservation: ReservationRowData | null;
+  /** ID du créneau actuel (avant transfert) — utilisé pour l'email de modification */
+  currentSlotId: string;
   open: boolean;
   onSuccess: (updatedReservation: ReservationRowData) => void;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +51,7 @@ interface UseTransferSlotProps {
 
 export function useTransferSlot({
   reservation,
+  currentSlotId,
   open,
   onSuccess,
   onOpenChange,
@@ -63,6 +70,7 @@ export function useTransferSlot({
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // ==========================================
   // EFFET - Charger les slots cibles
@@ -136,6 +144,7 @@ export function useTransferSlot({
       setSelectedSlotId(null);
       setNumPlaces(1);
       setError(null);
+      setNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
     }
   }, [open]);
 
@@ -247,6 +256,20 @@ export function useTransferSlot({
         checkinInternalNotes: result.data.reservation.checkinInternalNotes,
       });
 
+      // Email de modification (non-bloquant)
+      if (notifOptions.sendEmail) {
+        void fetch('/api/emails/send-modification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: reservation.id,
+            oldSlotId: currentSlotId,
+          }),
+        }).catch((err) =>
+          logger.warn('useTransferSlot - Email modification non envoyé', { err })
+        );
+      }
+
       // Fermer le drawer
       onOpenChange(false);
 
@@ -257,7 +280,7 @@ export function useTransferSlot({
       setIsSubmitting(false);
       isTransferringRef.current = false;
     }
-  }, [reservation, selectedSlotId, numPlaces, userId, role, companyId, selectedSlot, onSuccess, onOpenChange]);
+  }, [reservation, currentSlotId, selectedSlotId, numPlaces, userId, role, companyId, notifOptions, selectedSlot, onSuccess, onOpenChange]);
 
   // ==========================================
   // RETURN
@@ -285,5 +308,10 @@ export function useTransferSlot({
     handleIncrease,
     handleNumPlacesChange,
     handleTransfer,
+
+    // Notification
+    notifOptions,
+    setNotifOptions,
+    hasCalendarEvent: !!reservation?.googleCalendarEventId,
   };
 }

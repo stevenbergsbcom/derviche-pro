@@ -71,6 +71,9 @@ export interface AdminReservation {
   checkinAt: string | null;
   checkinBy: string | null;
   
+  // Google Calendar
+  googleCalendarEventId: string | null;
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -302,6 +305,7 @@ export interface ReservationRowWithRelations {
   updated_at: string;
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  google_calendar_event_id: string | null;
   slots?: SlotRowWithRelations | null;
 }
 
