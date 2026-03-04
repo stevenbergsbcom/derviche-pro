@@ -106,6 +106,7 @@ function AdminSidebarComponent() {
           <SidebarMenuItem>
             <SidebarLogoutButton />
           </SidebarMenuItem>
+
         </SidebarMenu>
       </SidebarFooter>
 

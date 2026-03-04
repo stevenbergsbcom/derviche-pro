@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 136 (final validé en prod) — 4 mars 2026
+> Dernière mise à jour : Session 137 (validé build prod) — 4 mars 2026
 
 ---
 
@@ -33,6 +33,7 @@
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV |
 | Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (7), RGPD |
+| Notifications | ✅ Badge cloche sidebar + Sheet paginé + marquage lu individuel — S137 |
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -72,39 +73,56 @@
 - **Sécurité** : `CRON_SECRET` dans GitHub Secrets + exclu du middleware Next.js
 - **Middleware** : `api/cron` exclu du matcher → plus de redirection 307 vers `/login`
 
+### ✅ Notifications admin (100%) — S137
+- **Badge cloche** dans le footer de la sidebar admin (polling 30s)
+- **Sheet latéral** : liste paginée (20/page), skeleton, état vide, erreur
+- **Marquage lu individuel** : chaque admin gère ses propres notifications lues
+- **"Tout marquer lu"** : upsert batch optimiste
+- **Mutations optimistes** : is_read mis à jour immédiatement côté UI
+- **3 types** : nouvelle réservation (vert), annulation (rouge), modification (ambre)
+- **Déclenchement** : après chaque envoi email confirmation/annulation/modification
+
+**Architecture :**
+- 2 tables : `admin_notifications` + `admin_notification_reads` (PK composite)
+- RLS : INSERT uniquement service role — SELECT/UPDATE admin + super-admin
+- API : GET `/api/admin/notifications` + POST `[id]/read` + POST `read-all`
+- Service : `src/lib/services/notifications/` (types + queries + index)
+- Hook : `use-notifications.ts` — polling 30s, pagination, mutations
+
 ---
 
-## Dernier travail (Session 136 — 4 mars 2026)
+## Dernier travail (Session 137 — 4 mars 2026)
 
 ### Fichiers clés créés/modifiés
 
 | Fichier | Modification |
 |---------|-------------|
-| `migration 055` | 3 templates rappels en DB |
-| `migration 056` | 3 toggles `reminder_enabled_*` dans `app_settings` |
-| `reminders/types.ts` | Types + configs DAILY/HOURLY |
-| `reminders/queries.ts` | `tryClaimReminder` + `updateReminderMessageId` + `releaseReminderClaim` + `logReminderSent` @deprecated |
-| `reminders/send.ts` | Flux : claim → template → HTML → Resend → update/release |
-| `reminders/process.ts` | `readToggleServerSide()` service role + boucle `for` indexée |
-| `builders/reminder-7d/2d/12h.ts` | Builders HTML thématiques |
-| `api/cron/reminders/daily/route.ts` | Route GET sécurisée J-7+J-2 |
-| `api/cron/reminders/hourly/route.ts` | Route GET sécurisée H-12 |
-| `.github/workflows/cron-daily.yml` | GitHub Actions — 7h UTC |
-| `.github/workflows/cron-hourly.yml` | GitHub Actions — toutes les heures |
-| `vercel.json` | `{}` — crons supprimés (limite Hobby) |
-| `middleware.ts` | `api/cron` ajouté aux exclusions du matcher |
-| `preview/route.ts` | +3 builders reminder + mock + default exhaustif |
-| `[key]/route.ts` | `VALID_TEMPLATE_KEYS` étendu (+3 reminder) |
-| `templates-section.tsx` | 2 groupes visuels, 7 templates |
-| `preferences-tabs.tsx` | Onglet Rappels avec `CalendarClock` |
-| `fallbacks.ts` | `key: EmailTemplateKey` + Record exhaustif |
+| `migration 057` | Table `admin_notifications` + index + RLS |
+| `migration 058` | Table `admin_notification_reads` + RLS |
+| `reminders/queries.ts` | Suppression `logReminderSent` @deprecated |
+| `reminders/index.ts` | Export `logReminderSent` supprimé |
+| `services/notifications/types.ts` | Types `NotificationType`, `AdminNotification`, etc. |
+| `services/notifications/queries.ts` | 5 fonctions CRUD notifications |
+| `services/notifications/index.ts` | Barrel exports |
+| `services/index.ts` | Module notifications enregistré |
+| `api/admin/notifications/route.ts` | GET liste paginée + unreadCount |
+| `api/admin/notifications/[id]/read/route.ts` | POST marquer une notif lue |
+| `api/admin/notifications/read-all/route.ts` | POST tout marquer lu |
+| `api/emails/send-confirmation/route.ts` | + `createAdminNotification('new_reservation')` |
+| `api/emails/send-cancellation/route.ts` | + `createAdminNotification('cancellation')` |
+| `api/emails/send-modification/route.ts` | + `createAdminNotification('modification')` |
+| `hooks/use-notifications.ts` | Hook polling 30s + pagination + mutations optimistes |
+| `components/admin/notifications/notification-item.tsx` | Ligne notif : icône + message + date relative |
+| `components/admin/notifications/notification-badge.tsx` | Cloche + badge rouge |
+| `components/admin/notifications/notification-sheet.tsx` | Sheet paginé complet |
+| `components/admin/admin-sidebar/index.tsx` | Intégration badge + sheet |
 
-### Points techniques notables S136
-- **Optimistic lock** : `tryClaimReminder()` insère `pending` avant envoi — contrainte unique DB arbitre. `releaseReminderClaim()` libère si échec (retry au prochain cron).
-- **GitHub Actions vs Vercel Cron** : plan Hobby Vercel limité à 1 cron/jour max.
-- **Middleware matcher** : exclure `api/cron` évite la redirection 307 vers `/login` (pas de session en contexte cron).
-- **Toggles service role** : `readToggleServerSide()` dans `process.ts` — `getAppSetting()` utilise le client anon, incompatible avec le contexte cron (RLS bloque).
-- `logReminderSent` marqué `@deprecated` — suppression en S137.
+### Points techniques notables S137
+- **Marquage lu individuel** : table de jonction `admin_notification_reads` (PK composite) — plus propre qu'un array `UUID[]` dénormalisé.
+- **is_read via LEFT JOIN** : calculé côté Supabase, filtré automatiquement par RLS (`user_id = auth.uid()`) — pas de requête supplémentaire.
+- **Mutations optimistes** : `markAsRead` et `markAllAsRead` mettent à jour l'UI immédiatement, l'appel API est non-bloquant.
+- **Sheet vs Popover** : Sheet choisi car Popover n'est pas dans le projet shadcn — évite une nouvelle dépendance.
+- **`slot_date` null dans send-confirmation** : payload ne contient que la date formatée FR, pas l'ISO. Dette légère, non bloquant.
 
 ---
 
@@ -112,7 +130,6 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S137** | Système notifications admin (badge lu/non-lu) | 🟡 Moyenne |
 | **S138** | RGPD suppression compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
 
 ---
@@ -121,7 +138,7 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
-| `logReminderSent` deprecated | `reminders/queries.ts` | Remplacé par `tryClaimReminder` + `updateReminderMessageId` — à supprimer en S137 | 🟠 S137 |
+| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau — notif créée sans `slot_date` | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf — stocker en `timestamptz` si précision accrue | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et des emails | 🟡 Basse |
 | RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S138 |
@@ -139,6 +156,7 @@
 | `buildCtaBlock` | `href` contrôlé côté serveur — ne jamais passer une URL utilisateur |
 | `api/cron/*/route.ts` | En dev sans `CRON_SECRET` : routes accessibles librement (warning loggé) |
 | `middleware.ts` | `api/cron` exclu du matcher — authentification par `CRON_SECRET` uniquement |
+| `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role (pas de policy RLS authenticated) |
 
 ---
 
@@ -152,3 +170,5 @@
 | 054 | `054_fix_unique_reservation_user_slot.sql` | Partial index — fix bug changement créneau |
 | 055 | `055_add_reminder_email_templates.sql` | 3 templates rappels en DB |
 | 056 | `056_add_reminder_app_settings.sql` | 3 toggles `reminder_enabled_*` (défaut : true) |
+| 057 | `057_create_admin_notifications.sql` | Table `admin_notifications` + index + RLS |
+| 058 | `058_create_admin_notification_reads.sql` | Table `admin_notification_reads` + RLS |
