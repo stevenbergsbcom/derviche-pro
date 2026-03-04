@@ -270,7 +270,8 @@ export const config = {
          * - favicon.ico (favicon file)
          * - sw.js (service worker)
          * - public folder files (static assets)
+         * - api/cron (routes cron — authentifiées par CRON_SECRET, pas par session)
          */
-        '/((?!_next/static|_next/image|favicon.ico|sw\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico)$).*)',
+        '/((?!_next/static|_next/image|favicon.ico|sw\\.js|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|ico)$).*)',
     ],
 };
