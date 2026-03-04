@@ -127,12 +127,16 @@ export function useCheckinDrawer({
     setCancelDialogOpen(true);
   }, []);
 
-  // Wrapper : annule + ferme la modale après succès
+  // Wrapper : annule + ferme la modale UNIQUEMENT en cas de succès
+  // En cas d'échec, la modale reste ouverte pour permettre de réessayer
   const handleCancelWithDialog = useCallback(async (
     notifOptions: Parameters<typeof handleCancel>[0]
   ) => {
-    await handleCancel(notifOptions);
-    setCancelDialogOpen(false);
+    const success = await handleCancel(notifOptions);
+    if (success) {
+      setCancelDialogOpen(false);
+    }
+    return success;
   }, [handleCancel]);
 
   // ==========================================

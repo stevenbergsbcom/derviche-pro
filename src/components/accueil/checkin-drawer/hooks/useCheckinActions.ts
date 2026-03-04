@@ -59,8 +59,9 @@ export interface UseCheckinActionsReturn {
   isSubmitting: boolean;
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  /** Annule la réservation avec les options de notification choisies dans la modale */
-  handleCancel: (notifOptions: NotificationOptions) => Promise<void>;
+  /** Annule la réservation avec les options de notification choisies dans la modale.
+   * Retourne true si l'annulation a réussi, false sinon. */
+  handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
 }
 
 // ============================================
@@ -279,7 +280,7 @@ export function useCheckinActions({
   const handleCancel = useCallback(async (cancelNotifOptions: NotificationOptions) => {
     if (!reservation || !userId || !role) {
       toast.error('Données manquantes pour l\'annulation');
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -294,7 +295,7 @@ export function useCheckinActions({
 
       if (!result.success || !result.data) {
         toast.error(result.error || 'Erreur lors de l\'annulation');
-        return;
+        return false;
       }
 
       const guestName = getFullName(
@@ -336,10 +337,12 @@ export function useCheckinActions({
       );
       onSuccess(updatedReservation);
       onOpenChange(false);
+      return true;
 
     } catch (error) {
       logger.error('useCheckinActions - Erreur annulation', error as Error);
       toast.error('Erreur lors de l\'annulation');
+      return false;
     } finally {
       setIsSubmitting(false);
     }

@@ -91,6 +91,7 @@ export function FooterSection({
           onClick={onCancelClick}
           disabled={isSubmitting}
           className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          aria-label="Annuler cette réservation et choisir les options de notification"
         >
           <X className="w-4 h-4 mr-1.5" />
           Annuler cette réservation

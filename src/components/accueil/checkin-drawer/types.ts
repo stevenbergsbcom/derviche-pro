@@ -118,7 +118,7 @@ export interface UseCheckinDrawerReturn {
   // Handlers
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  handleCancel: (notifOptions: NotificationOptions) => Promise<void>;
+  handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
 
   // Modale de confirmation d'annulation
   cancelDialogOpen: boolean;
