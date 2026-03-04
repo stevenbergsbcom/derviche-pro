@@ -5,10 +5,10 @@
  * Templates de secours utilisés quand la DB est inaccessible.
  */
 
-import type { EmailTemplate } from '@/types/email-templates';
+import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 
-export function getFallbackTemplate(key: string): EmailTemplate {
-  const defaults: Record<string, Partial<EmailTemplate>> = {
+export function getFallbackTemplate(key: EmailTemplateKey): EmailTemplate {
+  const defaults: Record<EmailTemplateKey, Partial<EmailTemplate>> = {
     reservation_confirmation: {
       header_title: 'Réservation confirmée ✓',
       subject: 'Votre réservation est confirmée — {{organisation}}',
@@ -97,7 +97,7 @@ export function getFallbackTemplate(key: string): EmailTemplate {
 
   return {
     id: 'fallback',
-    template_key: key as EmailTemplate['template_key'],
+    template_key: key,
     name: key,
     is_active: true,
     created_at: new Date().toISOString(),

@@ -7,7 +7,7 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Building2, Mail, Bell, Shield, Palette, FileText } from 'lucide-react';
+import { Building2, Mail, Bell, CalendarClock, Shield, Palette, FileText } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,7 +35,7 @@ export const PREFERENCE_TABS: PreferenceTab[] = [
   { id: 'email',         label: 'Email',          icon: Mail,      status: 'active',   statusLabel: 'Actif' },
   { id: 'templates',     label: 'Templates',      icon: FileText,  status: 'active',   statusLabel: 'Actif' },
   { id: 'notifications', label: 'Notifications',  icon: Bell,      status: 'active',   statusLabel: 'Actif' },
-  { id: 'reminders',     label: 'Rappels',        icon: Bell,      status: 'active',   statusLabel: 'Actif' },
+  { id: 'reminders',     label: 'Rappels',        icon: CalendarClock, status: 'active',   statusLabel: 'Actif' },
   { id: 'rgpd',          label: 'RGPD',           icon: Shield,    status: 'inactive', statusLabel: 'Non connecté' },
 ];
 

@@ -6,13 +6,13 @@
  * Appelé par les routes cron (/api/cron/reminders/daily et /hourly).
  *
  * Flux :
- *   1. Vérifier le toggle dans app_settings
+ *   1. Lire le toggle dans app_settings (via service role — bypass RLS)
  *   2. Récupérer les réservations éligibles (queries.ts)
  *   3. Envoyer chaque rappel (send.ts) — séquentiel avec délai
  *   4. Retourner un résumé (ProcessRemindersResult)
  */
 
-import { getAppSetting } from '@/lib/services/app-settings';
+import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { getEligibleReservations } from './queries';
 import { sendReminderEmail } from './send';
@@ -29,6 +29,49 @@ import type {
 
 /** Délai entre chaque envoi pour éviter le rate-limiting Resend (2 req/s en free) */
 const SEND_DELAY_MS = 600;
+
+/**
+ * Lit un toggle dans app_settings via le service role Supabase (bypass RLS).
+ *
+ * Pourquoi ne pas utiliser getAppSetting() ?
+ * → getAppSetting() utilise createClient() depuis @/lib/supabase/client (clé anon).
+ * → En contexte cron (sans session utilisateur), la RLS sur app_settings bloque la lecture.
+ * → Le service role bypasse la RLS et peut toujours lire app_settings.
+ */
+async function readToggleServerSide(toggleKey: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    logger.warn('[reminders/process] Variables Supabase manquantes — toggle activé par défaut', {
+      toggleKey,
+    });
+    return true;
+  }
+
+  try {
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data, error } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', toggleKey)
+      .single();
+
+    if (error || data === null) return true; // Défaut : activé
+
+    // Gérer boolean ET chaînes JSONB ('true' / 'false')
+    const val = data.value;
+    if (typeof val === 'boolean') return val;
+    if (val === 'false') return false;
+    return true;
+  } catch {
+    logger.warn('[reminders/process] Erreur lecture toggle — activé par défaut', { toggleKey });
+    return true;
+  }
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -79,25 +122,24 @@ export async function processReminders(
     results:  [],
   };
 
-  // ── 1. Vérifier le toggle ─────────────────────────────────────────────────
-  const toggleResult = await getAppSetting<boolean>(config.toggleKey);
-  const isEnabled = toggleResult.data ?? true; // Défaut : activé
+  // ── 1. Vérifier le toggle (service role pour bypasser RLS) ────────────────
+  const isEnabled = await readToggleServerSide(config.toggleKey);
 
   if (!isEnabled) {
-    logger.info(`[reminders/process] Toggle désactivé, rappels ignorés`, {
-      type: config.type,
+    logger.info('[reminders/process] Toggle désactivé — rappels ignorés', {
+      type:      config.type,
       toggleKey: config.toggleKey,
     });
     return { ...baseResult, enabled: false };
   }
 
   // ── 2. Récupérer les réservations éligibles ───────────────────────────────
-  logger.info(`[reminders/process] Démarrage batch`, { type: config.type });
+  logger.info('[reminders/process] Démarrage batch', { type: config.type });
 
   const reservations = await getEligibleReservations(config);
 
   if (reservations.length === 0) {
-    logger.info(`[reminders/process] Aucune réservation éligible`, { type: config.type });
+    logger.info('[reminders/process] Aucune réservation éligible', { type: config.type });
     return { ...baseResult, enabled: true, eligible: 0 };
   }
 
@@ -110,9 +152,10 @@ export async function processReminders(
   let sent   = 0;
   let failed = 0;
 
-  for (const reservation of reservations) {
-    const emailData = toEmailData(reservation);
-    const result    = await sendReminderEmail(config.type, emailData);
+  for (let i = 0; i < reservations.length; i++) {
+    const reservation = reservations[i];
+    const emailData   = toEmailData(reservation);
+    const result      = await sendReminderEmail(config.type, emailData);
 
     results.push(result);
 
@@ -120,21 +163,21 @@ export async function processReminders(
       sent++;
     } else {
       failed++;
-      logger.warn(`[reminders/process] Échec envoi réservation`, {
-        type: config.type,
+      logger.warn('[reminders/process] Échec envoi réservation', {
+        type:          config.type,
         reservationId: reservation.id,
-        error: result.error,
+        error:         result.error,
       });
     }
 
-    // Délai anti rate-limit entre chaque envoi
-    if (reservations.indexOf(reservation) < reservations.length - 1) {
+    // Délai anti rate-limit entre chaque envoi (sauf après le dernier)
+    if (i < reservations.length - 1) {
       await sleep(SEND_DELAY_MS);
     }
   }
 
   // ── 4. Résumé ─────────────────────────────────────────────────────────────
-  logger.info(`[reminders/process] Batch terminé`, {
+  logger.info('[reminders/process] Batch terminé', {
     type:     config.type,
     eligible: reservations.length,
     sent,
@@ -154,19 +197,13 @@ export async function processReminders(
 /**
  * Traite plusieurs types de rappels en séquence.
  * Utilisé par le cron daily pour J-7 + J-2 en un seul appel.
- *
- * @param configs - Liste de configurations de rappels à traiter
- * @returns Tableau de résultats par type
  */
 export async function processMultipleReminders(
   configs: ReminderConfig[]
 ): Promise<ProcessRemindersResult[]> {
   const results: ProcessRemindersResult[] = [];
-
   for (const config of configs) {
-    const result = await processReminders(config);
-    results.push(result);
+    results.push(await processReminders(config));
   }
-
   return results;
 }

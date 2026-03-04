@@ -19,7 +19,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
-import type { EligibleReservation, ReminderConfig } from './types';
+import type { EligibleReservation, ReminderConfig, ReminderType } from './types';
 
 // ============================================
 // CLIENT SERVICE ROLE (bypass RLS)
@@ -363,7 +363,7 @@ async function enrichWithManagers(
  */
 export async function logReminderSent(
   reservationId: string,
-  type: string,
+  type: ReminderType,
   recipientEmail: string,
   emailProviderId?: string
 ): Promise<void> {

@@ -2,7 +2,7 @@
  * Section Templates Email — Préférences admin
  * Derviche Diffusion
  *
- * Affiche les 4 templates email sous forme d'accordéons dépliables.
+ * Affiche les 7 templates email sous forme d'accordéons dépliables (4 transactionnels + 3 rappels).
  * Chaque template est éditable via EmailTemplateForm (super-admin uniquement).
  */
 
@@ -169,7 +169,7 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
     onDirtyChangeRef.current?.(anyDirty);
   }, [dirtyMap]);
 
-  // Chargement des 4 templates
+  // Chargement des 7 templates
   const loadTemplates = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
