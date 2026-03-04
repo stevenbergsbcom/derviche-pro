@@ -92,7 +92,10 @@ function NotificationItemComponent({
   const config = TYPE_CONFIG[notification.type];
   const Icon   = config.icon;
 
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(async (e: React.MouseEvent) => {
+    // Empêcher le click de traverser le Sheet et d'activer les éléments en dessous
+    e.stopPropagation();
+
     // Marquer comme lu si pas encore fait
     if (!notification.is_read) {
       await onRead(notification.id);
@@ -101,17 +104,21 @@ function NotificationItemComponent({
     // Fermer le Sheet
     onClose();
 
-    // Rediriger vers la réservation si disponible
+    // Attendre la fin de l'animation de fermeture du Sheet (300ms)
+    // avant de naviguer pour éviter le click-through sur la page cible
     if (notification.reservation_id) {
-      router.push(`/admin/reservations/${notification.reservation_id}`);
+      const reservationId = notification.reservation_id;
+      setTimeout(() => {
+        router.push(`/admin/reservations?reservationId=${reservationId}`);
+      }, 350);
     }
   }, [notification, onRead, onClose, router]);
 
   return (
     <button
-      onClick={() => void handleClick()}
+      onClick={(e) => void handleClick(e)}
       className={cn(
-        'w-full text-left px-4 py-3 flex gap-3 items-start transition-colors',
+        'w-full text-left px-4 py-3 flex gap-3 items-start transition-colors cursor-pointer',
         'hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         notification.is_read
           ? 'opacity-60'

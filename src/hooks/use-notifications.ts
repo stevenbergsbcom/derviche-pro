@@ -52,6 +52,8 @@ export interface UseNotificationsReturn {
   markAsRead: (id: string) => Promise<void>;
   /** Tout marquer lu */
   markAllAsRead: () => Promise<void>;
+  /** Masquer toutes les notifications pour moi (soft delete individuel) */
+  dismissAll: () => Promise<void>;
   /** Aller à une page */
   goToPage: (pageNum: number) => void;
   /** Rafraîchir le badge manuellement */
@@ -81,19 +83,27 @@ export function useNotifications(): UseNotificationsReturn {
   const fetchUnreadCount = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/notifications?page=1&limit=1');
-      if (!res.ok) return;
+
+      if (!res.ok) {
+        // Erreur HTTP — on sort du loading dans tous les cas
+        if (isMountedRef.current) setIsBadgeLoading(false);
+        return;
+      }
 
       const json = (await res.json()) as {
         success: boolean;
         data?: GetNotificationsResult;
       };
 
-      if (isMountedRef.current && json.success && json.data) {
+      if (!isMountedRef.current) return;
+
+      if (json.success && json.data) {
         setUnreadCount(json.data.unreadCount);
-        setIsBadgeLoading(false);
       }
+      // Dans tous les cas (success ou non), on sort du loading
+      setIsBadgeLoading(false);
     } catch {
-      // Non-bloquant : le badge reste à sa dernière valeur connue
+      // Erreur réseau — non-bloquant, le badge reste à sa dernière valeur connue
       if (isMountedRef.current) setIsBadgeLoading(false);
     }
   }, []);
@@ -185,6 +195,24 @@ export function useNotifications(): UseNotificationsReturn {
 
   // ── Polling badge (30s) ───────────────────────────────────────────────────
 
+  // ── Masquer toutes les notifications (soft delete individuel) ──────────
+
+  const dismissAll = useCallback(async () => {
+    // Mise à jour optimiste : vider la liste immédiatement
+    setNotifications([]);
+    setTotal(0);
+    setTotalPages(0);
+    setUnreadCount(0);
+
+    try {
+      await fetch('/api/admin/notifications/dismiss-all', { method: 'POST' });
+    } catch {
+      // Non-bloquant
+    }
+  }, []);
+
+  // ── Rafraîchir le badge ──────────────────────────────────────────
+
   const refreshBadge = useCallback(async () => {
     await fetchUnreadCount();
   }, [fetchUnreadCount]);
@@ -220,6 +248,7 @@ export function useNotifications(): UseNotificationsReturn {
     loadNotifications,
     markAsRead,
     markAllAsRead,
+    dismissAll,
     goToPage,
     refreshBadge,
   };

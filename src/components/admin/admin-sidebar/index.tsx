@@ -5,7 +5,7 @@
 
 'use client';
 
-import { memo, useState, useCallback } from 'react';
+import { memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -28,9 +28,6 @@ import {
   isRouteActive,
 } from '@/components/shared-sidebar';
 import { useAdminSidebarData } from './hooks/useAdminSidebarData';
-import { useNotifications } from '@/hooks/use-notifications';
-import { NotificationBadge } from '@/components/admin/notifications/notification-badge';
-import { NotificationSheet } from '@/components/admin/notifications/notification-sheet';
 import {
   ADMIN_BASE_HREF,
   ADMIN_ACCOUNT_HREF,
@@ -45,15 +42,6 @@ function AdminSidebarComponent() {
   const pathname = usePathname();
   const { userData, isLoading, displayName, filteredNavItems } =
     useAdminSidebarData();
-
-  // Notifications
-  const notificationsHook = useNotifications();
-  const [sheetOpen, setSheetOpen] = useState(false);
-
-  const handleBadgeClick = useCallback(() => {
-    setSheetOpen(true);
-    void notificationsHook.loadNotifications(1);
-  }, [notificationsHook]);
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -119,26 +107,11 @@ function AdminSidebarComponent() {
             <SidebarLogoutButton />
           </SidebarMenuItem>
 
-          {/* Badge notifications */}
-          <SidebarMenuItem>
-            <NotificationBadge
-              unreadCount={notificationsHook.unreadCount}
-              isLoading={notificationsHook.isBadgeLoading}
-              onClick={handleBadgeClick}
-            />
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
 
       {/* Rail pour hover-expand en mode collapsed */}
       <SidebarRail />
-
-      {/* Sheet notifications */}
-      <NotificationSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        hook={notificationsHook}
-      />
     </Sidebar>
   );
 }

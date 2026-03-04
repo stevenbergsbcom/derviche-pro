@@ -19,4 +19,5 @@ export {
   getAdminUnreadCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
+  dismissAllNotifications,
 } from './queries';

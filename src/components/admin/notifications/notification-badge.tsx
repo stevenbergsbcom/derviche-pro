@@ -1,31 +1,25 @@
 /**
- * NotificationBadge — Cloche avec badge non-lu dans la sidebar admin
+ * NotificationBadge — Cloche avec badge non-lu dans le header admin
  * Derviche Diffusion
  *
- * Bouton cloche qui ouvre le NotificationSheet.
- * Badge rouge avec le nombre de non-lus (masqué si 0).
- * Intégré dans le footer de la sidebar admin.
+ * Bouton icône cloche avec badge rouge (nombre de non-lus).
+ * Placé dans le header du layout admin (en haut à droite).
  */
 
 'use client';
 
 import { memo } from 'react';
 import { Bell } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import {
-  SidebarMenuButton,
-} from '@/components/ui/sidebar';
 
 // ============================================
 // PROPS
 // ============================================
 
 interface NotificationBadgeProps {
-  /** Nombre de notifications non lues */
   unreadCount: number;
-  /** En cours de chargement initial */
   isLoading: boolean;
-  /** Callback pour ouvrir le Sheet */
   onClick: () => void;
 }
 
@@ -39,45 +33,46 @@ function NotificationBadgeComponent({
   onClick,
 }: NotificationBadgeProps) {
   const hasUnread = unreadCount > 0;
-  // Affichage : 99+ si plus de 99
   const displayCount = unreadCount > 99 ? '99+' : String(unreadCount);
 
   return (
-    <SidebarMenuButton
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={onClick}
-      tooltip="Notifications"
-      className="relative"
+      className="relative h-9 w-9"
       aria-label={
         hasUnread
           ? `Notifications — ${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`
           : 'Notifications'
       }
     >
-      {/* Icône cloche */}
       <Bell
         aria-hidden
         className={cn(
-          'size-4 transition-colors',
-          hasUnread && !isLoading ? 'text-foreground' : 'text-muted-foreground'
+          'size-5 transition-colors',
+          hasUnread && !isLoading
+            ? 'text-foreground'
+            : 'text-muted-foreground'
         )}
       />
-      <span>Notifications</span>
 
-      {/* Badge non-lu — affiché uniquement si > 0 et pas en chargement */}
+      {/* Badge rouge — affiché uniquement si > 0 et pas en chargement */}
       {hasUnread && !isLoading && (
         <span
           className={cn(
-            'ml-auto flex items-center justify-center',
+            'absolute -top-0.5 -right-0.5',
+            'flex items-center justify-center',
             'min-w-[18px] h-[18px] rounded-full px-1',
-            'text-[10px] font-bold text-white',
-            'bg-red-500 shrink-0'
+            'text-[10px] font-bold text-white bg-red-500',
+            'pointer-events-none'
           )}
           aria-hidden
         >
           {displayCount}
         </span>
       )}
-    </SidebarMenuButton>
+    </Button>
   );
 }
 

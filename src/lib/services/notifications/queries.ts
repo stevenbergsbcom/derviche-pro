@@ -2,20 +2,20 @@
  * Queries — Service Notifications Admin
  * Derviche Diffusion
  *
- * Fonctions CRUD pour la table admin_notifications et admin_notification_reads.
+ * Fonctions CRUD pour admin_notifications, admin_notification_reads,
+ * et admin_notification_dismissals.
  *
  * Deux contextes d'appel :
- *   1. createNotification() — appelé depuis les routes /api/emails/*
+ *   1. createAdminNotification() — appelé depuis les routes /api/emails/*
  *      → utilise le service role (INSERT non accessible aux authenticated, par design RLS)
- *   2. getNotifications(), getUnreadCount(), markAsRead(), markAllAsRead()
- *      → utilisent le client serveur SSR (session cookie admin)
- *      → appelés uniquement depuis /api/admin/notifications/*
+ *   2. Toutes les autres fonctions
+ *      → client serveur SSR (session cookie admin)
+ *      → appelés depuis /api/admin/notifications/*
  *
- * Sécurité :
- *   - createNotification() : service role, jamais exposé côté client
- *   - Toutes les lectures : protégées par RLS (is_admin_or_super)
- *   - admin_notification_reads : RLS filtre automatiquement par auth.uid()
- *     → is_read = true si une ligne existe pour (notification_id, current_user)
+ * Architecture "dismiss par timestamp" :
+ *   - admin_notification_dismissals : une ligne par admin avec dismissed_at
+ *   - On affiche uniquement les notifs créées APRÈS dismissed_at
+ *   - Simple, pas d'upsert batch, pas de policy UPDATE complexe
  */
 
 import { createClient as createSupabaseServiceClient } from '@supabase/supabase-js';
@@ -40,8 +40,8 @@ const DEFAULT_PAGE_LIMIT = 20;
 // ============================================
 
 function getServiceClient() {
-  const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !key) {
     throw new Error(
@@ -58,7 +58,6 @@ function getServiceClient() {
 // TYPE INTERMÉDIAIRE (réponse brute Supabase)
 // ============================================
 
-/** Ligne brute retournée par Supabase avec JOIN reads */
 interface RawNotificationRow {
   id: string;
   type: string;
@@ -68,7 +67,7 @@ interface RawNotificationRow {
   slot_date: string | null;
   message: string;
   created_at: string;
-  /** Présent si LEFT JOIN — tableau vide = non lu par l'admin courant */
+  /** LEFT JOIN reads — tableau vide = non lu par l'admin courant */
   reads: Array<{ notification_id: string }>;
 }
 
@@ -87,10 +86,25 @@ function transformRow(row: RawNotificationRow): AdminNotification {
     slot_date:         row.slot_date,
     message:           row.message,
     created_at:        row.created_at,
-    // is_read = true si au moins une ligne existe dans reads pour cet admin
-    // La RLS filtre automatiquement reads par user_id = auth.uid()
-    is_read:           row.reads.length > 0,
+    // is_read = true si une ligne existe dans reads pour cet admin (RLS filtre par uid)
+    is_read: row.reads.length > 0,
   };
+}
+
+/**
+ * Récupère le dismissed_at de l'admin courant (ou null si jamais vidé).
+ * Utilisé pour filtrer les notifications antérieures au dernier "Vider".
+ */
+async function getDismissedAt(
+  supabase: Awaited<ReturnType<typeof createServerClient>>
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('admin_notification_dismissals')
+    .select('dismissed_at')
+    .single();
+
+  if (error || !data) return null;
+  return data.dismissed_at as string;
 }
 
 // ============================================
@@ -99,20 +113,7 @@ function transformRow(row: RawNotificationRow): AdminNotification {
 
 /**
  * Crée une notification admin suite à un événement réservation.
- * Non-bloquant : une erreur de création ne doit jamais faire échouer l'email.
- *
- * À appeler depuis les routes /api/emails/* après un envoi réussi.
- *
- * @example
- * // Dans send-confirmation/route.ts, après l'envoi email :
- * await createAdminNotification({
- *   type: 'new_reservation',
- *   reservation_id: payload.reservationId,
- *   professional_name: payload.guestFullName,
- *   show_title: payload.showTitle,
- *   slot_date: slotIsoDate,
- *   message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour ${payload.showTitle}`,
- * });
+ * Non-bloquant : une erreur ne fait jamais échouer l'email appelant.
  */
 export async function createAdminNotification(
   data: CreateNotificationData
@@ -147,18 +148,12 @@ export async function createAdminNotification(
 }
 
 // ============================================
-// READ — client serveur SSR (session admin)
+// READ — client serveur SSR
 // ============================================
 
 /**
- * Récupère les notifications paginées avec le statut lu/non-lu
- * pour l'admin courant.
- *
- * Le JOIN avec admin_notification_reads est automatiquement filtré
- * par RLS (user_id = auth.uid()) : reads.length > 0 ↔ lu par cet admin.
- *
- * @param page - Numéro de page (1-indexed)
- * @param limit - Nombre de notifications par page (défaut : 20)
+ * Récupère les notifications paginées pour l'admin courant.
+ * Exclut les notifications créées avant son dernier dismissed_at.
  */
 export async function getAdminNotifications(
   page = 1,
@@ -178,8 +173,11 @@ export async function getAdminNotifications(
     const from = (page - 1) * limit;
     const to   = from + limit - 1;
 
-    // Fetch paginé avec count + LEFT JOIN reads (filtré par RLS)
-    const { data, error, count } = await supabase
+    // Récupérer le timestamp du dernier "Vider" de cet admin
+    const dismissedAt = await getDismissedAt(supabase);
+
+    // Construction de la query avec filtre dismissed_at si présent
+    let query = supabase
       .from('admin_notifications')
       .select(
         `
@@ -192,11 +190,18 @@ export async function getAdminNotifications(
         message,
         created_at,
         reads:admin_notification_reads(notification_id)
-      `,
+        `,
         { count: 'exact' }
       )
       .order('created_at', { ascending: false })
       .range(from, to);
+
+    // Filtrer : uniquement les notifs créées APRÈS le dernier "Vider"
+    if (dismissedAt) {
+      query = query.gt('created_at', dismissedAt);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) {
       logger.error('[notifications/queries] Erreur getAdminNotifications', {
@@ -207,10 +212,8 @@ export async function getAdminNotifications(
       return defaultResult;
     }
 
-    const total = count ?? 0;
+    const total         = count ?? 0;
     const notifications = (data as unknown as RawNotificationRow[]).map(transformRow);
-
-    // Compter les non-lus sur toutes les notifications (pas seulement la page courante)
     const { count: unreadCount } = await getAdminUnreadCount();
 
     return {
@@ -228,17 +231,26 @@ export async function getAdminNotifications(
 }
 
 /**
- * Retourne uniquement le nombre de notifications non lues pour l'admin courant.
- * Utilisé par le badge de la sidebar (polling léger).
+ * Retourne le nombre de notifications non lues pour l'admin courant.
+ * Tient compte du dismissed_at : ignore les notifs antérieures au dernier "Vider".
  */
 export async function getAdminUnreadCount(): Promise<UnreadCountResult> {
   try {
     const supabase = await createServerClient();
 
-    // Total de notifications
-    const { count: totalCount, error: totalError } = await supabase
+    // Timestamp du dernier "Vider"
+    const dismissedAt = await getDismissedAt(supabase);
+
+    // Total des notifs visibles par cet admin (après dismissed_at si présent)
+    let totalQuery = supabase
       .from('admin_notifications')
       .select('*', { count: 'exact', head: true });
+
+    if (dismissedAt) {
+      totalQuery = totalQuery.gt('created_at', dismissedAt);
+    }
+
+    const { count: totalCount, error: totalError } = await totalQuery;
 
     if (totalError) {
       logger.error('[notifications/queries] Erreur getAdminUnreadCount total', {
@@ -247,10 +259,20 @@ export async function getAdminUnreadCount(): Promise<UnreadCountResult> {
       return { count: 0 };
     }
 
-    // Notifications lues par l'admin courant
-    const { count: readCount, error: readError } = await supabase
+    // Notifs lues par cet admin, uniquement parmi les notifs visibles
+    // (créées après dismissed_at) — on joint avec admin_notifications pour filtrer
+    let readQuery = supabase
       .from('admin_notification_reads')
-      .select('*', { count: 'exact', head: true });
+      .select('notification_id, admin_notifications!inner(created_at)', {
+        count: 'exact',
+        head: true,
+      });
+
+    if (dismissedAt) {
+      readQuery = readQuery.gt('admin_notifications.created_at', dismissedAt);
+    }
+
+    const { count: readCount, error: readError } = await readQuery;
 
     if (readError) {
       logger.error('[notifications/queries] Erreur getAdminUnreadCount reads', {
@@ -267,12 +289,12 @@ export async function getAdminUnreadCount(): Promise<UnreadCountResult> {
 }
 
 // ============================================
-// MARK AS READ — client serveur SSR
+// MARK AS READ
 // ============================================
 
 /**
  * Marque une notification comme lue pour l'admin courant.
- * Upsert silencieux : si déjà lu, ne fait rien (ON CONFLICT ignoré).
+ * Upsert silencieux (ignoreDuplicates si déjà lu).
  */
 export async function markNotificationAsRead(
   notificationId: string,
@@ -303,18 +325,24 @@ export async function markNotificationAsRead(
 }
 
 /**
- * Marque toutes les notifications comme lues pour l'admin courant.
- * Récupère d'abord tous les IDs non lus, puis fait un upsert batch.
- * Non-bloquant : une erreur partielle est loggée mais ne fait pas échouer la réponse.
+ * Marque toutes les notifications visibles comme lues pour l'admin courant.
  */
 export async function markAllNotificationsAsRead(userId: string): Promise<void> {
   try {
     const supabase = await createServerClient();
 
-    // 1. Récupérer tous les IDs de notifications
-    const { data: allNotifs, error: allError } = await supabase
+    // Récupérer uniquement les IDs visibles (après dismissed_at)
+    const dismissedAt = await getDismissedAt(supabase);
+
+    let notifQuery = supabase
       .from('admin_notifications')
       .select('id');
+
+    if (dismissedAt) {
+      notifQuery = notifQuery.gt('created_at', dismissedAt);
+    }
+
+    const { data: allNotifs, error: allError } = await notifQuery;
 
     if (allError || !allNotifs || allNotifs.length === 0) {
       if (allError) {
@@ -325,16 +353,15 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
       return;
     }
 
-    // 2. Upsert batch — ignoreDuplicates évite les erreurs sur les déjà-lus
     const rows = allNotifs.map((n) => ({
       notification_id: n.id,
-      user_id: userId,
+      user_id:         userId,
     }));
 
     const { error: upsertError } = await supabase
       .from('admin_notification_reads')
       .upsert(rows, {
-        onConflict: 'notification_id,user_id',
+        onConflict:       'notification_id,user_id',
         ignoreDuplicates: true,
       });
 
@@ -346,5 +373,38 @@ export async function markAllNotificationsAsRead(userId: string): Promise<void> 
     }
   } catch (err) {
     logger.error('[notifications/queries] Exception markAllAsRead', { err });
+  }
+}
+
+// ============================================
+// DISMISS ALL — nouvelle architecture timestamp
+// ============================================
+
+/**
+ * Masque toutes les notifications pour l'admin courant.
+ * Enregistre dismissed_at = NOW() dans admin_notification_dismissals.
+ * Les notifs créées AVANT ce timestamp deviennent invisibles pour cet admin.
+ * Les notifs créées APRÈS restent visibles.
+ * Les autres admins ne sont pas affectés.
+ */
+export async function dismissAllNotifications(userId: string): Promise<void> {
+  try {
+    const supabase = await createServerClient();
+
+    const { error } = await supabase
+      .from('admin_notification_dismissals')
+      .upsert(
+        { user_id: userId, dismissed_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+
+    if (error) {
+      logger.error('[notifications/queries] Erreur dismissAllNotifications', {
+        error: error.message,
+        userId,
+      });
+    }
+  } catch (err) {
+    logger.error('[notifications/queries] Exception dismissAllNotifications', { err });
   }
 }

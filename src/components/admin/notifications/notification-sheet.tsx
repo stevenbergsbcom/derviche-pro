@@ -12,8 +12,8 @@
 
 'use client';
 
-import { memo, useCallback } from 'react';
-import { CheckCheck, Loader2, BellOff } from 'lucide-react';
+import { memo, useCallback, useState } from 'react';
+import { CheckCheck, Loader2, BellOff, Trash2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -120,16 +120,25 @@ function NotificationSheetComponent({
     unreadCount,
     markAsRead,
     markAllAsRead,
+    dismissAll,
     goToPage,
   } = hook;
 
+  const [confirmDismiss, setConfirmDismiss] = useState(false);
+
   const handleClose = useCallback(() => {
+    setConfirmDismiss(false);
     onOpenChange(false);
   }, [onOpenChange]);
 
   const handleMarkAllAsRead = useCallback(async () => {
     await markAllAsRead();
   }, [markAllAsRead]);
+
+  const handleDismissAll = useCallback(async () => {
+    await dismissAll();
+    setConfirmDismiss(false);
+  }, [dismissAll]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -138,31 +147,71 @@ function NotificationSheetComponent({
         className="w-full sm:w-[420px] p-0 flex flex-col"
       >
         {/* En-tête */}
-        <SheetHeader className="px-4 py-3 border-b shrink-0">
-          <div className="flex items-center justify-between">
+        <SheetHeader className="px-4 pt-3 pb-2 border-b shrink-0">
+          {/* Ligne 1 : titre + badge non lus — pr-8 pour ne pas chevaucher la croix native */}
+          <div className="flex items-center pr-8">
             <SheetTitle className="text-base font-semibold">
               Notifications
-              {unreadCount > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({unreadCount} non lue{unreadCount > 1 ? 's' : ''})
-                </span>
-              )}
             </SheetTitle>
-
-            {/* Bouton tout marquer lu */}
             {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => void handleMarkAllAsRead()}
-                aria-label="Tout marquer comme lu"
-              >
-                <CheckCheck className="size-3.5" aria-hidden />
-                Tout lire
-              </Button>
+              <span className="ml-2 text-xs font-normal text-muted-foreground whitespace-nowrap">
+                {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
+              </span>
             )}
           </div>
+
+          {/* Ligne 2 : actions (masquées si liste vide) */}
+          {(notifications.length > 0 || confirmDismiss) && (
+            <div className="flex items-center gap-1 mt-1">
+              {unreadCount > 0 && !confirmDismiss && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground px-2"
+                  onClick={() => void handleMarkAllAsRead()}
+                  aria-label="Tout marquer comme lu"
+                >
+                  <CheckCheck className="size-3.5" aria-hidden />
+                  Tout lire
+                </Button>
+              )}
+
+              {notifications.length > 0 && !confirmDismiss && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-muted-foreground hover:text-destructive px-2"
+                  onClick={() => setConfirmDismiss(true)}
+                  aria-label="Vider mes notifications"
+                >
+                  <Trash2 className="size-3.5" aria-hidden />
+                  Vider
+                </Button>
+              )}
+
+              {confirmDismiss && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground">Vider pour moi ?</span>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="h-6 px-3 text-xs"
+                    onClick={() => void handleDismissAll()}
+                  >
+                    Confirmer
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setConfirmDismiss(false)}
+                  >
+                    Annuler
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </SheetHeader>
 
         {/* Corps scrollable */}
@@ -209,8 +258,12 @@ function NotificationSheetComponent({
             </div>
           )}
 
-          {/* Liste des notifications */}
-          {!isLoading && !error && notifications.length > 0 && (
+          {/* Liste des notifications
+              - Premier chargement (isLoading + liste vide) : skeleton affiché ci-dessus
+              - Changement de page (isLoading + liste existante) : liste conservée + spinner bas
+              - Chargé (pas isLoading) : liste seule
+          */}
+          {notifications.length > 0 && (
             <ul role="list" aria-label="Liste des notifications">
               {notifications.map((notif, idx) => (
                 <li key={notif.id} role="listitem">
@@ -225,7 +278,7 @@ function NotificationSheetComponent({
             </ul>
           )}
 
-          {/* Spinner changement de page */}
+          {/* Spinner changement de page — liste déjà visible, chargement en cours */}
           {isLoading && notifications.length > 0 && (
             <div className="flex justify-center py-4">
               <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden />
