@@ -22,6 +22,7 @@ import {
   type AdminNotificationEmailData,
 } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
+import { createCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 
@@ -254,7 +255,67 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
     }
 
-    // 5. Créer la notification admin en base (badge sidebar)
+    // 5. Créer l'événement Google Calendar (non-bloquant)
+    try {
+      const { data: calPref } = await adminClient
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'google_calendar_enabled')
+        .maybeSingle();
+
+      const isBoolTrue = (v: unknown) => v === true || v === 'true';
+
+      if (isBoolTrue(calPref?.value)) {
+        // Fetch données brutes du créneau (date ISO, heure, durée)
+        const { data: slotRaw } = await adminClient
+          .from('reservations')
+          .select(`
+            guest_structure,
+            slots!inner (
+              date,
+              time,
+              shows!inner ( duration_minutes )
+            )
+          `)
+          .eq('id', payload.reservationId)
+          .maybeSingle();
+
+        const slot = (slotRaw?.slots as unknown) as {
+          date: string;
+          time: string;
+          shows: { duration_minutes: number | null };
+        } | null;
+
+        if (slot) {
+          const calResult = await createCalendarEvent({
+            showTitle:            payload.showTitle,
+            guestFullName:        payload.guestFullName,
+            guestStructure:       (slotRaw as { guest_structure?: string | null } | null)?.guest_structure ?? null,
+            guestEmail:           payload.to,
+            reservationId:        payload.reservationId,
+            numPlaces:            payload.numPlaces,
+            slotDate:             slot.date,
+            slotTime:             slot.time,
+            durationMinutes:      slot.shows.duration_minutes,
+            venueName:            payload.venueName,
+            venueCity:            payload.venueCity,
+            sendEmailNotification: true,
+          });
+
+          if (calResult.success) {
+            // Stocker l'eventId pour pouvoir le modifier/supprimer plus tard
+            await adminClient
+              .from('reservations')
+              .update({ google_calendar_event_id: calResult.eventId })
+              .eq('id', payload.reservationId);
+          }
+        }
+      }
+    } catch (calErr) {
+      logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', { calErr });
+    }
+
+    // 6. Créer la notification admin en base (badge sidebar)
     // Non-bloquant : createAdminNotification gère ses propres erreurs
     await createAdminNotification({
       type: 'new_reservation',

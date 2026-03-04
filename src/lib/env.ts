@@ -21,6 +21,10 @@ const serverEnvSchema = z.object({
     SUPABASE_SERVICE_ROLE_KEY: z
         .string()
         .min(1, 'SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations admin'),
+    // Google Calendar (optionnelles — absentes si l'intégration est désactivée)
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email().optional(),
+    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().min(1).optional(),
+    GOOGLE_CALENDAR_ID: z.string().min(1).optional(),
 });
 
 // Type des variables client validées
@@ -56,6 +60,9 @@ export function getServerEnv(): ServerEnv {
     try {
         return serverEnvSchema.parse({
             SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+            GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
+            GOOGLE_CALENDAR_ID: process.env.GOOGLE_CALENDAR_ID,
         });
     } catch (error) {
         if (error instanceof z.ZodError) {

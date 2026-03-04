@@ -7,7 +7,7 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Building2, Mail, Bell, CalendarClock, Shield, Palette, FileText } from 'lucide-react';
+import { Building2, Mail, Bell, CalendarClock, Shield, Palette, FileText, Calendar } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,13 +30,14 @@ export interface PreferenceTab {
 // ============================================
 
 export const PREFERENCE_TABS: PreferenceTab[] = [
-  { id: 'organization',  label: 'Organisation',  icon: Building2, status: 'partial',  statusLabel: 'Partiel' },
-  { id: 'appearance',    label: 'Apparence',      icon: Palette,   status: 'active',   statusLabel: 'Actif' },
-  { id: 'email',         label: 'Email',          icon: Mail,      status: 'active',   statusLabel: 'Actif' },
-  { id: 'templates',     label: 'Templates',      icon: FileText,  status: 'active',   statusLabel: 'Actif' },
-  { id: 'notifications', label: 'Notifications',  icon: Bell,      status: 'active',   statusLabel: 'Actif' },
-  { id: 'reminders',     label: 'Rappels',        icon: CalendarClock, status: 'active',   statusLabel: 'Actif' },
-  { id: 'rgpd',          label: 'RGPD',           icon: Shield,    status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'organization',    label: 'Organisation',  icon: Building2,    status: 'partial',  statusLabel: 'Partiel' },
+  { id: 'appearance',      label: 'Apparence',     icon: Palette,      status: 'active',   statusLabel: 'Actif' },
+  { id: 'email',           label: 'Email',         icon: Mail,         status: 'active',   statusLabel: 'Actif' },
+  { id: 'templates',       label: 'Templates',     icon: FileText,     status: 'active',   statusLabel: 'Actif' },
+  { id: 'notifications',   label: 'Notifications', icon: Bell,         status: 'active',   statusLabel: 'Actif' },
+  { id: 'reminders',       label: 'Rappels',       icon: CalendarClock,status: 'active',   statusLabel: 'Actif' },
+  { id: 'google-calendar', label: 'Calendar',      icon: Calendar,     status: 'active',   statusLabel: 'Actif' },
+  { id: 'rgpd',            label: 'RGPD',          icon: Shield,       status: 'inactive', statusLabel: 'Non connecté' },
 ];
 
 const STATUS_STYLES: Record<PreferenceTab['status'], string> = {
@@ -64,7 +65,7 @@ export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       {/* h-auto pour ne pas clipper les triggers flex-col à 2 lignes */}
-      <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto gap-0.5 p-1">
+      <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto gap-0.5 p-1">
         {PREFERENCE_TABS.map((tab) => {
           const Icon = tab.icon;
           return (
