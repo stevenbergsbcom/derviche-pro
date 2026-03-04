@@ -12,7 +12,6 @@ export {
   tryClaimReminder,
   updateReminderMessageId,
   releaseReminderClaim,
-  logReminderSent,
 } from './queries';
 export type {
   ReminderType,

@@ -26,6 +26,7 @@ import {
   type ReservationModificationEmailData,
   type AdminNotificationEmailData,
 } from '@/lib/services/email';
+import { createAdminNotification } from '@/lib/services/notifications';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
@@ -319,6 +320,17 @@ export async function POST(request: Request): Promise<NextResponse> {
         });
       });
     }
+
+    // 11. Créer la notification admin en base (badge sidebar)
+    // Non-bloquant : createAdminNotification gère ses propres erreurs
+    await createAdminNotification({
+      type: 'modification',
+      reservation_id: reservation.id,
+      professional_name: recipientFullName,
+      show_title: show.title,
+      slot_date: `${slots.date}T${slots.time}`,
+      message: `${recipientFullName} a modifié son créneau pour « ${show.title} »`,
+    });
 
     return NextResponse.json({
       success: emailResult.success,

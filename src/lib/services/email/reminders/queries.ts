@@ -462,32 +462,3 @@ export async function releaseReminderClaim(
   }
 }
 
-/**
- * @deprecated Utiliser tryClaimReminder + updateReminderMessageId à la place.
- * Conservé pour compatibilité — sera supprimé en S137.
- */
-export async function logReminderSent(
-  reservationId: string,
-  type: ReminderType,
-  recipientEmail: string,
-  emailProviderId?: string
-): Promise<void> {
-  try {
-    const supabase = getServiceClient();
-    const { error } = await supabase
-      .from('sent_notifications')
-      .insert({
-        reservation_id:    reservationId,
-        type,
-        recipient_email:   recipientEmail,
-        email_provider_id: emailProviderId ?? null,
-      });
-    if (error) {
-      logger.error('[reminders/queries] Erreur logReminderSent', {
-        error: error.message, reservationId, type,
-      });
-    }
-  } catch (err) {
-    logger.error('[reminders/queries] Exception logReminderSent', { err, reservationId, type });
-  }
-}

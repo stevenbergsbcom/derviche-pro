@@ -21,6 +21,7 @@ import {
   sendAdminNotificationEmail,
   type AdminNotificationEmailData,
 } from '@/lib/services/email';
+import { createAdminNotification } from '@/lib/services/notifications';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 
@@ -252,6 +253,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       // La notif manager ne doit jamais bloquer la réponse
       logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
     }
+
+    // 5. Créer la notification admin en base (badge sidebar)
+    // Non-bloquant : createAdminNotification gère ses propres erreurs
+    await createAdminNotification({
+      type: 'new_reservation',
+      reservation_id: payload.reservationId,
+      professional_name: payload.guestFullName,
+      show_title: payload.showTitle,
+      slot_date: null, // Date formatée uniquement disponible dans ce contexte
+      message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
+    });
 
     return NextResponse.json({ success: true, messageId: result.messageId });
   } catch (err) {

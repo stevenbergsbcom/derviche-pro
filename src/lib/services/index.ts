@@ -33,3 +33,6 @@ export * from './storage';
 
 // Services Professionnel (espace programmateur)
 export * from './pro-reservations';
+
+// Services Notifications Admin
+export * from './notifications';
