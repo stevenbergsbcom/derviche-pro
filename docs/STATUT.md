@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 134B-suite — 3 mars 2026
+> Dernière mise à jour : Session 136 — 4 mars 2026
 
 ---
 
@@ -35,7 +35,7 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, deep-link réservations, modale UX refonte |
-| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, **Templates** ✅ S134B, RGPD |
+| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels ✅ S136, Templates ✅ S136 (+3 rappels), RGPD |
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -58,69 +58,79 @@
 | Notification manager (annulation) | inclus dans send-cancellation | ✅ S131 |
 | Notification manager (modification) | inclus dans send-modification | ✅ S132 |
 
-### ✅ Templates email dynamiques (100%) — S134A + S134B + S134B-suite
-- Table `email_templates` (migration 051) avec 4 templates en DB
+### ✅ Templates email dynamiques (100%) — S134A + S134B + S135 + S136
+- Table `email_templates` (migration 051) avec **7 templates en DB** (4 transactionnels + 3 rappels)
 - Champs éditables : `subject`, `intro_text`, `body_text`, `info_text`, `header_title`, `salutation`, `cta_text`, `contact_block_title`
 - Champs booléens : `show_contact_block`, `show_reservation_code`, `is_active`
 - Service `email-templates.ts` : `getEmailTemplate()`, `resolveTemplateVariables()`, `textToHtml()`
 - **Service email refactorisé → 8 modules** (`src/lib/services/email/`) — score audit 9/10
-- **UI admin : onglet "Templates" dans /admin/preferences** ✅
-- **⚠️ Relecture des templates en DB souhaitée** — voir section "À faire"
+- **UI admin : onglet "Templates" avec 2 groupes visuels** ✅ S136 — transactionnels + rappels automatiques
+- **Preview email : 7 builders supportés** ✅ S136 — reminder_7d/2d/12h avec mock dédié
+- **Mise en page emails : margin footer ajouté** ✅ S135
+
+### ✅ Rappels automatiques (100%) — S136
+| Type | Cron | Fenêtre | Couleur header | Statut |
+|------|------|---------|----------------|--------|
+| J-7 | `0 7 * * *` (daily) | `[J-7 18h, J-6 6h]` | Ambre `#92400e` | ✅ S136 |
+| J-2 | `0 7 * * *` (daily) | `[J-2 18h, J-1 6h]` | Orange `#c2410c` | ✅ S136 |
+| H-12 | `0 * * * *` (hourly) | `[H-11h30, H-12h30]` | Bleu DD `#1e3a5f` | ✅ S136 |
+
+- **Anti-doublon** via table `sent_notifications` (type CHECK existant)
+- **Routes cron sécurisées** (`CRON_SECRET` header `Authorization: Bearer`)
+- **Vercel Cron Jobs** configurés dans `vercel.json`
+- **Toggles admin** : `reminder_enabled_7d/2d/12h` dans `app_settings` (migration 056)
+- **Envoi séquentiel** avec délai 600ms anti rate-limit Resend
+- **Fallbacks DB** : 3 templates de secours si DB inaccessible
 
 ---
 
-## Dernier travail (Session 134B-suite — 3 mars 2026)
+## Dernier travail (Session 136 — 4 mars 2026)
 
-### Corrections post-audit S134B
+### Rappels automatiques J-7 / J-2 / H-12
 
-| Fichier | Bug | Fix |
-|---------|-----|-----|
-| `EmailPreviewModal.tsx` | Pas de timeout si iframe silencieuse | Timeout 10s + `role="alert"` |
-| `EmailTemplateForm.tsx` | Double `register()` sur 4 champs RHF | Destructuration avant `return` |
-| `EmailTemplateForm.tsx` | `focusProps` typé `string` | Typé `keyof TemplateFormValues` ✅ |
-| `templates-section.tsx` | `res.json()` sans vérifier `res.ok` | Vérification `if (!res.ok)` |
-| `preview/route.ts` | Regex `\$&` invalide → variables non substituées | `escapeRegExp()` avec callback arrow |
-| `email-templates.ts` | `{{événement}}` absent des badges UI | Ajout dans `EMAIL_TEMPLATE_VARIABLES` |
+| Fichier | Modification |
+|---------|-------------|
+| `migration 055` | 3 templates rappels en DB : `reminder_7d`, `reminder_2d`, `reminder_12h` |
+| `migration 056` | 3 toggles dans `app_settings` : `reminder_enabled_7d/2d/12h` = true |
+| `types/email-templates.ts` | `EmailTemplateKey` étendu (+3 clés reminder) + labels `EMAIL_TEMPLATE_NAMES` |
+| `email/fallbacks.ts` | 3 fallbacks reminder ajoutés |
+| `reminders/types.ts` | Types + configs `DAILY_REMINDER_CONFIGS` + `HOURLY_REMINDER_CONFIG` |
+| `reminders/queries.ts` | Requête éligibles (anti-doublon, fenêtre temporelle, enrichissement managers batch) |
+| `reminders/send.ts` | Envoi unitaire : template DB → builder HTML → Resend → log |
+| `reminders/process.ts` | Orchestrateur batch + `processMultipleReminders` |
+| `reminders/index.ts` | Barrel exports |
+| `builders/reminder-7d.ts` | Builder HTML J-7 (ambre) |
+| `builders/reminder-2d.ts` | Builder HTML J-2 (orange) |
+| `builders/reminder-12h.ts` | Builder HTML H-12 (bleu DD + or) |
+| `api/cron/reminders/daily/route.ts` | Route GET sécurisée — J-7 + J-2 |
+| `api/cron/reminders/hourly/route.ts` | Route GET sécurisée — H-12 |
+| `vercel.json` | 2 crons configurés (`0 7 * * *` et `0 * * * *`) |
+| `.env.local` | `CRON_SECRET` ajouté + doublon `NEXT_PUBLIC_APP_URL` corrigé |
+| `preview/route.ts` | +3 builders reminder + mock `MOCK_REMINDER` + `VALID_KEYS` étendu + `default` exhaustif |
+| `[key]/route.ts` | `VALID_TEMPLATE_KEYS` étendu (+3 clés reminder) — fix bug 400 |
+| `templates-section.tsx` | Refactor : `TemplateAccordionItem` + `TemplateGroupSeparator` + 2 groupes (transactionnels / rappels) |
+| `preferences-tabs.tsx` | Onglet Rappels → statut `active` / "Actif" |
+| `reminders-section.tsx` | Banner "Non connecté" retiré + import nettoyé |
+| `app-settings.ts` | `getReminderSettings()` : fix `parseBool()` cohérent avec `getNotificationSettings()` |
 
-### Refactoring `email.ts` → 8 modules (score audit 9/10)
+### Points techniques notables S136
 
-```
-src/lib/services/email/
-├── index.ts              ← 4 fonctions send...() + re-exports types
-├── types.ts              ← toutes les interfaces
-├── config.ts             ← getEmailConfig() depuis app_settings
-├── html-helpers.ts       ← escapeHtml, extractFirstName, build*Block
-├── fallbacks.ts          ← getFallbackTemplate()
-└── builders/
-    ├── confirmation.ts
-    ├── cancellation.ts
-    ├── modification.ts
-    └── admin-notification.ts
-```
-
-**Règle respectée :** imports depuis `@/lib/services/email` inchangés (résolution via `index.ts`).
-**Build :** ✅ `type-check && lint && build` passent.
+- **`enrichWithManagers`** : crée son propre client Supabase (évite conflit de types entre versions `@supabase/supabase-js`)
+- **Switch exhaustif** dans `generatePreviewHtml` : `default` avec `never` catch compile-time
+- **Timezone** : créneaux comparés en UTC naïf (acceptable pour fenêtres larges J-7/J-2 ; H-12 ±30min)
+- **Rate-limit Resend** : délai 600ms entre chaque envoi (plan free = 2 req/s)
+- **CRON_SECRET** ajouté sur Vercel Dashboard (Production + Preview)
 
 ---
 
 ## À faire (prochaines sessions)
 
-### ⚡ IMMÉDIAT — Début de S135
-
-1. **Relecture des templates email en DB** — Après le refactoring des builders HTML,
-   il faut vérifier que le contenu par défaut des 4 templates (`subject`, `intro_text`, etc.)
-   est cohérent avec la nouvelle structure et les nouvelles variables disponibles.
-   → Ouvrir `/admin/preferences` → onglet Templates → passer en revue les 4 templates.
-
-2. **S135 : Rappels automatiques J-7/J-2** (Vercel Cron)
-
 ### Sessions planifiées
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S135** | Rappels automatiques J-7/J-2 (Vercel Cron) | 🟠 Haute |
-| **S136** | Système notifications admin (badge lu/non-lu) | 🟡 Moyenne |
-| **S137** | RGPD suppression compte | 🟡 Basse |
+| **S137** | Système notifications admin (badge lu/non-lu) | 🟡 Moyenne |
+| **S138** | RGPD suppression compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
 
 ---
 
@@ -129,13 +139,12 @@ src/lib/services/email/
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
 | Zod sur query params | `preview/route.ts` | Pas de validation Zod sur les query params (admin uniquement, risque faible) | 🟡 Basse |
-| `email_catalogue_url` en DB | `app_settings` | Pointe encore Vercel, pas `derviche-pro.fr/catalogue` | 🟠 À corriger |
 | `organization_logo_url` | DB | Doublon à supprimer (remplacé par onglet Apparence migration 050) | 🟡 Basse |
-| Rappels auto | — | `reminder_enabled_7d/2d/12h` stockés, aucun job planifié | 🟠 S135 |
-| RGPD | — | Durées de conservation stockées, aucune purge automatique | 🟡 S137 |
-| Relecture templates DB | `/admin/preferences` → Templates | Vérifier cohérence contenu après refactoring builders | 🟠 S135 |
-| Factorisation builders | `src/lib/services/email/builders/` | Pattern résolution template dupliqué entre builders (acceptable, à factoriser si nouveaux types d'emails) | 🟡 Basse |
-| Types variables sujet admin | `types/email-templates.ts` | Interface dédiée pour variables sujet `admin_notification` (actuellement `EmailTemplateVariables` générique) | 🟡 Basse |
+| Timezone crons | `reminders/queries.ts` | Créneaux comparés en UTC naïf — si besoin précision accrue, stocker en `timestamptz` | 🟡 Basse |
+| Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` stockés mais absents du footer public et des emails | 🟡 Basse |
+| RGPD | — | Durées de conservation stockées, aucune purge automatique | 🟡 S138 |
+| Factorisation builders | `src/lib/services/email/builders/` | Pattern résolution template dupliqué entre builders (acceptable, à factoriser si nouveaux types) | 🟡 Basse |
+| Footer admin codé en dur | `builders/admin-notification.ts` | N'utilise pas `buildFooterRow` contrairement aux autres builders | 🟡 Basse |
 
 ---
 
@@ -146,5 +155,20 @@ src/lib/services/email/
 | `src/components/ui/accordion.tsx` | `cursor-pointer` ajouté manuellement (shadcn ne l'inclut pas) |
 | `hooks/useRepresentationForm.ts` (~148) | Champ à rendre obligatoire quand `useDervisheUsers` implémenté |
 | `lib/utils/export-professionals.ts` | Export CSV uniquement — xlsx/exceljs exclus (vulnérabilités sans fix) |
-| `app_settings` (DB) | `email_catalogue_url` pointe Vercel → à corriger vers `derviche-pro.fr` |
 | `src/lib/services/email/` | `index.ts` re-exporte tous les types de `types.ts` pour compatibilité imports existants |
+| `buildCtaBlock` dans `html-helpers.ts` | `href` doit toujours être contrôlé côté serveur — ne jamais passer une URL utilisateur |
+| `ProReservationCard.tsx` | `formatTime` et `isCancellable` : format attendu `HH:MM` ou `HH:MM:SS` (Supabase) |
+| `api/cron/reminders/*/route.ts` | En dev sans `CRON_SECRET`, les routes sont accessibles librement (warning loggé) |
+
+---
+
+## Migrations Supabase
+
+| # | Fichier | Description |
+|---|---------|-------------|
+| 001-051 | … | Voir historique sessions précédentes |
+| 052 | `052_fix_admin_notification_subject.sql` | Correction sujet `admin_notification` (variables `{{événement}}` et `{{nom}}`) |
+| 053 | `053_fix_email_catalogue_url.sql` | Correction `email_catalogue_url` → `derviche-pro.fr/catalogue` |
+| 054 | `054_fix_unique_reservation_user_slot.sql` | Partial index `(user_id, slot_id)` WHERE `status != 'cancelled'` — fix bug changement créneau |
+| 055 | `055_add_reminder_email_templates.sql` | 3 templates rappels en DB (`reminder_7d`, `reminder_2d`, `reminder_12h`) |
+| 056 | `056_add_reminder_app_settings.sql` | 3 toggles `reminder_enabled_*` dans `app_settings` (défaut : `true`) |

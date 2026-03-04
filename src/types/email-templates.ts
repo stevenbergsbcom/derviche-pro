@@ -19,7 +19,10 @@ export type EmailTemplateKey =
   | 'reservation_confirmation'
   | 'reservation_cancellation'
   | 'reservation_modification'
-  | 'admin_notification';
+  | 'admin_notification'
+  | 'reminder_7d'
+  | 'reminder_2d'
+  | 'reminder_12h';
 
 // ============================================
 // INTERFACE PRINCIPALE
@@ -123,4 +126,7 @@ export const EMAIL_TEMPLATE_NAMES: Record<EmailTemplateKey, string> = {
   reservation_cancellation: 'Annulation de réservation',
   reservation_modification: 'Modification de créneau',
   admin_notification:       'Notification admin (interne)',
+  reminder_7d:              'Rappel J-7 (7 jours avant)',
+  reminder_2d:              'Rappel J-2 (2 jours avant)',
+  reminder_12h:             'Rappel H-12 (12 heures avant)',
 };
