@@ -1,0 +1,29 @@
+name: Rappels journaliers (J-7 + J-2)
+
+on:
+  schedule:
+    # 7h00 UTC tous les jours = 9h Paris (été) / 8h Paris (hiver)
+    - cron: '0 7 * * *'
+  # Permet de déclencher manuellement depuis GitHub Actions (pratique pour tester)
+  workflow_dispatch:
+
+jobs:
+  trigger-daily-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le cron daily (J-7 + J-2)
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://derviche-pro.vercel.app/api/cron/reminders/daily)
+
+          echo "HTTP Status: $response"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$response" != "200" ]; then
+            echo "❌ Erreur HTTP $response"
+            exit 1
+          fi
+
+          echo "✅ Rappels journaliers déclenchés avec succès"

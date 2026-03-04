@@ -1,0 +1,29 @@
+name: Rappel horaire (H-12)
+
+on:
+  schedule:
+    # Toutes les heures
+    - cron: '0 * * * *'
+  # Permet de déclencher manuellement depuis GitHub Actions (pratique pour tester)
+  workflow_dispatch:
+
+jobs:
+  trigger-hourly-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le cron hourly (H-12)
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://derviche-pro.vercel.app/api/cron/reminders/hourly)
+
+          echo "HTTP Status: $response"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$response" != "200" ]; then
+            echo "❌ Erreur HTTP $response"
+            exit 1
+          fi
+
+          echo "✅ Rappel H-12 déclenché avec succès"
