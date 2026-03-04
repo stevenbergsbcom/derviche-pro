@@ -82,7 +82,7 @@ export function useCheckinDrawer({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [justReactivated, setJustReactivated] = useState(false);
   const [localStatus, setLocalStatus] = useState<'confirmed' | 'cancelled' | 'no_show'>('confirmed');
-  const [cancelNotifOptions, setCancelNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reactivateNotifOptions, setReactivateNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // ==========================================
@@ -119,9 +119,21 @@ export function useCheckinDrawer({
     setLocalStatus,
     setJustReactivated,
     setSelectedStatus: clearSelectedStatus,
-    cancelNotifOptions,
     reactivateNotifOptions,
   });
+
+  // Ouvre la modale de confirmation d'annulation
+  const handleCancelClick = useCallback(() => {
+    setCancelDialogOpen(true);
+  }, []);
+
+  // Wrapper : annule + ferme la modale après succès
+  const handleCancelWithDialog = useCallback(async (
+    notifOptions: Parameters<typeof handleCancel>[0]
+  ) => {
+    await handleCancel(notifOptions);
+    setCancelDialogOpen(false);
+  }, [handleCancel]);
 
   // ==========================================
   // EFFET - Réinitialiser quand la réservation change
@@ -133,7 +145,7 @@ export function useCheckinDrawer({
       setDetailsOpen(false);
       setJustReactivated(false);
       setLocalStatus(reservation.status);
-      setCancelNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
+      setCancelDialogOpen(false);
       setReactivateNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
     }
   }, [reservation, resetGuestForm, resetCheckinForm]);
@@ -179,7 +191,12 @@ export function useCheckinDrawer({
     // Handlers
     handleSave,
     handleReactivate,
-    handleCancel,
+    handleCancel: handleCancelWithDialog,
+
+    // Modale de confirmation d'annulation
+    cancelDialogOpen,
+    setCancelDialogOpen,
+    handleCancelClick,
     
     // Computed
     displayName,
@@ -189,9 +206,7 @@ export function useCheckinDrawer({
     isAdmin,
     accessLoading,
 
-    // Options de notification
-    cancelNotifOptions,
-    setCancelNotifOptions,
+    // Options de notification (réactivation uniquement)
     reactivateNotifOptions,
     setReactivateNotifOptions,
     hasCalendarEvent: !!reservation?.googleCalendarEventId,

@@ -25,6 +25,7 @@ import {
   NotesSection,
   FooterSection,
 } from './sections';
+import { CancelConfirmDialog } from './sections/CancelConfirmDialog';
 
 import type { CheckinDrawerProps } from './types';
 
@@ -132,10 +133,17 @@ export function CheckinDrawer({
           isCancelled={drawer.isCancelled}
           isSubmitting={drawer.uiState.isSubmitting}
           onSave={drawer.handleSave}
-          onCancel={drawer.handleCancel}
-          cancelNotifOptions={drawer.cancelNotifOptions}
-          onCancelNotifChange={drawer.setCancelNotifOptions}
+          onCancelClick={drawer.handleCancelClick}
+        />
+
+        {/* Modale de confirmation d'annulation */}
+        <CancelConfirmDialog
+          open={drawer.cancelDialogOpen}
+          onOpenChange={drawer.setCancelDialogOpen}
+          guestName={drawer.displayName}
           hasCalendarEvent={drawer.hasCalendarEvent}
+          onConfirm={drawer.handleCancel}
+          isProcessing={drawer.uiState.isSubmitting}
         />
       </DrawerContent>
     </Drawer>

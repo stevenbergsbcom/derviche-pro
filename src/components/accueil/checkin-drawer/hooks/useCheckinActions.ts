@@ -51,8 +51,6 @@ export interface UseCheckinActionsProps {
   setJustReactivated: (value: boolean) => void;
   /** Réinitialise le statut sélectionné à null */
   setSelectedStatus: () => void;
-  /** Options de notification pour l'annulation */
-  cancelNotifOptions: NotificationOptions;
   /** Options de notification pour la réactivation */
   reactivateNotifOptions: NotificationOptions;
 }
@@ -61,7 +59,8 @@ export interface UseCheckinActionsReturn {
   isSubmitting: boolean;
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  handleCancel: () => Promise<void>;
+  /** Annule la réservation avec les options de notification choisies dans la modale */
+  handleCancel: (notifOptions: NotificationOptions) => Promise<void>;
 }
 
 // ============================================
@@ -82,7 +81,6 @@ export function useCheckinActions({
   setLocalStatus,
   setJustReactivated,
   setSelectedStatus,
-  cancelNotifOptions,
   reactivateNotifOptions,
 }: UseCheckinActionsProps): UseCheckinActionsReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -278,7 +276,7 @@ export function useCheckinActions({
   // ==========================================
   // HANDLER - Annulation
   // ==========================================
-  const handleCancel = useCallback(async () => {
+  const handleCancel = useCallback(async (cancelNotifOptions: NotificationOptions) => {
     if (!reservation || !userId || !role) {
       toast.error('Données manquantes pour l\'annulation');
       return;
@@ -345,7 +343,7 @@ export function useCheckinActions({
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, userId, role, companyId, cancelNotifOptions, onSuccess, onOpenChange, setLocalStatus, setSelectedStatus]);
+  }, [reservation, userId, role, companyId, onSuccess, onOpenChange, setLocalStatus, setSelectedStatus]);
 
   // ==========================================
   // RETURN

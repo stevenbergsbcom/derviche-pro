@@ -118,7 +118,12 @@ export interface UseCheckinDrawerReturn {
   // Handlers
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  handleCancel: () => Promise<void>;
+  handleCancel: (notifOptions: NotificationOptions) => Promise<void>;
+
+  // Modale de confirmation d'annulation
+  cancelDialogOpen: boolean;
+  setCancelDialogOpen: (open: boolean) => void;
+  handleCancelClick: () => void;
   
   // Computed
   displayName: string;
@@ -128,9 +133,7 @@ export interface UseCheckinDrawerReturn {
   isAdmin: boolean;
   accessLoading: boolean;
 
-  // Options de notification
-  cancelNotifOptions: NotificationOptions;
-  setCancelNotifOptions: (options: NotificationOptions) => void;
+  // Options de notification (réactivation uniquement — annulation gérée par la modale)
   reactivateNotifOptions: NotificationOptions;
   setReactivateNotifOptions: (options: NotificationOptions) => void;
   /** Un événement Google Calendar existe-t-il pour cette réservation ? */

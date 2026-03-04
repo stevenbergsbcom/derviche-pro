@@ -459,7 +459,7 @@ function AdminReservationsContent() {
         reservation={selectedReservation}
         onCancel={handleCancel}
         isProcessing={isProcessing}
-        hasCalendarEvent={selectedReservation?.googleCalendarEventId != null
+        hasCalendarEvent={selectedReservation != null
           ? !!selectedReservation.googleCalendarEventId
           : undefined
         }

@@ -264,6 +264,7 @@ export function useTransferSlot({
           body: JSON.stringify({
             reservationId: reservation.id,
             oldSlotId: currentSlotId,
+            syncCalendar: notifOptions.syncCalendar,
           }),
         }).catch((err) =>
           logger.warn('useTransferSlot - Email modification non envoyé', { err })
