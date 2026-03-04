@@ -17,6 +17,10 @@ import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { ReservationRowData } from '../ReservationRow';
 import type { UseCheckinDrawerReturn } from './types';
 import { useGuestForm, useCheckinForm, useCheckinActions } from './hooks';
+import {
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+} from '@/components/admin/reservations/notification-switches';
 import { getFullName } from './constants';
 
 // ============================================
@@ -78,6 +82,8 @@ export function useCheckinDrawer({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [justReactivated, setJustReactivated] = useState(false);
   const [localStatus, setLocalStatus] = useState<'confirmed' | 'cancelled' | 'no_show'>('confirmed');
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [reactivateNotifOptions, setReactivateNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // ==========================================
   // COMPUTED VALUES
@@ -113,7 +119,25 @@ export function useCheckinDrawer({
     setLocalStatus,
     setJustReactivated,
     setSelectedStatus: clearSelectedStatus,
+    reactivateNotifOptions,
   });
+
+  // Ouvre la modale de confirmation d'annulation
+  const handleCancelClick = useCallback(() => {
+    setCancelDialogOpen(true);
+  }, []);
+
+  // Wrapper : annule + ferme la modale UNIQUEMENT en cas de succès
+  // En cas d'échec, la modale reste ouverte pour permettre de réessayer
+  const handleCancelWithDialog = useCallback(async (
+    notifOptions: Parameters<typeof handleCancel>[0]
+  ) => {
+    const success = await handleCancel(notifOptions);
+    if (success) {
+      setCancelDialogOpen(false);
+    }
+    return success;
+  }, [handleCancel]);
 
   // ==========================================
   // EFFET - Réinitialiser quand la réservation change
@@ -125,6 +149,8 @@ export function useCheckinDrawer({
       setDetailsOpen(false);
       setJustReactivated(false);
       setLocalStatus(reservation.status);
+      setCancelDialogOpen(false);
+      setReactivateNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
     }
   }, [reservation, resetGuestForm, resetCheckinForm]);
 
@@ -169,7 +195,12 @@ export function useCheckinDrawer({
     // Handlers
     handleSave,
     handleReactivate,
-    handleCancel,
+    handleCancel: handleCancelWithDialog,
+
+    // Modale de confirmation d'annulation
+    cancelDialogOpen,
+    setCancelDialogOpen,
+    handleCancelClick,
     
     // Computed
     displayName,
@@ -178,5 +209,10 @@ export function useCheckinDrawer({
     isCancelled,
     isAdmin,
     accessLoading,
+
+    // Options de notification (réactivation uniquement)
+    reactivateNotifOptions,
+    setReactivateNotifOptions,
+    hasCalendarEvent: !!reservation?.googleCalendarEventId,
   };
 }

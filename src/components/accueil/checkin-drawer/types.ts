@@ -5,6 +5,7 @@
 
 import type { CheckinStatus } from '@/types/database';
 import type { ReservationRowData } from '../ReservationRow';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // PROPS DU COMPOSANT PRINCIPAL
@@ -117,7 +118,12 @@ export interface UseCheckinDrawerReturn {
   // Handlers
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  handleCancel: () => Promise<void>;
+  handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
+
+  // Modale de confirmation d'annulation
+  cancelDialogOpen: boolean;
+  setCancelDialogOpen: (open: boolean) => void;
+  handleCancelClick: () => void;
   
   // Computed
   displayName: string;
@@ -126,4 +132,10 @@ export interface UseCheckinDrawerReturn {
   isCancelled: boolean;
   isAdmin: boolean;
   accessLoading: boolean;
+
+  // Options de notification (réactivation uniquement — annulation gérée par la modale)
+  reactivateNotifOptions: NotificationOptions;
+  setReactivateNotifOptions: (options: NotificationOptions) => void;
+  /** Un événement Google Calendar existe-t-il pour cette réservation ? */
+  hasCalendarEvent: boolean;
 }

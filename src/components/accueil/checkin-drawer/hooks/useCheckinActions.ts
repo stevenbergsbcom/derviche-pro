@@ -13,6 +13,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 import { 
   updateCheckinStatus, 
   updateGuestInfo, 
@@ -50,13 +51,17 @@ export interface UseCheckinActionsProps {
   setJustReactivated: (value: boolean) => void;
   /** Réinitialise le statut sélectionné à null */
   setSelectedStatus: () => void;
+  /** Options de notification pour la réactivation */
+  reactivateNotifOptions: NotificationOptions;
 }
 
 export interface UseCheckinActionsReturn {
   isSubmitting: boolean;
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
-  handleCancel: () => Promise<void>;
+  /** Annule la réservation avec les options de notification choisies dans la modale.
+   * Retourne true si l'annulation a réussi, false sinon. */
+  handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
 }
 
 // ============================================
@@ -77,6 +82,7 @@ export function useCheckinActions({
   setLocalStatus,
   setJustReactivated,
   setSelectedStatus,
+  reactivateNotifOptions,
 }: UseCheckinActionsProps): UseCheckinActionsReturn {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -246,21 +252,35 @@ export function useCheckinActions({
       );
       onSuccess(updatedReservation);
 
+      // Email de confirmation (non-bloquant)
+      if (reactivateNotifOptions.sendEmail) {
+        void fetch('/api/emails/send-confirmation-by-id', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: reservation.id,
+            syncCalendar: reactivateNotifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('useCheckinActions - Email réactivation non envoyé', { err })
+        );
+      }
+
     } catch (error) {
       logger.error('useCheckinActions - Erreur réactivation', error as Error);
       toast.error('Erreur lors de la réactivation');
     } finally {
       setIsSubmitting(false);
     }
-  }, [reservation, userId, role, companyId, onSuccess, setLocalStatus, setJustReactivated]);
+  }, [reservation, userId, role, companyId, reactivateNotifOptions, onSuccess, setLocalStatus, setJustReactivated]);
 
   // ==========================================
   // HANDLER - Annulation
   // ==========================================
-  const handleCancel = useCallback(async () => {
+  const handleCancel = useCallback(async (cancelNotifOptions: NotificationOptions) => {
     if (!reservation || !userId || !role) {
       toast.error('Données manquantes pour l\'annulation');
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -275,7 +295,7 @@ export function useCheckinActions({
 
       if (!result.success || !result.data) {
         toast.error(result.error || 'Erreur lors de l\'annulation');
-        return;
+        return false;
       }
 
       const guestName = getFullName(
@@ -284,6 +304,20 @@ export function useCheckinActions({
       );
 
       toast.success(`${guestName} : Réservation annulée`);
+
+      // Email d'annulation (non-bloquant)
+      if (cancelNotifOptions.sendEmail) {
+        void fetch('/api/emails/send-cancellation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reservationId: reservation.id,
+            syncCalendar: cancelNotifOptions.syncCalendar,
+          }),
+        }).catch((err) =>
+          logger.warn('useCheckinActions - Email annulation non envoyé', { err })
+        );
+      }
 
       // Mettre à jour l'état local
       setLocalStatus('cancelled');
@@ -303,10 +337,12 @@ export function useCheckinActions({
       );
       onSuccess(updatedReservation);
       onOpenChange(false);
+      return true;
 
     } catch (error) {
       logger.error('useCheckinActions - Erreur annulation', error as Error);
       toast.error('Erreur lors de l\'annulation');
+      return false;
     } finally {
       setIsSubmitting(false);
     }

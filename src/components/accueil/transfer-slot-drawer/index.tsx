@@ -37,6 +37,7 @@ export type { TransferSlotDrawerProps } from './types';
 
 export function TransferSlotDrawer({
   reservation,
+  currentSlotId,
   open,
   onOpenChange,
   onSuccess,
@@ -44,6 +45,7 @@ export function TransferSlotDrawer({
   // Hook personnalisé pour toute la logique
   const transfer = useTransferSlot({
     reservation,
+    currentSlotId,
     open,
     onSuccess,
     onOpenChange,
@@ -93,6 +95,9 @@ export function TransferSlotDrawer({
           wouldOverbook={transfer.wouldOverbook}
           isSubmitting={transfer.isSubmitting}
           onTransfer={transfer.handleTransfer}
+          notifOptions={transfer.notifOptions}
+          onNotifChange={transfer.setNotifOptions}
+          hasCalendarEvent={transfer.hasCalendarEvent}
         />
       </DrawerContent>
     </Drawer>

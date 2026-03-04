@@ -66,7 +66,8 @@ export async function getSlotReservations(
         checkin_venue_notes,
         checkin_internal_notes,
         special_requests,
-        created_at
+        created_at,
+        google_calendar_event_id
       `)
       .eq('slot_id', slotId)
       .order('guest_last_name', { ascending: true, nullsFirst: false })
@@ -107,6 +108,7 @@ export async function getSlotReservations(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? r.checkin_internal_notes : null,
       specialRequests: r.special_requests,
       createdAt: r.created_at,
+      googleCalendarEventId: (r as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
     }));
 
     logger.info('checkin.getSlotReservations - Succès', { count: reservations.length });
@@ -352,7 +354,8 @@ export async function updateCheckinStatus(
         checkin_venue_notes,
         checkin_internal_notes,
         special_requests,
-        created_at
+        created_at,
+        google_calendar_event_id
       `)
       .single();
 
@@ -392,6 +395,7 @@ export async function updateCheckinStatus(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.updateCheckinStatus - Succès', { 
@@ -565,7 +569,8 @@ export async function updateGuestInfo(
         checkin_venue_notes,
         checkin_internal_notes,
         special_requests,
-        created_at
+        created_at,
+        google_calendar_event_id
       `)
       .single();
 
@@ -604,6 +609,7 @@ export async function updateGuestInfo(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });

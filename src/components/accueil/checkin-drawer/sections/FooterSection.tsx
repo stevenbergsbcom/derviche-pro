@@ -28,8 +28,8 @@ export interface FooterSectionProps {
   isSubmitting: boolean;
   /** Handler de sauvegarde */
   onSave: () => void;
-  /** Handler d'annulation */
-  onCancel: () => void;
+  /** Handler d'ouverture de la modale de confirmation d'annulation */
+  onCancelClick: () => void;
 }
 
 // ============================================
@@ -43,14 +43,14 @@ export function FooterSection({
   isCancelled,
   isSubmitting,
   onSave,
-  onCancel,
+  onCancelClick,
 }: FooterSectionProps) {
   return (
     <DrawerFooter className="border-t pt-4">
       <div className="flex gap-3">
         <DrawerClose asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="flex-1"
             disabled={isSubmitting}
           >
@@ -75,7 +75,7 @@ export function FooterSection({
           )}
         </Button>
       </div>
-      
+
       {/* Indicateur de changement */}
       {hasChanges && (
         <p className="text-xs text-center text-muted-foreground mt-2">
@@ -83,14 +83,15 @@ export function FooterSection({
         </p>
       )}
 
-      {/* Bouton annuler la réservation - uniquement si confirmée */}
+      {/* Bouton annuler — uniquement si confirmée, ouvre la modale de confirmation */}
       {!isCancelled && (
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => void onCancel()}
+          onClick={onCancelClick}
           disabled={isSubmitting}
-          className="mt-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="w-full mt-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+          aria-label="Annuler cette réservation et choisir les options de notification"
         >
           <X className="w-4 h-4 mr-1.5" />
           Annuler cette réservation

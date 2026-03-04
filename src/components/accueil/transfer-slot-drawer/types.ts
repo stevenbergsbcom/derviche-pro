@@ -5,6 +5,7 @@
 
 import type { ReservationRowData } from '../ReservationRow';
 import type { TransferTargetSlot } from '@/lib/services/checkin';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // PROPS DU DRAWER PRINCIPAL
@@ -13,6 +14,8 @@ import type { TransferTargetSlot } from '@/lib/services/checkin';
 export interface TransferSlotDrawerProps {
   /** Réservation à transférer */
   reservation: ReservationRowData | null;
+  /** ID du créneau actuel (avant transfert) — utilisé pour l'email de modification */
+  currentSlotId: string;
   /** État d'ouverture */
   open: boolean;
   /** Handler de changement d'état */
@@ -64,6 +67,11 @@ export interface TransferFooterProps {
   wouldOverbook: boolean;
   isSubmitting: boolean;
   onTransfer: () => Promise<void>;
+  /** Options de notification pour le transfert */
+  notifOptions: NotificationOptions;
+  onNotifChange: (options: NotificationOptions) => void;
+  /** Un événement Google Calendar existe-t-il pour cette réservation ? */
+  hasCalendarEvent?: boolean;
 }
 
 // ============================================
@@ -93,4 +101,9 @@ export interface UseTransferSlotReturn {
   handleIncrease: () => void;
   handleNumPlacesChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleTransfer: () => Promise<void>;
+
+  // Notification
+  notifOptions: NotificationOptions;
+  setNotifOptions: (options: NotificationOptions) => void;
+  hasCalendarEvent: boolean;
 }

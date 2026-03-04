@@ -4,9 +4,10 @@
  */
 
 import type { CreateAdminReservationData } from '@/lib/services/admin-reservations';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // Réexport du type principal
-export type { CreateAdminReservationData };
+export type { CreateAdminReservationData, NotificationOptions };
 
 // ============================================
 // TYPES LOCAUX
@@ -64,7 +65,8 @@ export interface CreateReservationDialogProps {
   onOpenChange: (open: boolean) => void;
   shows: ShowOption[];
   onGetSlots: (showId: string) => Promise<SlotsResult>;
-  onCreate: (data: CreateAdminReservationData) => Promise<CreateResult>;
+  /** _notifOptions est une propriété UI pass-through pour le contrôle des notifications */
+  onCreate: (data: CreateAdminReservationData & { _notifOptions?: NotificationOptions }) => Promise<CreateResult>;
 }
 
 // ============================================

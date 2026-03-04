@@ -53,6 +53,8 @@ export interface ReservationRowData {
   guestAfcNumber?: string | null;
   /** Demandes spéciales */
   specialRequests?: string | null;
+  /** ID de l'événement Google Calendar (null si jamais créé) */
+  googleCalendarEventId?: string | null;
 }
 
 export interface ReservationRowProps {

@@ -10,7 +10,8 @@ import type {
   AvailableSlot, 
   ShowOption, 
   SlotsResult, 
-  CreateResult 
+  CreateResult,
+  NotificationOptions,
 } from '../types';
 import { 
   INITIAL_FORM_DATA, 
@@ -18,6 +19,7 @@ import {
   TOAST_MESSAGES 
 } from '../constants';
 import { validateReservationForm } from '../utils';
+import { DEFAULT_NOTIFICATION_OPTIONS } from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // TYPES DU HOOK
@@ -27,7 +29,7 @@ interface UseCreateReservationFormProps {
   open: boolean;
   shows: ShowOption[];
   onGetSlots: (showId: string) => Promise<SlotsResult>;
-  onCreate: (data: CreateAdminReservationData) => Promise<CreateResult>;
+  onCreate: (data: CreateAdminReservationData & { _notifOptions?: NotificationOptions }) => Promise<CreateResult>;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -48,6 +50,10 @@ interface UseCreateReservationFormReturn {
   
   // Spectacles filtrés
   publishedShows: ShowOption[];
+
+  // Notifications
+  notifOptions: NotificationOptions;
+  setNotifOptions: (options: NotificationOptions) => void;
   
   // Handlers
   handleShowChange: (showId: string) => void;
@@ -83,6 +89,7 @@ export function useCreateReservationForm({
   // États de validation et soumission
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
 
   // Spectacles publiés uniquement
   const publishedShows = shows.filter(s => s.status === 'published');
@@ -188,7 +195,7 @@ export function useCreateReservationForm({
 
     setIsSaving(true);
     try {
-      const result = await onCreateRef.current(formData);
+      const result = await onCreateRef.current({ ...formData, _notifOptions: notifOptions });
       
       if (result.success) {
         toast.success(TOAST_MESSAGES.createSuccess);
@@ -201,7 +208,7 @@ export function useCreateReservationForm({
     } finally {
       setIsSaving(false);
     }
-  }, [formData, selectedShowId, maxPlaces, availableSlots]);
+  }, [formData, selectedShowId, maxPlaces, availableSlots, notifOptions]);
 
   // Handler fermeture
   const handleClose = useCallback(() => {
@@ -228,6 +235,10 @@ export function useCreateReservationForm({
     // Spectacles filtrés
     publishedShows,
     
+    // Notifications
+    notifOptions,
+    setNotifOptions,
+
     // Handlers
     handleShowChange,
     handleFieldChange,

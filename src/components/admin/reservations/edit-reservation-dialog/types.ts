@@ -8,6 +8,7 @@ import type {
   UpdateReservationData,
   AvailableSlot 
 } from '@/lib/services/admin-reservations';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // Réexport des types du service
 export type { AdminReservation, UpdateReservationData, AvailableSlot };
@@ -36,11 +37,14 @@ export interface EditReservationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   reservation: AdminReservation | null;
-  onSave: (data: UpdateReservationData) => Promise<void>;
+  /** _notifOptions est une propriété UI pass-through pour le contrôle des notifications */
+  onSave: (data: UpdateReservationData & { _notifOptions?: NotificationOptions }) => Promise<void>;
   onCancel: (reservation: AdminReservation) => void;
   onGetSlots: (showId: string) => Promise<SlotsResult>;
   isSaving: boolean;
 }
+
+export type { NotificationOptions };
 
 /**
  * Props pour le banner d'annulation
@@ -151,6 +155,8 @@ export interface UseEditReservationState {
   slotsError: string | null;
   validationErrors: string[];
   isFormReady: boolean;
+  notifOptions: NotificationOptions;
+  setNotifOptions: (options: NotificationOptions) => void;
 }
 
 /**

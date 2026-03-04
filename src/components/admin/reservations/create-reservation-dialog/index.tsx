@@ -25,6 +25,7 @@ import type { CreateReservationDialogProps } from './types';
 
 // Hook principal
 import { useCreateReservationForm } from './hooks';
+import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 
 // Composants de section
 import {
@@ -64,6 +65,10 @@ export function CreateReservationDialog({
     
     // Spectacles filtrés
     publishedShows,
+
+    // Notifications
+    notifOptions,
+    setNotifOptions,
     
     // Handlers
     handleShowChange,
@@ -151,6 +156,14 @@ export function CreateReservationDialog({
             disabled={isSaving}
           />
         </div>
+
+        {/* Switches de notification */}
+        <NotificationSwitches
+          value={notifOptions}
+          onChange={setNotifOptions}
+          disabled={isSaving}
+          label="Notifier le professionnel"
+        />
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
           <Button 

@@ -125,7 +125,8 @@ export async function cancelReservationFromPWA(
         checkin_venue_notes,
         checkin_internal_notes,
         special_requests,
-        created_at
+        created_at,
+        google_calendar_event_id
       `)
       .single();
 
@@ -164,6 +165,7 @@ export async function cancelReservationFromPWA(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.cancelReservationFromPWA - Succès', { reservationId });
@@ -315,7 +317,8 @@ export async function reactivateReservation(
         checkin_venue_notes,
         checkin_internal_notes,
         special_requests,
-        created_at
+        created_at,
+        google_calendar_event_id
       `)
       .single();
 
@@ -354,6 +357,7 @@ export async function reactivateReservation(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.reactivateReservation - Succès', {

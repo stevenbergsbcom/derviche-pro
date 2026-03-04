@@ -125,6 +125,7 @@ export default function SlotReservationsPage() {
       {/* Drawer de transfert */}
       <TransferSlotDrawer
         reservation={selectedReservation}
+        currentSlotId={slotId}
         open={transferDrawerOpen}
         onOpenChange={setTransferDrawerOpen}
         onSuccess={handleTransferSuccess}
