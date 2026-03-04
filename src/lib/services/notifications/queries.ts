@@ -214,7 +214,8 @@ export async function getAdminNotifications(
 
     const total         = count ?? 0;
     const notifications = (data as unknown as RawNotificationRow[]).map(transformRow);
-    const { count: unreadCount } = await getAdminUnreadCount();
+    // Passe dismissedAt déjà chargé pour éviter un double appel DB
+    const { count: unreadCount } = await getAdminUnreadCount(dismissedAt);
 
     return {
       notifications,
@@ -233,13 +234,18 @@ export async function getAdminNotifications(
 /**
  * Retourne le nombre de notifications non lues pour l'admin courant.
  * Tient compte du dismissed_at : ignore les notifs antérieures au dernier "Vider".
+ * @param cachedDismissedAt - Si déjà récupéré par l'appelant, évite un double appel DB
  */
-export async function getAdminUnreadCount(): Promise<UnreadCountResult> {
+export async function getAdminUnreadCount(
+  cachedDismissedAt?: string | null
+): Promise<UnreadCountResult> {
   try {
     const supabase = await createServerClient();
 
-    // Timestamp du dernier "Vider"
-    const dismissedAt = await getDismissedAt(supabase);
+    // Réutilise le timestamp si fourni par l'appelant, sinon le charge
+    const dismissedAt = cachedDismissedAt !== undefined
+      ? cachedDismissedAt
+      : await getDismissedAt(supabase);
 
     // Total des notifs visibles par cet admin (après dismissed_at si présent)
     let totalQuery = supabase

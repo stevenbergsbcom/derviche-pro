@@ -205,11 +205,16 @@ export function useNotifications(): UseNotificationsReturn {
     setUnreadCount(0);
 
     try {
-      await fetch('/api/admin/notifications/dismiss-all', { method: 'POST' });
+      const res = await fetch('/api/admin/notifications/dismiss-all', { method: 'POST' });
+      if (!res.ok) {
+        // Échec serveur : resync le badge pour éviter une incohérence prolonguée
+        if (isMountedRef.current) await fetchUnreadCount();
+      }
     } catch {
-      // Non-bloquant
+      // Erreur réseau : resync le badge
+      if (isMountedRef.current) await fetchUnreadCount();
     }
-  }, []);
+  }, [fetchUnreadCount]);
 
   // ── Rafraîchir le badge ──────────────────────────────────────────
 

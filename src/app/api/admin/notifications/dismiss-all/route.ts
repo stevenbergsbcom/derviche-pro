@@ -9,6 +9,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { dismissAllNotifications } from '@/lib/services/notifications';
+import { logger } from '@/lib/logger';
 import type { InternalRole } from '@/types/database';
 
 // ============================================
@@ -58,7 +59,7 @@ export async function POST(): Promise<NextResponse<ApiResponse>> {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur interne';
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    logger.error('[notifications/dismiss-all] Erreur inattendue', { err });
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }

@@ -197,6 +197,7 @@ function NotificationSheetComponent({
                     size="sm"
                     className="h-6 px-3 text-xs"
                     onClick={() => void handleDismissAll()}
+                    aria-label="Confirmer vider les notifications"
                   >
                     Confirmer
                   </Button>
