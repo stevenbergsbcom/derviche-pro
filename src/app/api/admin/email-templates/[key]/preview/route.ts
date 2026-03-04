@@ -17,6 +17,9 @@ import { buildConfirmationHtml }    from '@/lib/services/email/builders/confirma
 import { buildCancellationHtml }    from '@/lib/services/email/builders/cancellation';
 import { buildModificationHtml }    from '@/lib/services/email/builders/modification';
 import { buildAdminNotificationHtml } from '@/lib/services/email/builders/admin-notification';
+import { buildReminder7dHtml }      from '@/lib/services/email/builders/reminder-7d';
+import { buildReminder2dHtml }      from '@/lib/services/email/builders/reminder-2d';
+import { buildReminder12hHtml }     from '@/lib/services/email/builders/reminder-12h';
 import { logger } from '@/lib/logger';
 import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 import type {
@@ -25,6 +28,7 @@ import type {
   ReservationModificationEmailData,
   AdminNotificationEmailData,
 } from '@/lib/services/email/types';
+import type { ReminderEmailData } from '@/lib/services/email/reminders/types';
 
 // ============================================
 // TYPES
@@ -118,7 +122,29 @@ const VALID_KEYS: EmailTemplateKey[] = [
   'reservation_cancellation',
   'reservation_modification',
   'admin_notification',
+  'reminder_7d',
+  'reminder_2d',
+  'reminder_12h',
 ];
+
+/** Mock partagé pour les 3 templates de rappel */
+const MOCK_REMINDER: ReminderEmailData = {
+  to: 'marie.dupont@theatre-ville.fr',
+  guestFullName: 'Marie Dupont',
+  reservationCode: 'DD-AB12CD',
+  reservationId: 'preview-id',
+  showTitle: 'Le Bal des Âmes',
+  showSlug: 'le-bal-des-ames',
+  companyName: 'Compagnie des Miroirs',
+  slotDateFormatted: 'mercredi 15 avril 2026',
+  slotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  numPlaces: 2,
+  managerName: 'Sophie Lefèvre',
+  managerEmail: 'sophie@derviche-pro.fr',
+  managerPhone: '06 12 34 56 78',
+};
 
 function isValidKey(key: string): key is EmailTemplateKey {
   return VALID_KEYS.includes(key as EmailTemplateKey);
@@ -170,6 +196,17 @@ function generatePreviewHtml(
       return buildModificationHtml(MOCK_MODIFICATION, config, template, appUrl);
     case 'admin_notification':
       return buildAdminNotificationHtml(MOCK_ADMIN_NOTIFICATION, config, template, appUrl);
+    case 'reminder_7d':
+      return buildReminder7dHtml(MOCK_REMINDER, config, template, appUrl);
+    case 'reminder_2d':
+      return buildReminder2dHtml(MOCK_REMINDER, config, template, appUrl);
+    case 'reminder_12h':
+      return buildReminder12hHtml(MOCK_REMINDER, config, template, appUrl);
+    default: {
+      // Sécurité : ne devrait jamais arriver grâce à isValidKey()
+      const _exhaustive: never = template.template_key;
+      throw new Error(`Template non supporté : ${String(_exhaustive)}`);
+    }
   }
 }
 

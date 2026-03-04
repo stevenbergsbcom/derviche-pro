@@ -30,11 +30,25 @@ import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 // CONSTANTES
 // ============================================
 
-const TEMPLATE_KEYS: EmailTemplateKey[] = [
+/** Templates transactionnels (confirmation, annulation, modification, admin) */
+const TRANSACTIONAL_KEYS: EmailTemplateKey[] = [
   'reservation_confirmation',
   'reservation_cancellation',
   'reservation_modification',
   'admin_notification',
+];
+
+/** Templates de rappels automatiques (J-7, J-2, H-12) */
+const REMINDER_KEYS: EmailTemplateKey[] = [
+  'reminder_7d',
+  'reminder_2d',
+  'reminder_12h',
+];
+
+/** Toutes les clés — utilisé pour le chargement initial */
+const TEMPLATE_KEYS: EmailTemplateKey[] = [
+  ...TRANSACTIONAL_KEYS,
+  ...REMINDER_KEYS,
 ];
 
 // ============================================
@@ -61,6 +75,74 @@ function TemplatesSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ============================================
+// SOUS-COMPOSANT : Item d'accordéon réutilisable
+// ============================================
+
+interface TemplateAccordionItemProps {
+  template: EmailTemplate;
+  isDirty: boolean;
+  canEdit: boolean;
+  onDirtyChange: (key: string, isDirty: boolean) => void;
+  onSaved: (key: string) => void;
+}
+
+function TemplateAccordionItem({
+  template,
+  isDirty,
+  canEdit,
+  onDirtyChange,
+  onSaved,
+}: TemplateAccordionItemProps) {
+  const templateName = EMAIL_TEMPLATE_NAMES[template.template_key] ?? template.name;
+
+  return (
+    <AccordionItem
+      value={template.template_key}
+      // last:!border-b : force la bordure basse sur le dernier item
+      // (écrase le last:border-b-0 de shadcn qui est prévu pour accordion groupé)
+      className="border rounded-lg px-1 last:!border-b [&[data-state=open]]:bg-muted/30"
+    >
+      <AccordionTrigger className="px-4 py-3 hover:no-underline">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="font-medium text-sm truncate">{templateName}</span>
+          {isDirty && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 border-orange-300 text-orange-600 bg-orange-50 shrink-0"
+            >
+              Non sauvegardé
+            </Badge>
+          )}
+        </div>
+      </AccordionTrigger>
+
+      <AccordionContent className="px-4 pb-5 pt-2">
+        <EmailTemplateForm
+          template={template}
+          canEdit={canEdit}
+          onDirtyChange={(dirty) => onDirtyChange(template.template_key, dirty)}
+          onSaved={() => onSaved(template.template_key)}
+        />
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
+/** Séparateur entre les groupes de templates */
+function TemplateGroupSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 pt-2 pb-1">
+      <div className="h-px flex-1 bg-border" />
+      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider shrink-0">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border" />
     </div>
   );
 }
@@ -176,45 +258,38 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
         )}
       </div>
 
+      {/* Groupe 1 : Emails transactionnels */}
+      <TemplateGroupSeparator label="Emails transactionnels" />
       <Accordion type="single" collapsible className="space-y-2">
-        {templates.map((template) => {
-          const templateName = EMAIL_TEMPLATE_NAMES[template.template_key] ?? template.name;
-          const isDirty      = dirtyMap[template.template_key] ?? false;
-
-          return (
-            <AccordionItem
+        {templates
+          .filter((t) => (TRANSACTIONAL_KEYS as string[]).includes(t.template_key))
+          .map((template) => (
+            <TemplateAccordionItem
               key={template.template_key}
-              value={template.template_key}
-              // last:!border-b : force la bordure basse sur le dernier item
-              // (écrase le last:border-b-0 de shadcn qui est prévu pour accordion groupé)
-              className="border rounded-lg px-1 last:!border-b [&[data-state=open]]:bg-muted/30"
-            >
-              <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="font-medium text-sm truncate">{templateName}</span>
-                  {isDirty && (
-                    <Badge
-                      variant="outline"
-                      className="text-[10px] px-1.5 py-0 border-orange-300 text-orange-600 bg-orange-50 shrink-0"
-                    >
-                      Non sauvegardé
-                    </Badge>
-                  )}
-                </div>
-              </AccordionTrigger>
+              template={template}
+              isDirty={dirtyMap[template.template_key] ?? false}
+              canEdit={canEdit}
+              onDirtyChange={handleDirtyChange}
+              onSaved={handleSaved}
+            />
+          ))}
+      </Accordion>
 
-              <AccordionContent className="px-4 pb-5 pt-2">
-                <EmailTemplateForm
-                  template={template}
-                  canEdit={canEdit}
-                  onDirtyChange={(dirty) => handleDirtyChange(template.template_key, dirty)}
-                  onSaved={() => handleSaved(template.template_key)}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
+      {/* Groupe 2 : Rappels automatiques */}
+      <TemplateGroupSeparator label="Rappels automatiques" />
+      <Accordion type="single" collapsible className="space-y-2">
+        {templates
+          .filter((t) => (REMINDER_KEYS as string[]).includes(t.template_key))
+          .map((template) => (
+            <TemplateAccordionItem
+              key={template.template_key}
+              template={template}
+              isDirty={dirtyMap[template.template_key] ?? false}
+              canEdit={canEdit}
+              onDirtyChange={handleDirtyChange}
+              onSaved={handleSaved}
+            />
+          ))}
       </Accordion>
     </div>
   );

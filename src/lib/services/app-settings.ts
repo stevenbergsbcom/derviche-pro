@@ -469,11 +469,19 @@ export async function getReminderSettings(): Promise<AppSettingResult<ReminderSe
     return { data: null, error: result.error };
   }
 
+  // parseBool : gère les valeurs JSONB boolean ET les chaînes 'true'/'false'
+  const parseBool = (val: unknown, fallback: boolean): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return fallback;
+  };
+
   return {
     data: {
-      reminder_enabled_7d: (result.data?.reminder_enabled_7d as boolean) ?? true,
-      reminder_enabled_2d: (result.data?.reminder_enabled_2d as boolean) ?? true,
-      reminder_enabled_12h: (result.data?.reminder_enabled_12h as boolean) ?? true,
+      reminder_enabled_7d:  parseBool(result.data?.reminder_enabled_7d,  true),
+      reminder_enabled_2d:  parseBool(result.data?.reminder_enabled_2d,  true),
+      reminder_enabled_12h: parseBool(result.data?.reminder_enabled_12h, true),
     },
     error: null,
   };

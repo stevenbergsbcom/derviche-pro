@@ -35,7 +35,7 @@ export const PREFERENCE_TABS: PreferenceTab[] = [
   { id: 'email',         label: 'Email',          icon: Mail,      status: 'active',   statusLabel: 'Actif' },
   { id: 'templates',     label: 'Templates',      icon: FileText,  status: 'active',   statusLabel: 'Actif' },
   { id: 'notifications', label: 'Notifications',  icon: Bell,      status: 'active',   statusLabel: 'Actif' },
-  { id: 'reminders',     label: 'Rappels',        icon: Bell,      status: 'inactive', statusLabel: 'Non connecté' },
+  { id: 'reminders',     label: 'Rappels',        icon: Bell,      status: 'active',   statusLabel: 'Actif' },
   { id: 'rgpd',          label: 'RGPD',           icon: Shield,    status: 'inactive', statusLabel: 'Non connecté' },
 ];
 

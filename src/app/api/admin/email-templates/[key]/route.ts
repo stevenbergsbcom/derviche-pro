@@ -39,6 +39,9 @@ const VALID_TEMPLATE_KEYS: EmailTemplateKey[] = [
   'reservation_cancellation',
   'reservation_modification',
   'admin_notification',
+  'reminder_7d',
+  'reminder_2d',
+  'reminder_12h',
 ];
 
 function isValidTemplateKey(key: string): key is EmailTemplateKey {
