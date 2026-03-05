@@ -129,19 +129,19 @@ export function useAddReservation({
    * Note: form.reset est stable, pas besoin dans les dépendances
    */
   useEffect(() => {
+    const { reset } = form;
     if (open) {
       setStep(slotId ? 'search' : 'select-slot');
       setActiveSlotId(slotId ?? '');
       setNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
-      form.reset(DEFAULT_FORM_VALUES);
+      reset(DEFAULT_FORM_VALUES);
       setOptionalFieldsOpen(false);
       setCheckinFieldsOpen(false);
       setDuplicateInfo(null);
       pendingFormDataRef.current = null;
       setShowDuplicateDialog(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]); // form.reset est stable, slotId est stable
+  }, [open, slotId, form]); // form stable (useForm), slotId pour resync si navigation avec drawer ouvert
 
   // ============================================
   // HANDLERS

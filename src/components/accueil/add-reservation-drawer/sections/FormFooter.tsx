@@ -30,6 +30,7 @@ export function FormFooter({ isSubmitting }: FormFooterProps) {
           type="submit"
           className="flex-1 bg-gold hover:bg-gold/90 text-derviche-dark"
           disabled={isSubmitting}
+          aria-busy={isSubmitting}
         >
           {isSubmitting ? (
             <>

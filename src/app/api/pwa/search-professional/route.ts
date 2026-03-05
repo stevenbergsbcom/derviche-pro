@@ -66,6 +66,11 @@ function isEmailQuery(q: string): boolean {
   return q.includes('@');
 }
 
+/** Échappe les métacaractères ILIKE (% et _) pour éviter des résultats inattendus */
+function escapeLike(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 // ============================================
 // ROUTE HANDLER
 // ============================================
@@ -126,29 +131,22 @@ export async function GET(request: Request): Promise<NextResponse> {
       address, postal_code, city, deleted_at
     `;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let profilesQuery: any;
-
-    if (isEmailQuery(q)) {
-      // Recherche exacte par email
-      profilesQuery = adminClient
-        .from('profiles')
-        .select(SELECT)
-        .eq('email', q.toLowerCase())
-        .is('deleted_at', null)
-        .limit(1);
-    } else {
-      // Recherche par nom OU prénom (insensible accents via ILIKE)
-      profilesQuery = adminClient
-        .from('profiles')
-        .select(SELECT)
-        .or(`last_name.ilike.%${q}%,first_name.ilike.%${q}%`)
-        .is('deleted_at', null)
-        .order('last_name', { ascending: true })
-        .limit(10);
-    }
-
-    const { data: profiles, error: profileError } = await profilesQuery;
+    const { data: profiles, error: profileError } = await (
+      isEmailQuery(q)
+        ? adminClient
+            .from('profiles')
+            .select(SELECT)
+            .eq('email', q.toLowerCase())
+            .is('deleted_at', null)
+            .limit(1)
+        : adminClient
+            .from('profiles')
+            .select(SELECT)
+            .or(`last_name.ilike.%${escapeLike(q)}%,first_name.ilike.%${escapeLike(q)}%`)
+            .is('deleted_at', null)
+            .order('last_name', { ascending: true })
+            .limit(10)
+    );
 
     if (profileError) {
       logger.error('[API search-professional] Erreur requête', { error: profileError.message });

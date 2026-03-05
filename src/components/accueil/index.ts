@@ -34,3 +34,6 @@ export type { AddReservationDrawerProps } from './add-reservation-drawer';
 export { TransferSlotDrawer } from './transfer-slot-drawer';
 export type { TransferSlotDrawerProps } from './transfer-slot-drawer';
 
+// ReservationFAB (Session 140)
+export { ReservationFAB } from './ReservationFAB';
+

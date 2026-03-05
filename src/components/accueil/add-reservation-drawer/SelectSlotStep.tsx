@@ -67,19 +67,25 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   useEffect(() => {
     if (!userId || !role) return;
 
+    let cancelled = false;
     setLoadingShows(true);
+
     void (async () => {
       try {
         const result = await getAccessibleShows(userId, role, companyId ?? null);
-        if (!result.error) {
+        if (!cancelled && !result.error) {
           setShows(result.data.map((s) => ({ id: s.id, title: s.title })));
         }
       } catch (err) {
-        logger.error('[SelectSlotStep] Erreur chargement spectacles', { err: String(err) });
+        if (!cancelled) {
+          logger.error('[SelectSlotStep] Erreur chargement spectacles', { err: String(err) });
+        }
       } finally {
-        setLoadingShows(false);
+        if (!cancelled) setLoadingShows(false);
       }
     })();
+
+    return () => { cancelled = true; };
   }, [userId, role, companyId]);
 
   // Charger les créneaux quand un spectacle est sélectionné

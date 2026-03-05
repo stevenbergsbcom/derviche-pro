@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   Search,
   Loader2,
@@ -46,12 +46,18 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
   const [profiles, setProfiles] = useState<FoundProfile[]>([]);
   const [searchDone, setSearchDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const canSearch = query.trim().length >= 2 && !isSearching && !disabled;
 
   const handleSearch = useCallback(async () => {
     const q = query.trim();
     if (q.length < 2) return;
+
+    // Annuler la requête précédente si en cours
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setIsSearching(true);
     setSearchDone(false);
@@ -60,7 +66,8 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
 
     try {
       const res = await fetch(
-        `/api/pwa/search-professional?q=${encodeURIComponent(q)}`
+        `/api/pwa/search-professional?q=${encodeURIComponent(q)}`,
+        { signal: controller.signal }
       );
       const data = await res.json() as { found: boolean; profiles?: FoundProfile[]; error?: string };
 
@@ -74,7 +81,8 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
       if (data.found && data.profiles) {
         setProfiles(data.profiles);
       }
-    } catch {
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return; // Requête annulée
       setError('Erreur réseau, réessayez');
     } finally {
       setIsSearching(false);
