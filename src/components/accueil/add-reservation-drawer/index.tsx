@@ -17,6 +17,7 @@ import { DrawerHeader } from './DrawerHeader';
 import { DuplicateDialog } from './DuplicateDialog';
 import { SearchStep } from './SearchStep';
 import { SelectSlotStep } from './SelectSlotStep';
+import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 import {
   RequiredFieldsSection,
   OptionalFieldsSection,
@@ -42,6 +43,8 @@ export function AddReservationDrawer({
   const {
     form,
     state,
+    notifOptions,
+    setNotifOptions,
     setOptionalFieldsOpen,
     setCheckinFieldsOpen,
     onFormSubmit,
@@ -66,7 +69,7 @@ export function AddReservationDrawer({
           <DrawerHeader capacityInfo={state.capacityInfo} />
 
           {/* Indicateur d'étape */}
-          <div className="px-4 pb-3 flex items-center gap-1.5 text-xs text-muted-foreground border-b">
+          <div className="px-4 py-3 flex items-center gap-1.5 text-xs text-muted-foreground border-b">
             {steps.map((s, i) => (
               <span key={s} className="flex items-center gap-1.5">
                 {i > 0 && <span aria-hidden="true">›</span>}
@@ -129,6 +132,17 @@ export function AddReservationDrawer({
                     isAdmin={isAdmin}
                   />
                 </div>
+
+                {/* Notifications */}
+                <div className="px-4 pb-2">
+                  <NotificationSwitches
+                    value={notifOptions}
+                    onChange={setNotifOptions}
+                    disabled={state.isSubmitting}
+                    label="Notifier le professionnel"
+                  />
+                </div>
+
                 <FormFooter isSubmitting={state.isSubmitting} />
               </form>
             )}

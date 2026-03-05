@@ -39,6 +39,10 @@ import type {
   UseAddReservationReturn,
 } from './types';
 import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
+import {
+  DEFAULT_NOTIFICATION_OPTIONS,
+  type NotificationOptions,
+} from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // HOOK
@@ -68,6 +72,7 @@ export function useAddReservation({
   const [step, setStep] = useState<AddReservationDrawerStep>(initialStep);
   const [activeSlotId, setActiveSlotId] = useState<string>(slotId ?? '');
 
+  const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optionalFieldsOpen, setOptionalFieldsOpen] = useState(false);
   const [checkinFieldsOpen, setCheckinFieldsOpen] = useState(false);
@@ -127,6 +132,7 @@ export function useAddReservation({
     if (open) {
       setStep(slotId ? 'search' : 'select-slot');
       setActiveSlotId(slotId ?? '');
+      setNotifOptions(DEFAULT_NOTIFICATION_OPTIONS);
       form.reset(DEFAULT_FORM_VALUES);
       setOptionalFieldsOpen(false);
       setCheckinFieldsOpen(false);
@@ -207,6 +213,21 @@ export function useAddReservation({
         }
 
         toast.success(`Réservation créée pour ${formData.firstName} ${formData.lastName}`);
+
+        // Envoyer email + calendar si demandé (non-bloquant)
+        if (notifOptions.sendEmail && result.reservationId) {
+          void fetch('/api/emails/send-confirmation-by-id', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              reservationId: result.reservationId,
+              syncCalendar: notifOptions.syncCalendar,
+            }),
+          }).catch((err) => {
+            logger.error('useAddReservation - Erreur envoi email confirmation', { err });
+          });
+        }
+
         onSuccess();
         onOpenChange(false);
       } catch (error) {
@@ -217,7 +238,7 @@ export function useAddReservation({
         setIsSubmitting(false);
       }
     },
-    [userId, role, companyId, activeSlotId, onSuccess, onOpenChange]
+    [userId, role, companyId, activeSlotId, notifOptions, onSuccess, onOpenChange]
   );
 
   /**
@@ -317,6 +338,8 @@ export function useAddReservation({
   return {
     form,
     state,
+    notifOptions,
+    setNotifOptions,
     setOptionalFieldsOpen,
     setCheckinFieldsOpen,
     onFormSubmit,

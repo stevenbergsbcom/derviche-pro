@@ -7,6 +7,7 @@ import type { UseFormReturn } from 'react-hook-form';
 import type { CheckinStatus } from '@/types/database';
 import type { DuplicateCheckResult } from '@/lib/services/checkin';
 import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
+import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // ============================================
 // STEP
@@ -106,6 +107,9 @@ export interface UseAddReservationReturn {
   form: UseFormReturn<AddReservationFormData>;
   // États
   state: AddReservationState;
+  // Notifications
+  notifOptions: NotificationOptions;
+  setNotifOptions: (options: NotificationOptions) => void;
   // Setters pour les collapsibles
   setOptionalFieldsOpen: (open: boolean) => void;
   setCheckinFieldsOpen: (open: boolean) => void;
