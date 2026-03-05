@@ -52,6 +52,7 @@ export interface AddReservationFormData {
   address?: string;
   postalCode?: string;
   city?: string;
+  country?: string;
   organization?: string;
   function?: string;
   afcNumber?: string;
@@ -154,8 +155,4 @@ export interface DuplicateDialogProps {
   pendingEmail: string | null;
   onConfirm: () => void;
   onCancel: () => void;
-}
-
-export interface DrawerHeaderProps {
-  capacityInfo: CapacityInfo | null;
 }

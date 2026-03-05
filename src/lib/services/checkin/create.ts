@@ -129,6 +129,7 @@ export async function createReservationFromCheckin(
         p_address: data.address?.trim() || undefined,
         p_postal_code: data.postalCode?.trim() || undefined,
         p_city: data.city?.trim() || undefined,
+        p_country: data.country?.trim() || undefined,
         p_organization: data.organization?.trim() || undefined,
         p_function: data.function?.trim() || undefined,
         p_afc_number: data.afcNumber?.trim() || undefined,

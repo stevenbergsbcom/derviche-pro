@@ -15,6 +15,7 @@ export function AddressSection({
   address,
   postalCode,
   city,
+  country,
   onChange,
   disabled,
 }: AddressSectionProps) {
@@ -62,6 +63,19 @@ export function AddressSection({
             placeholder={PLACEHOLDERS.city}
             disabled={disabled}
             autoComplete="address-level2"
+          />
+        </div>
+
+        {/* Pays */}
+        <div className="space-y-2 sm:col-span-3">
+          <Label htmlFor="country">{LABELS.country}</Label>
+          <Input
+            id="country"
+            value={country || ''}
+            onChange={(e) => onChange('country', e.target.value || null)}
+            placeholder={PLACEHOLDERS.country}
+            disabled={disabled}
+            autoComplete="country-name"
           />
         </div>
       </div>

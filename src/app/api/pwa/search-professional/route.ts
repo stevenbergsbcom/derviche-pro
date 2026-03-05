@@ -51,6 +51,7 @@ export interface FoundProfile {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  country: string | null;
 }
 
 export type SearchProfessionalResult =
@@ -128,7 +129,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const SELECT = `
       id, email, first_name, last_name, structure,
       phone, phone2, email2, afc_number, function,
-      address, postal_code, city, deleted_at
+      address, postal_code, city, country, deleted_at
     `;
 
     const { data: profiles, error: profileError } = await (
@@ -196,6 +197,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         address: string | null;
         postal_code: string | null;
         city: string | null;
+        country: string | null;
       }) => ({
         id: p.id,
         email: p.email,
@@ -210,6 +212,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         address: p.address,
         postalCode: p.postal_code,
         city: p.city,
+        country: p.country,
       })),
     };
 

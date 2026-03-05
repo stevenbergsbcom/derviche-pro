@@ -20,7 +20,7 @@ export function FormFooter({ isSubmitting }: FormFooterProps) {
           <Button
             type="button"
             variant="outline"
-            className="flex-1"
+            className="flex-1 h-12 text-base"
             disabled={isSubmitting}
           >
             Annuler
@@ -28,7 +28,7 @@ export function FormFooter({ isSubmitting }: FormFooterProps) {
         </DrawerClose>
         <Button
           type="submit"
-          className="flex-1 bg-gold hover:bg-gold/90 text-derviche-dark"
+          className="flex-1 h-12 text-base bg-gold hover:bg-gold/90 text-derviche-dark"
           disabled={isSubmitting}
           aria-busy={isSubmitting}
         >

@@ -187,6 +187,7 @@ export function useAddReservation({
           address: formData.address || undefined,
           postalCode: formData.postalCode || undefined,
           city: formData.city || undefined,
+          country: formData.country || undefined,
           organization: formData.organization || undefined,
           function: formData.function || undefined,
           afcNumber: formData.afcNumber || undefined,
@@ -274,6 +275,7 @@ export function useAddReservation({
       address: profile.address ?? '',
       postalCode: profile.postalCode ?? '',
       city: profile.city ?? '',
+      country: profile.country ?? 'France',
     });
     setStep('form');
   }, [form]);

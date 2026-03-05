@@ -97,6 +97,7 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
     address: row.guest_address || null,
     postalCode: row.guest_postal_code || null,
     city: row.guest_city || null,
+    country: row.guest_country || null,
     organization: row.guest_structure,
     function: row.guest_function,
     afcNumber: row.guest_afc_number || null,

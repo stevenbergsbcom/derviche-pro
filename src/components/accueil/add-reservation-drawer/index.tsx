@@ -65,34 +65,56 @@ export function AddReservationDrawer({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[95vh]">
-          <DrawerHeader capacityInfo={state.capacityInfo} />
+        <DrawerContent className="min-h-[90vh] max-h-[95vh] flex flex-col">
+          <DrawerHeader />
 
           {/* Indicateur d'étape */}
-          <div className="px-4 py-3 flex items-center gap-1.5 text-xs text-muted-foreground border-b">
-            {steps.map((s, i) => (
-              <span key={s} className="flex items-center gap-1.5">
-                {i > 0 && <span aria-hidden="true">›</span>}
-                <span
-                  className={
-                    s === state.step
-                      ? 'font-semibold text-derviche'
-                      : i < currentStepIndex
-                      ? 'text-muted-foreground line-through'
-                      : 'text-muted-foreground'
-                  }
-                  aria-current={s === state.step ? 'step' : undefined}
-                >
-                  {STEP_LABELS[s]}
+          <div className="px-4 py-3 flex items-center gap-2 border-b" role="list" aria-label="Étapes">
+            {steps.map((s, i) => {
+              const isActive = s === state.step;
+              const isDone = i < currentStepIndex;
+              return (
+                <span key={s} className="flex items-center gap-2" role="listitem">
+                  {i > 0 && (
+                    <span className="text-muted-foreground/50 text-sm" aria-hidden="true">—</span>
+                  )}
+                  <span
+                    className="flex items-center gap-1.5"
+                    aria-current={isActive ? 'step' : undefined}
+                  >
+                    <span
+                      className={
+                        isActive
+                          ? 'w-6 h-6 rounded-full bg-derviche text-white text-xs font-bold flex items-center justify-center shrink-0'
+                          : isDone
+                          ? 'w-6 h-6 rounded-full bg-muted text-muted-foreground text-xs font-bold flex items-center justify-center shrink-0'
+                          : 'w-6 h-6 rounded-full border-2 border-muted-foreground/30 text-muted-foreground/50 text-xs font-bold flex items-center justify-center shrink-0'
+                      }
+                      aria-hidden="true"
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      className={
+                        isActive
+                          ? 'text-sm font-semibold text-derviche'
+                          : isDone
+                          ? 'text-sm text-muted-foreground'
+                          : 'text-sm text-muted-foreground/50'
+                      }
+                    >
+                      {STEP_LABELS[s]}
+                    </span>
+                  </span>
                 </span>
-              </span>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             {/* Étape 1 : Sélection show/créneau */}
             {state.step === 'select-slot' && (
-              <div className="p-4">
+              <div className="p-5">
                 <SelectSlotStep
                   onSlotSelected={handleSlotSelected}
                   disabled={state.isSubmitting}
@@ -102,7 +124,7 @@ export function AddReservationDrawer({
 
             {/* Étape 2 : Recherche */}
             {state.step === 'search' && (
-              <div className="p-4">
+              <div className="p-5">
                 <SearchStep
                   onSelect={handleSelectProfile}
                   onSkip={handleSkipSearch}
@@ -114,7 +136,7 @@ export function AddReservationDrawer({
             {/* Étape 3 : Formulaire */}
             {state.step === 'form' && (
               <form onSubmit={onFormSubmit}>
-                <div className="p-4 space-y-4">
+                <div className="p-5 space-y-5">
                   <RequiredFieldsSection form={form} isSubmitting={state.isSubmitting} />
                   <Separator />
                   <OptionalFieldsSection
@@ -134,7 +156,7 @@ export function AddReservationDrawer({
                 </div>
 
                 {/* Notifications */}
-                <div className="px-4 pb-2">
+                <div className="px-5 pb-2">
                   <NotificationSwitches
                     value={notifOptions}
                     onChange={setNotifOptions}

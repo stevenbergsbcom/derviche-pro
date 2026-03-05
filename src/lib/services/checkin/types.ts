@@ -218,6 +218,7 @@ export interface CreateCheckinReservationData {
   address?: string;
   postalCode?: string;
   city?: string;
+  country?: string;
   organization?: string;  // -> guest_structure
   function?: string;      // -> guest_function
   afcNumber?: string;

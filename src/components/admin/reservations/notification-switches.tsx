@@ -66,20 +66,22 @@ export function NotificationSwitches({
   };
 
   return (
-    <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+    <div className="border-2 rounded-xl p-4 bg-muted/20 space-y-4">
+      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
         {label}
       </p>
 
       {/* Switch email */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Mail className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+            <Mail className="w-4 h-4 text-blue-600" aria-hidden="true" />
+          </div>
           <Label
             htmlFor="notif-send-email"
-            className="text-sm font-normal cursor-pointer"
+            className="text-base font-medium cursor-pointer leading-tight"
           >
-            Envoyer un email au professionnel
+            Email au professionnel
           </Label>
         </div>
         <Switch
@@ -92,23 +94,33 @@ export function NotificationSwitches({
 
       {/* Switch calendrier — conditionnel selon hasCalendarEvent */}
       {noCalendar ? (
-        // Pas d'événement Calendar associé — message informatif
-        <div className="flex items-center gap-2 text-muted-foreground/70">
-          <CalendarX className="w-4 h-4 shrink-0" aria-hidden="true" />
-          <span className="text-xs italic">
+        <div className="flex items-center gap-3 text-muted-foreground/60">
+          <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
+            <CalendarX className="w-4 h-4" aria-hidden="true" />
+          </div>
+          <span className="text-sm italic">
             Aucun événement Google Calendar associé
           </span>
         </div>
       ) : (
-        // Événement existant ou création — switch normal
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
+              value.sendEmail
+                ? 'bg-green-50 border-green-100'
+                : 'bg-muted border-muted'
+            }`}>
+              <Calendar className={`w-4 h-4 ${
+                value.sendEmail ? 'text-green-600' : 'text-muted-foreground/40'
+              }`} aria-hidden="true" />
+            </div>
             <Label
               htmlFor="notif-sync-calendar"
-              className={`text-sm font-normal ${!value.sendEmail ? 'text-muted-foreground/50' : 'cursor-pointer'}`}
+              className={`text-base font-medium leading-tight ${
+                value.sendEmail ? 'cursor-pointer' : 'text-muted-foreground/50'
+              }`}
             >
-              Synchroniser le calendrier Google
+              Google Calendar
             </Label>
           </div>
           <Switch
