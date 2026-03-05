@@ -124,6 +124,7 @@ export async function updateReservation(
       p_address: data.address,
       p_postal_code: data.postalCode,
       p_city: data.city,
+      p_country: data.country ?? null,
       p_organization: data.organization,
       p_function: data.function,
       p_afc_number: data.afcNumber,

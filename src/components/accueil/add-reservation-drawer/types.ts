@@ -156,7 +156,3 @@ export interface DuplicateDialogProps {
   onConfirm: () => void;
   onCancel: () => void;
 }
-
-export interface DrawerHeaderProps {
-  capacityInfo: CapacityInfo | null;
-}

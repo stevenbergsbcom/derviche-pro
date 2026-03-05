@@ -172,6 +172,7 @@ export function CreateReservationDialog({
             onClick={handleClose} 
             disabled={isSaving} 
             className="w-full sm:w-auto"
+            aria-label="Annuler la création"
           >
             Annuler
           </Button>
@@ -179,6 +180,7 @@ export function CreateReservationDialog({
             onClick={handleSubmit} 
             disabled={isSaving || !formData.slotId} 
             className="w-full sm:w-auto"
+            aria-label="Créer la réservation"
           >
             {isSaving ? (
               <>
