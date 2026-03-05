@@ -24,6 +24,7 @@ export const INITIAL_FORM_DATA: CreateAdminReservationData = {
   address: null,
   postalCode: null,
   city: null,
+  country: null,
   organization: null,
   function: null,
   afcNumber: null,
@@ -85,6 +86,7 @@ export const PLACEHOLDERS = {
   address: '123 rue du Théâtre',
   postalCode: '75001',
   city: 'Paris',
+  country: 'France',
   comment: 'Besoins particuliers, accessibilité...',
   checkinComment: 'Notes visibles lors du check-in...',
   checkinVenueNotes: 'Informations spécifiques au lieu...',
@@ -125,6 +127,7 @@ export const LABELS = {
   address: 'Adresse',
   postalCode: 'Code postal',
   city: 'Ville',
+  country: 'Pays',
   
   // Section Notes
   sectionNotes: 'Notes',

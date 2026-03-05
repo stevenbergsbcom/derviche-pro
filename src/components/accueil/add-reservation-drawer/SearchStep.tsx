@@ -107,45 +107,42 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
       </p>
 
       {/* Champ de recherche */}
-      <div className="space-y-2">
-        <Label htmlFor="search-pro">Email ou nom</Label>
-        <div className="flex gap-2">
-          <Input
-            id="search-pro"
-            type="text"
-            placeholder="jean.dupont@theatre.fr ou Dupont"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              // Reset résultats si l'utilisateur modifie la recherche
-              if (searchDone) {
-                setSearchDone(false);
-                setProfiles([]);
-              }
-            }}
-            onKeyDown={handleKeyDown}
-            disabled={isSearching || disabled}
-            autoComplete="off"
-            autoFocus
-            className="flex-1"
-            aria-label="Rechercher par email ou nom"
-          />
-          <Button
-            type="button"
-            onClick={() => void handleSearch()}
-            disabled={!canSearch}
-            variant="outline"
-            size="icon"
-            className="shrink-0"
-            aria-label="Lancer la recherche"
-          >
-            {isSearching ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Search className="w-4 h-4" />
-            )}
-          </Button>
-        </div>
+      <div className="space-y-3">
+        <Label htmlFor="search-pro" className="text-base">Email ou nom</Label>
+        <Input
+          id="search-pro"
+          type="text"
+          placeholder="jean.dupont@theatre.fr ou Dupont"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (searchDone) {
+              setSearchDone(false);
+              setProfiles([]);
+            }
+          }}
+          onKeyDown={handleKeyDown}
+          disabled={isSearching || disabled}
+          autoComplete="off"
+          autoFocus
+          className="h-12 text-base"
+          aria-label="Rechercher par email ou nom"
+        />
+        <Button
+          type="button"
+          onClick={() => void handleSearch()}
+          disabled={!canSearch}
+          variant="outline"
+          className="w-full h-12 text-base"
+          aria-label="Lancer la recherche"
+        >
+          {isSearching ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Search className="w-4 h-4 mr-2" />
+          )}
+          {isSearching ? 'Recherche en cours…' : 'Rechercher'}
+        </Button>
         <p className="text-xs text-muted-foreground">
           Minimum 2 caractères · Email exact ou nom partiel
         </p>
@@ -174,31 +171,31 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
                     type="button"
                     onClick={() => onSelect(profile)}
                     disabled={disabled}
-                    className="w-full text-left rounded-lg border border-green-200 bg-green-50 hover:bg-green-100 active:bg-green-200 p-3 transition-colors disabled:opacity-50"
+                    className="w-full text-left rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 active:bg-green-200 p-4 transition-colors disabled:opacity-50"
                     aria-label={`Sélectionner ${profile.firstName ?? ''} ${profile.lastName ?? ''}`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
                         <CheckCircle2
-                          className="w-4 h-4 text-green-600 shrink-0"
+                          className="w-5 h-5 text-green-600 shrink-0"
                           aria-hidden="true"
                         />
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-green-800 truncate">
+                          <p className="text-base font-semibold text-green-800 truncate">
                             {profile.firstName} {profile.lastName}
                           </p>
                           {profile.organization && (
-                            <p className="text-xs text-green-600 truncate">
+                            <p className="text-sm text-green-600 truncate">
                               {profile.organization}
                             </p>
                           )}
-                          <p className="text-xs text-green-500 truncate">
+                          <p className="text-sm text-green-500 truncate">
                             {profile.email}
                           </p>
                         </div>
                       </div>
                       <ChevronRight
-                        className="w-4 h-4 text-green-400 shrink-0"
+                        className="w-5 h-5 text-green-400 shrink-0"
                         aria-hidden="true"
                       />
                     </div>
@@ -232,7 +229,7 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
           variant="outline"
           onClick={onSkip}
           disabled={disabled}
-          className="w-full"
+          className="w-full h-12 text-base"
           aria-label="Continuer sans rechercher"
         >
           <Users className="w-4 h-4 mr-2" aria-hidden="true" />

@@ -267,6 +267,7 @@ export async function createAdminReservation(
       p_address: data.address?.trim() || null,
       p_postal_code: data.postalCode?.trim() || null,
       p_city: data.city?.trim() || null,
+      p_country: data.country?.trim() || null,
       p_organization: data.organization?.trim() || null,
       p_function: data.function?.trim() || null,
       p_afc_number: data.afcNumber?.trim() || null,

@@ -9,15 +9,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Theater, Calendar } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Loader2, Theater, Calendar, Check as CheckIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import { getAccessibleShows } from '@/lib/services/checkin';
@@ -58,10 +50,12 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   const [loadingShows, setLoadingShows] = useState(false);
 
   const [selectedShowId, setSelectedShowId] = useState('');
+  const [showListOpen, setShowListOpen] = useState(true);
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [selectedSlotId, setSelectedSlotId] = useState('');
+  const [slotListOpen, setSlotListOpen] = useState(true);
 
   // Charger les spectacles au montage
   useEffect(() => {
@@ -74,7 +68,12 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
       try {
         const result = await getAccessibleShows(userId, role, companyId ?? null);
         if (!cancelled && !result.error) {
-          setShows(result.data.map((s) => ({ id: s.id, title: s.title })));
+          // Filtrer : uniquement les spectacles avec au moins un créneau futur
+          setShows(
+            result.data
+              .filter((s) => s.upcomingSlotsCount > 0)
+              .map((s) => ({ id: s.id, title: s.title }))
+          );
         }
       } catch (err) {
         if (!cancelled) {
@@ -91,7 +90,9 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   // Charger les créneaux quand un spectacle est sélectionné
   const handleShowChange = useCallback(async (showId: string) => {
     setSelectedShowId(showId);
+    setShowListOpen(false);
     setSelectedSlotId('');
+    setSlotListOpen(true);
     setSlots([]);
     if (!showId) return;
 
@@ -119,89 +120,181 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   const canContinue = !!selectedSlotId && !disabled;
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Sélectionnez le spectacle et la représentation pour cette réservation.
-      </p>
+    <div className="space-y-6">
 
-      {/* Sélecteur spectacle */}
-      <div className="space-y-2">
-        <Label htmlFor="select-show" className="flex items-center gap-1.5">
-          <Theater className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-          Spectacle
-        </Label>
+      {/* Spectacles */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+            <Theater className="w-4 h-4" aria-hidden="true" />
+            Spectacle
+          </p>
+          {/* Bouton Changer — visible seulement quand liste fermée et spectacle sélectionné */}
+          {!showListOpen && selectedShowId && (
+            <button
+              type="button"
+              onClick={() => setShowListOpen(true)}
+              className="text-sm text-derviche underline underline-offset-2 hover:text-derviche/80"
+            >
+              Changer
+            </button>
+          )}
+        </div>
+
         {loadingShows ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
             <Loader2 className="w-4 h-4 animate-spin" />
             Chargement…
           </div>
+        ) : shows.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-2">Aucun spectacle disponible.</p>
+        ) : showListOpen ? (
+          /* Liste complète */
+          <div className="space-y-2" role="radiogroup" aria-label="Choisir un spectacle">
+            {shows.map((show) => {
+              const isSelected = selectedShowId === show.id;
+              return (
+                <button
+                  key={show.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => void handleShowChange(show.id)}
+                  disabled={disabled}
+                  className={[
+                    'w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-derviche',
+                    isSelected
+                      ? 'border-derviche bg-derviche/5'
+                      : 'border-border hover:border-derviche/40 hover:bg-muted/50',
+                    disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                  ].join(' ')}
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span className={`text-base font-medium ${isSelected ? 'text-derviche' : ''}`}>
+                      {show.title}
+                    </span>
+                    {isSelected && (
+                      <span className="w-5 h-5 rounded-full bg-derviche flex items-center justify-center shrink-0">
+                        <CheckIcon className="w-3 h-3 text-white" />
+                      </span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         ) : (
-          <Select
-            value={selectedShowId}
-            onValueChange={(v) => void handleShowChange(v)}
-            disabled={disabled || loadingShows}
-          >
-            <SelectTrigger id="select-show" aria-label="Choisir un spectacle">
-              <SelectValue placeholder="Choisir un spectacle…" />
-            </SelectTrigger>
-            <SelectContent>
-              {shows.map((show) => (
-                <SelectItem key={show.id} value={show.id}>
-                  {show.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          /* Carte résumé — spectacle sélectionné */
+          <div className="rounded-xl border-2 border-derviche bg-derviche/5 px-4 py-3.5">
+            <span className="flex items-center justify-between gap-3">
+              <span className="text-base font-medium text-derviche">
+                {shows.find((s) => s.id === selectedShowId)?.title}
+              </span>
+              <span className="w-5 h-5 rounded-full bg-derviche flex items-center justify-center shrink-0">
+                <CheckIcon className="w-3 h-3 text-white" />
+              </span>
+            </span>
+          </div>
         )}
       </div>
 
-      {/* Sélecteur créneau */}
+      {/* Créneaux */}
       {selectedShowId && (
-        <div className="space-y-2">
-          <Label htmlFor="select-slot" className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-            Représentation
-          </Label>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Calendar className="w-4 h-4" aria-hidden="true" />
+              Représentation
+            </p>
+            {!slotListOpen && selectedSlotId && (
+              <button
+                type="button"
+                onClick={() => setSlotListOpen(true)}
+                className="text-sm text-derviche underline underline-offset-2 hover:text-derviche/80"
+              >
+                Changer
+              </button>
+            )}
+          </div>
+
           {loadingSlots ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
               <Loader2 className="w-4 h-4 animate-spin" />
               Chargement…
             </div>
           ) : slots.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">
-              Aucune représentation disponible pour ce spectacle.
+              Aucune représentation disponible.
             </p>
-          ) : (
-            <Select
-              value={selectedSlotId}
-              onValueChange={setSelectedSlotId}
-              disabled={disabled || loadingSlots}
-            >
-              <SelectTrigger id="select-slot" aria-label="Choisir une représentation">
-                <SelectValue placeholder="Choisir une représentation…" />
-              </SelectTrigger>
-              <SelectContent>
-                {slots.map((slot) => (
-                  <SelectItem key={slot.id} value={slot.id}>
-                    <span className="flex items-center gap-2">
-                      <span>
-                        {formatDateFr(slot.date)}{slot.time ? ` à ${slot.time.slice(0, 5)}` : ''}
-                      </span>
-                      {slot.venueName && (
-                        <span className="text-muted-foreground text-xs">
-                          — {slot.venueName}
+          ) : slotListOpen ? (
+            /* Liste complète */
+            <div className="space-y-2" role="radiogroup" aria-label="Choisir une représentation">
+              {slots.map((slot) => {
+                const isSelected = selectedSlotId === slot.id;
+                const label = `${formatDateFr(slot.date)}${slot.time ? ` à ${slot.time.slice(0, 5)}` : ''}`;
+                return (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    onClick={() => {
+                      setSelectedSlotId(slot.id);
+                      setSlotListOpen(false);
+                    }}
+                    disabled={disabled}
+                    className={[
+                      'w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-derviche',
+                      isSelected
+                        ? 'border-derviche bg-derviche/5'
+                        : 'border-border hover:border-derviche/40 hover:bg-muted/50',
+                      disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+                    ].join(' ')}
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="space-y-0.5">
+                        <span className={`block text-base font-medium ${isSelected ? 'text-derviche' : ''}`}>
+                          {label}
                         </span>
-                      )}
-                      {slot.remainingCapacity !== null && (
-                        <span className="text-xs text-muted-foreground">
-                          ({slot.remainingCapacity} pl.)
+                        {slot.venueName && (
+                          <span className="block text-sm text-muted-foreground">
+                            {slot.venueName}
+                          </span>
+                        )}
+                      </span>
+                      {isSelected && (
+                        <span className="w-5 h-5 rounded-full bg-derviche flex items-center justify-center shrink-0">
+                          <CheckIcon className="w-3 h-3 text-white" />
                         </span>
                       )}
                     </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            /* Carte résumé — créneau sélectionné */
+            (() => {
+              const slot = slots.find((s) => s.id === selectedSlotId);
+              const label = slot ? `${formatDateFr(slot.date)}${slot.time ? ` à ${slot.time.slice(0, 5)}` : ''}` : '';
+              return (
+                <div className="rounded-xl border-2 border-derviche bg-derviche/5 px-4 py-3.5">
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="space-y-0.5">
+                      <span className="block text-base font-medium text-derviche">{label}</span>
+                      {slot?.venueName && (
+                        <span className="block text-sm text-muted-foreground">{slot.venueName}</span>
+                      )}
+                    </span>
+                    <span className="w-5 h-5 rounded-full bg-derviche flex items-center justify-center shrink-0">
+                      <CheckIcon className="w-3 h-3 text-white" />
+                    </span>
+                  </span>
+                </div>
+              );
+            })()
           )}
         </div>
       )}
@@ -211,7 +304,7 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
         type="button"
         onClick={() => onSlotSelected(selectedSlotId)}
         disabled={!canContinue}
-        className="w-full bg-derviche hover:bg-derviche/90"
+        className="w-full h-12 text-base bg-derviche hover:bg-derviche/90"
       >
         Continuer
       </Button>

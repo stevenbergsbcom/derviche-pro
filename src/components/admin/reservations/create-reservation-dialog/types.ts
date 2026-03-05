@@ -142,6 +142,7 @@ export interface AddressSectionProps extends FormSectionProps {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  country: string | null;
   onChange: FieldChangeHandler;
 }
 

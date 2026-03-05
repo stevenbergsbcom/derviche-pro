@@ -54,6 +54,7 @@ export interface AdminReservation {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  country: string | null;
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
@@ -181,6 +182,7 @@ export interface UpdateReservationData {
   address?: string | null;
   postalCode?: string | null;
   city?: string | null;
+  country?: string | null;
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
@@ -207,6 +209,7 @@ export interface CreateAdminReservationData {
   address?: string | null;
   postalCode?: string | null;
   city?: string | null;
+  country?: string | null;
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
@@ -289,6 +292,7 @@ export interface ReservationRowWithRelations {
   guest_address: string | null;
   guest_postal_code: string | null;
   guest_city: string | null;
+  guest_country: string | null;
   guest_structure: string | null;
   guest_function: string | null;
   guest_afc_number: string | null;

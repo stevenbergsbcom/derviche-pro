@@ -142,6 +142,7 @@ export function CreateReservationDialog({
             address={formData.address ?? null}
             postalCode={formData.postalCode ?? null}
             city={formData.city ?? null}
+            country={formData.country ?? null}
             onChange={handleFieldChange}
             disabled={isSaving}
           />

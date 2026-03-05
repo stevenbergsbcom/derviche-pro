@@ -52,6 +52,7 @@ export interface AddReservationFormData {
   address?: string;
   postalCode?: string;
   city?: string;
+  country?: string;
   organization?: string;
   function?: string;
   afcNumber?: string;

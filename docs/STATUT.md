@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 139 (complète + validée build) — 5 mars 2026
+> Dernière mise à jour : Session 140 — audit post-session corrigé, build clean, mergé main — 5 mars 2026
 
 ---
 
@@ -23,6 +23,11 @@
 - Recherche, check-in, annulation, transfert
 - **S139** : Switches email/calendar sur annulation + transfert
 - **S139** : Modale de confirmation avant annulation (avec switches)
+- **S140** : ReservationFAB — bouton flottant gold, création de réservation depuis n'importe quelle page /accueil
+- **S140** : SearchStep — recherche email OU nom avec pré-remplissage formulaire
+- **S140** : SelectSlotStep — sélection show + créneau si pas de contexte URL
+- **S140** : AddReservationDrawer enrichi — 3 étapes (select-slot → search → form)
+- **S140** : NotificationSwitches intégrés (email + calendar) dans le drawer
 
 ### ✅ Admin (100%)
 | Module | État |
@@ -75,78 +80,59 @@
 - **Sécurité** : `CRON_SECRET` dans GitHub Secrets + exclu du middleware Next.js
 
 ### ✅ Notifications admin (100%) — S137
-
-**Fonctionnalités :**
 - Badge cloche dans le header admin (polling 30s), badge rouge avec compteur
 - Sheet latéral : liste paginée (20/page), skeleton, état vide, erreur
-- Marquage lu individuel : chaque admin gère ses propres lectures
-- "Tout marquer lu" : upsert batch optimiste
-- "Vider" : soft delete individuel par timestamp (dismissed_at)
-- Mutations optimistes avec resync badge en cas d'échec
+- Marquage lu individuel, "tout marquer lu", "vider" (soft delete par timestamp)
 - 3 types : nouvelle réservation (vert), annulation (rouge), modification (ambre)
-- Clic notification → fermeture Sheet + navigation vers la réservation (query param)
-
-**Architecture :**
-- 3 tables : `admin_notifications` + `admin_notification_reads` + `admin_notification_dismissals`
-- **Dismiss par timestamp** : `dismissed_at` = "j'ai vidé à cet instant" → filtre `created_at > dismissed_at`
-- RLS : INSERT uniquement service role — SELECT/UPDATE admin + super-admin
-- `getDismissedAt()` mutualisé (passé en paramètre à `getAdminUnreadCount` pour éviter double appel DB)
-- Notifications créées **uniquement sur actions PRO** (send-confirmation/cancellation/modification)
-- Cloche dans `src/app/admin/layout.tsx` (header, pas sidebar)
-- Page `/admin/reservations` utilise query param `?reservationId=` (pas segment dynamique)
-- Click-through corrigé : `stopPropagation` + `setTimeout(350ms)` avant `router.push`
+- Architecture : 3 tables + dismiss par `dismissed_at` + RLS service role
 
 ### ✅ Google Calendar (100%) — S138
-
-**Fonctionnalités :**
-- Création automatique d'un événement Calendar à chaque confirmation de réservation
-- Mise à jour de l'événement lors d'un changement de créneau
-- Suppression de l'événement lors d'une annulation
-- Invitation email Google envoyée au professionnel
-- Préférences admin : switch principal + 2 switches email (annulation, modification)
-- Non-bloquant : une erreur Calendar n'interrompt jamais le flux de réservation
-
-**Architecture :**
-- Auth : OAuth2 refresh token (`reservation.derviche@gmail.com`)
-- Service : `src/lib/services/google-calendar/` (4 modules : types, auth, queries, index)
-- `google_calendar_event_id` stocké dans `reservations` après création
-- Migration 062 : 3 clés `app_settings`
+- Création / mise à jour / suppression événements Calendar
+- Auth OAuth2 refresh token (`reservation.derviche@gmail.com`)
+- Service `src/lib/services/google-calendar/` (4 modules)
+- `google_calendar_event_id` stocké dans `reservations`
 
 ### ✅ Switches email/calendar PWA & Admin (100%) — S139
-
-**Fonctionnalités :**
-- Switches email ON/OFF et Calendar ON/OFF sur toutes les actions admin et PWA
 - Composant partagé `NotificationSwitches` (admin + PWA)
 - Switch Calendar conditionnel : masqué si aucun événement Calendar associé
 - Modale de confirmation avant annulation PWA (`CancelConfirmDialog`)
-- Fermeture modale uniquement en cas de succès (`handleCancel` retourne `boolean`)
+- Fix sécurité : externe limité à ses spectacles assignés (`hosted_by_id`)
 
-**Sécurité :**
-- Fix : un `externe` ne peut déclencher emails/Calendar que sur ses spectacles assignés (`hosted_by_id`)
-- Fix : suppression du double appel email annulation dans `useAdminReservations`
-- Fix : `syncCalendar` manquant dans le fetch transfert de créneau PWA
+### ✅ Walk-in FAB + SearchStep enrichi (100%) — S140
+- **ReservationFAB** : bouton flottant gold visible partout dans `/accueil`, contextuel selon URL
+- **SearchStep** : recherche email (exact) OU nom (ILIKE échappé), AbortController anti-race
+- **SelectSlotStep** : sélection show + créneau si pas de `slotId` dans l'URL, cleanup demontage
+- **AddReservationDrawer** enrichi : `slotId` optionnel, 3 étapes, indicateur `aria-current="step"`
+- **NotificationSwitches** intégrés : email + calendar, envoi non-bloquant après création
+- **Migration 064** : fix sécurité RPC externe — `hosted_by_id` (cohérent migration 040)
+- **Nettoyage** : dead code `walkin-reservation/route.ts` supprimé, bouton "Ajouter" retiré de `ActionBar`
 
 ---
 
-## Dernier travail (Session 139 — 5 mars 2026)
+## Dernier travail (Session 140 — 5 mars 2026)
 
-### Fichiers clés créés/modifiés S139
+### Fichiers clés créés/modifiés S140
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/admin/reservations/notification-switches.tsx` | Composant partagé switches email + calendar |
-| `src/app/admin/reservations/page.tsx` | Switches sur annulation/modification/création + fix `hasCalendarEvent` |
-| `src/hooks/useAdminReservations.ts` | Suppression appel email redondant dans `cancel()` |
-| `src/components/accueil/transfer-slot-drawer/useTransferSlot.ts` | Ajout `syncCalendar` dans body fetch + switches UI |
-| `src/components/accueil/checkin-drawer/sections/CancelConfirmDialog.tsx` | Nouveau — modale confirmation annulation PWA |
-| `src/components/accueil/checkin-drawer/sections/FooterSection.tsx` | Suppression switches inline → bouton ouvre modale |
-| `src/components/accueil/checkin-drawer/hooks/useCheckinActions.ts` | `handleCancel(notifOptions)` + retourne `boolean` |
-| `src/components/accueil/checkin-drawer/useCheckinDrawer.ts` | `cancelDialogOpen` + `handleCancelWithDialog` |
-| `src/components/accueil/checkin-drawer/types.ts` | Types mis à jour |
-| `src/components/accueil/checkin-drawer/index.tsx` | Branchement `CancelConfirmDialog` |
-| `src/app/api/emails/send-confirmation-by-id/route.ts` | Fix sécurité : check `hosted_by_id` pour `externe` |
-| `src/app/api/emails/send-cancellation/route.ts` | Fix sécurité : check `hosted_by_id` + `hosted_by_id` dans select |
-| `src/app/api/emails/send-modification/route.ts` | Fix sécurité : check `hosted_by_id` + `hosted_by_id` dans select |
+| `src/app/api/pwa/search-professional/route.ts` | Réécriture : email OU nom, `escapeLike()`, ternaire sans `any` |
+| `src/components/accueil/add-reservation-drawer/SearchStep.tsx` | Nouveau — recherche avec AbortController |
+| `src/components/accueil/add-reservation-drawer/SelectSlotStep.tsx` | Nouveau — sélection show+slot avec cleanup |
+| `src/components/accueil/add-reservation-drawer/index.tsx` | Multi-étapes, indicateur ariane, NotificationSwitches |
+| `src/components/accueil/add-reservation-drawer/useAddReservation.ts` | `slotId` optionnel, étapes, notifOptions, envoi email post-création |
+| `src/components/accueil/add-reservation-drawer/types.ts` | `AddReservationDrawerStep`, `slotId` optionnel, `notifOptions` |
+| `src/components/accueil/ReservationFAB.tsx` | Nouveau — FAB contextuel avec parseSlotIdFromPath |
+| `src/components/accueil/index.ts` | Export `ReservationFAB` |
+| `src/app/accueil/layout.tsx` | Intégration `ReservationFAB` |
+| `src/app/accueil/[showSlug]/[slotId]/components/ActionBar.tsx` | Suppression bouton "Ajouter" |
+| `src/app/accueil/[showSlug]/[slotId]/page.tsx` | Suppression drawer inline (géré par FAB) |
+| `src/app/accueil/[showSlug]/[slotId]/hooks/useSlotDetails.ts` | Suppression handlers drawer |
+| `src/app/accueil/[showSlug]/[slotId]/types.ts` | Types nettoyés |
+| `src/components/accueil/add-reservation-drawer/sections/FormFooter.tsx` | `aria-busy` sur bouton submit |
+| `supabase/migrations/064_fix_walkin_rpc_externe_access.sql` | Fix sécurité : `hosted_by_id` pour externe |
+
+### Fichiers supprimés S140
+- `src/app/api/pwa/walkin-reservation/` (dead code — pivot Option C)
 
 ---
 
@@ -154,8 +140,7 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S140** | PWA : création de réservation depuis la PWA check-in | 🔴 Haute |
-| **S141** | Emails post-checkin : email différent selon statut de présence (présent, absent, coup de cœur, presse) | 🔴 Haute |
+| **S141** | Emails post-checkin : boutons email dans CheckinDrawer après sélection du statut de présence + nouveaux templates (présent, absent, coup de cœur, presse) avec toutes variables spectacle, texte 100% modifiable en préférences | 🔴 Haute |
 | **S142** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
@@ -185,22 +170,26 @@
 | `app/admin/layout.tsx` | Hook `useNotifications` instancié ici (header) — pas dans la sidebar |
 | `src/lib/services/google-calendar/auth.ts` | Redirect URI localhost en dur — utilisé uniquement pour obtenir le refresh token |
 | Routes email `externe` | `send-confirmation-by-id`, `send-cancellation`, `send-modification` : check `hosted_by_id` obligatoire |
+| `add-reservation-drawer` | `slotId` optionnel → 3 étapes si absent, 2 étapes si présent dans URL |
+| `ReservationFAB` | `parseSlotIdFromPath` : UUID regex sur `window.location.pathname` |
 
 ---
 
 ## Migrations Supabase
 
-| # | Fichier | Description |
-|---|---------|-------------|
-| 001-051 | … | Voir historique sessions précédentes |
-| 052 | `052_fix_admin_notification_subject.sql` | Correction sujet admin_notification |
-| 053 | `053_fix_email_catalogue_url.sql` | email_catalogue_url → derviche-pro.fr/catalogue |
-| 054 | `054_fix_unique_reservation_user_slot.sql` | Partial index — fix bug changement créneau |
-| 055 | `055_add_reminder_email_templates.sql` | 3 templates rappels en DB |
-| 056 | `056_add_reminder_app_settings.sql` | 3 toggles `reminder_enabled_*` (défaut : true) |
-| 057 | `057_create_admin_notifications.sql` | Table `admin_notifications` + index + RLS |
-| 058 | `058_create_admin_notification_reads.sql` | Table `admin_notification_reads` + RLS |
-| 059 | `059_add_dismissed_to_notification_reads.sql` | ~~Colonne dismissed~~ — abandonné, remplacé par 061 |
-| 060 | `060_add_update_policy_notification_reads.sql` | ~~Policy UPDATE reads~~ — abandonné |
-| 061 | `061_create_admin_notification_dismissals.sql` | Table `admin_notification_dismissals` — architecture finale |
-| 062 | `062_add_google_calendar_settings.sql` | 3 clés `app_settings` Google Calendar |
+| # | Fichier | Description | Appliquée prod |
+|---|---------|-------------|----------------|
+| 001-051 | … | Voir historique sessions précédentes | ✅ |
+| 052 | `052_fix_admin_notification_subject.sql` | Correction sujet admin_notification | ✅ |
+| 053 | `053_fix_email_catalogue_url.sql` | email_catalogue_url → derviche-pro.fr/catalogue | ✅ |
+| 054 | `054_fix_unique_reservation_user_slot.sql` | Partial index — fix bug changement créneau | ✅ |
+| 055 | `055_add_reminder_email_templates.sql` | 3 templates rappels en DB | ✅ |
+| 056 | `056_add_reminder_app_settings.sql` | 3 toggles `reminder_enabled_*` (défaut : true) | ✅ |
+| 057 | `057_create_admin_notifications.sql` | Table `admin_notifications` + index + RLS | ✅ |
+| 058 | `058_create_admin_notification_reads.sql` | Table `admin_notification_reads` + RLS | ✅ |
+| 059 | `059_add_dismissed_to_notification_reads.sql` | ~~Colonne dismissed~~ — abandonné, remplacé par 061 | ✅ |
+| 060 | `060_add_update_policy_notification_reads.sql` | ~~Policy UPDATE reads~~ — abandonné | ✅ |
+| 061 | `061_create_admin_notification_dismissals.sql` | Table `admin_notification_dismissals` — architecture finale | ✅ |
+| 062 | `062_add_google_calendar_settings.sql` | 3 clés `app_settings` Google Calendar | ✅ |
+| 063 | `063_create_walkin_reservation_rpc.sql` | RPC `create_walkin_reservation` (walk-in PWA) | ✅ |
+| 064 | `064_fix_walkin_rpc_externe_access.sql` | Fix sécurité : externe → `hosted_by_id` (cohérent migration 040) | ✅ |
