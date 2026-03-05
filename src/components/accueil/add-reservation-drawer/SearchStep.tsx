@@ -124,7 +124,6 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
           onKeyDown={handleKeyDown}
           disabled={isSearching || disabled}
           autoComplete="off"
-          autoFocus
           className="h-12 text-base"
           aria-label="Rechercher par email ou nom"
         />

@@ -65,7 +65,7 @@ export function AddReservationDrawer({
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="min-h-[90vh] max-h-[95vh] flex flex-col">
+        <DrawerContent className="min-h-[90dvh] max-h-[95dvh] flex flex-col">
           <DrawerHeader />
 
           {/* Indicateur d'étape */}
