@@ -1,38 +1,31 @@
 /**
- * ActionBar - Barre d'actions en bas de page (refresh + ajout)
+ * ActionBar - Barre d'actions en bas de page (refresh uniquement)
  * Derviche Diffusion
+ *
+ * Le bouton "Ajouter une réservation" a été supprimé au profit du ReservationFAB.
  */
 
 'use client';
 
-import { RefreshCw, Plus } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ActionBarProps {
   onRefresh: () => void;
-  onAddReservation: () => void;
 }
 
-export function ActionBar({ onRefresh, onAddReservation }: ActionBarProps) {
+export function ActionBar({ onRefresh }: ActionBarProps) {
   return (
     <div className="sticky bottom-0 bg-white border-t px-4 py-3 flex gap-3">
       <Button
         variant="outline"
         size="sm"
         onClick={onRefresh}
-        className="shrink-0"
+        className="w-full"
         aria-label="Rafraîchir la liste"
       >
-        <RefreshCw className="w-4 h-4" aria-hidden="true" />
-      </Button>
-      <Button
-        variant="default"
-        size="sm"
-        onClick={onAddReservation}
-        className="flex-1 bg-gold hover:bg-gold/90 text-derviche-dark"
-      >
-        <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
-        Ajouter une réservation
+        <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+        Actualiser
       </Button>
     </div>
   );

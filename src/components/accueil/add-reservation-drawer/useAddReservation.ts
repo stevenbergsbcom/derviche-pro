@@ -34,16 +34,18 @@ import { logger } from '@/lib/logger';
 import { addReservationSchema, DEFAULT_FORM_VALUES } from './constants';
 import type {
   AddReservationFormData,
+  AddReservationDrawerStep,
   CapacityInfo,
   UseAddReservationReturn,
 } from './types';
+import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
 
 // ============================================
 // HOOK
 // ============================================
 
 interface UseAddReservationParams {
-  slotId: string;
+  slotId?: string;
   open: boolean;
   onSuccess: () => void;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +62,11 @@ export function useAddReservation({
   // ============================================
   // ÉTATS
   // ============================================
+
+  // Step : 'select-slot' (si pas de slotId) → 'search' → 'form'
+  const initialStep: AddReservationDrawerStep = slotId ? 'search' : 'select-slot';
+  const [step, setStep] = useState<AddReservationDrawerStep>(initialStep);
+  const [activeSlotId, setActiveSlotId] = useState<string>(slotId ?? '');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [optionalFieldsOpen, setOptionalFieldsOpen] = useState(false);
@@ -90,7 +97,7 @@ export function useAddReservation({
    * Avec cleanup pour annuler si le drawer se ferme
    */
   useEffect(() => {
-    if (!open || !slotId) {
+    if (!open || !activeSlotId) {
       setCapacityInfo(null);
       return;
     }
@@ -98,7 +105,7 @@ export function useAddReservation({
     let cancelled = false;
 
     void (async () => {
-      const capacity = await checkSlotCapacity(slotId);
+      const capacity = await checkSlotCapacity(activeSlotId);
       if (!cancelled && capacity) {
         setCapacityInfo({
           remaining: capacity.remaining,
@@ -110,7 +117,7 @@ export function useAddReservation({
     return () => {
       cancelled = true;
     };
-  }, [open, slotId]);
+  }, [open, activeSlotId]);
 
   /**
    * Reset form et états quand le drawer s'ouvre
@@ -118,6 +125,8 @@ export function useAddReservation({
    */
   useEffect(() => {
     if (open) {
+      setStep(slotId ? 'search' : 'select-slot');
+      setActiveSlotId(slotId ?? '');
       form.reset(DEFAULT_FORM_VALUES);
       setOptionalFieldsOpen(false);
       setCheckinFieldsOpen(false);
@@ -126,7 +135,7 @@ export function useAddReservation({
       setShowDuplicateDialog(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]); // form.reset est stable
+  }, [open]); // form.reset est stable, slotId est stable
 
   // ============================================
   // HANDLERS
@@ -147,7 +156,7 @@ export function useAddReservation({
 
       // Vérifier les doublons si pas déjà fait
       if (!skipDuplicateCheck) {
-        const duplicate = await checkDuplicateEmail(slotId, formData.email);
+        const duplicate = await checkDuplicateEmail(activeSlotId, formData.email);
         if (duplicate.hasDuplicate) {
           setDuplicateInfo(duplicate);
           pendingFormDataRef.current = formData;
@@ -161,7 +170,7 @@ export function useAddReservation({
 
       try {
         const data: CreateCheckinReservationData = {
-          slotId,
+          slotId: activeSlotId,
           numPlaces: formData.numPlaces,
           firstName: formData.firstName,
           lastName: formData.lastName,
@@ -208,7 +217,7 @@ export function useAddReservation({
         setIsSubmitting(false);
       }
     },
-    [userId, role, companyId, slotId, onSuccess, onOpenChange]
+    [userId, role, companyId, activeSlotId, onSuccess, onOpenChange]
   );
 
   /**
@@ -217,6 +226,43 @@ export function useAddReservation({
   const onFormSubmit = form.handleSubmit((data) => {
     void handleSubmit(data);
   });
+
+  /**
+   * Slot sélectionné via SelectSlotStep → passe à 'search'
+   */
+  const handleSlotSelected = useCallback((selectedSlotId: string) => {
+    setActiveSlotId(selectedSlotId);
+    setStep('search');
+  }, []);
+
+  /**
+   * Profil sélectionné via SearchStep → pré-remplit le formulaire + passe à 'form'
+   */
+  const handleSelectProfile = useCallback((profile: FoundProfile) => {
+    form.reset({
+      ...DEFAULT_FORM_VALUES,
+      firstName: profile.firstName ?? '',
+      lastName: profile.lastName ?? '',
+      email: profile.email,
+      phone: profile.phone ?? '',
+      emailSecondary: profile.email2 ?? '',
+      phoneSecondary: profile.phone2 ?? '',
+      organization: profile.organization ?? '',
+      function: profile.function ?? '',
+      afcNumber: profile.afcNumber ?? '',
+      address: profile.address ?? '',
+      postalCode: profile.postalCode ?? '',
+      city: profile.city ?? '',
+    });
+    setStep('form');
+  }, [form]);
+
+  /**
+   * Passer la recherche → formulaire vide
+   */
+  const handleSkipSearch = useCallback(() => {
+    setStep('form');
+  }, []);
 
   /**
    * Confirme la création malgré un doublon détecté
@@ -243,6 +289,8 @@ export function useAddReservation({
 
   const state = useMemo(
     () => ({
+      step,
+      activeSlotId,
       isSubmitting,
       optionalFieldsOpen,
       checkinFieldsOpen,
@@ -251,6 +299,8 @@ export function useAddReservation({
       showDuplicateDialog,
     }),
     [
+      step,
+      activeSlotId,
       isSubmitting,
       optionalFieldsOpen,
       checkinFieldsOpen,
@@ -270,6 +320,9 @@ export function useAddReservation({
     setOptionalFieldsOpen,
     setCheckinFieldsOpen,
     onFormSubmit,
+    handleSlotSelected,
+    handleSelectProfile,
+    handleSkipSearch,
     handleConfirmDuplicate,
     handleCancelDuplicate,
     isAdmin,

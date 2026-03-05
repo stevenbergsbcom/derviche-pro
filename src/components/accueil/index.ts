@@ -34,7 +34,3 @@ export type { AddReservationDrawerProps } from './add-reservation-drawer';
 export { TransferSlotDrawer } from './transfer-slot-drawer';
 export type { TransferSlotDrawerProps } from './transfer-slot-drawer';
 
-// WalkInDrawer + WalkInFAB (Session 140)
-export { WalkInDrawer } from './walkin-drawer';
-export type { WalkInDrawerProps } from './walkin-drawer';
-export { WalkInFAB } from './WalkInFAB';

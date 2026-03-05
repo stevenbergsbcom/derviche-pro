@@ -17,7 +17,6 @@ import {
 import { searchMatch } from '@/lib/utils';
 import { isPresent } from '@/components/accueil/StatusBadge';
 import type { ReservationRowData } from '@/components/accueil';
-import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import type { SlotInfo, UseSlotDetailsProps, UseSlotDetailsReturn } from '../types';
 
@@ -78,9 +77,6 @@ export function useSlotDetails({
   // États pour le drawer de check-in
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState<ReservationRowData | null>(null);
-
-  // État pour le drawer d'ajout de réservation
-  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
 
   // État pour le drawer de transfert
   const [transferDrawerOpen, setTransferDrawerOpen] = useState(false);
@@ -402,22 +398,6 @@ export function useSlotDetails({
   );
 
   /**
-   * Ouvre le drawer d'ajout
-   */
-  const handleAddReservation = useCallback(() => {
-    setAddDrawerOpen(true);
-  }, []);
-
-  /**
-   * Succès ajout réservation - rafraîchit la liste
-   */
-  const handleAddSuccess = useCallback(() => {
-    loadedRef.current = false;
-    void loadData();
-    toast.success('Réservation ajoutée');
-  }, [loadData]);
-
-  /**
    * Ouvre le drawer de transfert
    */
   const handleTransferClick = useCallback(() => {
@@ -463,10 +443,6 @@ export function useSlotDetails({
     selectedReservation,
     setDrawerOpen,
 
-    // Drawer ajout
-    addDrawerOpen,
-    setAddDrawerOpen,
-
     // Drawer transfert
     transferDrawerOpen,
     setTransferDrawerOpen,
@@ -476,8 +452,6 @@ export function useSlotDetails({
     handleRefresh,
     handleReservationClick,
     handleCheckinSuccess,
-    handleAddReservation,
-    handleAddSuccess,
     handleTransferClick,
     handleTransferSuccess,
   };

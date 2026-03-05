@@ -6,14 +6,26 @@
 import type { UseFormReturn } from 'react-hook-form';
 import type { CheckinStatus } from '@/types/database';
 import type { DuplicateCheckResult } from '@/lib/services/checkin';
+import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
+
+// ============================================
+// STEP
+// ============================================
+
+/** Étapes du drawer :
+ *  - 'select-slot' : sélection show + créneau (si pas de slotId pré-fourni)
+ *  - 'search'      : recherche email/nom (pré-remplissage)
+ *  - 'form'        : formulaire complet
+ */
+export type AddReservationDrawerStep = 'select-slot' | 'search' | 'form';
 
 // ============================================
 // PROPS DU COMPOSANT PRINCIPAL
 // ============================================
 
 export interface AddReservationDrawerProps {
-  /** ID du slot pour lequel créer la réservation */
-  slotId: string;
+  /** ID du slot pour lequel créer la réservation (optionnel si sélection via FAB) */
+  slotId?: string;
   /** État d'ouverture */
   open: boolean;
   /** Handler de changement d'état */
@@ -75,6 +87,8 @@ export interface CapacityInfo {
 // ============================================
 
 export interface AddReservationState {
+  step: AddReservationDrawerStep;
+  activeSlotId: string;
   isSubmitting: boolean;
   optionalFieldsOpen: boolean;
   checkinFieldsOpen: boolean;
@@ -95,7 +109,11 @@ export interface UseAddReservationReturn {
   // Setters pour les collapsibles
   setOptionalFieldsOpen: (open: boolean) => void;
   setCheckinFieldsOpen: (open: boolean) => void;
-  // Handlers
+  // Handlers de navigation entre étapes
+  handleSlotSelected: (slotId: string) => void;
+  handleSelectProfile: (profile: FoundProfile) => void;
+  handleSkipSearch: () => void;
+  // Handlers formulaire
   onFormSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   handleConfirmDuplicate: () => void;
   handleCancelDuplicate: () => void;

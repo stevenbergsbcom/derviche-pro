@@ -13,7 +13,6 @@
 import { useParams } from 'next/navigation';
 import {
   CheckinDrawer,
-  AddReservationDrawer,
   TransferSlotDrawer,
 } from '@/components/accueil';
 import { useSlotDetails } from './hooks/useSlotDetails';
@@ -50,10 +49,6 @@ export default function SlotReservationsPage() {
     selectedReservation,
     setDrawerOpen,
 
-    // Drawer ajout
-    addDrawerOpen,
-    setAddDrawerOpen,
-
     // Drawer transfert
     transferDrawerOpen,
     setTransferDrawerOpen,
@@ -63,8 +58,6 @@ export default function SlotReservationsPage() {
     handleRefresh,
     handleReservationClick,
     handleCheckinSuccess,
-    handleAddReservation,
-    handleAddSuccess,
     handleTransferClick,
     handleTransferSuccess,
   } = useSlotDetails({ slotId, showSlug });
@@ -104,10 +97,7 @@ export default function SlotReservationsPage() {
 
       {/* Barre d'action en bas */}
       {!isLoading && !error && (
-        <ActionBar
-          onRefresh={handleRefresh}
-          onAddReservation={handleAddReservation}
-        />
+        <ActionBar onRefresh={handleRefresh} />
       )}
 
       {/* Overlay de chargement (refresh) */}
@@ -131,13 +121,6 @@ export default function SlotReservationsPage() {
         onSuccess={handleTransferSuccess}
       />
 
-      {/* Drawer d'ajout de réservation */}
-      <AddReservationDrawer
-        slotId={slotId}
-        open={addDrawerOpen}
-        onOpenChange={setAddDrawerOpen}
-        onSuccess={handleAddSuccess}
-      />
     </div>
   );
 }

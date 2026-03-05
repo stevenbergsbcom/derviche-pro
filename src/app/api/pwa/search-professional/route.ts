@@ -1,14 +1,16 @@
 /**
- * API Route - Recherche d'un professionnel par email
- * GET /api/pwa/search-professional?email=...
+ * API Route - Recherche d'un professionnel par email ou nom
+ * GET /api/pwa/search-professional?q=...
  *
- * Utilisée par la PWA lors de la création d'une réservation walk-in :
- * permet de savoir si un professionnel a déjà un compte avant de créer une réservation guest.
+ * Mode auto selon la valeur de `q` :
+ *   - Contient "@" → recherche par email exact
+ *   - Sinon        → recherche par nom/prénom (ILIKE)
  *
  * Sécurité :
- * - Authentification requise (admin, super-admin ou externe)
- * - Service role côté serveur pour contourner les RLS
- * - Retourne uniquement les données nécessaires (pas de données sensibles)
+ *   - Authentification requise (admin, super-admin, externe)
+ *   - Service role pour contourner RLS
+ *   - Résultats limités à 10 max (protection RGPD)
+ *   - Retourne uniquement les champs nécessaires
  */
 
 import { NextResponse } from 'next/server';
@@ -20,37 +22,49 @@ import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import type { UserRole } from '@/types/database';
 
 // ============================================
-// VALIDATION SCHEMA
+// VALIDATION
 // ============================================
 
 const querySchema = z.object({
-  email: z.string().email('Email invalide'),
+  q: z
+    .string()
+    .min(2, 'Minimum 2 caractères')
+    .max(100, 'Requête trop longue')
+    .transform((s) => s.trim()),
 });
 
 // ============================================
-// TYPE DE RETOUR
+// TYPES
 // ============================================
 
+export interface FoundProfile {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  organization: string | null;
+  phone: string | null;
+  phone2: string | null;
+  email2: string | null;
+  afcNumber: string | null;
+  function: string | null;
+  address: string | null;
+  postalCode: string | null;
+  city: string | null;
+}
+
 export type SearchProfessionalResult =
-  | {
-      found: true;
-      profile: {
-        id: string;
-        email: string;
-        firstName: string | null;
-        lastName: string | null;
-        organization: string | null;
-        phone: string | null;
-        phone2: string | null;
-        email2: string | null;
-        afcNumber: string | null;
-        function: string | null;
-        address: string | null;
-        postalCode: string | null;
-        city: string | null;
-      };
-    }
+  | { found: true; profiles: FoundProfile[] }
   | { found: false };
+
+// ============================================
+// HELPERS
+// ============================================
+
+/** Détermine si la requête est une recherche par email */
+function isEmailQuery(q: string): boolean {
+  return q.includes('@');
+}
 
 // ============================================
 // ROUTE HANDLER
@@ -58,40 +72,39 @@ export type SearchProfessionalResult =
 
 export async function GET(request: Request): Promise<NextResponse> {
   try {
-    // 1. Extraire et valider le query param
+    // 1. Validation
     const { searchParams } = new URL(request.url);
-    const rawParams = { email: searchParams.get('email') ?? '' };
-    const parseResult = querySchema.safeParse(rawParams);
+    const parseResult = querySchema.safeParse({ q: searchParams.get('q') ?? '' });
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Email invalide ou manquant' },
+        { found: false, error: parseResult.error.issues[0]?.message ?? 'Paramètre invalide' },
         { status: 400 }
       );
     }
 
-    const { email } = parseResult.data;
+    const { q } = parseResult.data;
 
-    // 2. Vérifier l'authentification
+    // 2. Auth
     const userClient = await createServerClient();
     const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
+      return NextResponse.json({ found: false, error: 'Non authentifié' }, { status: 401 });
     }
 
-    // 3. Client service role (nécessaire pour lire les profils sans restriction RLS)
+    // 3. Service role client
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
-      logger.error('[API /pwa/search-professional] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json({ success: false, error: 'Configuration serveur manquante' }, { status: 500 });
+      logger.error('[API search-professional] SUPABASE_SERVICE_ROLE_KEY manquant');
+      return NextResponse.json({ found: false, error: 'Configuration serveur manquante' }, { status: 500 });
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 4. Vérifier le rôle de l'utilisateur
+    // 4. Vérification du rôle
     const { data: userRoleData } = await adminClient
       .from('user_roles')
       .select('role')
@@ -100,88 +113,117 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const userRole = userRoleData?.role as UserRole | undefined;
     const isAuthorized =
-      userRole === 'super-admin' ||
-      userRole === 'admin' ||
-      userRole === 'externe';
+      userRole === 'super-admin' || userRole === 'admin' || userRole === 'externe';
 
     if (!isAuthorized) {
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      return NextResponse.json({ found: false, error: 'Accès refusé' }, { status: 403 });
     }
 
-    // 5. Rechercher le profil par email (uniquement les professionnels actifs)
-    const { data: profile, error: profileError } = await adminClient
-      .from('profiles')
-      .select(`
-        id,
-        email,
-        first_name,
-        last_name,
-        structure,
-        phone,
-        phone2,
-        email2,
-        afc_number,
-        function,
-        address,
-        postal_code,
-        city,
-        deleted_at
-      `)
-      .eq('email', email.toLowerCase().trim())
-      .is('deleted_at', null)
-      .maybeSingle();
+    // 5. Requête selon le mode (email ou nom)
+    const SELECT = `
+      id, email, first_name, last_name, structure,
+      phone, phone2, email2, afc_number, function,
+      address, postal_code, city, deleted_at
+    `;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let profilesQuery: any;
+
+    if (isEmailQuery(q)) {
+      // Recherche exacte par email
+      profilesQuery = adminClient
+        .from('profiles')
+        .select(SELECT)
+        .eq('email', q.toLowerCase())
+        .is('deleted_at', null)
+        .limit(1);
+    } else {
+      // Recherche par nom OU prénom (insensible accents via ILIKE)
+      profilesQuery = adminClient
+        .from('profiles')
+        .select(SELECT)
+        .or(`last_name.ilike.%${q}%,first_name.ilike.%${q}%`)
+        .is('deleted_at', null)
+        .order('last_name', { ascending: true })
+        .limit(10);
+    }
+
+    const { data: profiles, error: profileError } = await profilesQuery;
 
     if (profileError) {
-      logger.error('[API /pwa/search-professional] Erreur requête profil', { error: profileError.message });
-      return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+      logger.error('[API search-professional] Erreur requête', { error: profileError.message });
+      return NextResponse.json({ found: false, error: 'Erreur serveur' }, { status: 500 });
     }
 
-    // 6. Vérifier que c'est bien un professionnel (rôle "professional")
-    if (profile) {
-      const { data: roleData } = await adminClient
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', profile.id)
-        .maybeSingle();
-
-      // Si le compte trouvé n'est pas un professionnel, on traite comme "not found"
-      // (pas de raison d'accéder aux données staff depuis ce formulaire)
-      if (!roleData || roleData.role !== 'professional') {
-        logger.info('[API /pwa/search-professional] Email trouvé mais rôle non professionnel', {
-          userId: profile.id,
-          role: roleData?.role,
-        });
-        return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
-      }
-
-      const result: SearchProfessionalResult = {
-        found: true,
-        profile: {
-          id: profile.id,
-          email: profile.email,
-          firstName: profile.first_name,
-          lastName: profile.last_name,
-          organization: profile.structure,
-          phone: profile.phone,
-          phone2: profile.phone2,
-          email2: profile.email2,
-          afcNumber: profile.afc_number,
-          function: (profile as unknown as { function?: string | null }).function ?? null,
-          address: profile.address,
-          postalCode: profile.postal_code,
-          city: profile.city,
-        },
-      };
-
-      logger.info('[API /pwa/search-professional] Professionnel trouvé', { userId: profile.id });
-      return NextResponse.json(result);
+    if (!profiles || profiles.length === 0) {
+      return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
     }
 
-    // 7. Aucun compte trouvé
-    return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
+    // 6. Filtrer uniquement les professionnels
+    // On récupère les rôles en une seule requête (IN)
+    const profileIds = profiles.map((p: { id: string }) => p.id);
+    const { data: roles } = await adminClient
+      .from('user_roles')
+      .select('user_id, role')
+      .in('user_id', profileIds);
+
+    const professionalIds = new Set(
+      (roles ?? [])
+        .filter((r: { role: string }) => r.role === 'professional')
+        .map((r: { user_id: string }) => r.user_id)
+    );
+
+    const filteredProfiles = profiles.filter((p: { id: string }) =>
+      professionalIds.has(p.id)
+    );
+
+    if (filteredProfiles.length === 0) {
+      return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
+    }
+
+    // 7. Transformation
+    const result: SearchProfessionalResult = {
+      found: true,
+      profiles: filteredProfiles.map((p: {
+        id: string;
+        email: string;
+        first_name: string | null;
+        last_name: string | null;
+        structure: string | null;
+        phone: string | null;
+        phone2: string | null;
+        email2: string | null;
+        afc_number: string | null;
+        function?: string | null;
+        address: string | null;
+        postal_code: string | null;
+        city: string | null;
+      }) => ({
+        id: p.id,
+        email: p.email,
+        firstName: p.first_name,
+        lastName: p.last_name,
+        organization: p.structure,
+        phone: p.phone,
+        phone2: p.phone2,
+        email2: p.email2,
+        afcNumber: p.afc_number,
+        function: p.function ?? null,
+        address: p.address,
+        postalCode: p.postal_code,
+        city: p.city,
+      })),
+    };
+
+    logger.info('[API search-professional] Résultats', {
+      query: isEmailQuery(q) ? 'email' : 'nom',
+      count: filteredProfiles.length,
+    });
+
+    return NextResponse.json(result);
 
   } catch (err) {
-    logger.error('[API /pwa/search-professional] Exception', { err: String(err) });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    logger.error('[API search-professional] Exception', { err: String(err) });
+    return NextResponse.json({ found: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }
