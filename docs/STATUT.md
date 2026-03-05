@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 138 (complète + validée build) — 4 mars 2026
+> Dernière mise à jour : Session 139 (complète + validée build) — 5 mars 2026
 
 ---
 
@@ -21,6 +21,8 @@
 ### ✅ Check-in PWA (100%)
 - Flux : spectacles → créneaux → liste réservations
 - Recherche, check-in, annulation, transfert
+- **S139** : Switches email/calendar sur annulation + transfert
+- **S139** : Modale de confirmation avant annulation (avec switches)
 
 ### ✅ Admin (100%)
 | Module | État |
@@ -50,6 +52,7 @@
 | Confirmation réservation | POST /api/emails/send-confirmation | ✅ S129 |
 | Annulation réservation | POST /api/emails/send-cancellation | ✅ S131 |
 | Modification créneau | POST /api/emails/send-modification | ✅ S132 |
+| Confirmation par ID (admin/externe) | POST /api/emails/send-confirmation-by-id | ✅ S138 |
 | Notifications manager (3 types) | inclus dans les routes ci-dessus | ✅ S131-132 |
 
 ### ✅ Templates email dynamiques (100%) — S134-S136
@@ -96,55 +99,54 @@
 ### ✅ Google Calendar (100%) — S138
 
 **Fonctionnalités :**
-- Création automatique d'un événement Calendar à chaque confirmation de réservation (actions PRO uniquement — S139 étend aux actions admin)
+- Création automatique d'un événement Calendar à chaque confirmation de réservation
 - Mise à jour de l'événement lors d'un changement de créneau
 - Suppression de l'événement lors d'une annulation
-- Invitation email Google envoyée au professionnel (création toujours, annulation/modification selon préférences)
+- Invitation email Google envoyée au professionnel
 - Préférences admin : switch principal + 2 switches email (annulation, modification)
 - Non-bloquant : une erreur Calendar n'interrompt jamais le flux de réservation
 
 **Architecture :**
 - Auth : OAuth2 refresh token (`reservation.derviche@gmail.com`)
 - Service : `src/lib/services/google-calendar/` (4 modules : types, auth, queries, index)
-- Calcul heure de fin en temps local Paris (pas UTC) pour éviter le double décalage
 - `google_calendar_event_id` stocké dans `reservations` après création
-- Migration 062 : 3 clés `app_settings` (enabled, notify_on_cancellation, notify_on_modification)
+- Migration 062 : 3 clés `app_settings`
 
-**Variables d'environnement requises :**
-- `GOOGLE_OAUTH_CLIENT_ID`
-- `GOOGLE_OAUTH_CLIENT_SECRET`
-- `GOOGLE_OAUTH_REFRESH_TOKEN`
-- `GOOGLE_CALENDAR_ID` (`reservation.derviche@gmail.com`)
+### ✅ Switches email/calendar PWA & Admin (100%) — S139
+
+**Fonctionnalités :**
+- Switches email ON/OFF et Calendar ON/OFF sur toutes les actions admin et PWA
+- Composant partagé `NotificationSwitches` (admin + PWA)
+- Switch Calendar conditionnel : masqué si aucun événement Calendar associé
+- Modale de confirmation avant annulation PWA (`CancelConfirmDialog`)
+- Fermeture modale uniquement en cas de succès (`handleCancel` retourne `boolean`)
+
+**Sécurité :**
+- Fix : un `externe` ne peut déclencher emails/Calendar que sur ses spectacles assignés (`hosted_by_id`)
+- Fix : suppression du double appel email annulation dans `useAdminReservations`
+- Fix : `syncCalendar` manquant dans le fetch transfert de créneau PWA
 
 ---
 
-## Dernier travail (Session 138 — 4 mars 2026)
+## Dernier travail (Session 139 — 5 mars 2026)
 
-### Fichiers clés créés/modifiés S138
+### Fichiers clés créés/modifiés S139
 
 | Fichier | Modification |
 |---------|-------------|
-| `migration 062` | 3 clés `app_settings` Google Calendar |
-| `src/lib/env.ts` | Variables Google Calendar optionnelles dans serverEnvSchema |
-| `src/lib/services/app-settings.ts` | Types + constantes + `getGoogleCalendarSettings()` |
-| `src/hooks/useAppSettings.ts` | Hook `useGoogleCalendarSettings()` |
-| `src/lib/services/google-calendar/types.ts` | `CalendarEventData` + `CalendarResult` |
-| `src/lib/services/google-calendar/auth.ts` | `getGoogleAuthClient()` — OAuth2 refresh token |
-| `src/lib/services/google-calendar/queries.ts` | `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent` |
-| `src/lib/services/google-calendar/index.ts` | Barrel exports |
-| `src/app/admin/preferences/components/sections/google-calendar-section.tsx` | Section UI préférences (variables env corrigées OAuth2) |
-| `src/app/admin/preferences/components/sections/index.ts` | Export `GoogleCalendarSection` |
-| `src/app/admin/preferences/components/preferences-tabs.tsx` | Onglet Calendar (badge Actif) |
-| `src/app/admin/preferences/components/preferences-content.tsx` | Rendu conditionnel onglet Calendar |
-| `api/emails/send-confirmation/route.ts` | + `createCalendarEvent` (non-bloquant) |
-| `api/emails/send-cancellation/route.ts` | + `deleteCalendarEvent` (non-bloquant) |
-| `api/emails/send-modification/route.ts` | + `updateCalendarEvent` (non-bloquant) |
-
-### Points techniques notables S138
-- **OAuth2 vs Service Account** : les Service Accounts Gmail ne peuvent pas inviter des participants sans Google Workspace. OAuth2 refresh token résout le problème sur un compte Gmail personnel.
-- **Calcul heure de fin** : ne pas utiliser `toISOString()` (UTC) puis repasser dans `buildDateTimeWithParisTz` — double décalage qui inverse start/end (`time range is empty`). Calculer directement en temps local.
-- **Non-bloquant** : chaque appel Calendar est dans un `try/catch` indépendant — une erreur Google n'interrompt jamais la réservation.
-- **Routes debug/auth temporaires** supprimées après récupération du refresh token.
+| `src/components/admin/reservations/notification-switches.tsx` | Composant partagé switches email + calendar |
+| `src/app/admin/reservations/page.tsx` | Switches sur annulation/modification/création + fix `hasCalendarEvent` |
+| `src/hooks/useAdminReservations.ts` | Suppression appel email redondant dans `cancel()` |
+| `src/components/accueil/transfer-slot-drawer/useTransferSlot.ts` | Ajout `syncCalendar` dans body fetch + switches UI |
+| `src/components/accueil/checkin-drawer/sections/CancelConfirmDialog.tsx` | Nouveau — modale confirmation annulation PWA |
+| `src/components/accueil/checkin-drawer/sections/FooterSection.tsx` | Suppression switches inline → bouton ouvre modale |
+| `src/components/accueil/checkin-drawer/hooks/useCheckinActions.ts` | `handleCancel(notifOptions)` + retourne `boolean` |
+| `src/components/accueil/checkin-drawer/useCheckinDrawer.ts` | `cancelDialogOpen` + `handleCancelWithDialog` |
+| `src/components/accueil/checkin-drawer/types.ts` | Types mis à jour |
+| `src/components/accueil/checkin-drawer/index.tsx` | Branchement `CancelConfirmDialog` |
+| `src/app/api/emails/send-confirmation-by-id/route.ts` | Fix sécurité : check `hosted_by_id` pour `externe` |
+| `src/app/api/emails/send-cancellation/route.ts` | Fix sécurité : check `hosted_by_id` + `hosted_by_id` dans select |
+| `src/app/api/emails/send-modification/route.ts` | Fix sécurité : check `hosted_by_id` + `hosted_by_id` dans select |
 
 ---
 
@@ -152,8 +154,9 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S139** | Emails + Google Calendar pour actions admin/super-admin/externe (création, annulation, modification réservation + app check-in) avec switches configurables | 🔴 Haute |
-| **S140** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Basse |
+| **S140** | PWA : création de réservation depuis la PWA check-in | 🔴 Haute |
+| **S141** | Emails post-checkin : email différent selon statut de présence (présent, absent, coup de cœur, presse) | 🔴 Haute |
+| **S142** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
 
@@ -161,12 +164,11 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
-| Emails/Calendar manquants pour actions admin | routes emails + app check-in | Emails et Calendar ne se déclenchent que pour les actions pro. Actions admin/super-admin/externe non couvertes. | 🔴 S139 |
 | `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées (remplacées par 061) | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S140 |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S142 |
 
 ---
 
@@ -181,7 +183,8 @@
 | `middleware.ts` | `api/cron` exclu du matcher — auth par `CRON_SECRET` uniquement |
 | `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role |
 | `app/admin/layout.tsx` | Hook `useNotifications` instancié ici (header) — pas dans la sidebar |
-| `src/lib/services/google-calendar/auth.ts` | Redirect URI localhost en dur — utilisé uniquement pour obtenir le refresh token, pas pour les appels serveur |
+| `src/lib/services/google-calendar/auth.ts` | Redirect URI localhost en dur — utilisé uniquement pour obtenir le refresh token |
+| Routes email `externe` | `send-confirmation-by-id`, `send-cancellation`, `send-modification` : check `hosted_by_id` obligatoire |
 
 ---
 
