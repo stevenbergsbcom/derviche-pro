@@ -33,3 +33,7 @@ export type { AddReservationDrawerProps } from './add-reservation-drawer';
 // TransferSlotDrawer (refactorisé en dossier - Session 83)
 export { TransferSlotDrawer } from './transfer-slot-drawer';
 export type { TransferSlotDrawerProps } from './transfer-slot-drawer';
+
+// ReservationFAB (Session 140)
+export { ReservationFAB } from './ReservationFAB';
+

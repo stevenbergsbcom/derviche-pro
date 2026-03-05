@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertTriangle, ChevronLeft, LogOut, Home } from 'lucide-react';
 import { useCurrentUserRole, type UserRole } from '@/hooks/useCurrentUserRole';
+import { ReservationFAB } from '@/components/accueil/ReservationFAB';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
@@ -210,6 +211,7 @@ export default function AccueilLayout({
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+      <ReservationFAB />
     </div>
   );
 }

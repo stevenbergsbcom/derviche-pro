@@ -51,10 +51,6 @@ export interface UseSlotDetailsReturn {
   selectedReservation: ReservationRowData | null;
   setDrawerOpen: (open: boolean) => void;
   
-  // Drawer ajout
-  addDrawerOpen: boolean;
-  setAddDrawerOpen: (open: boolean) => void;
-  
   // Drawer transfert
   transferDrawerOpen: boolean;
   setTransferDrawerOpen: (open: boolean) => void;
@@ -64,8 +60,6 @@ export interface UseSlotDetailsReturn {
   handleRefresh: () => void;
   handleReservationClick: (reservation: CheckinReservation) => void;
   handleCheckinSuccess: (updatedReservation: ReservationRowData) => void;
-  handleAddReservation: () => void;
-  handleAddSuccess: () => void;
   handleTransferClick: () => void;
   handleTransferSuccess: (updatedReservation: ReservationRowData) => void;
 }
