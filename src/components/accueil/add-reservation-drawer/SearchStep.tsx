@@ -126,6 +126,12 @@ export function SearchStep({ onSelect, onSkip, disabled }: SearchStepProps) {
           autoComplete="off"
           className="h-12 text-base"
           aria-label="Rechercher par email ou nom"
+          onFocus={(e) => {
+            const target = e.currentTarget;
+            setTimeout(() => {
+              target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 350);
+          }}
         />
         <Button
           type="button"

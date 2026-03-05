@@ -10,6 +10,7 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Separator } from '@/components/ui/separator';
 import { useAddReservation } from './useAddReservation';
@@ -62,10 +63,37 @@ export function AddReservationDrawer({
 
   const currentStepIndex = steps.findIndex((s) => s === state.step);
 
+  // Hauteur réelle du viewport (se réduit quand le clavier mobile s'ouvre)
+  const [vpHeight, setVpHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setVpHeight(null);
+      return;
+    }
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => setVpHeight(vv.height);
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, [open]);
+
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="min-h-[90dvh] max-h-[95dvh] flex flex-col">
+        <DrawerContent
+          className="flex flex-col"
+          style={vpHeight
+            ? { minHeight: `${vpHeight * 0.9}px`, maxHeight: `${vpHeight}px` }
+            : { minHeight: '90dvh', maxHeight: '95dvh' }
+          }
+        >
           <DrawerHeader />
 
           {/* Indicateur d'étape */}
