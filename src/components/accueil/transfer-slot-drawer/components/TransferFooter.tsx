@@ -63,7 +63,7 @@ export function TransferFooter({
         <DrawerClose asChild>
           <Button 
             variant="outline" 
-            className="flex-1"
+            className="flex-1 h-12 text-base"
             disabled={isSubmitting}
           >
             Annuler
@@ -73,7 +73,7 @@ export function TransferFooter({
           onClick={() => void onTransfer()}
           disabled={!canTransfer}
           className={cn(
-            'flex-1',
+            'flex-1 h-12 text-base',
             wouldOverbook && 'bg-orange-600 hover:bg-orange-700'
           )}
         >
