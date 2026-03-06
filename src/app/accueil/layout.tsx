@@ -90,6 +90,27 @@ function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
   const isMainPage = pathname === '/accueil';
   const displayBackButton = showBackButton ?? !isMainPage;
 
+  /**
+   * Navigation retour déterministe — évite router.back() qui est non fiable
+   * en PWA standalone (pile d'historique vide au lancement)
+   *
+   * /accueil/[showSlug]/[slotId] → /accueil/[showSlug]
+   * /accueil/[showSlug]          → /accueil
+   * autre                        → /accueil (fallback)
+   */
+  const handleBack = () => {
+    const segments = pathname.split('/').filter(Boolean);
+    // ['accueil', showSlug, slotId] → /accueil/showSlug
+    // ['accueil', showSlug]         → /accueil
+    if (segments.length >= 3) {
+      router.push(`/${segments.slice(0, 2).join('/')}`);
+    } else if (segments.length === 2) {
+      router.push('/accueil');
+    } else {
+      router.push('/accueil');
+    }
+  };
+
   const handleLogout = async () => {
     try {
       const supabase = createClient();
@@ -111,7 +132,7 @@ function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.back()}
+              onClick={handleBack}
               className="h-9 w-9 text-white hover:bg-white/10"
             >
               <ChevronLeft className="w-5 h-5" />
