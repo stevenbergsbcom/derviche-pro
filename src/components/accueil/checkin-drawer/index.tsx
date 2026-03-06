@@ -108,6 +108,7 @@ export function CheckinDrawer({
             onAddressChange={drawer.setGuestAddress}
             onPostalCodeChange={drawer.setGuestPostalCode}
             onCityChange={drawer.setGuestCity}
+            onCountryChange={drawer.setGuestCountry}
             onAfcNumberChange={drawer.setGuestAfcNumber}
             onSpecialRequestsChange={drawer.setSpecialRequests}
           />

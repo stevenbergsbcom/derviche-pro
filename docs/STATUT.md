@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 140 — audit post-session corrigé, build clean, mergé main — 5 mars 2026
+> Dernière mise à jour : Session 142 — Harmonisation UX PWA mobile + corrections post-audit, mergé main — 6 mars 2026
 
 ---
 
@@ -28,6 +28,14 @@
 - **S140** : SelectSlotStep — sélection show + créneau si pas de contexte URL
 - **S140** : AddReservationDrawer enrichi — 3 étapes (select-slot → search → form)
 - **S140** : NotificationSwitches intégrés (email + calendar) dans le drawer
+- **S141** : CancelConfirmDialog — fix `DrawerHeaderProps` mort, aria-labels, `p_country` dans updateReservation
+- **S141** : Fix UX mobile clavier — `visualViewport` hook + `scrollIntoView` sur focus input
+- **S142** : Harmonisation UX mobile — `GuestInfoSection` h-12/text-base/space-y-2/champs empilés + **champ Pays**
+- **S142** : `NotesSection` — textareas rows=3 + text-base
+- **S142** : `PlacesSelector` — boutons h-12/w-12, input h-12/text-base
+- **S142** : `TransferFooter` — boutons h-12/text-base
+- **S142** : `TransferSlotDrawer` — visualViewport (clavier mobile)
+- **S142** : `SlotsList` — représentations passées masquées par défaut, révélées via bouton collapsible
 
 ### ✅ Admin (100%)
 | Module | État |
@@ -109,30 +117,43 @@
 
 ---
 
-## Dernier travail (Session 140 — 5 mars 2026)
+## Dernier travail (Session 142 — 6 mars 2026)
 
-### Fichiers clés créés/modifiés S140
+### Contexte
+Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation UX complète des composants PWA checkin-drawer + transfer-slot-drawer pour uniformiser l'expérience mobile.
+
+### Corrections S141 (appliquées avant S142)
+- `DrawerHeaderProps` mort supprimé de `types.ts`
+- `aria-label` sur boutons Annuler/Créer du dialog admin
+- `p_country` ajouté dans `updateReservation` mutations
+- Migration 065 (renommage 062) + Migration 066 (`update_reservation_safe` avec `p_country`)
+- Fix UX mobile : `autoFocus` supprimé sur SearchStep, `visualViewport` hook sur checkin-drawer
+- `scrollIntoView` sur focus input SearchStep (délai 350ms)
+
+### Fichiers clés modifiés S142
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/app/api/pwa/search-professional/route.ts` | Réécriture : email OU nom, `escapeLike()`, ternaire sans `any` |
-| `src/components/accueil/add-reservation-drawer/SearchStep.tsx` | Nouveau — recherche avec AbortController |
-| `src/components/accueil/add-reservation-drawer/SelectSlotStep.tsx` | Nouveau — sélection show+slot avec cleanup |
-| `src/components/accueil/add-reservation-drawer/index.tsx` | Multi-étapes, indicateur ariane, NotificationSwitches |
-| `src/components/accueil/add-reservation-drawer/useAddReservation.ts` | `slotId` optionnel, étapes, notifOptions, envoi email post-création |
-| `src/components/accueil/add-reservation-drawer/types.ts` | `AddReservationDrawerStep`, `slotId` optionnel, `notifOptions` |
-| `src/components/accueil/ReservationFAB.tsx` | Nouveau — FAB contextuel avec parseSlotIdFromPath |
-| `src/components/accueil/index.ts` | Export `ReservationFAB` |
-| `src/app/accueil/layout.tsx` | Intégration `ReservationFAB` |
-| `src/app/accueil/[showSlug]/[slotId]/components/ActionBar.tsx` | Suppression bouton "Ajouter" |
-| `src/app/accueil/[showSlug]/[slotId]/page.tsx` | Suppression drawer inline (géré par FAB) |
-| `src/app/accueil/[showSlug]/[slotId]/hooks/useSlotDetails.ts` | Suppression handlers drawer |
-| `src/app/accueil/[showSlug]/[slotId]/types.ts` | Types nettoyés |
-| `src/components/accueil/add-reservation-drawer/sections/FormFooter.tsx` | `aria-busy` sur bouton submit |
-| `supabase/migrations/064_fix_walkin_rpc_externe_access.sql` | Fix sécurité : `hosted_by_id` pour externe |
+| `checkin-drawer/sections/GuestInfoSection.tsx` | Refonte complète UX mobile : h-12/text-base, champs empilés, space-y-2, icônes w-4, + **champ Pays** |
+| `checkin-drawer/types.ts` | + `country` dans `GuestFormState`, + `setGuestCountry` dans `UseCheckinDrawerReturn` |
+| `checkin-drawer/hooks/useGuestForm.ts` | + état `country` + setter `setGuestCountry` |
+| `checkin-drawer/useCheckinDrawer.ts` | + exposition `setGuestCountry` |
+| `checkin-drawer/helpers/mappers.ts` | + `guestCountry` dans tous les payloads, comparaisons, résultats |
+| `checkin-drawer/index.tsx` | + prop `onCountryChange` passé à `GuestInfoSection` |
+| `accueil/ReservationRow.tsx` | + `guestCountry` dans `ReservationRowData` |
+| `checkin/types.ts` | + `guestCountry` dans `CheckinReservation`, `UpdateCheckinParams`, `UpdateGuestInfoParams` |
+| `checkin/reservations.ts` | + `guest_country` dans SELECT, UPDATE et transformers |
+| `checkin/cancel.ts` | + `guest_country` dans SELECT et transformers (cancel + reactivate) |
+| `checkin/transfer.ts` | + `guest_country` dans SELECT et transformer |
+| `checkin-drawer/sections/NotesSection.tsx` | rows 2→3, + `text-base` sur les 3 textareas |
+| `transfer-slot-drawer/components/PlacesSelector.tsx` | Boutons h-12/w-12, input h-12/text-base, suppression `size="icon"` |
+| `transfer-slot-drawer/components/TransferFooter.tsx` | Boutons h-12/text-base |
+| `transfer-slot-drawer/components/SlotsList.tsx` | Séparation slots à venir / passés, bouton collapsible pour les passés |
+| `transfer-slot-drawer/index.tsx` | + `visualViewport` hook (clavier mobile), `dvh` fallback |
 
-### Fichiers supprimés S140
-- `src/app/api/pwa/walkin-reservation/` (dead code — pivot Option C)
+### Migrations appliquées en prod S141
+- `065_add_country_to_admin_reservation_rpc.sql` (renommage 062)
+- `066_add_country_to_update_reservation_safe.sql`
 
 ---
 
@@ -140,8 +161,8 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S141** | Emails post-checkin : boutons email dans CheckinDrawer après sélection du statut de présence + nouveaux templates (présent, absent, coup de cœur, presse) avec toutes variables spectacle, texte 100% modifiable en préférences | 🔴 Haute |
-| **S142** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
+| **S143** | Emails post-checkin : boutons email dans CheckinDrawer après sélection statut de présence + nouveaux templates (présent, absent, coup de cœur, presse) | 🔴 Haute |
+| **S144** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
 
@@ -153,7 +174,7 @@
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées (remplacées par 061) | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S142 |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S144 |
 
 ---
 
@@ -172,6 +193,8 @@
 | Routes email `externe` | `send-confirmation-by-id`, `send-cancellation`, `send-modification` : check `hosted_by_id` obligatoire |
 | `add-reservation-drawer` | `slotId` optionnel → 3 étapes si absent, 2 étapes si présent dans URL |
 | `ReservationFAB` | `parseSlotIdFromPath` : UUID regex sur `window.location.pathname` |
+| `visualViewport` PWA | Implémenté sur checkin-drawer (S141) + transfer-slot-drawer (S142) |
+| `guestCountry` PWA | Champ pays propagé sur toute la chaîne checkin (14 fichiers) — pas de migration BDD (colonne existante) |
 
 ---
 
@@ -193,3 +216,5 @@
 | 062 | `062_add_google_calendar_settings.sql` | 3 clés `app_settings` Google Calendar | ✅ |
 | 063 | `063_create_walkin_reservation_rpc.sql` | RPC `create_walkin_reservation` (walk-in PWA) | ✅ |
 | 064 | `064_fix_walkin_rpc_externe_access.sql` | Fix sécurité : externe → `hosted_by_id` (cohérent migration 040) | ✅ |
+| 065 | `065_add_country_to_admin_reservation_rpc.sql` | RPC `get_admin_reservations` avec `guest_country` | ✅ |
+| 066 | `066_add_country_to_update_reservation_safe.sql` | RPC `update_reservation_safe` avec `p_country` | ✅ |

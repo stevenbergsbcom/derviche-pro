@@ -29,6 +29,7 @@ const INITIAL_GUEST_STATE: GuestFormState = {
   address: '',
   postalCode: '',
   city: '',
+  country: '',
   afcNumber: '',
   specialRequests: '',
 };
@@ -53,6 +54,7 @@ export interface UseGuestFormReturn {
   setGuestAddress: (value: string) => void;
   setGuestPostalCode: (value: string) => void;
   setGuestCity: (value: string) => void;
+  setGuestCountry: (value: string) => void;
   setGuestAfcNumber: (value: string) => void;
   setSpecialRequests: (value: string) => void;
   
@@ -118,6 +120,10 @@ export function useGuestForm(): UseGuestFormReturn {
     setGuestForm(prev => ({ ...prev, city: value }));
   }, []);
 
+  const setGuestCountry = useCallback((value: string) => {
+    setGuestForm(prev => ({ ...prev, country: value }));
+  }, []);
+
   const setGuestAfcNumber = useCallback((value: string) => {
     setGuestForm(prev => ({ ...prev, afcNumber: value }));
   }, []);
@@ -159,6 +165,7 @@ export function useGuestForm(): UseGuestFormReturn {
     setGuestAddress,
     setGuestPostalCode,
     setGuestCity,
+    setGuestCountry,
     setGuestAfcNumber,
     setSpecialRequests,
     resetFromReservation,

@@ -29,6 +29,7 @@ export interface GuestPayload {
   guestAddress: string | null;
   guestPostalCode: string | null;
   guestCity: string | null;
+  guestCountry: string | null;
   guestAfcNumber: string | null;
   specialRequests: string | null;
 }
@@ -46,6 +47,7 @@ export interface GuestResultData {
   guestAddress: string | null;
   guestPostalCode: string | null;
   guestCity: string | null;
+  guestCountry: string | null;
   guestAfcNumber: string | null;
   specialRequests: string | null;
 }
@@ -79,6 +81,7 @@ export function mapReservationToGuestState(reservation: ReservationRowData): Gue
     address: reservation.guestAddress || '',
     postalCode: reservation.guestPostalCode || '',
     city: reservation.guestCity || '',
+    country: reservation.guestCountry || '',
     afcNumber: reservation.guestAfcNumber || '',
     specialRequests: reservation.specialRequests || '',
   };
@@ -118,6 +121,7 @@ export function buildGuestPayload(guest: GuestFormState): GuestPayload {
     guestAddress: guest.address.trim() || null,
     guestPostalCode: guest.postalCode.trim() || null,
     guestCity: guest.city.trim() || null,
+    guestCountry: guest.country.trim() || null,
     guestAfcNumber: guest.afcNumber.trim() || null,
     specialRequests: guest.specialRequests.trim() || null,
   };
@@ -154,6 +158,7 @@ export function mapResultToReservationUpdate(
     guestAddress: guestData.guestAddress,
     guestPostalCode: guestData.guestPostalCode,
     guestCity: guestData.guestCity,
+    guestCountry: guestData.guestCountry,
     guestAfcNumber: guestData.guestAfcNumber,
     specialRequests: guestData.specialRequests,
   };
@@ -182,6 +187,7 @@ export function hasGuestChanges(
     current.address !== (original.guestAddress || '') ||
     current.postalCode !== (original.guestPostalCode || '') ||
     current.city !== (original.guestCity || '') ||
+    current.country !== (original.guestCountry || '') ||
     current.afcNumber !== (original.guestAfcNumber || '') ||
     current.specialRequests !== (original.specialRequests || '')
   );

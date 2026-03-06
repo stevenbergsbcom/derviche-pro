@@ -117,6 +117,7 @@ export async function cancelReservationFromPWA(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_afc_number,
         num_places,
         status,
@@ -156,6 +157,7 @@ export async function cancelReservationFromPWA(
       guestAddress: updated.guest_address,
       guestPostalCode: updated.guest_postal_code,
       guestCity: updated.guest_city,
+      guestCountry: (updated as unknown as { guest_country: string | null }).guest_country,
       guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
@@ -165,7 +167,7 @@ export async function cancelReservationFromPWA(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.cancelReservationFromPWA - Succès', { reservationId });
@@ -309,6 +311,7 @@ export async function reactivateReservation(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_afc_number,
         num_places,
         status,
@@ -348,6 +351,7 @@ export async function reactivateReservation(
       guestAddress: updated.guest_address,
       guestPostalCode: updated.guest_postal_code,
       guestCity: updated.guest_city,
+      guestCountry: (updated as unknown as { guest_country: string | null }).guest_country,
       guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
@@ -357,7 +361,7 @@ export async function reactivateReservation(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.reactivateReservation - Succès', {

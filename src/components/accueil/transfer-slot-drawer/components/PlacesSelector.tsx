@@ -38,10 +38,10 @@ export function PlacesSelector({
         <Button
           type="button"
           variant="outline"
-          size="icon"
           onClick={onDecrease}
           disabled={numPlaces <= 1 || isSubmitting}
           aria-label="Diminuer le nombre de places"
+          className="h-12 w-12 shrink-0"
         >
           <Minus className="w-4 h-4" />
         </Button>
@@ -53,16 +53,16 @@ export function PlacesSelector({
           value={numPlaces}
           onChange={onChange}
           disabled={isSubmitting}
-          className="w-20 text-center"
+          className="w-20 h-12 text-base text-center"
           aria-label="Nombre de places"
         />
         <Button
           type="button"
           variant="outline"
-          size="icon"
           onClick={onIncrease}
           disabled={numPlaces >= MAX_PLACES || isSubmitting}
           aria-label="Augmenter le nombre de places"
+          className="h-12 w-12 shrink-0"
         >
           <Plus className="w-4 h-4" />
         </Button>

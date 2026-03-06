@@ -63,8 +63,9 @@ export function TransferFooter({
         <DrawerClose asChild>
           <Button 
             variant="outline" 
-            className="flex-1"
+            className="flex-1 h-12 text-base"
             disabled={isSubmitting}
+            aria-label="Annuler le transfert"
           >
             Annuler
           </Button>
@@ -72,8 +73,10 @@ export function TransferFooter({
         <Button
           onClick={() => void onTransfer()}
           disabled={!canTransfer}
+          aria-label="Transférer la réservation"
+          aria-busy={isSubmitting}
           className={cn(
-            'flex-1',
+            'flex-1 h-12 text-base',
             wouldOverbook && 'bg-orange-600 hover:bg-orange-700'
           )}
         >

@@ -342,6 +342,7 @@ export function useSlotDetails({
         guestAddress: reservation.guestAddress,
         guestPostalCode: reservation.guestPostalCode,
         guestCity: reservation.guestCity,
+        guestCountry: reservation.guestCountry,
         guestAfcNumber: reservation.guestAfcNumber,
         numPlaces: reservation.numPlaces,
         checkinStatus: reservation.checkinStatus,
@@ -387,6 +388,7 @@ export function useSlotDetails({
                 guestAddress: updatedReservation.guestAddress ?? null,
                 guestPostalCode: updatedReservation.guestPostalCode ?? null,
                 guestCity: updatedReservation.guestCity ?? null,
+                guestCountry: updatedReservation.guestCountry ?? null,
                 guestAfcNumber: updatedReservation.guestAfcNumber ?? null,
                 specialRequests: updatedReservation.specialRequests ?? null,
               }

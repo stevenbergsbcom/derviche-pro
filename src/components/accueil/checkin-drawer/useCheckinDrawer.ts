@@ -60,6 +60,7 @@ export function useCheckinDrawer({
     setGuestAddress,
     setGuestPostalCode,
     setGuestCity,
+    setGuestCountry,
     setGuestAfcNumber,
     setSpecialRequests,
     resetFromReservation: resetGuestForm,
@@ -180,6 +181,7 @@ export function useCheckinDrawer({
     setGuestAddress,
     setGuestPostalCode,
     setGuestCity,
+    setGuestCountry,
     setGuestAfcNumber,
     setSpecialRequests,
     

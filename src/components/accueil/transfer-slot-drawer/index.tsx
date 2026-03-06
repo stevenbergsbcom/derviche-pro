@@ -6,10 +6,12 @@
  * du même spectacle, avec possibilité de modifier le nombre de places
  * 
  * Refactorisé Session 83 : pattern hook + sections
+ * S142 : visualViewport pour le clavier mobile
  */
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -51,12 +53,41 @@ export function TransferSlotDrawer({
     onOpenChange,
   });
 
+  // ==========================================
+  // VISUAL VIEWPORT — Gestion clavier mobile
+  // ==========================================
+  const [vpHeight, setVpHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const update = () => setVpHeight(vv.height);
+    update();
+
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  const drawerStyle = vpHeight
+    ? { minHeight: `${vpHeight * 0.9}px`, maxHeight: `${vpHeight}px` }
+    : undefined;
+
   // Si pas de réservation, ne rien afficher
   if (!reservation) return null;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh]">
+      <DrawerContent
+        className="max-h-[90dvh]"
+        style={drawerStyle}
+      >
         {/* En-tête */}
         <DrawerHeader
           displayName={transfer.displayName}

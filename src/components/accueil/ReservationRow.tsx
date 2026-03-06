@@ -49,6 +49,8 @@ export interface ReservationRowData {
   guestPostalCode?: string | null;
   /** Ville */
   guestCity?: string | null;
+  /** Pays */
+  guestCountry?: string | null;
   /** Numéro AFC */
   guestAfcNumber?: string | null;
   /** Demandes spéciales */
@@ -79,7 +81,7 @@ export function ReservationRow({ reservation, onClick, className }: ReservationR
     <button
       type="button"
       onClick={onClick}
-
+      aria-label={fullName ? `Voir les détails de ${fullName}` : 'Voir les détails de la réservation'}
       className={cn(
         'w-full flex items-center gap-3 p-3 text-left',
         'bg-white rounded-lg border border-gray-200 shadow-sm',
