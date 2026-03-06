@@ -55,9 +55,9 @@ export function NotesSection({
           value={checkinForm.comment}
           onChange={(e) => onCommentChange(e.target.value)}
           placeholder="Note sur l'invité..."
-          rows={2}
+          rows={3}
           disabled={isSubmitting}
-          className="resize-none"
+          className="resize-none text-base"
         />
       </div>
 
@@ -75,9 +75,9 @@ export function NotesSection({
           value={checkinForm.venueNotes}
           onChange={(e) => onVenueNotesChange(e.target.value)}
           placeholder="Informations liées au lieu, à l'accueil..."
-          rows={2}
+          rows={3}
           disabled={isSubmitting}
-          className="resize-none"
+          className="resize-none text-base"
         />
       </div>
 
@@ -97,9 +97,9 @@ export function NotesSection({
             value={checkinForm.internalNotes}
             onChange={(e) => onInternalNotesChange(e.target.value)}
             placeholder="Notes confidentielles (non visibles par externes/compagnies)..."
-            rows={2}
+            rows={3}
             disabled={isSubmitting}
-            className="resize-none"
+            className="resize-none text-base"
           />
         </div>
       )}
