@@ -40,14 +40,14 @@ export function NotesSection({
   onInternalNotesChange,
 }: NotesSectionProps) {
   return (
-    <>
+    <div className="space-y-4">
       {/* Champ commentaire */}
       <div>
         <label 
           htmlFor="checkin-comment" 
           className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
         >
-          <MessageSquare className="w-4 h-4" />
+          <MessageSquare className="w-4 h-4" aria-hidden="true" />
           Commentaire
         </label>
         <Textarea
@@ -67,7 +67,7 @@ export function NotesSection({
           htmlFor="checkin-venue-notes" 
           className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
         >
-          <MapPin className="w-4 h-4" />
+          <MapPin className="w-4 h-4" aria-hidden="true" />
           Notes sur le lieu
         </label>
         <Textarea
@@ -88,7 +88,7 @@ export function NotesSection({
             htmlFor="checkin-internal-notes" 
             className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
           >
-            <Lock className="w-4 h-4" />
+            <Lock className="w-4 h-4" aria-hidden="true" />
             Notes internes Derviche
             <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
           </label>
@@ -103,6 +103,6 @@ export function NotesSection({
           />
         </div>
       )}
-    </>
+    </div>
   );
 }

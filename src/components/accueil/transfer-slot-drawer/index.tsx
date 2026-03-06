@@ -59,6 +59,7 @@ export function TransferSlotDrawer({
   const [vpHeight, setVpHeight] = useState<number | null>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const vv = window.visualViewport;
     if (!vv) return;
 

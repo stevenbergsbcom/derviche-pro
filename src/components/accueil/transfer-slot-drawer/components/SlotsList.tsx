@@ -51,7 +51,7 @@ export function SlotsList({
       <div
         className="flex-1 overflow-y-auto px-4"
         role="listbox"
-        aria-label="Liste des créneaux disponibles"
+        aria-label="Créneaux disponibles"
       >
         {isLoading ? (
           <div
@@ -86,7 +86,7 @@ export function SlotsList({
               </p>
             )}
 
-            <div role="listbox" aria-label="Créneaux à venir">
+            <div role="group" aria-label="Créneaux à venir">
               {upcomingSlots.map((slot) => (
                 <SlotItem
                   key={slot.id}
@@ -108,7 +108,7 @@ export function SlotsList({
                   size="sm"
                   onClick={() => setShowPast((v) => !v)}
                   aria-expanded={showPast}
-                  className="w-full text-muted-foreground gap-2 h-10 text-base"
+                  className="w-full text-muted-foreground gap-2 h-12 text-base"
                 >
                   <ChevronDown
                     className={cn(
@@ -126,7 +126,7 @@ export function SlotsList({
                 {showPast && (
                   <div
                     className="mt-3 space-y-3"
-                    role="listbox"
+                    role="group"
                     aria-label="Représentations passées"
                   >
                     {pastSlots.map((slot) => (
