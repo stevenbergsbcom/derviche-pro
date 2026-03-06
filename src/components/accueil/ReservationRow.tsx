@@ -49,6 +49,8 @@ export interface ReservationRowData {
   guestPostalCode?: string | null;
   /** Ville */
   guestCity?: string | null;
+  /** Pays */
+  guestCountry?: string | null;
   /** Numéro AFC */
   guestAfcNumber?: string | null;
   /** Demandes spéciales */

@@ -79,6 +79,7 @@ export interface CheckinReservation {
   guestAddress: string | null;
   guestPostalCode: string | null;
   guestCity: string | null;
+  guestCountry: string | null;
   guestAfcNumber: string | null;
   numPlaces: number;
   status: 'confirmed' | 'cancelled' | 'no_show';
@@ -155,6 +156,7 @@ export interface UpdateCheckinParams {
   guestAddress?: string | null;
   guestPostalCode?: string | null;
   guestCity?: string | null;
+  guestCountry?: string | null;
   guestAfcNumber?: string | null;
   specialRequests?: string | null;
 }
@@ -184,6 +186,7 @@ export interface UpdateGuestInfoParams {
   guestAddress?: string | null;
   guestPostalCode?: string | null;
   guestCity?: string | null;
+  guestCountry?: string | null;
   guestAfcNumber?: string | null;
   specialRequests?: string | null;
   // Notes (pas de checkin_status car réservation peut être annulée)

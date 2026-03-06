@@ -55,6 +55,7 @@ export interface GuestFormState {
   address: string;
   postalCode: string;
   city: string;
+  country: string;
   afcNumber: string;
   specialRequests: string;
 }
@@ -103,6 +104,7 @@ export interface UseCheckinDrawerReturn {
   setGuestAddress: (value: string) => void;
   setGuestPostalCode: (value: string) => void;
   setGuestCity: (value: string) => void;
+  setGuestCountry: (value: string) => void;
   setGuestAfcNumber: (value: string) => void;
   setSpecialRequests: (value: string) => void;
   

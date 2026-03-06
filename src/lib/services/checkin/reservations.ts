@@ -58,6 +58,7 @@ export async function getSlotReservations(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_afc_number,
         num_places,
         status,
@@ -98,6 +99,7 @@ export async function getSlotReservations(
       guestAddress: r.guest_address,
       guestPostalCode: r.guest_postal_code,
       guestCity: r.guest_city,
+      guestCountry: (r as unknown as { guest_country: string | null }).guest_country,
       guestAfcNumber: r.guest_afc_number,
       numPlaces: r.num_places,
       status: r.status as 'confirmed' | 'cancelled' | 'no_show',
@@ -151,6 +153,7 @@ export async function updateCheckinStatus(
     guestAddress,
     guestPostalCode,
     guestCity,
+    guestCountry,
     guestAfcNumber,
     specialRequests,
   } = params;
@@ -243,6 +246,7 @@ export async function updateCheckinStatus(
       guest_address?: string | null;
       guest_postal_code?: string | null;
       guest_city?: string | null;
+      guest_country?: string | null;
       guest_afc_number?: string | null;
       special_requests?: string | null;
     } = {};
@@ -306,6 +310,9 @@ export async function updateCheckinStatus(
     if (guestCity !== undefined) {
       updateData.guest_city = guestCity?.trim() || null;
     }
+    if (guestCountry !== undefined) {
+      updateData.guest_country = guestCountry?.trim() || null;
+    }
     if (guestAfcNumber !== undefined) {
       updateData.guest_afc_number = guestAfcNumber?.trim() || null;
     }
@@ -346,6 +353,7 @@ export async function updateCheckinStatus(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_afc_number,
         num_places,
         status,
@@ -385,6 +393,7 @@ export async function updateCheckinStatus(
       guestAddress: updated.guest_address,
       guestPostalCode: updated.guest_postal_code,
       guestCity: updated.guest_city,
+      guestCountry: (updated as unknown as { guest_country: string | null }).guest_country,
       guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
@@ -395,7 +404,7 @@ export async function updateCheckinStatus(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.updateCheckinStatus - Succès', { 
@@ -527,6 +536,7 @@ export async function updateGuestInfo(
       guest_address: guestAddress?.trim() || null,
       guest_postal_code: guestPostalCode?.trim() || null,
       guest_city: guestCity?.trim() || null,
+      guest_country: params.guestCountry?.trim() || null,
       guest_afc_number: guestAfcNumber?.trim() || null,
       special_requests: specialRequests?.trim() || null,
     };
@@ -561,6 +571,7 @@ export async function updateGuestInfo(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_afc_number,
         num_places,
         status,
@@ -600,6 +611,7 @@ export async function updateGuestInfo(
       guestAddress: updated.guest_address,
       guestPostalCode: updated.guest_postal_code,
       guestCity: updated.guest_city,
+      guestCountry: (updated as unknown as { guest_country: string | null }).guest_country,
       guestAfcNumber: updated.guest_afc_number,
       numPlaces: updated.num_places,
       status: updated.status as 'confirmed' | 'cancelled' | 'no_show',
@@ -609,7 +621,7 @@ export async function updateGuestInfo(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });
