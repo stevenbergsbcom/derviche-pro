@@ -10,7 +10,9 @@
 
 'use client';
 
+import { Suspense } from 'react';
 import { useParams } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 import {
   CheckinDrawer,
   TransferSlotDrawer,
@@ -24,7 +26,7 @@ import {
   ReservationsContent,
 } from './components';
 
-export default function SlotReservationsPage() {
+function SlotReservationsContent() {
   const params = useParams();
   const showSlug = params.showSlug as string;
   const slotId = params.slotId as string;
@@ -122,5 +124,19 @@ export default function SlotReservationsPage() {
       />
 
     </div>
+  );
+}
+
+export default function SlotReservationsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <Loader2 className="w-8 h-8 animate-spin text-gold" />
+        </div>
+      }
+    >
+      <SlotReservationsContent />
+    </Suspense>
   );
 }

@@ -136,3 +136,9 @@ export {
   cancelReservationFromPWA,
   reactivateReservation,
 } from './cancel';
+
+// ============================================
+// RECHERCHE GLOBALE
+// ============================================
+export type { GlobalSearchResult, GlobalSearchResults } from './search';
+export { searchReservations } from './search';

@@ -8,13 +8,14 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle, ChevronLeft, LogOut, Home } from 'lucide-react';
+import { Loader2, AlertTriangle, ChevronLeft, LogOut, Home, Search } from 'lucide-react';
 import { useCurrentUserRole, type UserRole } from '@/hooks/useCurrentUserRole';
 import { ReservationFAB } from '@/components/accueil/ReservationFAB';
+import { GlobalSearchSheet } from '@/components/accueil/global-search/GlobalSearchSheet';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
@@ -80,9 +81,10 @@ function LoadingScreen() {
 interface AccueilHeaderProps {
   role: UserRole;
   showBackButton?: boolean;
+  onSearchOpen: () => void;
 }
 
-function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
+function AccueilHeader({ role, showBackButton, onSearchOpen }: AccueilHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   
@@ -133,7 +135,7 @@ function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
               variant="ghost"
               size="icon"
               onClick={handleBack}
-              className="h-9 w-9 text-white hover:bg-white/10"
+              className="h-11 w-11 text-white hover:bg-white/10"
             >
               <ChevronLeft className="w-5 h-5" />
               <span className="sr-only">Retour</span>
@@ -153,16 +155,27 @@ function AccueilHeader({ role, showBackButton }: AccueilHeaderProps) {
           </div>
         </div>
 
-        {/* Droite : Déconnexion */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleLogout}
-          className="h-9 w-9 text-white hover:bg-white/10"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="sr-only">Déconnexion</span>
-        </Button>
+        {/* Droite : Recherche + Déconnexion */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSearchOpen}
+            className="h-11 w-11 text-white hover:bg-white/10"
+            aria-label="Rechercher une réservation"
+          >
+            <Search className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            className="h-11 w-11 text-white hover:bg-white/10"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="sr-only">Déconnexion</span>
+          </Button>
+        </div>
       </div>
     </header>
   );
@@ -177,8 +190,30 @@ export default function AccueilLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { role, isLoading, isAuthenticated, hasRoleFetchError } = useCurrentUserRole();
+  const { role, isLoading, isAuthenticated, hasRoleFetchError, user } = useCurrentUserRole();
   const router = useRouter();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  // Chargement du companyId si rôle company
+  useEffect(() => {
+    if (!user || role !== 'company') return;
+    let cancelled = false;
+    async function loadCompanyId() {
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('profiles')
+          .select('company_id')
+          .eq('id', user!.id)
+          .single();
+        if (!cancelled && data?.company_id) setCompanyId(data.company_id);
+      } catch { /* silencieux */ }
+    }
+    void loadCompanyId();
+    return () => { cancelled = true; };
+  }, [user, role]);
 
   // Vérification de l'accès
   useEffect(() => {
@@ -228,11 +263,16 @@ export default function AccueilLayout({
   // Accès autorisé
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <AccueilHeader role={role} />
+      <AccueilHeader role={role} onSearchOpen={() => setSearchOpen(true)} />
       <main className="flex-1 overflow-auto">
         {children}
       </main>
       <ReservationFAB />
+      <GlobalSearchSheet
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        companyId={companyId}
+      />
     </div>
   );
 }
