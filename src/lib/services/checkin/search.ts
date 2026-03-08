@@ -9,6 +9,7 @@
  * - super-admin / admin : toutes les réservations
  * - externe : uniquement les slots dont il est hosted_by_id
  * - company : uniquement les slots de ses spectacles (hosted_by = 'company')
+ * - role null ou inconnu : aucun résultat (défense en profondeur)
  */
 
 import { createClient } from '@/lib/supabase/client';
@@ -53,13 +54,24 @@ export interface GlobalSearchResults {
 const MAX_RESULTS = 20;
 const MIN_QUERY_LENGTH = 2;
 
+/** Rôles autorisés pour la recherche globale */
+const ALLOWED_SEARCH_ROLES: UserRole[] = ['super-admin', 'admin', 'externe', 'company'];
+
+/**
+ * Échappe les caractères spéciaux ILIKE (%, _, \)
+ * pour éviter les matchs non intentionnels
+ */
+function escapeIlike(value: string): string {
+  return value.replace(/[%_\\]/g, '\\$&');
+}
+
 // ============================================
 // FONCTION PRINCIPALE
 // ============================================
 
 /**
- * Recherche des réservations dans toute la base selon la query
- * Cherche sur : prénom, nom, email, structure (insensible à la casse, accents)
+ * Recherche des réservations dans toute la base selon la query.
+ * Cherche sur : prénom, nom, email, structure (insensible à la casse).
  */
 export async function searchReservations(
   query: string,
@@ -73,11 +85,20 @@ export async function searchReservations(
     return { data: [], error: null };
   }
 
+  // Défense en profondeur : bloquer role null ou non autorisé
+  if (!role || !ALLOWED_SEARCH_ROLES.includes(role)) {
+    logger.warn('checkin.searchReservations - Rôle non autorisé', { role });
+    return { data: [], error: null };
+  }
+
   try {
     logger.info('checkin.searchReservations - Début', { query: trimmed, role });
 
     const supabase = createClient();
-    const searchPattern = `%${trimmed}%`;
+
+    // Échapper les wildcards ILIKE pour éviter les matchs non voulus
+    const escaped = escapeIlike(trimmed);
+    const searchPattern = `%${escaped}%`;
 
     // Construction de la requête de base
     let queryBuilder = supabase
@@ -108,24 +129,20 @@ export async function searchReservations(
           )
         )
       `)
-      // Recherche multi-champs
       .or(
         `guest_first_name.ilike.${searchPattern},guest_last_name.ilike.${searchPattern},guest_email.ilike.${searchPattern},guest_structure.ilike.${searchPattern}`
       )
       .limit(MAX_RESULTS);
 
-    // Filtres selon le rôle
-    if (role !== null && !ADMIN_ROLES.includes(role)) {
+    // Filtres selon le rôle (admin = pas de filtre)
+    if (!ADMIN_ROLES.includes(role)) {
       if (role === 'externe') {
-        // Externe : uniquement les slots dont il est hosted_by_id
         queryBuilder = queryBuilder.eq('slots.hosted_by_id', userId);
       } else if (role === 'company' && companyId) {
-        // Company : uniquement ses spectacles en mode company
         queryBuilder = queryBuilder
           .eq('slots.hosted_by', 'company')
           .eq('slots.shows.company_id', companyId);
       } else {
-        // Rôle inconnu → aucun résultat
         return { data: [], error: null };
       }
     }
@@ -171,8 +188,8 @@ export async function searchReservations(
       };
     });
 
-    // Trier : confirmées en premier, puis annulées, puis no_show
-    const statusOrder = { confirmed: 0, no_show: 1, cancelled: 2 };
+    // Trier : confirmées en premier, puis no_show, puis annulées
+    const statusOrder: Record<string, number> = { confirmed: 0, no_show: 1, cancelled: 2 };
     results.sort(
       (a, b) =>
         (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3) ||

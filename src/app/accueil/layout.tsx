@@ -82,9 +82,10 @@ interface AccueilHeaderProps {
   role: UserRole;
   showBackButton?: boolean;
   onSearchOpen: () => void;
+  searchOpen: boolean;
 }
 
-function AccueilHeader({ role, showBackButton, onSearchOpen }: AccueilHeaderProps) {
+function AccueilHeader({ role, showBackButton, onSearchOpen, searchOpen }: AccueilHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   
@@ -163,6 +164,8 @@ function AccueilHeader({ role, showBackButton, onSearchOpen }: AccueilHeaderProp
             onClick={onSearchOpen}
             className="h-11 w-11 text-white hover:bg-white/10"
             aria-label="Rechercher une réservation"
+            aria-haspopup="dialog"
+            aria-expanded={searchOpen}
           >
             <Search className="w-5 h-5" />
           </Button>
@@ -263,7 +266,7 @@ export default function AccueilLayout({
   // Accès autorisé
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <AccueilHeader role={role} onSearchOpen={() => setSearchOpen(true)} />
+      <AccueilHeader role={role} onSearchOpen={() => setSearchOpen(true)} searchOpen={searchOpen} />
       <main className="flex-1 overflow-auto">
         {children}
       </main>

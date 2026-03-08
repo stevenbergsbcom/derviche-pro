@@ -339,13 +339,16 @@ export function useSlotDetails({
 
     autoOpenDoneRef.current = true;
 
-    setTimeout(() => {
+    const tid = setTimeout(() => {
       if (!isMountedRef.current) return;
       handleReservationClick(target);
       const url = new URL(window.location.href);
       url.searchParams.delete('reservationId');
-      router.replace(url.pathname, { scroll: false });
+      const cleanUrl = url.pathname + (url.search ? url.search : '');
+      router.replace(cleanUrl, { scroll: false });
     }, 350);
+
+    return () => clearTimeout(tid);
   }, [targetReservationId, isLoading, reservations, handleReservationClick, router]);
 
   const handleCheckinSuccess = useCallback(

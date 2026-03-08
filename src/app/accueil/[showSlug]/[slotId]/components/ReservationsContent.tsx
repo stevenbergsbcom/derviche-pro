@@ -40,7 +40,8 @@ export function ReservationsContent({
 }: ReservationsContentProps) {
   const [showCancelled, setShowCancelled] = useState(false);
 
-  // Ouvre automatiquement les annulées si la recherche n'en retourne qu'elles
+  // Ouvre automatiquement les annulées si la recherche n'en retourne qu'elles.
+  // Referme si des résultats actifs réapparaissent.
   useEffect(() => {
     if (!searchQuery.trim()) {
       setShowCancelled(false);
@@ -50,6 +51,8 @@ export function ReservationsContent({
     const cancelled = filteredReservations.filter((r) => r.status === 'cancelled');
     if (active.length === 0 && cancelled.length > 0) {
       setShowCancelled(true);
+    } else if (active.length > 0) {
+      setShowCancelled(false);
     }
   }, [searchQuery, filteredReservations]);
 
