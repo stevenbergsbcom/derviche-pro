@@ -97,6 +97,7 @@ export interface CheckinFollowupEmailData extends ManagerContact {
   reservationId: string;
   // Spectacle
   showTitle: string;
+  showSlug: string;
   companyName: string;
   /** Synopsis court (short_description en DB) */
   synopsis: string | null;
@@ -104,6 +105,13 @@ export interface CheckinFollowupEmailData extends ManagerContact {
   durationFormatted: string | null;
   /** Publics cibles concaténés (ex: "Tout public, Jeune public") */
   targetAudiences: string | null;
+  // URLs optionnelles du spectacle (S149)
+  /** URL du dossier de presse (null si non renseignée) */
+  folderUrl: string | null;
+  /** URL du teaser vidéo (null si non renseignée) */
+  teaserUrl: string | null;
+  /** URL de la captation vidéo (null si non renseignée) */
+  captationUrl: string | null;
   // Créneau
   slotDateFormatted: string;
   slotTimeFormatted: string;

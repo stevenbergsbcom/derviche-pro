@@ -67,16 +67,20 @@ interface ReservationForFollowup {
     time: string;
     hosted_by_id: string | null;
     shows: {
-      title:               string;
-      short_description:   string | null;
-      duration_minutes:    number | null;
-      derviche_manager_id: string | null;
-      company_id:          string | null;
+    title:               string;
+    slug:                string;
+    short_description:   string | null;
+    duration_minutes:    number | null;
+    folder_url:          string | null;
+    teaser_url:          string | null;
+    captation_url:       string | null;
+    derviche_manager_id: string | null;
+    company_id:          string | null;
       companies: { name: string } | null;
-      show_target_audience_mapping: {
-        target_audiences: { name: string } | null;
-      }[];
-    };
+        show_target_audience_mapping: {
+          target_audiences: { name: string } | null;
+        }[];
+      };
     venues: { name: string; city: string } | null;
   };
 }
@@ -161,8 +165,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           hosted_by_id,
           shows!inner (
             title,
+            slug,
             short_description,
             duration_minutes,
+            folder_url,
+            teaser_url,
+            captation_url,
             derviche_manager_id,
             company_id,
             companies:company_id ( name ),
@@ -275,10 +283,14 @@ export async function POST(request: Request): Promise<NextResponse> {
         guestStructure:   reservation.guest_structure,
         reservationId:    reservation.id,
         showTitle:        show.title,
+        showSlug:         show.slug,
         companyName,
         synopsis:         show.short_description,
         durationFormatted,
         targetAudiences,
+        folderUrl:         show.folder_url,
+        teaserUrl:         show.teaser_url,
+        captationUrl:      show.captation_url,
         slotDateFormatted: formatDateFr(slots.date),
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName:         venue?.name ?? '',

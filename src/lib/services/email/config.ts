@@ -17,6 +17,8 @@ export interface EmailConfig {
   fromAddress: string;
   replyTo: string;
   catalogueUrl: string;
+  /** URL de base de l'application (ex: https://derviche-pro.vercel.app) — dérivée de catalogueUrl */
+  appUrl: string;
   signature: string;
   footerText: string;
   organizationName: string;
@@ -53,12 +55,16 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       if (typeof row.value === 'string') settings[row.key] = row.value;
     });
 
+    const catalogueUrl = settings['email_catalogue_url'] ?? 'https://derviche-pro.vercel.app/catalogue';
+    const appUrl = (() => { try { return new URL(catalogueUrl).origin; } catch { return 'https://derviche-pro.vercel.app'; } })();
+
     return {
       fromName:         settings['email_from_name']      ?? 'Derviche Diffusion',
       fromAddress:      settings['email_from_address']   ?? 'reservations@derviche-pro.fr',
       replyTo:          settings['email_reply_to']       ?? 'contact@derviche-pro.fr',
       // ⚠️ Mettre à jour la clé email_catalogue_url en DB vers derviche-pro.fr/catalogue
-      catalogueUrl:     settings['email_catalogue_url']  ?? 'https://derviche-pro.vercel.app/catalogue',
+      catalogueUrl,
+      appUrl,
       signature:        settings['email_signature']      ?? "L'équipe Derviche Diffusion",
       footerText:       settings['email_footer_text']    ?? 'Derviche Diffusion — contact@derviche-pro.fr',
       organizationName: settings['organization_name']    ?? 'Derviche Diffusion',
@@ -70,6 +76,7 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       fromAddress:      'reservations@derviche-pro.fr',
       replyTo:          'contact@derviche-pro.fr',
       catalogueUrl:     'https://derviche-pro.vercel.app/catalogue',
+      appUrl:           'https://derviche-pro.vercel.app',
       signature:        "L'équipe Derviche Diffusion",
       footerText:       'Derviche Diffusion — contact@derviche-pro.fr',
       organizationName: 'Derviche Diffusion',

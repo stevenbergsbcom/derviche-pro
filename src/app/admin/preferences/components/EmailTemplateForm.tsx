@@ -12,7 +12,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, Save, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, Save, Loader2, AlertCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 import { EmailPreviewModal } from './EmailPreviewModal';
 import { logger } from '@/lib/logger';
@@ -48,6 +53,15 @@ const templateFormSchema = z.object({
   contact_block_title:   z.string().max(100),
   show_contact_block:    z.boolean(),
   show_reservation_code: z.boolean(),
+  // Liens optionnels post-checkin (S149)
+  show_folder_link:      z.boolean(),
+  folder_link_text:      z.string().max(200),
+  show_teaser_link:      z.boolean(),
+  teaser_link_text:      z.string().max(200),
+  show_captation_link:   z.boolean(),
+  captation_link_text:   z.string().max(200),
+  show_booking_link:     z.boolean(),
+  booking_link_text:     z.string().max(200),
 });
 
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
@@ -96,6 +110,49 @@ function VariableBadges({ onInsert, disabled }: VariableBadgesProps) {
             </TooltipContent>
           </Tooltip>
         ))}
+
+        {/* Icône ⓘ — popover avec toutes les variables */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center self-center ml-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Aide sur les variables disponibles"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="start" className="w-80 p-0">
+            <div className="px-4 py-3 border-b">
+              <p className="text-sm font-semibold">Variables disponibles</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Cliquez sur un badge pour l&apos;insérer dans le champ actif.
+              </p>
+            </div>
+            <div className="p-2 max-h-72 overflow-y-auto">
+              <table className="w-full text-xs">
+                <tbody>
+                  {EMAIL_TEMPLATE_VARIABLES.map((v) => (
+                    <tr key={v.key} className="border-b last:border-0">
+                      <td className="py-1.5 pr-3 font-mono text-primary whitespace-nowrap">
+                        {v.key}
+                      </td>
+                      <td className="py-1.5 text-muted-foreground">
+                        {v.description}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2.5 border-t bg-muted/30">
+              <p className="text-[11px] text-muted-foreground">
+                Certaines variables ne sont disponibles que sur certains types de templates.
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
+
       </div>
     </TooltipProvider>
   );
@@ -146,6 +203,15 @@ export function EmailTemplateForm({
       contact_block_title:   template.contact_block_title   ?? '',
       show_contact_block:    template.show_contact_block    ?? false,
       show_reservation_code: template.show_reservation_code ?? false,
+      // Liens optionnels post-checkin (S149)
+      show_folder_link:      template.show_folder_link    ?? false,
+      folder_link_text:      template.folder_link_text    ?? 'Consulter le dossier de presse',
+      show_teaser_link:      template.show_teaser_link    ?? false,
+      teaser_link_text:      template.teaser_link_text    ?? 'Voir le teaser vidéo',
+      show_captation_link:   template.show_captation_link ?? false,
+      captation_link_text:   template.captation_link_text ?? 'Voir la captation vidéo',
+      show_booking_link:     template.show_booking_link   ?? false,
+      booking_link_text:     template.booking_link_text   ?? 'Réserver une place pour ce spectacle',
     },
   });
 
@@ -158,6 +224,7 @@ export function EmailTemplateForm({
 
   const showContactBlock = watch('show_contact_block');
   const isConfirmation   = template.template_key === 'reservation_confirmation';
+  const isSimpleStyle    = template.is_simple_style === true;
 
   // Notifier le parent quand isDirty change
   useEffect(() => {
@@ -234,6 +301,16 @@ export function EmailTemplateForm({
       contact_block_title:   v.contact_block_title   ?? '',
       show_contact_block:    v.show_contact_block    ?? false,
       show_reservation_code: v.show_reservation_code ?? false,
+      is_simple_style:       template.is_simple_style ?? false,
+      // Liens optionnels post-checkin (S149)
+      show_folder_link:      v.show_folder_link    ?? false,
+      folder_link_text:      v.folder_link_text    ?? '',
+      show_teaser_link:      v.show_teaser_link    ?? false,
+      teaser_link_text:      v.teaser_link_text    ?? '',
+      show_captation_link:   v.show_captation_link ?? false,
+      captation_link_text:   v.captation_link_text ?? '',
+      show_booking_link:     v.show_booking_link   ?? false,
+      booking_link_text:     v.booking_link_text   ?? ''
     };
   };
 
@@ -249,6 +326,16 @@ export function EmailTemplateForm({
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+
+        {/* Bandeau style sobre */}
+        {isSimpleStyle && (
+          <div className="flex items-center gap-2 rounded-md bg-blue-50 border border-blue-200 px-3 py-2">
+            <span className="text-xs text-blue-700">
+              ✉️ Style sobre — cet email s&apos;envoie sans header graphique (fond blanc, ton personnel).
+              Les champs non utilisés sont masqués.
+            </span>
+          </div>
+        )}
 
         {/* Bandeau modifications non sauvegardées */}
         {isDirty && (
@@ -278,18 +365,20 @@ export function EmailTemplateForm({
           )}
         </div>
 
-        {/* Titre en-tête */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`header_title-${template.template_key}`}>
-            Titre de l&apos;en-tête
-          </Label>
-          <Input
-            id={`header_title-${template.template_key}`}
-            {...register('header_title')}
-            disabled={!canEdit}
-            placeholder="Ex: Réservation confirmée ✓"
-          />
-        </div>
+        {/* Titre en-tête — masqué pour les templates style sobre */}
+        {!isSimpleStyle && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`header_title-${template.template_key}`}>
+              Titre de l&apos;en-tête
+            </Label>
+            <Input
+              id={`header_title-${template.template_key}`}
+              {...register('header_title')}
+              disabled={!canEdit}
+              placeholder="Ex: Réservation confirmée ✓"
+            />
+          </div>
+        )}
 
         {/* Intro text */}
         <div className="space-y-1.5">
@@ -333,74 +422,187 @@ export function EmailTemplateForm({
           )}
         </div>
 
-        {/* Info text */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`info_text-${template.template_key}`}>
-            Bloc informatif
-          </Label>
-          <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
-          <Textarea
-            id={`info_text-${template.template_key}`}
-            {...infoRegisterProps}
-            {...focusProps(infoRef, 'info_text')}
-            ref={(el) => { infoRhfRef(el); infoRef.current = el; }}
-            disabled={!canEdit}
-            rows={3}
-            placeholder="Affiché dans un encadré jaune. Laisser vide pour masquer."
-            className="font-mono text-sm resize-none"
-          />
-        </div>
-
-        {/* CTA text */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`cta_text-${template.template_key}`}>
-            Texte du bouton d&apos;action
-          </Label>
-          <Input
-            id={`cta_text-${template.template_key}`}
-            {...register('cta_text')}
-            disabled={!canEdit}
-            placeholder="Ex: Voir le spectacle →"
-          />
-          <p className="text-xs text-muted-foreground">
-            Laisser vide pour masquer le bouton.
-          </p>
-        </div>
-
-        {/* Toggle show_contact_block */}
-        <div className="flex items-center justify-between rounded-lg border p-4">
-          <div className="space-y-0.5">
-            <Label htmlFor={`show_contact_block-${template.template_key}`} className="text-sm font-medium">
-              Afficher le bloc de contact
+        {/* Info text — masqué pour les templates style sobre */}
+        {!isSimpleStyle && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`info_text-${template.template_key}`}>
+              Bloc informatif
             </Label>
+            <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
+            <Textarea
+              id={`info_text-${template.template_key}`}
+              {...infoRegisterProps}
+              {...focusProps(infoRef, 'info_text')}
+              ref={(el) => { infoRhfRef(el); infoRef.current = el; }}
+              disabled={!canEdit}
+              rows={3}
+              placeholder="Affiché dans un encadré jaune. Laisser vide pour masquer."
+              className="font-mono text-sm resize-none"
+            />
+          </div>
+        )}
+
+        {/* CTA text — masqué pour les templates style sobre */}
+        {!isSimpleStyle && (
+          <div className="space-y-1.5">
+            <Label htmlFor={`cta_text-${template.template_key}`}>
+              Texte du bouton d&apos;action
+            </Label>
+            <Input
+              id={`cta_text-${template.template_key}`}
+              {...register('cta_text')}
+              disabled={!canEdit}
+              placeholder="Ex: Voir le spectacle →"
+            />
             <p className="text-xs text-muted-foreground">
-              Affiche les coordonnées du manager Derviche assigné au spectacle
+              Laisser vide pour masquer le bouton.
             </p>
           </div>
-          <Switch
-            id={`show_contact_block-${template.template_key}`}
-            checked={showContactBlock}
-            onCheckedChange={(checked) =>
-              setValue('show_contact_block', checked, { shouldDirty: true })
-            }
-            disabled={!canEdit}
-          />
-        </div>
+        )}
 
-        {/* Titre bloc contact (conditionnel) */}
-        {showContactBlock && (
-          <div className="space-y-1.5 pl-4 border-l-2 border-muted">
-            <Label htmlFor={`contact_block_title-${template.template_key}`}>
-              Titre du bloc de contact
-            </Label>
+        {/* Liens optionnels — uniquement pour les templates style sobre (post-checkin) */}
+        {isSimpleStyle && (
+          <div className="space-y-3 rounded-lg border p-4">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Liens optionnels
+            </p>
+
+            {/* Dossier de presse */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`show_folder_link-${template.template_key}`} className="text-sm font-medium">
+                    Lien dossier de presse
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
+                </div>
+                <Switch
+                  id={`show_folder_link-${template.template_key}`}
+                  checked={watch('show_folder_link')}
+                  onCheckedChange={(checked) => setValue('show_folder_link', checked, { shouldDirty: true })}
+                  disabled={!canEdit}
+                />
+              </div>
+              {watch('show_folder_link') && (
+                <Input
+                  {...register('folder_link_text')}
+                  disabled={!canEdit}
+                  placeholder="Ex: Consulter le dossier de presse"
+                  className="text-sm"
+                />
+              )}
+            </div>
+
+            {/* Teaser vidéo */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`show_teaser_link-${template.template_key}`} className="text-sm font-medium">
+                    Lien teaser vidéo
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
+                </div>
+                <Switch
+                  id={`show_teaser_link-${template.template_key}`}
+                  checked={watch('show_teaser_link')}
+                  onCheckedChange={(checked) => setValue('show_teaser_link', checked, { shouldDirty: true })}
+                  disabled={!canEdit}
+                />
+              </div>
+              {watch('show_teaser_link') && (
+                <Input
+                  {...register('teaser_link_text')}
+                  disabled={!canEdit}
+                  placeholder="Ex: Voir le teaser vidéo"
+                  className="text-sm"
+                />
+              )}
+            </div>
+
+            {/* Captation vidéo */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`show_captation_link-${template.template_key}`} className="text-sm font-medium">
+                    Lien captation vidéo
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
+                </div>
+                <Switch
+                  id={`show_captation_link-${template.template_key}`}
+                  checked={watch('show_captation_link')}
+                  onCheckedChange={(checked) => setValue('show_captation_link', checked, { shouldDirty: true })}
+                  disabled={!canEdit}
+                />
+              </div>
+              {watch('show_captation_link') && (
+                <Input
+                  {...register('captation_link_text')}
+                  disabled={!canEdit}
+                  placeholder="Ex: Voir la captation vidéo"
+                  className="text-sm"
+                />
+              )}
+            </div>
+
+            {/* Lien de réservation */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`show_booking_link-${template.template_key}`} className="text-sm font-medium">
+                    Lien de réservation
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Lien vers la page publique du spectacle (toujours disponible)</p>
+                </div>
+                <Switch
+                  id={`show_booking_link-${template.template_key}`}
+                  checked={watch('show_booking_link')}
+                  onCheckedChange={(checked) => setValue('show_booking_link', checked, { shouldDirty: true })}
+                  disabled={!canEdit}
+                />
+              </div>
+              {watch('show_booking_link') && (
+                <Input
+                  {...register('booking_link_text')}
+                  disabled={!canEdit}
+                  placeholder="Ex: Réserver une place pour ce spectacle"
+                  className="text-sm"
+                />
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bloc de contact */}
+        <div className="space-y-2 rounded-lg border p-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor={`show_contact_block-${template.template_key}`} className="text-sm font-medium">
+                Bloc de contact
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Affiche les coordonnées du manager Derviche assigné au spectacle
+              </p>
+            </div>
+            <Switch
+              id={`show_contact_block-${template.template_key}`}
+              checked={showContactBlock}
+              onCheckedChange={(checked) =>
+                setValue('show_contact_block', checked, { shouldDirty: true })
+              }
+              disabled={!canEdit}
+            />
+          </div>
+          {showContactBlock && (
             <Input
               id={`contact_block_title-${template.template_key}`}
               {...register('contact_block_title')}
               disabled={!canEdit}
               placeholder="Ex: Votre contact Derviche Diffusion"
+              className="text-sm"
             />
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Toggle show_reservation_code (confirmation uniquement) */}
         {isConfirmation && (
