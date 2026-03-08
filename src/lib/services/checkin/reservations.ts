@@ -374,7 +374,11 @@ export async function updateCheckinStatus(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .single();
 
@@ -416,7 +420,12 @@ export async function updateCheckinStatus(
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
       googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
-      checkinFollowupEmails: [],
+      checkinFollowupEmails: ((updated as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     };
 
     logger.info('checkin.updateCheckinStatus - Succès', { 
@@ -593,7 +602,11 @@ export async function updateGuestInfo(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .single();
 
@@ -634,7 +647,12 @@ export async function updateGuestInfo(
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
       googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
-      checkinFollowupEmails: [],
+      checkinFollowupEmails: ((updated as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });

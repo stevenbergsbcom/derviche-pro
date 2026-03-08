@@ -27,6 +27,7 @@ export function RowHoverActions({ onEdit }: RowHoverActionsProps) {
     <Button
       variant="ghost"
       size="icon"
+      aria-label="Modifier la réservation"
       className="h-8 w-8 cursor-pointer hover:bg-derviche/10 hover:text-derviche"
       onClick={(e) => {
         e.stopPropagation();

@@ -137,12 +137,14 @@ export function useCheckinDrawer({
   // HANDLER - Auto-save du statut (sans fermer le drawer)
   // ==========================================
   const isSavingStatusRef = useRef(false);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
 
   const handleAutoSaveStatus = useCallback(async (status: CheckinStatus | null) => {
     if (!reservation || !userId || !role) return;
     if (isSavingStatusRef.current) return;
 
     isSavingStatusRef.current = true;
+    setIsSavingStatus(true);
     try {
       const result = await updateCheckinStatus({
         reservationId: reservation.id,
@@ -180,6 +182,7 @@ export function useCheckinDrawer({
       setSelectedStatus(reservation.checkinStatus ?? null);
     } finally {
       isSavingStatusRef.current = false;
+      setIsSavingStatus(false);
     }
   }, [reservation, userId, role, companyId, guestForm, setSelectedStatus, onSuccess]);
 
@@ -259,6 +262,7 @@ export function useCheckinDrawer({
     handleReactivate,
     handleCancel: handleCancelWithDialog,
     handleAutoSaveStatus,
+    isSavingStatus,
 
     // Modale de confirmation d'annulation
     cancelDialogOpen,

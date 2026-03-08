@@ -87,7 +87,7 @@ export function CheckinDrawer({
             onStatusChange={drawer.setSelectedStatus}
             onAutoSave={drawer.handleAutoSaveStatus}
             isCancelled={drawer.isCancelled}
-            isSubmitting={drawer.uiState.isSubmitting}
+            isSubmitting={drawer.uiState.isSubmitting || drawer.isSavingStatus}
           />
 
           {/* Emails post-visite — juste après les boutons, visible dès le clic */}
