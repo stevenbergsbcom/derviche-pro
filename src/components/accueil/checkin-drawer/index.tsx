@@ -122,6 +122,7 @@ export function CheckinDrawer({
             onCommentChange={drawer.setComment}
             onVenueNotesChange={drawer.setVenueNotes}
             onInternalNotesChange={drawer.setInternalNotes}
+            isStaffDD={drawer.isStaffDD}
           />
         </div>
 

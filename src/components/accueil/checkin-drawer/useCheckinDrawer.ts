@@ -46,6 +46,8 @@ export function useCheckinDrawer({
   // HOOKS SPÉCIALISÉS
   // ==========================================
   const { userId, role, companyId, isAdmin, isLoading: accessLoading } = useCheckinAccess();
+  // Vrai pour tout le staff DD (admin + externe) — jamais pour les compagnies
+  const isStaffDD = role !== null && role !== 'company';
   
   const {
     guestForm,
@@ -210,6 +212,7 @@ export function useCheckinDrawer({
     canSave: canSave && !isSubmitting,
     isCancelled,
     isAdmin,
+    isStaffDD,
     accessLoading,
 
     // Options de notification (réactivation uniquement)

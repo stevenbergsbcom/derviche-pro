@@ -124,6 +124,8 @@ export interface UseAddReservationReturn {
   handleCancelDuplicate: () => void;
   // Contexte utilisateur
   isAdmin: boolean;
+  /** Staff DD (admin + externe) : true. Compagnies : false. */
+  isStaffDD: boolean;
 }
 
 // ============================================
@@ -140,7 +142,10 @@ export interface CollapsibleSectionProps extends SectionProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export type CheckinSectionProps = CollapsibleSectionProps;
+export interface CheckinSectionProps extends CollapsibleSectionProps {
+  /** Staff DD (admin + externe) : true. Compagnies : false. Masque les notes internes. */
+  isStaffDD: boolean;
+}
 
 export interface FormFooterProps {
   isSubmitting: boolean;

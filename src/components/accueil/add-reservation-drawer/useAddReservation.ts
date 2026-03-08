@@ -62,6 +62,7 @@ export function useAddReservation({
   onOpenChange,
 }: UseAddReservationParams): UseAddReservationReturn {
   const { userId, role, companyId, isAdmin } = useCheckinAccess();
+  const isStaffDD = role !== null && role !== 'company';
 
   // ============================================
   // ÉTATS
@@ -351,5 +352,6 @@ export function useAddReservation({
     handleConfirmDuplicate,
     handleCancelDuplicate,
     isAdmin,
+    isStaffDD,
   };
 }
