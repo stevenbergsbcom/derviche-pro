@@ -24,6 +24,7 @@ import {
   GuestInfoSection,
   NotesSection,
   FooterSection,
+  CheckinEmailsSection,
 } from './sections';
 import { CancelConfirmDialog } from './sections/CancelConfirmDialog';
 
@@ -84,8 +85,16 @@ export function CheckinDrawer({
           <StatusButtonsSection
             selectedStatus={drawer.checkinForm.selectedStatus}
             onStatusChange={drawer.setSelectedStatus}
+            onAutoSave={drawer.handleAutoSaveStatus}
             isCancelled={drawer.isCancelled}
-            isSubmitting={drawer.uiState.isSubmitting}
+            isSubmitting={drawer.uiState.isSubmitting || drawer.isSavingStatus}
+          />
+
+          {/* Emails post-visite — juste après les boutons, visible dès le clic */}
+          <CheckinEmailsSection
+            reservation={reservation}
+            currentStatus={drawer.checkinForm.selectedStatus}
+            canSendCheckinEmails={drawer.canSendCheckinEmails}
           />
 
           {/* Séparateur - masqué si annulée (pas de boutons) */}

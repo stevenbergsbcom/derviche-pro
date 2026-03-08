@@ -40,8 +40,11 @@ export function ReservationFAB() {
 
   const slotId = parseSlotIdFromPath(pathname ?? '');
 
+  // Le drawer gère lui-même sa fermeture via onOpenChange.
+  // handleSuccess sert uniquement à déclencher le refresh de la liste parente
+  // (ici le FAB n'a pas de liste à rafraîchir — le drawer appellera onOpenChange(false) au bon moment).
   const handleSuccess = useCallback(() => {
-    setOpen(false);
+    // intentionnellement vide : pas de setOpen(false) ici
   }, []);
 
   if (!isVisible) return null;

@@ -121,6 +121,10 @@ export interface UseCheckinDrawerReturn {
   handleSave: () => Promise<void>;
   handleReactivate: () => Promise<void>;
   handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
+  /** Sauvegarde le statut immédiatement sans fermer le drawer */
+  handleAutoSaveStatus: (status: CheckinStatus | null) => Promise<void>;
+  /** Vrai pendant l'auto-save du statut — bloque les clics sur les boutons */
+  isSavingStatus: boolean;
 
   // Modale de confirmation d'annulation
   cancelDialogOpen: boolean;
@@ -135,6 +139,9 @@ export interface UseCheckinDrawerReturn {
   isAdmin: boolean;
   /** Vrai pour admin, super-admin et externe — jamais pour company */
   isStaffDD: boolean;
+  /** Vrai pour tout rôle autorisé à envoyer des emails post-checkin
+   *  (admin, super-admin, externe, company) */
+  canSendCheckinEmails: boolean;
   accessLoading: boolean;
 
   // Options de notification (réactivation uniquement — annulation gérée par la modale)

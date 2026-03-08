@@ -118,6 +118,14 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
     // Google Calendar
     googleCalendarEventId: row.google_calendar_event_id,
 
+    // Emails post-checkin
+    checkinFollowupEmails: (row.checkin_followup_emails ?? []).map((e) => ({
+      id: e.id,
+      templateKey: e.template_key,
+      sentAt: e.sent_at,
+      sentBy: e.sent_by,
+    })),
+
     // Timestamps
     createdAt: row.created_at,
     updatedAt: row.updated_at,

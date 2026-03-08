@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { CheckinStatus } from '@/types/database';
+import type { CheckinFollowupTemplateKey } from '@/types/email-templates';
 
 import type { 
   CheckinReservation, 
@@ -68,7 +69,11 @@ export async function getSlotReservations(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .eq('slot_id', slotId)
       .order('guest_last_name', { ascending: true, nullsFirst: false })
@@ -106,11 +111,17 @@ export async function getSlotReservations(
       checkinStatus: r.checkin_status as CheckinStatus | null,
       checkinComment: r.checkin_comment,
       checkinVenueNotes: r.checkin_venue_notes,
-      // Notes internes masquées pour les non-admins
+      // Notes internes : super-admin, admin et externe uniquement (voir ADMIN_ROLES)
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? r.checkin_internal_notes : null,
       specialRequests: r.special_requests,
       createdAt: r.created_at,
       googleCalendarEventId: (r as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: ((r as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     }));
 
     logger.info('checkin.getSlotReservations - Succès', { count: reservations.length });
@@ -363,7 +374,11 @@ export async function updateCheckinStatus(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .single();
 
@@ -400,11 +415,17 @@ export async function updateCheckinStatus(
       checkinStatus: updated.checkin_status as CheckinStatus | null,
       checkinComment: updated.checkin_comment,
       checkinVenueNotes: updated.checkin_venue_notes,
-      // Notes internes masquées pour les non-admins
+      // Notes internes : super-admin, admin et externe uniquement (voir ADMIN_ROLES)
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: ((updated as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     };
 
     logger.info('checkin.updateCheckinStatus - Succès', { 
@@ -581,7 +602,11 @@ export async function updateGuestInfo(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .single();
 
@@ -621,7 +646,13 @@ export async function updateGuestInfo(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: ((updated as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });

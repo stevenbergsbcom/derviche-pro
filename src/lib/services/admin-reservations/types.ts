@@ -75,6 +75,9 @@ export interface AdminReservation {
   // Google Calendar
   googleCalendarEventId: string | null;
 
+  // Emails post-checkin
+  checkinFollowupEmails: { id: string; templateKey: string; sentAt: string; sentBy: string | null }[];
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -310,6 +313,7 @@ export interface ReservationRowWithRelations {
   cancelled_at: string | null;
   cancellation_reason: string | null;
   google_calendar_event_id: string | null;
+  checkin_followup_emails?: { id: string; template_key: string; sent_at: string; sent_by: string | null }[] | null;
   slots?: SlotRowWithRelations | null;
 }
 

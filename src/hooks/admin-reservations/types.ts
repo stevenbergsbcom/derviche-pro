@@ -115,6 +115,9 @@ export interface UseAdminReservationsReturn {
 
   /** Réinitialiser les filtres */
   resetFilters: () => void;
+
+  /** Mettre à jour un champ en place sans rechargement (préserve l'ordre du tableau) */
+  patchReservation: (id: string, patch: Partial<AdminReservation>) => void;
 }
 
 /**

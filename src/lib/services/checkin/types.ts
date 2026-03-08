@@ -5,6 +5,7 @@
 
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { SlotHostedBy, CheckinStatus } from '@/types/database';
+import type { CheckinFollowupTemplateKey } from '@/types/email-templates';
 
 // ============================================
 // TYPES DE BASE
@@ -93,6 +94,8 @@ export interface CheckinReservation {
   createdAt: string;
   /** ID de l'événement Google Calendar (null si jamais créé) */
   googleCalendarEventId: string | null;
+  /** Emails post-checkin déjà envoyés pour cette réservation */
+  checkinFollowupEmails: { templateKey: CheckinFollowupTemplateKey; sentAt: string }[];
 }
 
 // ============================================

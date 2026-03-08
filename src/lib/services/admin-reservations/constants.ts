@@ -15,6 +15,12 @@
  */
 export const RESERVATION_SELECT_QUERY = `
   *,
+  checkin_followup_emails (
+    id,
+    template_key,
+    sent_at,
+    sent_by
+  ),
   slots!inner (
     id,
     date,
@@ -45,6 +51,12 @@ export const RESERVATION_SELECT_QUERY = `
  */
 export const RESERVATION_SINGLE_SELECT_QUERY = `
   *,
+  checkin_followup_emails (
+    id,
+    template_key,
+    sent_at,
+    sent_by
+  ),
   slots (
     id,
     date,

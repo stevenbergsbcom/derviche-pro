@@ -12,7 +12,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -23,8 +22,6 @@ import {
   Phone,
   Ticket,
   Pencil,
-  CheckCircle,
-  Ban,
 } from 'lucide-react';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import type { AdminReservation } from '@/lib/services/admin-reservations';
@@ -38,12 +35,10 @@ import { formatDateFr, formatDateTimeFr } from './reservation-helpers';
 interface ReservationCardProps {
   reservation: AdminReservation;
   visibleColumns: ReservationColumn[];
-  onCheckin: (reservation: AdminReservation) => void;
   onEdit: (reservation: AdminReservation) => void;
-  onCancel: (reservation: AdminReservation) => void;
 }
 
-export function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit, onCancel }: ReservationCardProps) {
+export function ReservationCard({ reservation, visibleColumns, onEdit }: ReservationCardProps) {
   const isCancelled = reservation.status === 'cancelled';
   const isColumnVisible = (col: ReservationColumn) => visibleColumns.includes(col);
   const showName = isColumnVisible('lastName') || isColumnVisible('firstName');
@@ -95,15 +90,6 @@ export function ReservationCard({ reservation, visibleColumns, onCheckin, onEdit
               <DropdownMenuItem onClick={() => onEdit(reservation)}>
                 <Pencil className="w-4 h-4 mr-2" />
                 Modifier
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCheckin(reservation)} disabled={isCancelled}>
-                <CheckCircle className="w-4 h-4 mr-2" />
-                Check-in
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onCancel(reservation)} disabled={isCancelled} className="text-destructive">
-                <Ban className="w-4 h-4 mr-2" />
-                Annuler
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

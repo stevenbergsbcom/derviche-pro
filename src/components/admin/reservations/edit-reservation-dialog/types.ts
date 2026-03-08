@@ -8,6 +8,7 @@ import type {
   UpdateReservationData,
   AvailableSlot 
 } from '@/lib/services/admin-reservations';
+import type { CheckinStatus } from '@/types/database';
 import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 
 // Réexport des types du service
@@ -42,6 +43,8 @@ export interface EditReservationDialogProps {
   onCancel: (reservation: AdminReservation) => void;
   onGetSlots: (showId: string) => Promise<SlotsResult>;
   isSaving: boolean;
+  /** Appelé après mise à jour checkin réussie — permet au parent de rafraîchir ses données */
+  onCheckinUpdated?: (reservationId: string, status: CheckinStatus | null) => void;
 }
 
 export type { NotificationOptions };

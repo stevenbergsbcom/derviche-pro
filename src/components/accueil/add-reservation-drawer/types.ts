@@ -8,6 +8,7 @@ import type { CheckinStatus } from '@/types/database';
 import type { DuplicateCheckResult } from '@/lib/services/checkin';
 import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
 import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
+import type { ReservationRowData } from '@/components/accueil/ReservationRow';
 
 // ============================================
 // STEP
@@ -17,8 +18,9 @@ import type { NotificationOptions } from '@/components/admin/reservations/notifi
  *  - 'select-slot' : sélection show + créneau (si pas de slotId pré-fourni)
  *  - 'search'      : recherche email/nom (pré-remplissage)
  *  - 'form'        : formulaire complet
+ *  - 'success'     : écran post-création — envoi emails post-checkin (si statut défini)
  */
-export type AddReservationDrawerStep = 'select-slot' | 'search' | 'form';
+export type AddReservationDrawerStep = 'select-slot' | 'search' | 'form' | 'success';
 
 // ============================================
 // PROPS DU COMPOSANT PRINCIPAL
@@ -97,6 +99,8 @@ export interface AddReservationState {
   capacityInfo: CapacityInfo | null;
   duplicateInfo: DuplicateCheckResult | null;
   showDuplicateDialog: boolean;
+  /** Réservation créée — dispos après l'étape 'success' */
+  createdReservation: ReservationRowData | null;
 }
 
 // ============================================

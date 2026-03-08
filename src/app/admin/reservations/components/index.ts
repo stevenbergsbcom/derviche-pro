@@ -20,5 +20,4 @@ export { ReservationsContent, type ReservationsContentProps } from './reservatio
 export { PaginationControls, type PaginationControlsProps } from './pagination-controls';
 
 // Dialogs
-export { CheckinDialog, type CheckinDialogProps, type CheckinDialogReservation } from './checkin-dialog';
 export { CancelDialog, type CancelDialogProps, type CancelDialogReservation } from './cancel-dialog';

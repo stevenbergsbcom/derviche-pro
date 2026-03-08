@@ -20,6 +20,7 @@ import { buildAdminNotificationHtml } from '@/lib/services/email/builders/admin-
 import { buildReminder7dHtml }      from '@/lib/services/email/builders/reminder-7d';
 import { buildReminder2dHtml }      from '@/lib/services/email/builders/reminder-2d';
 import { buildReminder12hHtml }     from '@/lib/services/email/builders/reminder-12h';
+import { buildSimpleHtml }          from '@/lib/services/email/builders/simple';
 import { logger } from '@/lib/logger';
 import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 import type {
@@ -27,6 +28,7 @@ import type {
   ReservationCancellationEmailData,
   ReservationModificationEmailData,
   AdminNotificationEmailData,
+  CheckinFollowupEmailData,
 } from '@/lib/services/email/types';
 import type { ReminderEmailData } from '@/lib/services/email/reminders/types';
 
@@ -125,7 +127,31 @@ const VALID_KEYS: EmailTemplateKey[] = [
   'reminder_7d',
   'reminder_2d',
   'reminder_12h',
+  'checkin_thank_you',
+  'checkin_loved',
+  'checkin_press',
+  'checkin_followup_absent',
 ];
+
+/** Mock pour les 4 templates post-checkin */
+const MOCK_CHECKIN_FOLLOWUP: CheckinFollowupEmailData = {
+  to: 'marie.dupont@theatre-ville.fr',
+  guestFullName: 'Marie Dupont',
+  guestStructure: 'Théâtre de la Ville — Bordeaux',
+  reservationId: 'preview-id',
+  showTitle: 'Le Bal des Âmes',
+  companyName: 'Compagnie des Miroirs',
+  synopsis: 'Un voyage poétique et musical entre deux mondes, où les vivants et les morts se croisent le temps d\'une nuit.',
+  durationFormatted: '1h20',
+  targetAudiences: 'Tout public, À partir de 12 ans',
+  slotDateFormatted: 'mercredi 15 avril 2026',
+  slotTimeFormatted: '19h30',
+  venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  managerName: 'Sophie Lefèvre',
+  managerEmail: 'sophie@derviche-pro.fr',
+  managerPhone: '06 12 34 56 78',
+};
 
 /** Mock partagé pour les 3 templates de rappel */
 const MOCK_REMINDER: ReminderEmailData = {
@@ -175,6 +201,7 @@ function buildTemplateFromParams(
     contact_block_title:   q.get('contact_block_title')   ?? '',
     show_contact_block:    q.get('show_contact_block')    === 'true',
     show_reservation_code: q.get('show_reservation_code') === 'true',
+    is_simple_style:       q.get('is_simple_style')       === 'true',
   };
 }
 
@@ -202,6 +229,12 @@ function generatePreviewHtml(
       return buildReminder2dHtml(MOCK_REMINDER, config, template, appUrl);
     case 'reminder_12h':
       return buildReminder12hHtml(MOCK_REMINDER, config, template, appUrl);
+    // Post-checkin (S144) : style sobre
+    case 'checkin_thank_you':
+    case 'checkin_loved':
+    case 'checkin_press':
+    case 'checkin_followup_absent':
+      return buildSimpleHtml(MOCK_CHECKIN_FOLLOWUP, config, template);
     default: {
       // Sécurité : ne devrait jamais arriver grâce à isValidKey()
       const _exhaustive: never = template.template_key;
@@ -305,6 +338,7 @@ export async function GET(
         contact_block_title:   dbTemplate.contact_block_title   ?? '',
         show_contact_block:    dbTemplate.show_contact_block    ?? false,
         show_reservation_code: dbTemplate.show_reservation_code ?? false,
+        is_simple_style:       dbTemplate.is_simple_style       ?? false,
       };
     }
 

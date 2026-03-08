@@ -20,3 +20,6 @@ export type { NotesSectionProps } from './NotesSection';
 
 export { FooterSection } from './FooterSection';
 export type { FooterSectionProps } from './FooterSection';
+
+export { CheckinEmailsSection } from './CheckinEmailsSection';
+export type { CheckinEmailsSectionProps } from './CheckinEmailsSection';
