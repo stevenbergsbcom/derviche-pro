@@ -78,6 +78,19 @@ export interface EmailTemplate {
    * true = email sobre style personnel, false = design graphique standard.
    */
   is_simple_style: boolean;
+  // ── Liens optionnels (post-checkin uniquement, S149) ──
+  /** Afficher le lien vers le dossier de presse (si folder_url renseigné sur le spectacle) */
+  show_folder_link: boolean;
+  folder_link_text: string;
+  /** Afficher le lien vers le teaser vidéo (si teaser_url renseigné sur le spectacle) */
+  show_teaser_link: boolean;
+  teaser_link_text: string;
+  /** Afficher le lien vers la captation vidéo (si captation_url renseignée sur le spectacle) */
+  show_captation_link: boolean;
+  captation_link_text: string;
+  /** Afficher un lien vers la page de réservation publique du spectacle */
+  show_booking_link: boolean;
+  booking_link_text: string;
   /** Template actif ou désactivé */
   is_active: boolean;
   created_at: string;
@@ -102,6 +115,15 @@ export type EmailTemplateUpdatePayload = Pick<
   | 'show_contact_block'
   | 'show_reservation_code'
   | 'is_simple_style'
+  // Liens optionnels (S149)
+  | 'show_folder_link'
+  | 'folder_link_text'
+  | 'show_teaser_link'
+  | 'teaser_link_text'
+  | 'show_captation_link'
+  | 'captation_link_text'
+  | 'show_booking_link'
+  | 'booking_link_text'
 >;
 
 // ============================================

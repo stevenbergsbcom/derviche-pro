@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { sendCheckinFollowupEmail } from '@/lib/services/email';
+import { isSafeUrl } from '@/lib/services/email/html-helpers';
 import { formatDuration } from '@/lib/services/email/builders/simple';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
@@ -67,16 +68,20 @@ interface ReservationForFollowup {
     time: string;
     hosted_by_id: string | null;
     shows: {
-      title:               string;
-      short_description:   string | null;
-      duration_minutes:    number | null;
-      derviche_manager_id: string | null;
-      company_id:          string | null;
+    title:               string;
+    slug:                string;
+    short_description:   string | null;
+    duration_minutes:    number | null;
+    folder_url:          string | null;
+    teaser_url:          string | null;
+    captation_url:       string | null;
+    derviche_manager_id: string | null;
+    company_id:          string | null;
       companies: { name: string } | null;
-      show_target_audience_mapping: {
-        target_audiences: { name: string } | null;
-      }[];
-    };
+        show_target_audience_mapping: {
+          target_audiences: { name: string } | null;
+        }[];
+      };
     venues: { name: string; city: string } | null;
   };
 }
@@ -161,8 +166,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           hosted_by_id,
           shows!inner (
             title,
+            slug,
             short_description,
             duration_minutes,
+            folder_url,
+            teaser_url,
+            captation_url,
             derviche_manager_id,
             company_id,
             companies:company_id ( name ),
@@ -275,10 +284,15 @@ export async function POST(request: Request): Promise<NextResponse> {
         guestStructure:   reservation.guest_structure,
         reservationId:    reservation.id,
         showTitle:        show.title,
+        showSlug:         show.slug,
         companyName,
         synopsis:         show.short_description,
         durationFormatted,
         targetAudiences,
+        // Filtrage sécurité : n'accepter que les URLs http(s) pour éviter les injections javascript:
+        folderUrl:         isSafeUrl(show.folder_url)   ? show.folder_url   : null,
+        teaserUrl:         isSafeUrl(show.teaser_url)   ? show.teaser_url   : null,
+        captationUrl:      isSafeUrl(show.captation_url) ? show.captation_url : null,
         slotDateFormatted: formatDateFr(slots.date),
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName:         venue?.name ?? '',

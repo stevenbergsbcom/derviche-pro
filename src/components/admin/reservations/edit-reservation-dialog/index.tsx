@@ -99,7 +99,8 @@ export function EditReservationDialog({
     setIsUpdatingCheckin(true);
     try {
       if (status !== null) {
-        await updateReservationCheckin(reservation.id, { checkinStatus: status });
+        const { error: checkinError } = await updateReservationCheckin(reservation.id, { checkinStatus: status });
+        if (checkinError) throw new Error(checkinError);
       } else {
         // Reset à null : mise à jour directe via Supabase client
         const { createClient } = await import('@/lib/supabase/client');

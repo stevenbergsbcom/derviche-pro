@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S147-fix — Fix Supabase error check checkin reset null, mergé main — 8 mars 2026
+> Dernière mise à jour : Session S148-S149 — Templates post-checkin UI admin + liens optionnels + popover variables, mergé main — 8 mars 2026
 
 ---
 
@@ -62,11 +62,15 @@
 | Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (7), Google Calendar, RGPD |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
 
-### ⚠️ Admin — Templates email (90%) — S148 en cours
-- **7 templates** transactionnels + rappels : éditables dans /admin/préférences/Templates ✅
-- **4 templates post-checkin** : en BDD + types + labels ✅ — **absents de l'UI admin** ❌
-- Groupe "Emails post-checkin" manquant dans `templates-section.tsx` ❌
-- Preview `is_simple_style = true` (style sobre) non validé ❌
+### ✅ Admin — Templates email (100%) — S148-S149
+- **11 templates** éditables dans /admin/préférences/Templates (3 groupes : transactionnels, rappels, post accueil)
+- Groupe "Emails post accueil" : 4 templates avec bandeau bleu + champs masqués si `is_simple_style`
+- **4 liens optionnels** par template post-checkin : dossier, teaser, captation, réservation (switch + texte éditable)
+- Bloc de contact harmonisé (même pattern switch+input)
+- Popover ⓘ sur les badges variables : tableau complet de toutes les variables
+- Route API `/api/admin/email-templates/[key]` : whitelist étendue aux 4 clés post-checkin
+- `EmailConfig` enrichi : champ `appUrl` dérivé de `catalogueUrl`
+- Migration 071 : 8 nouvelles colonnes sur `email_templates`
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -89,10 +93,10 @@
 | Notifications manager (3 types) | inclus dans les routes ci-dessus | ✅ S131-132 |
 | Emails post-checkin | POST /api/emails/send-checkin-followup | ✅ S147 |
 
-### ✅ Templates email dynamiques (100% BDD, 90% UI) — S134-S136 + S144
-- **11 templates en DB** : 4 transactionnels + 3 rappels + 4 post-checkin
-- UI admin : onglet "Templates" avec 2 groupes visuels (3ème groupe post-checkin manquant → S148)
-- Preview email : 7 builders supportés (post-checkin non encore préviewés)
+### ✅ Templates email dynamiques (100%) — S134-S136 + S144 + S148-S149
+- **11 templates en DB** : 4 transactionnels + 3 rappels + 4 post accueil
+- UI admin : onglet "Templates" avec 3 groupes visuels
+- Preview email : 11 builders supportés
 - Service email refactorisé → 8 modules dans `src/lib/services/email/`
 
 ### ✅ Rappels automatiques (100%) — S136 — VALIDÉ EN PROD
@@ -155,8 +159,7 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S148** | Templates email post-checkin dans l'UI admin : 3ème groupe accordéon + preview `is_simple_style` | 🔴 Haute |
-| **S149** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
+| **S150** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
 
@@ -221,3 +224,4 @@
 | 068 | `068_checkin_followup_emails.sql` | Table `checkin_followup_emails` + `is_simple_style` + 4 templates post-checkin | ✅ |
 | 069 | `069_add_unique_constraint_checkin_followup_emails.sql` | UNIQUE `(reservation_id, template_key)` + dédoublonnage | ✅ |
 | 070 | `070_fix_rls_checkin_followup_emails_insert.sql` | RLS INSERT restreinte aux 4 rôles autorisés | ✅ |
+| 071 | `071_add_link_options_to_email_templates.sql` | 8 colonnes liens optionnels sur `email_templates` | ✅ |

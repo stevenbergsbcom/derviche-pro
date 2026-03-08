@@ -140,10 +140,15 @@ const MOCK_CHECKIN_FOLLOWUP: CheckinFollowupEmailData = {
   guestStructure: 'Théâtre de la Ville — Bordeaux',
   reservationId: 'preview-id',
   showTitle: 'Le Bal des Âmes',
+  showSlug: 'le-bal-des-ames',
   companyName: 'Compagnie des Miroirs',
   synopsis: 'Un voyage poétique et musical entre deux mondes, où les vivants et les morts se croisent le temps d\'une nuit.',
   durationFormatted: '1h20',
   targetAudiences: 'Tout public, À partir de 12 ans',
+  // URLs fictives pour la preview
+  folderUrl: 'https://drive.google.com/example-dossier',
+  teaserUrl: 'https://youtube.com/example-teaser',
+  captationUrl: 'https://vimeo.com/example-captation',
   slotDateFormatted: 'mercredi 15 avril 2026',
   slotTimeFormatted: '19h30',
   venueName: 'Théâtre de la Ville',
@@ -202,6 +207,15 @@ function buildTemplateFromParams(
     show_contact_block:    q.get('show_contact_block')    === 'true',
     show_reservation_code: q.get('show_reservation_code') === 'true',
     is_simple_style:       q.get('is_simple_style')       === 'true',
+    // Liens optionnels post-checkin (S149)
+    show_folder_link:      q.get('show_folder_link')      === 'true',
+    folder_link_text:      q.get('folder_link_text')      ?? 'Consulter le dossier de presse',
+    show_teaser_link:      q.get('show_teaser_link')      === 'true',
+    teaser_link_text:      q.get('teaser_link_text')      ?? 'Voir le teaser vidéo',
+    show_captation_link:   q.get('show_captation_link')   === 'true',
+    captation_link_text:   q.get('captation_link_text')   ?? 'Voir la captation vidéo',
+    show_booking_link:     q.get('show_booking_link')     === 'true',
+    booking_link_text:     q.get('booking_link_text')     ?? 'Réserver une place pour ce spectacle',
   };
 }
 
@@ -339,6 +353,15 @@ export async function GET(
         show_contact_block:    dbTemplate.show_contact_block    ?? false,
         show_reservation_code: dbTemplate.show_reservation_code ?? false,
         is_simple_style:       dbTemplate.is_simple_style       ?? false,
+        // Liens optionnels post-checkin (S149)
+        show_folder_link:      dbTemplate.show_folder_link      ?? false,
+        folder_link_text:      dbTemplate.folder_link_text      ?? 'Consulter le dossier de presse',
+        show_teaser_link:      dbTemplate.show_teaser_link      ?? false,
+        teaser_link_text:      dbTemplate.teaser_link_text      ?? 'Voir le teaser vidéo',
+        show_captation_link:   dbTemplate.show_captation_link   ?? false,
+        captation_link_text:   dbTemplate.captation_link_text   ?? 'Voir la captation vidéo',
+        show_booking_link:     dbTemplate.show_booking_link     ?? false,
+        booking_link_text:     dbTemplate.booking_link_text     ?? 'Réserver une place pour ce spectacle',
       };
     }
 

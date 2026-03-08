@@ -45,10 +45,19 @@ const REMINDER_KEYS: EmailTemplateKey[] = [
   'reminder_12h',
 ];
 
+/** Templates post-checkin (S144 — envoyés après le check-in selon le statut de présence) */
+const CHECKIN_FOLLOWUP_KEYS: EmailTemplateKey[] = [
+  'checkin_thank_you',
+  'checkin_loved',
+  'checkin_press',
+  'checkin_followup_absent',
+];
+
 /** Toutes les clés — utilisé pour le chargement initial */
 const TEMPLATE_KEYS: EmailTemplateKey[] = [
   ...TRANSACTIONAL_KEYS,
   ...REMINDER_KEYS,
+  ...CHECKIN_FOLLOWUP_KEYS,
 ];
 
 // ============================================
@@ -280,6 +289,23 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
       <Accordion type="single" collapsible className="space-y-2">
         {templates
           .filter((t) => (REMINDER_KEYS as string[]).includes(t.template_key))
+          .map((template) => (
+            <TemplateAccordionItem
+              key={template.template_key}
+              template={template}
+              isDirty={dirtyMap[template.template_key] ?? false}
+              canEdit={canEdit}
+              onDirtyChange={handleDirtyChange}
+              onSaved={handleSaved}
+            />
+          ))}
+      </Accordion>
+
+      {/* Groupe 3 : Emails post-checkin */}
+      <TemplateGroupSeparator label="Emails post accueil" />
+      <Accordion type="single" collapsible className="space-y-2">
+        {templates
+          .filter((t) => (CHECKIN_FOLLOWUP_KEYS as string[]).includes(t.template_key))
           .map((template) => (
             <TemplateAccordionItem
               key={template.template_key}

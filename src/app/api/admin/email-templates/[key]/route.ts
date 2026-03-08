@@ -42,6 +42,11 @@ const VALID_TEMPLATE_KEYS: EmailTemplateKey[] = [
   'reminder_7d',
   'reminder_2d',
   'reminder_12h',
+  // Post-checkin (S144)
+  'checkin_thank_you',
+  'checkin_loved',
+  'checkin_press',
+  'checkin_followup_absent',
 ];
 
 function isValidTemplateKey(key: string): key is EmailTemplateKey {
@@ -59,6 +64,15 @@ const updatePayloadSchema = z.object({
   contact_block_title:   z.string().max(100),
   show_contact_block:    z.boolean(),
   show_reservation_code: z.boolean(),
+  // Liens optionnels post-checkin (S149)
+  show_folder_link:      z.boolean(),
+  folder_link_text:      z.string().max(200),
+  show_teaser_link:      z.boolean(),
+  teaser_link_text:      z.string().max(200),
+  show_captation_link:   z.boolean(),
+  captation_link_text:   z.string().max(200),
+  show_booking_link:     z.boolean(),
+  booking_link_text:     z.string().max(200),
 });
 
 // ============================================

@@ -27,6 +27,20 @@ export function extractFirstName(fullName: string): string {
   return fullName.trim().split(' ')[0] ?? fullName;
 }
 
+/**
+ * Vérifie qu'une URL est sûre pour un attribut href.
+ * N'autorise que les schémas http: et https: pour éviter les injections javascript:.
+ */
+export function isSafeUrl(url: string | null | undefined): url is string {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 // ============================================
 // BLOCS HTML PARTAGÉS
 // ============================================
