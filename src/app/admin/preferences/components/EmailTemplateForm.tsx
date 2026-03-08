@@ -303,14 +303,16 @@ export function EmailTemplateForm({
       show_reservation_code: v.show_reservation_code ?? false,
       is_simple_style:       template.is_simple_style ?? false,
       // Liens optionnels post-checkin (S149)
+      // On utilise ?? (pas ||) pour rester cohérent avec defaultValues :
+      // si l'utilisateur vide un champ, la preview doit refléter ce vide.
       show_folder_link:      v.show_folder_link    ?? false,
-      folder_link_text:      v.folder_link_text    || 'Consulter le dossier de presse',
+      folder_link_text:      v.folder_link_text    ?? '',
       show_teaser_link:      v.show_teaser_link    ?? false,
-      teaser_link_text:      v.teaser_link_text    || 'Voir le teaser vidéo',
+      teaser_link_text:      v.teaser_link_text    ?? '',
       show_captation_link:   v.show_captation_link ?? false,
-      captation_link_text:   v.captation_link_text || 'Voir la captation vidéo',
+      captation_link_text:   v.captation_link_text ?? '',
       show_booking_link:     v.show_booking_link   ?? false,
-      booking_link_text:     v.booking_link_text   || 'Réserver une place pour ce spectacle',
+      booking_link_text:     v.booking_link_text   ?? '',
     };
   };
 
