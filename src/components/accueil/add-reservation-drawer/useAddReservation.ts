@@ -35,6 +35,7 @@ import { addReservationSchema, DEFAULT_FORM_VALUES } from './constants';
 import type {
   AddReservationFormData,
   AddReservationDrawerStep,
+  AddReservationState,
   CapacityInfo,
   UseAddReservationReturn,
 } from './types';
@@ -80,6 +81,7 @@ export function useAddReservation({
   const [capacityInfo, setCapacityInfo] = useState<CapacityInfo | null>(null);
   const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+  const [createdReservation, setCreatedReservation] = useState<AddReservationState['createdReservation']>(null);
 
   // Refs pour éviter les problèmes de race conditions et dépendances
   const isSubmittingRef = useRef(false);
@@ -141,6 +143,7 @@ export function useAddReservation({
       setDuplicateInfo(null);
       pendingFormDataRef.current = null;
       setShowDuplicateDialog(false);
+      setCreatedReservation(null);
     }
   }, [open, slotId, form]); // form stable (useForm), slotId pour resync si navigation avec drawer ouvert
 
@@ -231,7 +234,24 @@ export function useAddReservation({
         }
 
         onSuccess();
-        onOpenChange(false);
+
+        // Si un statut checkin est défini, afficher l'étape email avant de fermer
+        if (formData.checkinStatus && result.reservationId) {
+          setCreatedReservation({
+            id: result.reservationId,
+            guestFirstName: formData.firstName,
+            guestLastName: formData.lastName,
+            guestEmail: formData.email,
+            guestStructure: formData.organization ?? null,
+            numPlaces: formData.numPlaces,
+            checkinStatus: formData.checkinStatus,
+            status: 'confirmed',
+            checkinFollowupEmails: [],
+          });
+          setStep('success');
+        } else {
+          onOpenChange(false);
+        }
       } catch (error) {
         logger.error('useAddReservation - Erreur création réservation', { error });
         toast.error('Erreur lors de la création de la réservation');
@@ -321,6 +341,7 @@ export function useAddReservation({
       capacityInfo,
       duplicateInfo,
       showDuplicateDialog,
+      createdReservation,
     }),
     [
       step,
@@ -331,6 +352,7 @@ export function useAddReservation({
       capacityInfo,
       duplicateInfo,
       showDuplicateDialog,
+      createdReservation,
     ]
   );
 

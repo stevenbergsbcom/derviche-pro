@@ -303,22 +303,31 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 11. Enregistrer l'envoi dans checkin_followup_emails
-    const { error: insertError } = await adminClient
+    // Upsert : met à jour sent_at si l'email avait déjà été envoyé (renvoi)
+    const { error: upsertError } = await adminClient
       .from('checkin_followup_emails')
-      .insert({
-        reservation_id: reservationId,
-        template_key:   templateKey,
-        sent_by:        user.id,
-        sent_at:        new Date().toISOString(),
-      });
+      .upsert(
+        {
+          reservation_id: reservationId,
+          template_key:   templateKey,
+          sent_by:        user.id,
+          sent_at:        new Date().toISOString(),
+        },
+        { onConflict: 'reservation_id,template_key' }
+      );
 
-    if (insertError) {
-      // Non-bloquant : l'email est envoyé, on logue seulement
-      logger.error('[API /emails/send-checkin-followup] Erreur insert tracking', {
+    if (upsertError) {
+      // Bloquant : l'émail est envoyé mais le tracking a échoué — on le signale au client
+      // pour éviter la désync UI / BDD
+      logger.error('[API /emails/send-checkin-followup] Erreur upsert tracking', {
         reservationId,
         templateKey,
-        error: insertError.message,
+        error: upsertError.message,
       });
+      return NextResponse.json(
+        { success: false, error: 'Email envoyé mais erreur d\u2019enregistrement du suivi' },
+        { status: 500 }
+      );
     }
 
     logger.info('[API /emails/send-checkin-followup] Succès', {

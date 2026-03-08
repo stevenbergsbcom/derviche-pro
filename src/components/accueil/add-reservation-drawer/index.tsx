@@ -25,6 +25,9 @@ import {
   CheckinFieldsSection,
   FormFooter,
 } from './sections';
+import { CheckinEmailsSection } from '@/components/accueil/checkin-drawer/sections/CheckinEmailsSection';
+import { Button } from '@/components/ui/button';
+import { CheckCircle } from 'lucide-react';
 import type { AddReservationDrawerProps } from './types';
 
 export type { AddReservationDrawerProps } from './types';
@@ -57,6 +60,7 @@ export function AddReservationDrawer({
     isStaffDD,
   } = useAddReservation({ slotId, open, onSuccess, onOpenChange });
 
+  // 'success' n'est pas une étape du stepper — c'est un écran post-soumission
   const steps = slotId
     ? (['search', 'form'] as const)
     : (['select-slot', 'search', 'form'] as const);
@@ -96,7 +100,8 @@ export function AddReservationDrawer({
         >
           <DrawerHeader />
 
-          {/* Indicateur d'étape */}
+          {/* Indicateur d'étape (masqué sur l'écran de succès) */}
+          {state.step !== 'success' && (
           <div className="px-4 py-3 flex items-center gap-2 border-b" role="list" aria-label="Étapes">
             {steps.map((s, i) => {
               const isActive = s === state.step;
@@ -138,6 +143,7 @@ export function AddReservationDrawer({
               );
             })}
           </div>
+          )}
 
           <div className="flex-1 overflow-y-auto overscroll-contain">
             {/* Étape 1 : Sélection show/créneau */}
@@ -195,6 +201,39 @@ export function AddReservationDrawer({
 
                 <FormFooter isSubmitting={state.isSubmitting} />
               </form>
+            )}
+
+            {/* Étape 4 : Succès — emails post-checkin */}
+            {state.step === 'success' && state.createdReservation && (
+              <div className="p-5 space-y-5">
+                {/* En-tête de confirmation */}
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200">
+                  <CheckCircle className="w-6 h-6 text-green-600 shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-base font-semibold text-green-800">Réservation créée</p>
+                    <p className="text-sm text-green-700">
+                      {state.createdReservation.guestFirstName} {state.createdReservation.guestLastName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Emails post-checkin */}
+                <CheckinEmailsSection
+                  reservation={state.createdReservation}
+                  currentStatus={state.createdReservation.checkinStatus}
+                  canSendCheckinEmails={true}
+                />
+
+                {/* Bouton Fermer */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Fermer
+                </Button>
+              </div>
             )}
           </div>
         </DrawerContent>
