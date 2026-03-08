@@ -46,7 +46,7 @@ export interface UseCheckinFormReturn {
   resetFromReservation: (reservation: ReservationRowData) => void;
   
   /** Vérifie si des modifications ont été faites */
-  checkHasChanges: (reservation: ReservationRowData, isAdmin: boolean) => boolean;
+  checkHasChanges: (reservation: ReservationRowData) => boolean;
 }
 
 // ============================================
@@ -88,8 +88,8 @@ export function useCheckinForm(): UseCheckinFormReturn {
   // CHECK HAS CHANGES
   // ==========================================
   
-  const checkHasChanges = useCallback((reservation: ReservationRowData, isAdmin: boolean) => {
-    return hasCheckinChanges(checkinForm, reservation, isAdmin);
+  const checkHasChanges = useCallback((reservation: ReservationRowData) => {
+    return hasCheckinChanges(checkinForm, reservation);
   }, [checkinForm]);
 
   // ==========================================

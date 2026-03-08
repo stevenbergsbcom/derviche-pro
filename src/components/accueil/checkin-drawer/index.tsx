@@ -4,7 +4,7 @@
  * 
  * Permet de marquer le statut de présence d'un invité
  * avec 4 options : Présent, Coup de cœur, Presse, Absent
- * + commentaire, notes venue, notes internes (admin only)
+ * + commentaire, notes venue, notes internes (staff DD uniquement, pas les compagnies)
  * + édition des 13 champs guest
  */
 
@@ -118,7 +118,6 @@ export function CheckinDrawer({
           {/* Notes (commentaire, venue, internes) */}
           <NotesSection
             checkinForm={drawer.checkinForm}
-            isAdmin={drawer.isAdmin}
             isSubmitting={drawer.uiState.isSubmitting}
             onCommentChange={drawer.setComment}
             onVenueNotesChange={drawer.setVenueNotes}

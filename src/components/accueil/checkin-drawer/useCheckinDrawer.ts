@@ -94,8 +94,8 @@ export function useCheckinDrawer({
 
   const hasChanges = useMemo(() => {
     if (!reservation) return false;
-    return checkGuestHasChanges(reservation) || checkCheckinHasChanges(reservation, isAdmin);
-  }, [reservation, checkGuestHasChanges, checkCheckinHasChanges, isAdmin]);
+    return checkGuestHasChanges(reservation) || checkCheckinHasChanges(reservation);
+  }, [reservation, checkGuestHasChanges, checkCheckinHasChanges]);
 
   const isResettingStatus = checkinForm.selectedStatus === null && reservation?.checkinStatus !== null;
   const canSave = (checkinForm.selectedStatus !== null || isResettingStatus || hasChanges) && !accessLoading;

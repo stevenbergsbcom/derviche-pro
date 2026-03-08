@@ -194,6 +194,24 @@ function ReservationCard({ reservation }: ReservationCardProps) {
           <p>{reservation.email}</p>
           <p>{reservation.numPlaces} place{reservation.numPlaces > 1 ? 's' : ''}</p>
         </div>
+
+        {/* Ligne 5: Demandes + notes (si renseignées) */}
+        {(reservation.specialRequests || reservation.checkinNotes || reservation.checkinVenueNotes || reservation.cancellationReason) && (
+          <div className="text-xs text-muted-foreground space-y-0.5 border-t border-border pt-2">
+            {reservation.specialRequests && (
+              <p><span className="font-medium text-foreground">Demandes :</span> {reservation.specialRequests}</p>
+            )}
+            {reservation.checkinNotes && (
+              <p><span className="font-medium text-foreground">Note check-in :</span> {reservation.checkinNotes}</p>
+            )}
+            {reservation.checkinVenueNotes && (
+              <p><span className="font-medium text-foreground">Note lieu :</span> {reservation.checkinVenueNotes}</p>
+            )}
+            {reservation.cancellationReason && (
+              <p><span className="font-medium text-foreground">Motif annulation :</span> {reservation.cancellationReason}</p>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -168,7 +168,7 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   
   // Notes et métadonnées
   specialRequests: { label: 'Demandes', defaultVisible: false },
-  checkinNotes: { label: 'Notes check-in', defaultVisible: false },
+  checkinNotes: { label: 'Notes accueil', defaultVisible: false },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   checkinInternalNotes: { label: 'Notes internes', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
@@ -401,7 +401,7 @@ export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn
   
   // Notes et métadonnées (SANS notes internes)
   specialRequests: { label: 'Demandes', defaultVisible: false },
-  checkinNotes: { label: 'Notes check-in', defaultVisible: false },
+  checkinNotes: { label: 'Notes accueil', defaultVisible: false },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
 };

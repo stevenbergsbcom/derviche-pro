@@ -72,6 +72,7 @@ export interface CompanyReservation {
   // Timestamps
   createdAt: string;
   cancelledAt: string | null;
+  cancellationReason: string | null;
   
   // Relations
   slot: CompanyReservationSlot | null;
@@ -205,6 +206,7 @@ function transformReservation(
     // Timestamps
     createdAt: row.created_at,
     cancelledAt: row.cancelled_at,
+    cancellationReason: row.cancellation_reason || null,
     
     // Relations
     slot: slot ? {
@@ -304,6 +306,7 @@ export async function getCompanyReservations(
         checkin_venue_notes,
         created_at,
         cancelled_at,
+        cancellation_reason,
         slots!inner (
           id,
           date,
@@ -479,6 +482,7 @@ export async function getAllCompanyReservationsForExport(
         checkin_venue_notes,
         created_at,
         cancelled_at,
+        cancellation_reason,
         slots!inner (
           id,
           date,

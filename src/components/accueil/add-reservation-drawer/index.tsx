@@ -54,7 +54,6 @@ export function AddReservationDrawer({
     handleSkipSearch,
     handleConfirmDuplicate,
     handleCancelDuplicate,
-    isAdmin,
   } = useAddReservation({ slotId, open, onSuccess, onOpenChange });
 
   const steps = slotId
@@ -179,7 +178,6 @@ export function AddReservationDrawer({
                     isSubmitting={state.isSubmitting}
                     isOpen={state.checkinFieldsOpen}
                     onOpenChange={setCheckinFieldsOpen}
-                    isAdmin={isAdmin}
                   />
                 </div>
 

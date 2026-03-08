@@ -41,7 +41,7 @@ export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   status: 'Statut',
   checkinStatus: 'Check-in',
   specialRequests: 'Demandes',
-  checkinNotes: 'Notes check-in',
+  checkinNotes: 'Notes accueil',
   checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
 };
