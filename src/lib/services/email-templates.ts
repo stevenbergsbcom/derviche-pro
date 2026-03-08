@@ -53,10 +53,22 @@ export interface EmailTemplateUpdateResult {
 export interface EmailTemplateVariables {
   prénom?: string;
   nom?: string;
+  /** Structure / organisation du professionnel */
+  structure?: string;
   spectacle?: string;
+  /** Nom de la compagnie artistique */
+  compagnie?: string;
   date?: string;
   heure?: string;
   lieu?: string;
+  /** Ville du lieu de représentation */
+  ville?: string;
+  /** Synopsis court du spectacle (short_description en DB) */
+  synopsis?: string;
+  /** Durée du spectacle formatée (ex: "1h15") */
+  durée?: string;
+  /** Public(s) cible(s) du spectacle (concaténés en texte) */
+  public_cible?: string;
   code?: string;
   organisation?: string;
   /** Spécifique au template admin_notification : libellé de l'événement déclencheur */
@@ -202,15 +214,21 @@ export function resolveTemplateVariables(
   if (!text) return '';
 
   return text
-    .replace(/\{\{prénom\}\}/g,       variables.prénom       ?? '{{prénom}}')
-    .replace(/\{\{nom\}\}/g,          variables.nom          ?? '{{nom}}')
-    .replace(/\{\{spectacle\}\}/g,    variables.spectacle    ?? '{{spectacle}}')
-    .replace(/\{\{date\}\}/g,         variables.date         ?? '{{date}}')
-    .replace(/\{\{heure\}\}/g,        variables.heure        ?? '{{heure}}')
-    .replace(/\{\{lieu\}\}/g,         variables.lieu         ?? '{{lieu}}')
-    .replace(/\{\{code\}\}/g,         variables.code         ?? '{{code}}')
-    .replace(/\{\{organisation\}\}/g, variables.organisation ?? '{{organisation}}')
-    .replace(/\{\{événement\}\}/g,    variables.événement    ?? '{{événement}}');
+    .replace(/\{\{prénom\}\}/g,        variables.prénom        ?? '{{prénom}}')
+    .replace(/\{\{nom\}\}/g,           variables.nom           ?? '{{nom}}')
+    .replace(/\{\{structure\}\}/g,     variables.structure     ?? '{{structure}}')
+    .replace(/\{\{spectacle\}\}/g,     variables.spectacle     ?? '{{spectacle}}')
+    .replace(/\{\{compagnie\}\}/g,     variables.compagnie     ?? '{{compagnie}}')
+    .replace(/\{\{date\}\}/g,          variables.date          ?? '{{date}}')
+    .replace(/\{\{heure\}\}/g,         variables.heure         ?? '{{heure}}')
+    .replace(/\{\{lieu\}\}/g,          variables.lieu          ?? '{{lieu}}')
+    .replace(/\{\{ville\}\}/g,         variables.ville         ?? '{{ville}}')
+    .replace(/\{\{synopsis\}\}/g,      variables.synopsis      ?? '{{synopsis}}')
+    .replace(/\{\{durée\}\}/g,         variables.durée         ?? '{{durée}}')
+    .replace(/\{\{public_cible\}\}/g,  variables.public_cible  ?? '{{public_cible}}')
+    .replace(/\{\{code\}\}/g,          variables.code          ?? '{{code}}')
+    .replace(/\{\{organisation\}\}/g,  variables.organisation  ?? '{{organisation}}')
+    .replace(/\{\{événement\}\}/g,     variables.événement     ?? '{{événement}}');
 }
 
 /**

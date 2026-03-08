@@ -26,13 +26,17 @@ import {
   CancelledBanner,
   AnomalyBanner,
   ValidationErrors,
+  CheckinAndEmailsSection,
   SlotPlacesSection,
   PersonalInfoSection,
   ProfessionalInfoSection,
   AddressSection,
   NotesSection,
 } from './components';
+import { useState, useEffect } from 'react';
 import type { EditReservationDialogProps } from './types';
+import type { CheckinStatus } from '@/types/database';
+import { updateReservationCheckin } from '@/lib/services/admin-reservations';
 
 // ============================================
 // COMPOSANT PRINCIPAL
@@ -46,6 +50,7 @@ export function EditReservationDialog({
   onCancel,
   onGetSlots,
   isSaving,
+  onCheckinUpdated,
 }: EditReservationDialogProps) {
   // Hook de gestion du formulaire
   const {
@@ -70,12 +75,48 @@ export function EditReservationDialog({
     onGetSlots,
   });
 
+  // État local du statut checkin — doit être avant tout return conditionnel
+  const [checkinStatus, setCheckinStatus] = useState<CheckinStatus | null>(
+    reservation?.checkinStatus ?? null
+  );
+  const [isUpdatingCheckin, setIsUpdatingCheckin] = useState(false);
+
+  // Synchroniser si la réservation change (ex: deep-link)
+  useEffect(() => {
+    setCheckinStatus(reservation?.checkinStatus ?? null);
+  }, [reservation?.id, reservation?.checkinStatus]);
+
   // Ne pas rendre si pas de réservation
   if (!reservation) return null;
 
   const isCancelled = reservation.status === 'cancelled';
   // Afficher les switches de notif seulement si le créneau a changé
   const slotChanged = formData?.slotId !== undefined && formData.slotId !== reservation.slot?.id;
+
+  const handleCheckinChange = async (status: CheckinStatus | null) => {
+    if (status === checkinStatus) return;
+    setCheckinStatus(status); // optimiste
+    setIsUpdatingCheckin(true);
+    try {
+      if (status !== null) {
+        await updateReservationCheckin(reservation.id, { checkinStatus: status });
+      } else {
+        // Reset à null : mise à jour directe via Supabase client
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        await supabase
+          .from('reservations')
+          .update({ checkin_status: null, checkin_at: null })
+          .eq('id', reservation.id);
+      }
+      // Notifier le parent pour rafraîchir ses données (corrige le bouton stale)
+      onCheckinUpdated?.(reservation.id, status);
+    } catch {
+      setCheckinStatus(reservation?.checkinStatus ?? null); // rollback
+    } finally {
+      setIsUpdatingCheckin(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -98,6 +139,17 @@ export function EditReservationDialog({
         <AnomalyBanner hasAnomaly={reservation.hasDataAnomaly} />
         
         <ValidationErrors errors={validationErrors} />
+
+        {/* Checkin & Emails */}
+        <CheckinAndEmailsSection
+          reservationId={reservation.id}
+          reservationStatus={reservation.status as 'confirmed' | 'cancelled' | 'no_show'}
+          currentCheckinStatus={checkinStatus}
+          guestEmail={reservation.email}
+          checkinFollowupEmails={reservation.checkinFollowupEmails}
+          isSaving={isSaving || isUpdatingCheckin}
+          onCheckinChange={(s) => void handleCheckinChange(s)}
+        />
 
         {/* Indicateur de chargement du formulaire */}
         {!isFormReady && (

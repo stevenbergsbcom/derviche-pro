@@ -326,6 +326,7 @@ export async function transferReservation(
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
       googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: [],
     };
 
     logger.info('checkin.transferReservation - Succès', {

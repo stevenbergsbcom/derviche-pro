@@ -145,7 +145,7 @@ export async function getReservationsBySlot(slotId: string): Promise<AdminReserv
     }
 
     const reservations = transformReservations(
-      (data || []) as ReservationRowWithRelations[]
+      (data || []) as unknown as ReservationRowWithRelations[]
     );
 
     return { data: reservations, error: null };

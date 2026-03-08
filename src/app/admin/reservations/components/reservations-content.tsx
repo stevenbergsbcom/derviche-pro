@@ -44,8 +44,6 @@ export interface ReservationsContentProps {
   onResetFilters: () => void;
   onSortChange: (sortBy: SortOption | string | undefined) => void;
   onEdit: (reservation: AdminReservation) => void;
-  onCheckin: (reservation: AdminReservation) => void;
-  onCancel: (reservation: AdminReservation) => void;
 }
 
 // ============================================
@@ -111,8 +109,6 @@ export function ReservationsContent({
   onResetFilters,
   onSortChange,
   onEdit,
-  onCheckin,
-  onCancel,
 }: ReservationsContentProps) {
   // États spéciaux
   if (isLoading) {
@@ -141,9 +137,7 @@ export function ReservationsContent({
             key={reservation.id}
             reservation={reservation}
             visibleColumns={columns}
-            onCheckin={onCheckin}
             onEdit={onEdit}
-            onCancel={onCancel}
           />
         ))}
       </div>
@@ -188,10 +182,7 @@ export function ReservationsContent({
                     >
                       <td className="p-2 align-middle">
                         <RowHoverActions
-                          reservation={r}
                           onEdit={() => onEdit(r)}
-                          onCheckin={() => onCheckin(r)}
-                          onCancel={() => onCancel(r)}
                         />
                       </td>
                       {columns.map((col) => (

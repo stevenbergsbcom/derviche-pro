@@ -348,6 +348,19 @@ export function useAdminReservations(
   // SLOTS
   // ─────────────────────────────────────────────────────────────
 
+  /**
+   * Met à jour un champ d'une réservation dans la liste en mémoire
+   * sans déclencher de rechargement ni changer l'ordre du tableau.
+   */
+  const patchReservation = useCallback(
+    (id: string, patch: Partial<AdminReservation>) => {
+      setReservations((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, ...patch } : r))
+      );
+    },
+    []
+  );
+
   const getSlots = useCallback(async (showId: string) => {
     const result = await getAvailableSlotsForShow(showId);
     if (result.error) {
@@ -421,5 +434,6 @@ export function useAdminReservations(
     setPageSize,
     setFilters,
     resetFilters,
+    patchReservation,
   };
 }

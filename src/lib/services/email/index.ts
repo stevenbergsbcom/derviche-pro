@@ -36,11 +36,13 @@ import { buildConfirmationHtml }      from './builders/confirmation';
 import { buildCancellationHtml }      from './builders/cancellation';
 import { buildModificationHtml }      from './builders/modification';
 import { buildAdminNotificationHtml } from './builders/admin-notification';
+import { buildSimpleHtml }            from './builders/simple';
 import type {
   ReservationConfirmationEmailData,
   ReservationCancellationEmailData,
   ReservationModificationEmailData,
   AdminNotificationEmailData,
+  CheckinFollowupEmailData,
   SendEmailResult,
 } from './types';
 
@@ -237,6 +239,58 @@ export async function sendAdminNotificationEmail(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendAdminNotificationEmail', { message });
+    return { success: false, error: message };
+  }
+}
+
+export async function sendCheckinFollowupEmail(
+  data: CheckinFollowupEmailData,
+  templateKey: import('@/types/email-templates').CheckinFollowupTemplateKey
+): Promise<SendEmailResult> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    logger.error('[email] RESEND_API_KEY manquante');
+    return { success: false, error: 'Configuration email manquante' };
+  }
+
+  try {
+    const [config, tplResult] = await Promise.all([
+      getEmailConfig(),
+      getEmailTemplate(templateKey),
+    ]);
+    if (tplResult.error) logger.warn('[email] Fallback checkin followup', { error: tplResult.error, templateKey });
+    const template = tplResult.data ?? getFallbackTemplate(templateKey);
+    const html     = buildSimpleHtml(data, config, template);
+
+    // Variables pour le sujet (non échappées — Resend gère l'encodage de l'objet)
+    const subject = resolveTemplateVariables(template.subject, {
+      prénom:       data.guestFullName.trim().split(' ')[0] ?? data.guestFullName,
+      spectacle:    data.showTitle,
+      compagnie:    data.companyName,
+      organisation: config.organizationName,
+    } as EmailTemplateVariables);
+
+    const { data: result, error } = await new Resend(apiKey).emails.send({
+      from:    `${config.fromName} <${config.fromAddress}>`,
+      to:      data.to,
+      replyTo: config.replyTo,
+      subject,
+      html,
+    });
+
+    if (error) {
+      logger.error('[email] Erreur Resend checkin followup', { error, templateKey });
+      return { success: false, error: error.message };
+    }
+    logger.info('[email] Checkin followup envoyé', {
+      messageId: result?.id,
+      reservationId: data.reservationId,
+      templateKey,
+    });
+    return { success: true, messageId: result?.id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('[email] Exception sendCheckinFollowupEmail', { message, templateKey });
     return { success: false, error: message };
   }
 }

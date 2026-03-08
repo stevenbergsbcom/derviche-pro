@@ -22,7 +22,12 @@ export type EmailTemplateKey =
   | 'admin_notification'
   | 'reminder_7d'
   | 'reminder_2d'
-  | 'reminder_12h';
+  | 'reminder_12h'
+  // Post-checkin (S144)
+  | 'checkin_thank_you'
+  | 'checkin_loved'
+  | 'checkin_press'
+  | 'checkin_followup_absent';
 
 // ============================================
 // INTERFACE PRINCIPALE
@@ -68,6 +73,11 @@ export interface EmailTemplate {
   show_contact_block: boolean;
   /** Afficher ou masquer le code de réservation */
   show_reservation_code: boolean;
+  /**
+   * Style sobre (fond blanc, texte noir) vs style graphique (header bleu Derviche).
+   * true = email sobre style personnel, false = design graphique standard.
+   */
+  is_simple_style: boolean;
   /** Template actif ou désactivé */
   is_active: boolean;
   created_at: string;
@@ -91,6 +101,7 @@ export type EmailTemplateUpdatePayload = Pick<
   | 'contact_block_title'
   | 'show_contact_block'
   | 'show_reservation_code'
+  | 'is_simple_style'
 >;
 
 // ============================================
@@ -103,11 +114,17 @@ export type EmailTemplateUpdatePayload = Pick<
  */
 export const EMAIL_TEMPLATE_VARIABLES = [
   { key: '{{prénom}}',       description: 'Prénom du professionnel' },
-  { key: '{{nom}}',          description: 'Nom du professionnel' },
+  { key: '{{nom}}',          description: 'Nom complet du professionnel' },
+  { key: '{{structure}}',    description: 'Structure / organisation du professionnel' },
   { key: '{{spectacle}}',    description: 'Titre du spectacle' },
+  { key: '{{compagnie}}',    description: 'Nom de la compagnie' },
   { key: '{{date}}',         description: 'Date du créneau' },
   { key: '{{heure}}',        description: 'Heure du créneau' },
   { key: '{{lieu}}',         description: 'Nom du lieu' },
+  { key: '{{ville}}',        description: 'Ville du lieu' },
+  { key: '{{synopsis}}',     description: 'Synopsis court du spectacle' },
+  { key: '{{durée}}',        description: 'Durée du spectacle (ex: 1h15)' },
+  { key: '{{public_cible}}', description: 'Public(s) cible(s) du spectacle' },
   { key: '{{code}}',         description: 'Code de réservation' },
   { key: '{{organisation}}', description: 'Nom de l\'organisation' },
   /** Spécifique au template admin_notification : libellé de l'événement (ex: "Nouvelle réservation") */
@@ -122,11 +139,37 @@ export type EmailTemplateVariableKey =
 // ============================================
 
 export const EMAIL_TEMPLATE_NAMES: Record<EmailTemplateKey, string> = {
-  reservation_confirmation: 'Confirmation de réservation',
-  reservation_cancellation: 'Annulation de réservation',
-  reservation_modification: 'Modification de créneau',
-  admin_notification:       'Notification admin (interne)',
-  reminder_7d:              'Rappel J-7 (7 jours avant)',
-  reminder_2d:              'Rappel J-2 (2 jours avant)',
-  reminder_12h:             'Rappel H-12 (12 heures avant)',
+  reservation_confirmation:  'Confirmation de réservation',
+  reservation_cancellation:  'Annulation de réservation',
+  reservation_modification:  'Modification de créneau',
+  admin_notification:        'Notification admin (interne)',
+  reminder_7d:               'Rappel J-7 (7 jours avant)',
+  reminder_2d:               'Rappel J-2 (2 jours avant)',
+  reminder_12h:              'Rappel H-12 (12 heures avant)',
+  // Post-checkin (S144)
+  checkin_thank_you:         'Remerciement présence',
+  checkin_loved:             'Coup de cœur ❤️',
+  checkin_press:             'Suivi presse',
+  checkin_followup_absent:   'Suivi absence',
 };
+
+// ============================================
+// TYPES POST-CHECKIN (S144)
+// ============================================
+
+/** Clés de templates post-checkin uniquement */
+export type CheckinFollowupTemplateKey =
+  | 'checkin_thank_you'
+  | 'checkin_loved'
+  | 'checkin_press'
+  | 'checkin_followup_absent';
+
+/** Ligne de la table checkin_followup_emails */
+export interface CheckinFollowupEmailRow {
+  id: string;
+  reservation_id: string;
+  template_key: CheckinFollowupTemplateKey;
+  sent_at: string;
+  sent_by: string | null;
+  created_at: string;
+}

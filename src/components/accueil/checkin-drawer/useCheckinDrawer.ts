@@ -12,16 +12,22 @@
 
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { toast } from 'sonner';
+import { logger } from '@/lib/logger';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import type { ReservationRowData } from '../ReservationRow';
 import type { UseCheckinDrawerReturn } from './types';
 import { useGuestForm, useCheckinForm, useCheckinActions } from './hooks';
+import { updateCheckinStatus } from '@/lib/services/checkin';
+import { mapResultToReservationUpdate } from './helpers';
+import type { CheckinResultData, GuestResultData } from './helpers';
 import {
   DEFAULT_NOTIFICATION_OPTIONS,
   type NotificationOptions,
 } from '@/components/admin/reservations/notification-switches';
 import { getFullName } from './constants';
+import type { CheckinStatus } from '@/types/database';
 
 // ============================================
 // PROPS DU HOOK
@@ -48,6 +54,8 @@ export function useCheckinDrawer({
   const { userId, role, companyId, isAdmin, isLoading: accessLoading } = useCheckinAccess();
   // Vrai pour tout le staff DD (admin + externe) — jamais pour les compagnies
   const isStaffDD = role !== null && role !== 'company';
+  // Emails post-checkin : staff DD + compagnies (jamais les professionnels)
+  const canSendCheckinEmails = role !== null && role !== 'professional';
   
   const {
     guestForm,
@@ -125,6 +133,56 @@ export function useCheckinDrawer({
     reactivateNotifOptions,
   });
 
+  // ==========================================
+  // HANDLER - Auto-save du statut (sans fermer le drawer)
+  // ==========================================
+  const isSavingStatusRef = useRef(false);
+
+  const handleAutoSaveStatus = useCallback(async (status: CheckinStatus | null) => {
+    if (!reservation || !userId || !role) return;
+    if (isSavingStatusRef.current) return;
+
+    isSavingStatusRef.current = true;
+    try {
+      const result = await updateCheckinStatus({
+        reservationId: reservation.id,
+        status,
+        comment: null,
+        venueNotes: null,
+        internalNotes: undefined,
+        userId,
+        role,
+        companyId,
+        guestFirstName: guestForm.firstName.trim() || undefined,
+        guestLastName: guestForm.lastName.trim() || undefined,
+        guestEmail: guestForm.email.trim() || undefined,
+        guestPhone: guestForm.phone.trim() || undefined,
+        guestStructure: guestForm.structure.trim() || undefined,
+      });
+
+      if (!result.success || !result.data) {
+        toast.error(result.error || 'Erreur lors de la sauvegarde du statut');
+        // Rollback : revenir au statut BDD
+        setSelectedStatus(reservation.checkinStatus ?? null);
+        return;
+      }
+
+      // Notifier le parent sans fermer le drawer
+      const updatedReservation = mapResultToReservationUpdate(
+        reservation,
+        result.data as GuestResultData,
+        result.data as CheckinResultData
+      );
+      onSuccess(updatedReservation);
+    } catch (err) {
+      logger.error('[handleAutoSaveStatus] Exception', err as Error);
+      toast.error('Erreur lors de la sauvegarde du statut');
+      setSelectedStatus(reservation.checkinStatus ?? null);
+    } finally {
+      isSavingStatusRef.current = false;
+    }
+  }, [reservation, userId, role, companyId, guestForm, setSelectedStatus, onSuccess]);
+
   // Ouvre la modale de confirmation d'annulation
   const handleCancelClick = useCallback(() => {
     setCancelDialogOpen(true);
@@ -200,6 +258,7 @@ export function useCheckinDrawer({
     handleSave,
     handleReactivate,
     handleCancel: handleCancelWithDialog,
+    handleAutoSaveStatus,
 
     // Modale de confirmation d'annulation
     cancelDialogOpen,
@@ -213,6 +272,7 @@ export function useCheckinDrawer({
     isCancelled,
     isAdmin,
     isStaffDD,
+    canSendCheckinEmails,
     accessLoading,
 
     // Options de notification (réactivation uniquement)

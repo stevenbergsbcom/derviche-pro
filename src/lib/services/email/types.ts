@@ -84,6 +84,35 @@ export interface AdminNotificationEmailData {
 }
 
 // ============================================
+// POST-CHECKIN (S144)
+// ============================================
+
+/** Données enrichies pour les emails post-checkin */
+export interface CheckinFollowupEmailData extends ManagerContact {
+  to: string;
+  /** Nom complet du professionnel */
+  guestFullName: string;
+  /** Structure / organisation du professionnel */
+  guestStructure: string | null;
+  reservationId: string;
+  // Spectacle
+  showTitle: string;
+  companyName: string;
+  /** Synopsis court (short_description en DB) */
+  synopsis: string | null;
+  /** Durée formatée (ex: "1h15") */
+  durationFormatted: string | null;
+  /** Publics cibles concaténés (ex: "Tout public, Jeune public") */
+  targetAudiences: string | null;
+  // Créneau
+  slotDateFormatted: string;
+  slotTimeFormatted: string;
+  // Lieu
+  venueName: string;
+  venueCity: string;
+}
+
+// ============================================
 // RÉSULTAT D'ENVOI
 // ============================================
 

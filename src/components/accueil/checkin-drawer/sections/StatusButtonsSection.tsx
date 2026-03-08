@@ -18,8 +18,10 @@ import type { CheckinStatus } from '@/types/database';
 export interface StatusButtonsSectionProps {
   /** Statut actuellement sélectionné */
   selectedStatus: CheckinStatus | null;
-  /** Callback de changement de statut */
+  /** Callback de changement de statut (met à jour le state local) */
   onStatusChange: (status: CheckinStatus | null) => void;
+  /** Callback d'auto-save immédiat en BDD */
+  onAutoSave: (status: CheckinStatus | null) => Promise<void>;
   /** La réservation est-elle annulée ? */
   isCancelled: boolean;
   /** En cours de traitement ? */
@@ -33,6 +35,7 @@ export interface StatusButtonsSectionProps {
 export function StatusButtonsSection({
   selectedStatus,
   onStatusChange,
+  onAutoSave,
   isCancelled,
   isSubmitting,
 }: StatusButtonsSectionProps) {
@@ -57,7 +60,10 @@ export function StatusButtonsSection({
             <button
               key={config.status}
               type="button"
-              onClick={() => onStatusChange(config.status)}
+              onClick={() => {
+                onStatusChange(config.status);
+                void onAutoSave(config.status);
+              }}
               disabled={isSubmitting}
               aria-label={`Marquer comme ${config.label}`}
               aria-pressed={isActive}
@@ -85,7 +91,10 @@ export function StatusButtonsSection({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => onStatusChange(null)}
+          onClick={() => {
+            onStatusChange(null);
+            void onAutoSave(null);
+          }}
           disabled={isSubmitting}
           aria-label="Réinitialiser le statut de présence"
           className="mt-3 w-full text-muted-foreground hover:text-foreground"

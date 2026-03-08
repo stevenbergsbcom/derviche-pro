@@ -53,7 +53,7 @@ export async function getAdminReservationById(id: string): Promise<AdminReservat
       return { data: null, error: error.message };
     }
 
-    const reservation = transformReservation(data as ReservationRowWithRelations);
+    const reservation = transformReservation(data as unknown as ReservationRowWithRelations);
     return { data: reservation, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : ERROR_MESSAGES.EXCEPTION;

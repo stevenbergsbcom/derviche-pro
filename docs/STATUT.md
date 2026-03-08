@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session 142 — Harmonisation UX PWA mobile + corrections post-audit, mergé main — 6 mars 2026
+> Dernière mise à jour : Session 143-bis — Sécurité notes internes + harmonisation champs commentaires, mergé main — 8 mars 2026
 
 ---
 
@@ -36,6 +36,10 @@
 - **S142** : `TransferFooter` — boutons h-12/text-base
 - **S142** : `TransferSlotDrawer` — visualViewport (clavier mobile)
 - **S142** : `SlotsList` — représentations passées masquées par défaut, révélées via bouton collapsible
+- **S143** : Annulations masquées par défaut dans la liste PWA, bouton collapsible pour les afficher
+- **S143** : Recherche globale (`GlobalSearchSheet` + `useGlobalSearch` + `search.ts`) — ouvre directement le drawer
+- **S143-bis** : Harmonisation labels commentaires/notes (Notes accueil, Notes internes Derviche, Demandes spéciales)
+- **S143-bis** : Sécurité notes internes — `isStaffDD` (role !== 'company') → absent du DOM pour les compagnies
 
 ### ✅ Admin (100%)
 | Module | État |
@@ -58,6 +62,8 @@
 
 ### ✅ Company (100%)
 - Dashboard, liste/filtres réservations, statistiques, export, mon compte
+- Voit : `special_requests`, `checkin_comment`, `checkin_venue_notes`, `cancellation_reason`
+- Ne voit jamais : `checkin_internal_notes` (UI + service + RPC)
 
 ### ✅ Emails transactionnels (100%)
 | Type | Route API | Statut |
@@ -117,43 +123,70 @@
 
 ---
 
-## Dernier travail (Session 142 — 6 mars 2026)
+## Dernier travail (Session 143-bis — 8 mars 2026)
 
 ### Contexte
-Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation UX complète des composants PWA checkin-drawer + transfer-slot-drawer pour uniformiser l'expérience mobile.
+Audit des champs commentaire/notes sur les réservations. Harmonisation des labels, correction d'une faille de sécurité UI (notes internes visibles par les compagnies), décisions métier sur l'accès par rôle.
 
-### Corrections S141 (appliquées avant S142)
-- `DrawerHeaderProps` mort supprimé de `types.ts`
-- `aria-label` sur boutons Annuler/Créer du dialog admin
-- `p_country` ajouté dans `updateReservation` mutations
-- Migration 065 (renommage 062) + Migration 066 (`update_reservation_safe` avec `p_country`)
-- Fix UX mobile : `autoFocus` supprimé sur SearchStep, `visualViewport` hook sur checkin-drawer
-- `scrollIntoView` sur focus input SearchStep (délai 350ms)
+### Corrections syntaxe JSX
+- 2 commentaires multi-lignes mal fermés (`*/` → `*/}`) dans `NotesSection.tsx` et `CheckinFieldsSection.tsx`
 
-### Fichiers clés modifiés S142
+### Harmonisation labels (partout dans l'app)
 
+| Champ BDD | Label unifié |
+|---|---|
+| `checkin_comment` | **Notes accueil** |
+| `checkin_venue_notes` | Notes lieu |
+| `checkin_internal_notes` | **Notes internes Derviche** + 🔒 + Badge "Admin" |
+| `special_requests` | Demandes spéciales + helper text exemples PMR |
+
+### Sécurité notes internes — faille corrigée
+
+**Problème** : Le middleware autorise `company` sur `/accueil/`. Le champ `checkin_internal_notes` était rendu inconditionnellement → exposition aux compagnies.
+
+**Solution** : prop `isStaffDD = role !== null && role !== 'company'` propagée dans toute la chaîne.
+
+**Fichiers modifiés :**
 | Fichier | Modification |
 |---------|-------------|
-| `checkin-drawer/sections/GuestInfoSection.tsx` | Refonte complète UX mobile : h-12/text-base, champs empilés, space-y-2, icônes w-4, + **champ Pays** |
-| `checkin-drawer/types.ts` | + `country` dans `GuestFormState`, + `setGuestCountry` dans `UseCheckinDrawerReturn` |
-| `checkin-drawer/hooks/useGuestForm.ts` | + état `country` + setter `setGuestCountry` |
-| `checkin-drawer/useCheckinDrawer.ts` | + exposition `setGuestCountry` |
-| `checkin-drawer/helpers/mappers.ts` | + `guestCountry` dans tous les payloads, comparaisons, résultats |
-| `checkin-drawer/index.tsx` | + prop `onCountryChange` passé à `GuestInfoSection` |
-| `accueil/ReservationRow.tsx` | + `guestCountry` dans `ReservationRowData` |
-| `checkin/types.ts` | + `guestCountry` dans `CheckinReservation`, `UpdateCheckinParams`, `UpdateGuestInfoParams` |
-| `checkin/reservations.ts` | + `guest_country` dans SELECT, UPDATE et transformers |
-| `checkin/cancel.ts` | + `guest_country` dans SELECT et transformers (cancel + reactivate) |
-| `checkin/transfer.ts` | + `guest_country` dans SELECT et transformer |
-| `checkin-drawer/sections/NotesSection.tsx` | rows 2→3, + `text-base` sur les 3 textareas |
-| `transfer-slot-drawer/components/PlacesSelector.tsx` | Boutons h-12/w-12, input h-12/text-base, suppression `size="icon"` |
-| `transfer-slot-drawer/components/TransferFooter.tsx` | Boutons h-12/text-base |
-| `transfer-slot-drawer/components/SlotsList.tsx` | Séparation slots à venir / passés, bouton collapsible pour les passés |
-| `transfer-slot-drawer/index.tsx` | + `visualViewport` hook (clavier mobile), `dvh` fallback |
+| `checkin-drawer/types.ts` | `isStaffDD: boolean` dans `UseCheckinDrawerReturn` |
+| `checkin-drawer/useCheckinDrawer.ts` | Calcul + exposition `isStaffDD` |
+| `checkin-drawer/index.tsx` | `isStaffDD={drawer.isStaffDD}` → `NotesSection` |
+| `checkin-drawer/sections/NotesSection.tsx` | Interface + destructuration + `{isStaffDD && ...}` |
+| `add-reservation-drawer/types.ts` | `isStaffDD` dans `UseAddReservationReturn` + `CheckinSectionProps` |
+| `add-reservation-drawer/useAddReservation.ts` | Calcul + exposition `isStaffDD` |
+| `add-reservation-drawer/index.tsx` | `isStaffDD` destructuré + passé à `CheckinFieldsSection` |
+| `add-reservation-drawer/sections/CheckinFieldsSection.tsx` | Destructuration + `{isStaffDD && ...}` |
 
-### Migrations appliquées en prod S141
-- `065_add_country_to_admin_reservation_rpc.sql` (renommage 062)
-- `066_add_country_to_update_reservation_safe.sql`
+### Accès externes aux notes internes — décision métier
+
+Les externes travaillent sur place avec les admins → doivent pouvoir lire ET écrire `checkin_internal_notes`.
+
+**Fichiers modifiés :**
+| Fichier | Modification |
+|---------|-------------|
+| `src/lib/services/checkin/constants.ts` | `ADMIN_ROLES` : ajout de `'externe'` |
+| `supabase/migrations/067_allow_externe_internal_notes.sql` | RPC `create_admin_reservation` : `CASE WHEN role IN ('super-admin', 'admin', 'externe')` |
+
+### Tableau final accès par rôle
+
+| Champ | Pro (public) | Admin | Externe (PWA) | Compagnie |
+|---|---|---|---|---|
+| `special_requests` | ✅ saisie | ✅ | ✅ | ✅ lecture |
+| `checkin_comment` | ❌ | ✅ | ✅ | ✅ lecture |
+| `checkin_venue_notes` | ❌ | ✅ | ✅ | ✅ lecture |
+| `checkin_internal_notes` | ❌ | ✅ | ✅ | ❌ jamais |
+| `cancellation_reason` | ❌ | ✅ | ✅ | ✅ lecture |
+
+### Protection multicouche `checkin_internal_notes`
+
+| Couche | Mécanisme |
+|---|---|
+| **UI** | `{isStaffDD && ...}` → absent du DOM |
+| **Lecture service** | `ADMIN_ROLES.includes(role) ? notes : null` |
+| **Update checkin** | Guard `ADMIN_ROLES.includes(role)` |
+| **Update guest info** | Guard `ADMIN_ROLES.includes(role)` |
+| **Création RPC** | `CASE WHEN role IN ('super-admin', 'admin', 'externe') ELSE NULL` |
 
 ---
 
@@ -161,8 +194,8 @@ Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S143** | Emails post-checkin : boutons email dans CheckinDrawer après sélection statut de présence + nouveaux templates (présent, absent, coup de cœur, presse) | 🔴 Haute |
-| **S144** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
+| **S144** | Emails post-checkin : boutons email dans CheckinDrawer après sélection statut de présence + nouveaux templates (présent, absent, coup de cœur, presse) | 🔴 Haute |
+| **S145** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
 
@@ -174,7 +207,7 @@ Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais plus utilisées (remplacées par 061) | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S144 |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S145 |
 
 ---
 
@@ -195,6 +228,9 @@ Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation
 | `ReservationFAB` | `parseSlotIdFromPath` : UUID regex sur `window.location.pathname` |
 | `visualViewport` PWA | Implémenté sur checkin-drawer (S141) + transfer-slot-drawer (S142) |
 | `guestCountry` PWA | Champ pays propagé sur toute la chaîne checkin (14 fichiers) — pas de migration BDD (colonne existante) |
+| `isStaffDD` PWA | `role !== null && role !== 'company'` — calculé dans useCheckinDrawer + useAddReservation |
+| `ADMIN_ROLES` checkin | `['super-admin', 'admin', 'externe']` — contrôle lecture/écriture `checkin_internal_notes` |
+| Commentaires JSX multi-lignes | Toujours fermer avec `*/}` et non `*/` — erreur TS1005 sinon |
 
 ---
 
@@ -218,3 +254,4 @@ Suite de la S141 (corrections post-audit + fix UX mobile clavier). Harmonisation
 | 064 | `064_fix_walkin_rpc_externe_access.sql` | Fix sécurité : externe → `hosted_by_id` (cohérent migration 040) | ✅ |
 | 065 | `065_add_country_to_admin_reservation_rpc.sql` | RPC `get_admin_reservations` avec `guest_country` | ✅ |
 | 066 | `066_add_country_to_update_reservation_safe.sql` | RPC `update_reservation_safe` avec `p_country` | ✅ |
+| 067 | `067_allow_externe_internal_notes.sql` | RPC `create_admin_reservation` : externe peut écrire `checkin_internal_notes` | ✅ |

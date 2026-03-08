@@ -38,7 +38,6 @@ import {
   FiltersSection,
   ReservationsContent,
   PaginationControls,
-  CheckinDialog,
   CancelDialog,
 } from './components';
 import { useReservationFilters } from './hooks';
@@ -69,7 +68,6 @@ function AdminReservationsContent() {
     filters,
     loadReservations,
     loadStats,
-    checkin,
     update,
     cancel,
     exportWithOptions,
@@ -78,6 +76,7 @@ function AdminReservationsContent() {
     setPageSize,
     pageSize,
     setFilters,
+    patchReservation,
   } = useAdminReservations(50);
 
   const { shows, refresh: refreshShows } = useShows();
@@ -109,7 +108,6 @@ function AdminReservationsContent() {
 
   // États dialogs
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
-  const [checkinDialogOpen, setCheckinDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -220,11 +218,6 @@ function AdminReservationsContent() {
   const handleRefresh = useCallback(() => void loadReservations(), [loadReservations]);
 
   // Handlers de dialogs
-  const openCheckinDialog = useCallback((reservation: AdminReservation) => {
-    setSelectedReservation(reservation);
-    setCheckinDialogOpen(true);
-  }, []);
-
   const openCancelDialog = useCallback((reservation: AdminReservation) => {
     setSelectedReservation(reservation);
     setCancelDialogOpen(true);
@@ -234,19 +227,6 @@ function AdminReservationsContent() {
     setSelectedReservation(reservation);
     setEditDialogOpen(true);
   }, []);
-
-  // Handler check-in
-  const handleCheckin = useCallback(async (status: CheckinStatus) => {
-    if (!selectedReservation) return;
-    setIsProcessing(true);
-    const result = await checkin(selectedReservation.id, { checkinStatus: status });
-    setIsProcessing(false);
-    if (result.success) {
-      setCheckinDialogOpen(false);
-      setSelectedReservation(null);
-      void loadStats();
-    }
-  }, [selectedReservation, checkin, loadStats]);
 
   // Handler annulation
   const handleCancel = useCallback(async (reason?: string, notifOptions?: NotificationOptions) => {
@@ -273,6 +253,18 @@ function AdminReservationsContent() {
       void loadStats();
     }
   }, [selectedReservation, cancel, loadStats]);
+
+  // Handler mise à jour checkin depuis le dialog d'édition
+  const handleCheckinUpdated = useCallback((reservationId: string, status: CheckinStatus | null) => {
+    // Mettre à jour en place dans le tableau (préserve l'ordre, pas de refetch)
+    patchReservation(reservationId, { checkinStatus: status });
+    // Mettre à jour selectedReservation pour que le dialog affiche le bon bouton
+    setSelectedReservation((prev) =>
+      prev?.id === reservationId ? { ...prev, checkinStatus: status } : prev
+    );
+    // Rafraîchir uniquement les stats (compteurs) en arrière-plan
+    void loadStats();
+  }, [patchReservation, loadStats]);
 
   // Handler modification
   const handleEdit = useCallback(async (data: UpdateReservationData & { _notifOptions?: NotificationOptions }) => {
@@ -428,8 +420,6 @@ function AdminReservationsContent() {
         onResetFilters={handleResetAllFilters}
         onSortChange={filtersHook.handleSortChange}
         onEdit={openEditDialog}
-        onCheckin={openCheckinDialog}
-        onCancel={openCancelDialog}
       />
 
       {/* Pagination */}
@@ -445,14 +435,6 @@ function AdminReservationsContent() {
       )}
 
       {/* Dialogs */}
-      <CheckinDialog
-        open={checkinDialogOpen}
-        onOpenChange={setCheckinDialogOpen}
-        reservation={selectedReservation}
-        onCheckin={handleCheckin}
-        isProcessing={isProcessing}
-      />
-
       <CancelDialog
         open={cancelDialogOpen}
         onOpenChange={setCancelDialogOpen}
@@ -481,6 +463,7 @@ function AdminReservationsContent() {
         onCancel={openCancelDialog}
         onGetSlots={getSlots}
         isSaving={isProcessing}
+        onCheckinUpdated={handleCheckinUpdated}
       />
 
       <CreateReservationDialog

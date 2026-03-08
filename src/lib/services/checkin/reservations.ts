@@ -9,6 +9,7 @@ import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { CheckinStatus } from '@/types/database';
+import type { CheckinFollowupTemplateKey } from '@/types/email-templates';
 
 import type { 
   CheckinReservation, 
@@ -68,7 +69,11 @@ export async function getSlotReservations(
         checkin_internal_notes,
         special_requests,
         created_at,
-        google_calendar_event_id
+        google_calendar_event_id,
+        checkin_followup_emails (
+          template_key,
+          sent_at
+        )
       `)
       .eq('slot_id', slotId)
       .order('guest_last_name', { ascending: true, nullsFirst: false })
@@ -111,6 +116,12 @@ export async function getSlotReservations(
       specialRequests: r.special_requests,
       createdAt: r.created_at,
       googleCalendarEventId: (r as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: ((r as unknown as {
+        checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
+      }).checkin_followup_emails ?? []).map((e) => ({
+        templateKey: e.template_key as CheckinFollowupTemplateKey,
+        sentAt: e.sent_at,
+      })),
     }));
 
     logger.info('checkin.getSlotReservations - Succès', { count: reservations.length });
@@ -405,6 +416,7 @@ export async function updateCheckinStatus(
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
       googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: [],
     };
 
     logger.info('checkin.updateCheckinStatus - Succès', { 
@@ -622,6 +634,7 @@ export async function updateGuestInfo(
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
       googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      checkinFollowupEmails: [],
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });
