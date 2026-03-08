@@ -18,6 +18,7 @@ import type { ReservationRowData } from '@/components/accueil/ReservationRow';
  *  - 'select-slot' : sélection show + créneau (si pas de slotId pré-fourni)
  *  - 'search'      : recherche email/nom (pré-remplissage)
  *  - 'form'        : formulaire complet
+ *  - 'success'     : écran post-création — envoi emails post-checkin (si statut défini)
  */
 export type AddReservationDrawerStep = 'select-slot' | 'search' | 'form' | 'success';
 

@@ -111,7 +111,7 @@ export async function getSlotReservations(
       checkinStatus: r.checkin_status as CheckinStatus | null,
       checkinComment: r.checkin_comment,
       checkinVenueNotes: r.checkin_venue_notes,
-      // Notes internes masquées pour les non-admins
+      // Notes internes : super-admin, admin et externe uniquement (voir ADMIN_ROLES)
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? r.checkin_internal_notes : null,
       specialRequests: r.special_requests,
       createdAt: r.created_at,
@@ -415,11 +415,11 @@ export async function updateCheckinStatus(
       checkinStatus: updated.checkin_status as CheckinStatus | null,
       checkinComment: updated.checkin_comment,
       checkinVenueNotes: updated.checkin_venue_notes,
-      // Notes internes masquées pour les non-admins
+      // Notes internes : super-admin, admin et externe uniquement (voir ADMIN_ROLES)
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
       checkinFollowupEmails: ((updated as unknown as {
         checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
       }).checkin_followup_emails ?? []).map((e) => ({
@@ -646,7 +646,7 @@ export async function updateGuestInfo(
       checkinInternalNotes: ADMIN_ROLES.includes(role) ? updated.checkin_internal_notes : null,
       specialRequests: updated.special_requests,
       createdAt: updated.created_at,
-      googleCalendarEventId: (updated as unknown as { guest_country: string | null, google_calendar_event_id: string | null }).google_calendar_event_id,
+      googleCalendarEventId: (updated as unknown as { google_calendar_event_id: string | null }).google_calendar_event_id,
       checkinFollowupEmails: ((updated as unknown as {
         checkin_followup_emails: { template_key: string; sent_at: string }[] | null;
       }).checkin_followup_emails ?? []).map((e) => ({

@@ -57,11 +57,23 @@ CREATE POLICY "checkin_followup_emails_select"
   TO authenticated
   USING (true);
 
+-- INSERT uniquement via service role (API) — pas d'accès direct client
+-- La logique de sécurité métier (rôle, hosted_by_id, company_id) est
+-- vérifiée dans /api/emails/send-checkin-followup avant d'appeler Supabase
+-- avec le service role key (bypass RLS intentionnel).
+-- Les clients authentifiés ne peuvent pas insérer directement.
 CREATE POLICY "checkin_followup_emails_insert"
   ON public.checkin_followup_emails
   FOR INSERT
   TO authenticated
-  WITH CHECK (true);
+  WITH CHECK (
+    -- Restreint aux rôles autorisés (super-admin, admin, externe, company)
+    EXISTS (
+      SELECT 1 FROM public.user_roles
+      WHERE user_id = auth.uid()
+        AND role IN ('super-admin', 'admin', 'externe', 'company')
+    )
+  );
 
 
 -- ============================================

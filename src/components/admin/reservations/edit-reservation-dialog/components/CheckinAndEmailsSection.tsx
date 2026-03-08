@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Check, Heart, Newspaper, X, RotateCcw,
   Mail, CheckCircle, Loader2, AlertCircle,
@@ -139,6 +139,13 @@ export function CheckinAndEmailsSection({
   const [localSentEmails, setLocalSentEmails] = useState<SentFollowupEmail[]>(checkinFollowupEmails);
   const [sending, setSending] = useState<Set<CheckinFollowupTemplateKey>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CheckinFollowupTemplateKey, string>>>({});
+
+  // Resynchroniser l'état local quand la réservation change (ouverture d'un autre dialog)
+  useEffect(() => {
+    setLocalSentEmails(checkinFollowupEmails);
+    setSending(new Set());
+    setErrors({});
+  }, [reservationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSendEmail = useCallback(async (templateKey: CheckinFollowupTemplateKey) => {
     if (sending.has(templateKey)) return;

@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Mail, CheckCircle, Loader2, RotateCcw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -143,6 +143,18 @@ function CheckinEmailsSectionInner({ reservation, emailConfigs }: InnerProps) {
 
   const [sending, setSending] = useState<Set<CheckinFollowupTemplateKey>>(new Set());
   const [errors, setErrors] = useState<Partial<Record<CheckinFollowupTemplateKey, string>>>({});
+
+  // Resynchroniser l'état local quand la réservation change (autre invité ouvert dans le drawer)
+  useEffect(() => {
+    setSentEmails(
+      (reservation.checkinFollowupEmails ?? []).map((e) => ({
+        templateKey: e.templateKey as CheckinFollowupTemplateKey,
+        sentAt: e.sentAt,
+      }))
+    );
+    setSending(new Set());
+    setErrors({});
+  }, [reservation.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getSentEmail = useCallback(
     (key: CheckinFollowupTemplateKey): SentEmail | undefined =>
