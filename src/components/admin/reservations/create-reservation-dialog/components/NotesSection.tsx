@@ -5,9 +5,10 @@
 
 'use client';
 
-import { FileText } from 'lucide-react';
+import { FileText, Lock } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import type { NotesSectionProps } from '../types';
 import { LABELS, PLACEHOLDERS } from '../constants';
 
@@ -30,6 +31,7 @@ export function NotesSection({
         {/* Demandes spéciales */}
         <div className="space-y-2">
           <Label htmlFor="comment">{LABELS.comment}</Label>
+          <p className="text-xs text-muted-foreground">Saisi par le professionnel lors de la réservation</p>
           <Textarea
             id="comment"
             value={comment || ''}
@@ -66,9 +68,14 @@ export function NotesSection({
           />
         </div>
         
-        {/* Notes internes */}
+        {/* Notes internes Derviche */}
         <div className="space-y-2">
-          <Label htmlFor="checkinInternalNotes">{LABELS.checkinInternalNotes}</Label>
+          <Label htmlFor="checkinInternalNotes" className="flex items-center gap-2">
+            <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+            {LABELS.checkinInternalNotes}
+            <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
+          </Label>
+          <p className="text-xs text-muted-foreground">Non visibles par les compagnies</p>
           <Textarea
             id="checkinInternalNotes"
             value={checkinInternalNotes || ''}

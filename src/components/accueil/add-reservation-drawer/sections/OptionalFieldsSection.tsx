@@ -206,6 +206,9 @@ export function OptionalFieldsSection({
             <MessageSquare className="w-4 h-4" aria-hidden="true" />
             Demandes spéciales
           </Label>
+          <p className="text-xs text-muted-foreground">
+            Saisi par le professionnel lors de la réservation
+          </p>
           <Textarea
             id="specialRequests"
             {...register('specialRequests')}

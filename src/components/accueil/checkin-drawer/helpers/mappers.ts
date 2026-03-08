@@ -198,13 +198,12 @@ export function hasGuestChanges(
  */
 export function hasCheckinChanges(
   current: CheckinFormState,
-  original: ReservationRowData,
-  isAdmin: boolean
+  original: ReservationRowData
 ): boolean {
   return (
     current.selectedStatus !== original.checkinStatus ||
     current.comment !== (original.checkinComment || '') ||
     current.venueNotes !== (original.checkinVenueNotes || '') ||
-    (isAdmin && current.internalNotes !== (original.checkinInternalNotes || ''))
+    current.internalNotes !== (original.checkinInternalNotes || '')
   );
 }

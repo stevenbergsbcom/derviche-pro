@@ -338,6 +338,7 @@ export function GuestInfoSection({
             <AlertCircle className="w-4 h-4" aria-hidden="true" />
             Demandes spéciales
           </label>
+          <p className="text-xs text-muted-foreground">Saisi par le professionnel lors de la réservation</p>
           <Textarea
             id="guest-special-requests"
             value={guestForm.specialRequests}

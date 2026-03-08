@@ -17,8 +17,6 @@ import type { CheckinFormState } from '../types';
 export interface NotesSectionProps {
   /** État du formulaire check-in */
   checkinForm: CheckinFormState;
-  /** L'utilisateur est-il admin ? */
-  isAdmin: boolean;
   /** En cours de traitement ? */
   isSubmitting: boolean;
   /** Callbacks de mise à jour */
@@ -33,7 +31,6 @@ export interface NotesSectionProps {
 
 export function NotesSection({
   checkinForm,
-  isAdmin,
   isSubmitting,
   onCommentChange,
   onVenueNotesChange,
@@ -48,7 +45,7 @@ export function NotesSection({
           className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
         >
           <MessageSquare className="w-4 h-4" aria-hidden="true" />
-          Commentaire
+          Notes accueil
         </label>
         <Textarea
           id="checkin-comment"
@@ -81,28 +78,29 @@ export function NotesSection({
         />
       </div>
 
-      {/* Notes internes - Admin uniquement */}
-      {isAdmin && (
-        <div>
-          <label 
-            htmlFor="checkin-internal-notes" 
-            className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
-          >
-            <Lock className="w-4 h-4" aria-hidden="true" />
-            Notes internes Derviche
-            <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
-          </label>
-          <Textarea
-            id="checkin-internal-notes"
-            value={checkinForm.internalNotes}
-            onChange={(e) => onInternalNotesChange(e.target.value)}
-            placeholder="Notes confidentielles (non visibles par externes/compagnies)..."
-            rows={3}
-            disabled={isSubmitting}
-            className="resize-none text-base"
-          />
-        </div>
-      )}
+      {/* Notes internes Derviche - Visibles uniquement par le staff DD (admin + externe), jamais par les compagnies */}
+      <div>
+        <label 
+          htmlFor="checkin-internal-notes" 
+          className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
+        >
+          <Lock className="w-4 h-4" aria-hidden="true" />
+          Notes internes Derviche
+          <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
+        </label>
+        <p className="text-xs text-muted-foreground mb-2">
+          Non visibles par les compagnies
+        </p>
+        <Textarea
+          id="checkin-internal-notes"
+          value={checkinForm.internalNotes}
+          onChange={(e) => onInternalNotesChange(e.target.value)}
+          placeholder="Notes confidentielles Derviche..."
+          rows={3}
+          disabled={isSubmitting}
+          className="resize-none text-base"
+        />
+      </div>
     </div>
   );
 }

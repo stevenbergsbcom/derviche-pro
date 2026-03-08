@@ -140,9 +140,7 @@ export interface CollapsibleSectionProps extends SectionProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export interface CheckinSectionProps extends CollapsibleSectionProps {
-  isAdmin: boolean;
-}
+export type CheckinSectionProps = CollapsibleSectionProps;
 
 export interface FormFooterProps {
   isSubmitting: boolean;

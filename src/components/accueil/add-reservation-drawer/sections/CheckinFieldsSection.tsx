@@ -28,7 +28,6 @@ export function CheckinFieldsSection({
   isSubmitting,
   isOpen,
   onOpenChange,
-  isAdmin,
 }: CheckinSectionProps) {
   const { register, watch, setValue } = form;
   const checkinStatus = watch('checkinStatus');
@@ -108,10 +107,10 @@ export function CheckinFieldsSection({
           )}
         </div>
 
-        {/* Commentaire check-in */}
+        {/* Notes accueil */}
         <div className="space-y-2">
           <Label htmlFor="checkinComment" className="text-base">
-            Commentaire
+            Notes accueil
           </Label>
           <Textarea
             id="checkinComment"
@@ -139,29 +138,28 @@ export function CheckinFieldsSection({
           />
         </div>
 
-        {/* Notes internes - Admin uniquement */}
-        {isAdmin && (
-          <div className="space-y-2">
-            <Label
-              htmlFor="checkinInternalNotes"
-              className="text-base flex items-center gap-1.5"
-            >
-              <Lock className="w-4 h-4" aria-hidden="true" />
-              Notes internes Derviche
-              <Badge variant="outline" className="text-xs ml-1">
-                Admin
-              </Badge>
-            </Label>
-            <Textarea
-              id="checkinInternalNotes"
-              {...register('checkinInternalNotes')}
-              placeholder="Notes confidentielles..."
-              rows={3}
-              disabled={isSubmitting}
-              className="resize-none text-base"
-            />
-          </div>
-        )}
+        {/* Notes internes Derviche - Staff DD uniquement (admin + externe), pas les compagnies */}
+        <div className="space-y-2">
+          <Label
+            htmlFor="checkinInternalNotes"
+            className="text-base flex items-center gap-1.5"
+          >
+            <Lock className="w-4 h-4" aria-hidden="true" />
+            Notes internes Derviche
+            <Badge variant="outline" className="text-xs ml-1">
+              Admin
+            </Badge>
+          </Label>
+          <p className="text-xs text-muted-foreground">Non visibles par les compagnies</p>
+          <Textarea
+            id="checkinInternalNotes"
+            {...register('checkinInternalNotes')}
+            placeholder="Notes confidentielles..."
+            rows={3}
+            disabled={isSubmitting}
+            className="resize-none text-base"
+          />
+        </div>
       </CollapsibleContent>
     </Collapsible>
   );

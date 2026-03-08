@@ -1092,7 +1092,8 @@ export default function SpectacleDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="comment">Commentaire</Label>
+                    <Label htmlFor="comment">Demandes spéciales</Label>
+                    <p className="text-xs text-muted-foreground">PMR, placement particulier, besoin spécifique…</p>
                     <Textarea
                         id="comment"
                         rows={4}

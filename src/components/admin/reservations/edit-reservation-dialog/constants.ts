@@ -59,9 +59,9 @@ export const LABELS = {
   // Section Notes
   sectionNotes: 'Notes',
   specialRequests: 'Demandes spéciales',
-  checkinComment: 'Notes check-in',
+  checkinComment: 'Notes accueil',
   checkinVenueNotes: 'Notes lieu',
-  checkinInternalNotes: 'Notes internes',
+  checkinInternalNotes: 'Notes internes Derviche',
 } as const;
 
 // ============================================
