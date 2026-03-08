@@ -138,7 +138,11 @@ export function CheckinFieldsSection({
           />
         </div>
 
-        {/* Notes internes Derviche - Staff DD uniquement (admin + externe), pas les compagnies */}
+        {/*
+         * DÉCISION MÉTIER INTENTIONNELLE — Ne pas modifier sans validation.
+         * Visible et modifiable par TOUT le staff DD (admin ET externe).
+         * Jamais visible par les compagnies, même si elles font l'accueil.
+         */}
         <div className="space-y-2">
           <Label
             htmlFor="checkinInternalNotes"

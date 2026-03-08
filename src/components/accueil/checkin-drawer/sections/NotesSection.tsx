@@ -78,7 +78,14 @@ export function NotesSection({
         />
       </div>
 
-      {/* Notes internes Derviche - Visibles uniquement par le staff DD (admin + externe), jamais par les compagnies */}
+      {/*
+       * DÉCISION MÉTIER INTENTIONNELLE — Ne pas modifier sans validation.
+       * Les notes internes Derviche sont visibles et modifiables par TOUT le staff DD
+       * sur place (admin ET externe), car ils travaillent ensemble à l'accueil.
+       * Seules les compagnies (role: 'company') ne doivent jamais voir ce champ,
+       * même quand elles assurent elles-mêmes l'accueil de leur spectacle.
+       * Le backend (ADMIN_ROLES) protège déjà l'écriture en BDD.
+       */}
       <div>
         <label 
           htmlFor="checkin-internal-notes" 
