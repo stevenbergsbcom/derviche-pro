@@ -180,7 +180,8 @@ export function GlobalSearchSheet({
   // Focus auto à l'ouverture
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      const tid = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(tid);
     } else {
       clearSearch();
     }

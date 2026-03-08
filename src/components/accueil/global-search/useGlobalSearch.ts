@@ -2,7 +2,9 @@
  * useGlobalSearch - Hook de recherche globale de réservations
  * Derviche Diffusion
  *
- * Gère le debounce, l'état de chargement et les résultats
+ * Gère le debounce, l'état de chargement et les résultats.
+ * Utilise un pattern requestId pour ignorer les réponses obsolètes
+ * (évite les race conditions quand plusieurs requêtes sont en vol).
  */
 
 'use client';
@@ -36,7 +38,14 @@ export function useGlobalSearch(companyId: string | null): UseGlobalSearchReturn
   const [hasSearched, setHasSearched] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  // Incrémenté à chaque requête — on n'applique les setters que si l'id correspond
+  const requestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -62,17 +71,19 @@ export function useGlobalSearch(companyId: string | null): UseGlobalSearchReturn
     setIsLoading(true);
 
     debounceRef.current = setTimeout(async () => {
-      // Annuler la requête précédente
-      if (abortRef.current) abortRef.current.abort();
-      abortRef.current = new AbortController();
-
       if (!user || !role) {
         setIsLoading(false);
         return;
       }
 
+      // Marquer cette requête avec un id unique
+      const currentId = ++requestIdRef.current;
+
       try {
         const result = await searchReservations(query.trim(), user.id, role, companyId);
+
+        // Ignorer si une requête plus récente a été lancée ou si démonté
+        if (currentId !== requestIdRef.current || !isMountedRef.current) return;
 
         setHasSearched(true);
         setIsLoading(false);
@@ -85,6 +96,7 @@ export function useGlobalSearch(companyId: string | null): UseGlobalSearchReturn
           setResults(result.data);
         }
       } catch (err) {
+        if (currentId !== requestIdRef.current || !isMountedRef.current) return;
         const msg = err instanceof Error ? err.message : 'Erreur inconnue';
         logger.error('useGlobalSearch - Exception', { error: msg });
         setIsLoading(false);
