@@ -23,6 +23,8 @@ export interface NotesSectionProps {
   onCommentChange: (value: string) => void;
   onVenueNotesChange: (value: string) => void;
   onInternalNotesChange: (value: string) => void;
+  /** Staff DD (admin + externe) : true. Compagnies : false. Masque les notes internes. */
+  isStaffDD: boolean;
 }
 
 // ============================================
@@ -35,6 +37,7 @@ export function NotesSection({
   onCommentChange,
   onVenueNotesChange,
   onInternalNotesChange,
+  isStaffDD,
 }: NotesSectionProps) {
   return (
     <div className="space-y-4">
@@ -78,36 +81,31 @@ export function NotesSection({
         />
       </div>
 
-      {/*
-       * DÉCISION MÉTIER INTENTIONNELLE — Ne pas modifier sans validation.
-       * Les notes internes Derviche sont visibles et modifiables par TOUT le staff DD
-       * sur place (admin ET externe), car ils travaillent ensemble à l'accueil.
-       * Seules les compagnies (role: 'company') ne doivent jamais voir ce champ,
-       * même quand elles assurent elles-mêmes l'accueil de leur spectacle.
-       * Le backend (ADMIN_ROLES) protège déjà l'écriture en BDD.
-       */}
-      <div>
-        <label 
-          htmlFor="checkin-internal-notes" 
-          className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
-        >
-          <Lock className="w-4 h-4" aria-hidden="true" />
-          Notes internes Derviche
-          <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
-        </label>
-        <p className="text-xs text-muted-foreground mb-2">
-          Non visibles par les compagnies
-        </p>
-        <Textarea
-          id="checkin-internal-notes"
-          value={checkinForm.internalNotes}
-          onChange={(e) => onInternalNotesChange(e.target.value)}
-          placeholder="Notes confidentielles Derviche..."
-          rows={3}
-          disabled={isSubmitting}
-          className="resize-none text-base"
-        />
-      </div>
+      {/* Notes internes : staff DD uniquement (admin + externe). Jamais les compagnies. */}
+      {isStaffDD && (
+        <div>
+          <label 
+            htmlFor="checkin-internal-notes" 
+            className="flex items-center gap-2 text-base font-medium text-muted-foreground mb-2"
+          >
+            <Lock className="w-4 h-4" aria-hidden="true" />
+            Notes internes Derviche
+            <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
+          </label>
+          <p className="text-xs text-muted-foreground mb-2">
+            Non visibles par les compagnies
+          </p>
+          <Textarea
+            id="checkin-internal-notes"
+            value={checkinForm.internalNotes}
+            onChange={(e) => onInternalNotesChange(e.target.value)}
+            placeholder="Notes confidentielles Derviche..."
+            rows={3}
+            disabled={isSubmitting}
+            className="resize-none text-base"
+          />
+        </div>
+      )}
     </div>
   );
 }

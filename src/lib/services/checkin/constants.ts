@@ -9,8 +9,8 @@ import type { SlotHostedBy } from '@/types/database';
 /** Constante par défaut pour la limite des slots passés (en jours) */
 export const DEFAULT_PAST_DAYS_LIMIT = 30;
 
-/** Rôles avec accès complet (admin) */
-export const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin'];
+/** Rôles avec accès aux notes internes Derviche (lecture + écriture) */
+export const ADMIN_ROLES: UserRole[] = ['super-admin', 'admin', 'externe'];
 
 /** Rôles valides pour l'accès check-in (utilisés par les RPC) */
 export const VALID_CHECKIN_ROLES = ['super-admin', 'admin', 'externe', 'company'] as const;

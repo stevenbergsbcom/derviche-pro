@@ -133,6 +133,8 @@ export interface UseCheckinDrawerReturn {
   canSave: boolean;
   isCancelled: boolean;
   isAdmin: boolean;
+  /** Vrai pour admin, super-admin et externe — jamais pour company */
+  isStaffDD: boolean;
   accessLoading: boolean;
 
   // Options de notification (réactivation uniquement — annulation gérée par la modale)
