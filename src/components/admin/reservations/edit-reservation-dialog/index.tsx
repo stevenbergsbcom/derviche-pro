@@ -104,10 +104,11 @@ export function EditReservationDialog({
         // Reset à null : mise à jour directe via Supabase client
         const { createClient } = await import('@/lib/supabase/client');
         const supabase = createClient();
-        await supabase
+        const { error } = await supabase
           .from('reservations')
           .update({ checkin_status: null, checkin_at: null })
           .eq('id', reservation.id);
+        if (error) throw error;
       }
       // Notifier le parent pour rafraîchir ses données (corrige le bouton stale)
       onCheckinUpdated?.(reservation.id, status);
