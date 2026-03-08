@@ -8,6 +8,7 @@
 'use client';
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -24,9 +25,6 @@ import type { SlotInfo, UseSlotDetailsProps, UseSlotDetailsReturn } from '../typ
 // TYPE GUARDS
 // ============================================
 
-/**
- * Type guard pour vérifier la structure venue
- */
 function isValidVenue(venue: unknown): venue is { name: string; city: string } {
   return (
     typeof venue === 'object' &&
@@ -36,9 +34,6 @@ function isValidVenue(venue: unknown): venue is { name: string; city: string } {
   );
 }
 
-/**
- * Type guard pour vérifier la structure show
- */
 function isValidShow(show: unknown): show is { title: string; slug: string } {
   return (
     typeof show === 'object' &&
@@ -52,10 +47,6 @@ function isValidShow(show: unknown): show is { title: string; slug: string } {
 // HOOK PRINCIPAL
 // ============================================
 
-/**
- * Hook principal pour la page de détails d'un slot
- * Gère les états, le chargement des données, et tous les handlers
- */
 export function useSlotDetails({
   slotId,
   showSlug,
@@ -84,6 +75,11 @@ export function useSlotDetails({
   // Refs pour protection race conditions
   const loadedRef = useRef(false);
   const isMountedRef = useRef(true);
+  const autoOpenDoneRef = useRef(false);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const targetReservationId = searchParams.get('reservationId');
 
   // Cleanup au démontage
   useEffect(() => {
@@ -97,9 +93,6 @@ export function useSlotDetails({
   // CHARGEMENT DES DONNÉES
   // ============================================
 
-  /**
-   * Charge les informations du slot
-   */
   const loadSlotInfo = useCallback(async (): Promise<SlotInfo | null> => {
     try {
       const supabase = createClient();
@@ -127,7 +120,6 @@ export function useSlotDetails({
         return null;
       }
 
-      // Utilisation des type guards pour validation
       const venue = isValidVenue(data.venues)
         ? { name: data.venues.name, city: String(data.venues.city || '') }
         : null;
@@ -153,7 +145,7 @@ export function useSlotDetails({
   }, [slotId, showSlug]);
 
   /**
-   * Charge le company_id si rôle company (avec protection race condition)
+   * Charge le company_id si rôle company
    */
   useEffect(() => {
     let cancelled = false;
@@ -190,36 +182,27 @@ export function useSlotDetails({
     }
 
     void loadCompanyId();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user, role]);
 
-  /**
-   * Charge toutes les données (slot + réservations) avec protection démontage
-   */
   const loadData = useCallback(async () => {
     if (!user || !role || isAuthLoading) return;
 
-    // Gestion du cas company avec erreur
     if (role === 'company') {
       if (companyIdError) {
         setError(companyIdError);
         setIsLoading(false);
         return;
       }
-      if (companyId === null) return; // Attendre le chargement
+      if (companyId === null) return;
     }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Charger les infos du slot
       const info = await loadSlotInfo();
-
-      if (!isMountedRef.current) return; // Composant démonté
+      if (!isMountedRef.current) return;
 
       if (!info) {
         setError('Représentation non trouvée');
@@ -228,10 +211,8 @@ export function useSlotDetails({
       }
       setSlotInfo(info);
 
-      // Charger les réservations
       const result = await getSlotReservations(slotId, user.id, role, companyId);
-
-      if (!isMountedRef.current) return; // Composant démonté
+      if (!isMountedRef.current) return;
 
       if (result.error) {
         setError(result.error);
@@ -240,8 +221,7 @@ export function useSlotDetails({
         setReservations(result.data);
       }
     } catch (err) {
-      if (!isMountedRef.current) return; // Composant démonté
-
+      if (!isMountedRef.current) return;
       logger.error('useSlotDetails - Erreur chargement données', { err, slotId });
       const message = err instanceof Error ? err.message : 'Erreur inconnue';
       setError(`Impossible de charger les données : ${message}`);
@@ -252,12 +232,8 @@ export function useSlotDetails({
     }
   }, [user, role, companyId, companyIdError, isAuthLoading, slotId, loadSlotInfo]);
 
-  /**
-   * Chargement initial avec protection race condition
-   */
   useEffect(() => {
     if (!loadedRef.current && !isAuthLoading && user && role) {
-      // Pour company, attendre companyId ou companyIdError
       if (role === 'company' && companyId === null && !companyIdError) return;
       loadedRef.current = true;
       void loadData();
@@ -268,9 +244,6 @@ export function useSlotDetails({
   // COMPUTED VALUES
   // ============================================
 
-  /**
-   * Réservations filtrées selon la recherche
-   */
   const filteredReservations = useMemo(() => {
     if (!searchQuery.trim()) return reservations;
 
@@ -288,25 +261,16 @@ export function useSlotDetails({
     });
   }, [reservations, searchQuery]);
 
-  /**
-   * Réservations confirmées (mémorisé)
-   */
   const confirmedReservations = useMemo(
     () => reservations.filter((r) => r.status === 'confirmed'),
     [reservations]
   );
 
-  /**
-   * Nombre de réservations confirmées (mémorisé)
-   */
   const confirmedCount = useMemo(
     () => confirmedReservations.length,
     [confirmedReservations]
   );
 
-  /**
-   * Nombre de présents (mémorisé)
-   */
   const presentCount = useMemo(
     () => confirmedReservations.filter((r) => isPresent(r.checkinStatus)).length,
     [confirmedReservations]
@@ -316,9 +280,6 @@ export function useSlotDetails({
   // HANDLERS
   // ============================================
 
-  /**
-   * Refresh manuel
-   */
   const handleRefresh = useCallback(() => {
     loadedRef.current = false;
     void loadData();
@@ -360,8 +321,33 @@ export function useSlotDetails({
   );
 
   /**
-   * Succès check-in - met à jour la liste
+   * Auto-ouverture depuis la recherche globale.
+   * Placé APRÈS handleReservationClick dont il dépend.
+   * Si un ?reservationId= est présent dans l'URL, ouvre le drawer une seule fois
+   * puis nettoie le param sans rechargement.
    */
+  useEffect(() => {
+    if (
+      !targetReservationId ||
+      isLoading ||
+      reservations.length === 0 ||
+      autoOpenDoneRef.current
+    ) return;
+
+    const target = reservations.find((r) => r.id === targetReservationId);
+    if (!target) return;
+
+    autoOpenDoneRef.current = true;
+
+    setTimeout(() => {
+      if (!isMountedRef.current) return;
+      handleReservationClick(target);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('reservationId');
+      router.replace(url.pathname, { scroll: false });
+    }, 350);
+  }, [targetReservationId, isLoading, reservations, handleReservationClick, router]);
+
   const handleCheckinSuccess = useCallback(
     (updatedReservation: ReservationRowData) => {
       setReservations((prev) =>
@@ -369,14 +355,11 @@ export function useSlotDetails({
           r.id === updatedReservation.id
             ? {
                 ...r,
-                // Statut de la réservation
                 status: updatedReservation.status,
-                // Check-in
                 checkinStatus: updatedReservation.checkinStatus,
                 checkinComment: updatedReservation.checkinComment ?? null,
                 checkinVenueNotes: updatedReservation.checkinVenueNotes ?? null,
                 checkinInternalNotes: updatedReservation.checkinInternalNotes ?? null,
-                // Infos guest
                 guestFirstName: updatedReservation.guestFirstName,
                 guestLastName: updatedReservation.guestLastName,
                 guestEmail: updatedReservation.guestEmail,
@@ -399,17 +382,11 @@ export function useSlotDetails({
     []
   );
 
-  /**
-   * Ouvre le drawer de transfert
-   */
   const handleTransferClick = useCallback(() => {
     setDrawerOpen(false);
     setTransferDrawerOpen(true);
   }, []);
 
-  /**
-   * Succès transfert - retire la réservation de la liste
-   */
   const handleTransferSuccess = useCallback(
     (updatedReservation: ReservationRowData) => {
       setReservations((prev) =>
@@ -426,30 +403,19 @@ export function useSlotDetails({
   // ============================================
 
   return {
-    // Données
     slotInfo,
     reservations,
     filteredReservations,
-
-    // États
     isLoading,
     error,
     searchQuery,
-
-    // Compteurs
     confirmedCount,
     presentCount,
-
-    // Drawer check-in
     drawerOpen,
     selectedReservation,
     setDrawerOpen,
-
-    // Drawer transfert
     transferDrawerOpen,
     setTransferDrawerOpen,
-
-    // Handlers
     setSearchQuery,
     handleRefresh,
     handleReservationClick,
