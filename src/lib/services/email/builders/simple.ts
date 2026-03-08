@@ -18,6 +18,7 @@ import type { CheckinFollowupEmailData } from '../types';
 import {
   escapeHtml,
   extractFirstName,
+  isSafeUrl,
   buildContactBlock,
   buildSignatureBlock,
   buildFooterRow,
@@ -89,27 +90,27 @@ export function buildSimpleHtml(
   // Chaque lien n'est rendu que si le switch est ON ET que l'URL est renseignée
   const appUrl = config.appUrl ?? '';
 
-  const folderLinkBlock = (template.show_folder_link && data.folderUrl)
+  const folderLinkBlock = (template.show_folder_link && isSafeUrl(data.folderUrl))
     ? `<tr><td style="padding:16px 0 0 0;">
         <a href="${escapeHtml(data.folderUrl)}" style="color:#1e3a5f;font-size:14px;">📂 ${escapeHtml(template.folder_link_text)}</a>
        </td></tr>`
     : '';
 
-  const teaserLinkBlock = (template.show_teaser_link && data.teaserUrl)
+  const teaserLinkBlock = (template.show_teaser_link && isSafeUrl(data.teaserUrl))
     ? `<tr><td style="padding:16px 0 0 0;">
         <a href="${escapeHtml(data.teaserUrl)}" style="color:#1e3a5f;font-size:14px;">🎬 ${escapeHtml(template.teaser_link_text)}</a>
        </td></tr>`
     : '';
 
-  const captationLinkBlock = (template.show_captation_link && data.captationUrl)
+  const captationLinkBlock = (template.show_captation_link && isSafeUrl(data.captationUrl))
     ? `<tr><td style="padding:16px 0 0 0;">
         <a href="${escapeHtml(data.captationUrl)}" style="color:#1e3a5f;font-size:14px;">🎥 ${escapeHtml(template.captation_link_text)}</a>
        </td></tr>`
     : '';
 
-  const bookingLinkBlock = template.show_booking_link
+  const bookingLinkBlock = (template.show_booking_link && isSafeUrl(appUrl))
     ? `<tr><td style="padding:16px 0 0 0;">
-        <a href="${escapeHtml(appUrl)}/spectacle/${escapeHtml(data.showSlug)}" style="color:#1e3a5f;font-size:14px;">🎭 ${escapeHtml(template.booking_link_text)}</a>
+        <a href="${escapeHtml(appUrl)}/spectacle/${encodeURIComponent(data.showSlug)}" style="color:#1e3a5f;font-size:14px;">🎭 ${escapeHtml(template.booking_link_text)}</a>
        </td></tr>`
     : '';
 

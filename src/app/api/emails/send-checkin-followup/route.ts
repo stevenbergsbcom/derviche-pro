@@ -20,6 +20,7 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { sendCheckinFollowupEmail } from '@/lib/services/email';
+import { isSafeUrl } from '@/lib/services/email/html-helpers';
 import { formatDuration } from '@/lib/services/email/builders/simple';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
@@ -288,9 +289,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         synopsis:         show.short_description,
         durationFormatted,
         targetAudiences,
-        folderUrl:         show.folder_url,
-        teaserUrl:         show.teaser_url,
-        captationUrl:      show.captation_url,
+        // Filtrage sécurité : n'accepter que les URLs http(s) pour éviter les injections javascript:
+        folderUrl:         isSafeUrl(show.folder_url)   ? show.folder_url   : null,
+        teaserUrl:         isSafeUrl(show.teaser_url)   ? show.teaser_url   : null,
+        captationUrl:      isSafeUrl(show.captation_url) ? show.captation_url : null,
         slotDateFormatted: formatDateFr(slots.date),
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName:         venue?.name ?? '',

@@ -304,13 +304,13 @@ export function EmailTemplateForm({
       is_simple_style:       template.is_simple_style ?? false,
       // Liens optionnels post-checkin (S149)
       show_folder_link:      v.show_folder_link    ?? false,
-      folder_link_text:      v.folder_link_text    ?? '',
+      folder_link_text:      v.folder_link_text    || 'Consulter le dossier de presse',
       show_teaser_link:      v.show_teaser_link    ?? false,
-      teaser_link_text:      v.teaser_link_text    ?? '',
+      teaser_link_text:      v.teaser_link_text    || 'Voir le teaser vidéo',
       show_captation_link:   v.show_captation_link ?? false,
-      captation_link_text:   v.captation_link_text ?? '',
+      captation_link_text:   v.captation_link_text || 'Voir la captation vidéo',
       show_booking_link:     v.show_booking_link   ?? false,
-      booking_link_text:     v.booking_link_text   ?? ''
+      booking_link_text:     v.booking_link_text   || 'Réserver une place pour ce spectacle',
     };
   };
 
