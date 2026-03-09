@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AdminPageHeader } from '@/components/admin';
 import { ResendQuotaWidget } from './resend-quota-widget';
+import { RateLimitWidget }   from './rate-limit-widget';
 import { LogsTable } from './logs-table';
 import type { AppLog } from '@/app/api/admin/logs/route';
 
@@ -120,8 +121,11 @@ export function SystemeContent() {
         subtitle="Monitoring technique — logs et quota email"
       />
 
-      {/* Widget quota Resend */}
-      <ResendQuotaWidget />
+      {/* Widgets de monitoring — côte à côte sur desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <ResendQuotaWidget />
+        <RateLimitWidget />
+      </div>
 
       {/* Journal des logs */}
       <LogsTable
