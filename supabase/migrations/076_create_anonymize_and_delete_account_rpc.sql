@@ -87,9 +87,10 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'Profil introuvable');
   END IF;
 
-  -- Email anonymisé : préfixe + 8 chars du hash MD5 + domaine fictif
-  -- Format : deleted-a1b2c3d4@anonyme.local
-  v_anon_email := 'deleted-' || LEFT(MD5(v_user_email), 8) || '@anonyme.local';
+  -- Email anonymisé : préfixe + 12 chars du hash MD5(user_id + email) + domaine fictif
+  -- Combine user_id + email pour réduire le risque de collision (2^48 combinaisons)
+  -- Format : deleted-a1b2c3d4e5f6@anonyme.local
+  v_anon_email := 'deleted-' || LEFT(MD5(v_user_id::TEXT || v_user_email), 12) || '@anonyme.local';
 
   -- ============================================
   -- 4. Annuler les réservations FUTURES (date >= aujourd'hui)
@@ -142,11 +143,12 @@ BEGIN
     guest_postal_code   = NULL,
     guest_city          = NULL,
     guest_country       = NULL,
-    guest_structure     = NULL,
-    guest_function      = NULL,
-    guest_afc_number    = NULL,
-    special_requests    = NULL,
-    updated_at          = NOW()
+    guest_structure        = NULL,
+    guest_function         = NULL,
+    guest_afc_number       = NULL,
+    special_requests       = NULL,
+    checkin_internal_notes = NULL,  -- peut contenir des PII (notes sur la personne)
+    updated_at             = NOW()
   WHERE
     user_id = v_user_id
     OR LOWER(guest_email) = LOWER(v_user_email);
