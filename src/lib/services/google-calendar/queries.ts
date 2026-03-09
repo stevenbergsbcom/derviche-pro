@@ -6,12 +6,19 @@
  * Toutes sont non-bloquantes : les erreurs sont loggées et retournées
  * sans jamais faire échouer la réservation.
  *
+ * Après chaque opération :
+ *   - Succès → entrée dans app_logs (category: 'calendar', status: 'success')
+ *   - Erreur  → entrée dans app_logs (status: 'error')
+ *              + notification admin de type 'calendar_error'
+ *
  * Utilisé uniquement côté serveur (Route Handlers).
  */
 
 import { google } from 'googleapis';
 import { getGoogleAuthClient } from './auth';
 import { logger } from '@/lib/logger';
+import { logCalendar } from '@/lib/services/logs';
+import { createAdminNotification } from '@/lib/services/notifications';
 import type { CalendarEventData, CalendarResult } from './types';
 
 // Durée par défaut si shows.duration_minutes est null
@@ -110,6 +117,39 @@ function buildEventBody(data: CalendarEventData) {
 }
 
 // ============================================
+// HELPER — Notification admin sur erreur Calendar
+// ============================================
+
+/**
+ * Crée une notification admin de type 'calendar_error'.
+ * Non-bloquant — fire & forget.
+ */
+async function notifyCalendarError(
+  action: string,
+  errorMessage: string,
+  reservationId?: string,
+  showTitle?: string,
+  guestFullName?: string,
+  slotDate?: string,
+): Promise<void> {
+  const actionLabels: Record<string, string> = {
+    calendar_create: 'création',
+    calendar_update: 'mise à jour',
+    calendar_delete: 'suppression',
+  };
+  const label = actionLabels[action] ?? action;
+
+  void createAdminNotification({
+    type:              'calendar_error',
+    reservation_id:    reservationId ?? null,
+    professional_name: guestFullName ?? 'Inconnu',
+    show_title:        showTitle ?? 'Inconnu',
+    slot_date:         slotDate ?? null,
+    message:           `Erreur Google Calendar (${label}) : ${errorMessage}`,
+  });
+}
+
+// ============================================
 // OPÉRATIONS PRINCIPALES
 // ============================================
 
@@ -141,12 +181,23 @@ export async function createCalendarEvent(
     const eventId = response.data.id;
 
     if (!eventId) {
-      return { success: false, error: 'Événement créé sans ID retourné' };
+      const errMsg = 'Événement créé sans ID retourné';
+      void logCalendar('calendar_create', false, {
+        reservation_id: data.reservationId,
+        error_message: errMsg,
+      });
+      void notifyCalendarError('calendar_create', errMsg, data.reservationId, data.showTitle, data.guestFullName, data.slotDate);
+      return { success: false, error: errMsg };
     }
 
     logger.info('[GoogleCalendar] Événement créé', {
       eventId,
       reservationId: data.reservationId,
+    });
+
+    void logCalendar('calendar_create', true, {
+      event_id: eventId,
+      reservation_id: data.reservationId,
     });
 
     return { success: true, eventId };
@@ -156,6 +207,11 @@ export async function createCalendarEvent(
       reservationId: data.reservationId,
       error: message,
     });
+    void logCalendar('calendar_create', false, {
+      reservation_id: data.reservationId,
+      error_message: message,
+    });
+    void notifyCalendarError('calendar_create', message, data.reservationId, data.showTitle, data.guestFullName, data.slotDate);
     return { success: false, error: message };
   }
 }
@@ -192,6 +248,11 @@ export async function updateCalendarEvent(
       reservationId: data.reservationId,
     });
 
+    void logCalendar('calendar_update', true, {
+      event_id: eventId,
+      reservation_id: data.reservationId,
+    });
+
     return { success: true, eventId };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -200,6 +261,12 @@ export async function updateCalendarEvent(
       reservationId: data.reservationId,
       error: message,
     });
+    void logCalendar('calendar_update', false, {
+      event_id: eventId,
+      reservation_id: data.reservationId,
+      error_message: message,
+    });
+    void notifyCalendarError('calendar_update', message, data.reservationId, data.showTitle, data.guestFullName, data.slotDate);
     return { success: false, error: message };
   }
 }
@@ -231,6 +298,10 @@ export async function deleteCalendarEvent(
 
     logger.info('[GoogleCalendar] Événement supprimé', { eventId });
 
+    void logCalendar('calendar_delete', true, {
+      event_id: eventId,
+    });
+
     return { success: true, eventId };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -238,6 +309,13 @@ export async function deleteCalendarEvent(
       eventId,
       error: message,
     });
+    void logCalendar('calendar_delete', false, {
+      event_id: eventId,
+      error_message: message,
+    });
+    // Pour delete, on n'a pas accès aux données de la réservation (showTitle, guestFullName)
+    // → on passe les valeurs disponibles uniquement
+    void notifyCalendarError('calendar_delete', message, undefined, undefined, undefined, undefined);
     return { success: false, error: message };
   }
 }

@@ -5,8 +5,8 @@
  * Ces types correspondent exactement au schéma défini dans les migrations SQL.
  * Ils sont utilisés pour typer les requêtes Supabase et garantir la cohérence des données.
  * 
- * Mis à jour : CDC V4 - 23 décembre 2025
- * Migrations : 001-015
+ * Mis à jour : Session S150 — ajout app_logs
+ * Migrations : 001-072
  */
 
 // ============================================
@@ -36,6 +36,38 @@ export type CheckinStatus = 'present_loved' | 'present_press' | 'present_neutral
 
 /** Source de création d'une réservation */
 export type ReservationSource = 'public' | 'admin';
+
+// ============================================
+// TABLE : app_logs (S150 — journal système)
+// ============================================
+
+export type AppLogCategory = 'email' | 'calendar' | 'reservation' | 'system';
+export type AppLogLevel    = 'info' | 'warning' | 'error';
+export type AppLogStatus   = 'success' | 'error';
+
+export interface AppLogRow {
+  id:              string;
+  category:        AppLogCategory;
+  level:           AppLogLevel;
+  action:          string;
+  status:          AppLogStatus;
+  actor_id:        string | null;
+  actor_role:      string | null;
+  reservation_id:  string | null;
+  details:         Record<string, unknown>;
+  created_at:      string;
+}
+
+export interface AppLogInsert {
+  category:        AppLogCategory;
+  level:           AppLogLevel;
+  action:          string;
+  status:          AppLogStatus;
+  actor_id?:       string | null;
+  actor_role?:     string | null;
+  reservation_id?: string | null;
+  details?:        Record<string, unknown>;
+}
 
 // ============================================
 // TABLE : companies
@@ -632,6 +664,11 @@ export interface InternalUser {
 export interface Database {
   public: {
     Tables: {
+      app_logs: {
+        Row:    AppLogRow;
+        Insert: AppLogInsert;
+        Update: Partial<AppLogInsert>;
+      };
       companies: {
         Row: CompanyRow;
         Insert: CompanyInsert;

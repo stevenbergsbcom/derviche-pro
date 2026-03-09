@@ -11,7 +11,7 @@
 
 import { memo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarPlus, CalendarX, CalendarClock } from 'lucide-react';
+import { CalendarPlus, CalendarX, CalendarClock, CalendarOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AdminNotification, NotificationType } from '@/lib/services/notifications';
 
@@ -37,6 +37,11 @@ const TYPE_CONFIG: Record<
     icon: CalendarClock,
     label: 'Modification',
     iconClass: 'text-amber-500',
+  },
+  calendar_error: {
+    icon: CalendarOff,
+    label: 'Erreur Calendar',
+    iconClass: 'text-orange-600',
   },
 };
 

@@ -81,6 +81,45 @@ export type Database = {
           },
         ]
       }
+      app_logs: {
+        Row: {
+          id: string
+          category: string
+          level: string
+          action: string
+          status: string
+          actor_id: string | null
+          actor_role: string | null
+          reservation_id: string | null
+          details: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          category: string
+          level: string
+          action: string
+          status: string
+          actor_id?: string | null
+          actor_role?: string | null
+          reservation_id?: string | null
+          details?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          category?: string
+          level?: string
+          action?: string
+          status?: string
+          actor_id?: string | null
+          actor_role?: string | null
+          reservation_id?: string | null
+          details?: Json
+          created_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           description: string | null

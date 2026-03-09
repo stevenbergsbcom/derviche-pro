@@ -1,4 +1,4 @@
-name: Rappels journaliers (J-7 + J-2)
+name: Rappels journaliers (J-7 + J-2) + Purge logs
 
 on:
   schedule:
@@ -27,3 +27,21 @@ jobs:
           fi
 
           echo "✅ Rappels journaliers déclenchés avec succès"
+
+      - name: Purge des logs système (> 90 jours)
+        run: |
+          response=$(curl -s -o /tmp/purge-response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://derviche-pro.vercel.app/api/cron/purge-logs)
+
+          echo "HTTP Status: $response"
+          echo "Response body:"
+          cat /tmp/purge-response.json
+
+          if [ "$response" != "200" ]; then
+            echo "⚠️ Purge logs — erreur HTTP $response (non bloquant)"
+          else
+            echo "✅ Purge des logs terminée"
+          fi
+        # Ne pas faire échouer le workflow si la purge échoue
+        continue-on-error: true

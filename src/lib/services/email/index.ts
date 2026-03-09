@@ -29,6 +29,7 @@ import {
   resolveTemplateVariables,
   type EmailTemplateVariables,
 } from '@/lib/services/email-templates';
+import { logEmail } from '@/lib/services/logs';
 
 import { getEmailConfig } from './config';
 import { getFallbackTemplate } from './fallbacks';
@@ -92,13 +93,29 @@ export async function sendReservationConfirmationEmail(
 
     if (error) {
       logger.error('[email] Erreur Resend confirmation', { error });
+      void logEmail('send_confirmation', false, {
+        to: Array.isArray(data.to) ? data.to[0] : data.to,
+        template_key: 'reservation_confirmation',
+        error_message: error.message,
+      }, data.reservationId);
       return { success: false, error: error.message };
     }
+
     logger.info('[email] Confirmation envoyée', { messageId: result?.id, reservationId: data.reservationId });
+    void logEmail('send_confirmation', true, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      resend_id: result?.id ?? null,
+      template_key: 'reservation_confirmation',
+    }, data.reservationId);
     return { success: true, messageId: result?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendReservationConfirmationEmail', { message });
+    void logEmail('send_confirmation', false, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      template_key: 'reservation_confirmation',
+      error_message: message,
+    }, data.reservationId);
     return { success: false, error: message };
   }
 }
@@ -134,13 +151,29 @@ export async function sendReservationCancellationEmail(
 
     if (error) {
       logger.error('[email] Erreur Resend annulation', { error });
+      void logEmail('send_cancellation', false, {
+        to: Array.isArray(data.to) ? data.to[0] : data.to,
+        template_key: 'reservation_cancellation',
+        error_message: error.message,
+      }, data.reservationId);
       return { success: false, error: error.message };
     }
+
     logger.info('[email] Annulation envoyée', { messageId: result?.id, reservationId: data.reservationId });
+    void logEmail('send_cancellation', true, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      resend_id: result?.id ?? null,
+      template_key: 'reservation_cancellation',
+    }, data.reservationId);
     return { success: true, messageId: result?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendReservationCancellationEmail', { message });
+    void logEmail('send_cancellation', false, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      template_key: 'reservation_cancellation',
+      error_message: message,
+    }, data.reservationId);
     return { success: false, error: message };
   }
 }
@@ -177,13 +210,29 @@ export async function sendReservationModificationEmail(
 
     if (error) {
       logger.error('[email] Erreur Resend modification', { error });
+      void logEmail('send_modification', false, {
+        to: Array.isArray(data.to) ? data.to[0] : data.to,
+        template_key: 'reservation_modification',
+        error_message: error.message,
+      }, data.reservationId);
       return { success: false, error: error.message };
     }
+
     logger.info('[email] Modification envoyée', { messageId: result?.id, reservationId: data.reservationId });
+    void logEmail('send_modification', true, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      resend_id: result?.id ?? null,
+      template_key: 'reservation_modification',
+    }, data.reservationId);
     return { success: true, messageId: result?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendReservationModificationEmail', { message });
+    void logEmail('send_modification', false, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      template_key: 'reservation_modification',
+      error_message: message,
+    }, data.reservationId);
     return { success: false, error: message };
   }
 }
@@ -232,13 +281,29 @@ export async function sendAdminNotificationEmail(
 
     if (error) {
       logger.error('[email] Erreur Resend notif admin', { error });
+      void logEmail('send_admin_notification', false, {
+        to: Array.isArray(data.to) ? data.to[0] : data.to,
+        template_key: 'admin_notification',
+        error_message: error.message,
+      }, data.reservationId);
       return { success: false, error: error.message };
     }
+
     logger.info('[email] Notif admin envoyée', { messageId: result?.id, eventType: data.eventType, reservationId: data.reservationId });
+    void logEmail('send_admin_notification', true, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      resend_id: result?.id ?? null,
+      template_key: 'admin_notification',
+    }, data.reservationId);
     return { success: true, messageId: result?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendAdminNotificationEmail', { message });
+    void logEmail('send_admin_notification', false, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      template_key: 'admin_notification',
+      error_message: message,
+    }, data.reservationId);
     return { success: false, error: message };
   }
 }
@@ -280,17 +345,33 @@ export async function sendCheckinFollowupEmail(
 
     if (error) {
       logger.error('[email] Erreur Resend checkin followup', { error, templateKey });
+      void logEmail('send_checkin_followup', false, {
+        to: Array.isArray(data.to) ? data.to[0] : data.to,
+        template_key: templateKey,
+        error_message: error.message,
+      }, data.reservationId);
       return { success: false, error: error.message };
     }
+
     logger.info('[email] Checkin followup envoyé', {
       messageId: result?.id,
       reservationId: data.reservationId,
       templateKey,
     });
+    void logEmail('send_checkin_followup', true, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      resend_id: result?.id ?? null,
+      template_key: templateKey,
+    }, data.reservationId);
     return { success: true, messageId: result?.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('[email] Exception sendCheckinFollowupEmail', { message, templateKey });
+    void logEmail('send_checkin_followup', false, {
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      template_key: templateKey,
+      error_message: message,
+    }, data.reservationId);
     return { success: false, error: message };
   }
 }
