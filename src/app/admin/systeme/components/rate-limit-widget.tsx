@@ -5,7 +5,7 @@
  * Affiche :
  *   - Nombre total de requêtes bloquées aujourd'hui et sur 7 jours
  *   - Détail par route (auth, emails, reservations)
- *   - Dernière tentative bloquée (IP + route)
+ *   - Dernière tentative bloquée (IP masquée + route)
  *   - Indicateur visuel si activité suspecte (> 10 bloquées aujourd'hui)
  *
  * Source : table app_logs, action = 'rate_limit_blocked'
@@ -33,12 +33,12 @@ interface RouteStats {
 }
 
 interface RateLimitData {
-  blockedToday:    number;
-  blocked7d:       number;
-  lastBlockedAt:   string | null;
-  lastIdentifier:  string | null;
-  lastRoute:       string | null;
-  byRoute:         RouteStats[];
+  blockedToday:   number;
+  blocked7d:      number;
+  lastBlockedAt:  string | null;
+  lastIdentifier: string | null;
+  lastRoute:      string | null;
+  byRoute:        RouteStats[];
 }
 
 // ============================================
@@ -49,12 +49,12 @@ interface RateLimitData {
 const ALERT_THRESHOLD = 10;
 
 const ROUTE_LABELS: Record<string, string> = {
-  '/api/auth/verify-password':       'Auth — vérif. mot de passe',
-  '/api/auth/check-account-status':  'Auth — statut compte',
-  '/api/emails/send-confirmation':   'Email — confirmation',
-  '/api/emails/send-cancellation':   'Email — annulation',
-  '/api/emails/send-modification':   'Email — modification',
-  '/api/reservations':               'Réservations',
+  '/api/auth/verify-password':      'Auth — vérif. mot de passe',
+  '/api/auth/check-account-status': 'Auth — statut compte',
+  '/api/emails/send-confirmation':  'Email — confirmation',
+  '/api/emails/send-cancellation':  'Email — annulation',
+  '/api/emails/send-modification':  'Email — modification',
+  '/api/reservations':              'Réservations',
 };
 
 function labelForRoute(route: string | null): string {
@@ -76,13 +76,33 @@ function formatDate(iso: string | null): string {
 function maskIp(identifier: string | null): string {
   if (!identifier) return '—';
   // Format IP:userId → prendre juste l'IP
-  const ip = identifier.split(':')[0] ?? identifier;
+  const ip    = identifier.split(':')[0] ?? identifier;
   const parts = ip.split('.');
   if (parts.length === 4) {
     return `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
   }
   // IPv6 ou autre — tronquer
   return ip.length > 20 ? `${ip.slice(0, 20)}…` : ip;
+}
+
+/**
+ * Retourne minuit UTC du jour courant en ISO string.
+ * Utilise Date.UTC() pour éviter le bug timezone :
+ * new Date(y, m, d) crée minuit LOCAL puis converti en UTC,
+ * ce qui exclut les premières heures de la journée dans les fuseaux UTC+.
+ */
+function startOfTodayUTC(): string {
+  const now = new Date();
+  return new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  )).toISOString();
+}
+
+function start7dUTC(): string {
+  const now = new Date();
+  return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 // ============================================
@@ -98,13 +118,13 @@ export function RateLimitWidget() {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const supabase = createClient();
-      const now      = new Date();
+    // Flag anti setState-après-unmount
+    let cancelled = false;
 
-      // Bornes temporelles
-      const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const start7d    = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    try {
+      const supabase   = createClient();
+      const startToday = startOfTodayUTC();
+      const start7d    = start7dUTC();
 
       // 1. Nombre bloqué aujourd'hui
       const { count: countToday, error: e1 } = await supabase
@@ -124,7 +144,7 @@ export function RateLimitWidget() {
 
       if (e2) throw new Error(e2.message);
 
-      // 3. Dernière tentative bloquée (détails)
+      // 3. Dernière tentative bloquée
       const { data: lastRows, error: e3 } = await supabase
         .from('app_logs')
         .select('created_at, details')
@@ -158,28 +178,120 @@ export function RateLimitWidget() {
         .map(([route, count]) => ({ route, label: labelForRoute(route), count }))
         .sort((a, b) => b.count - a.count);
 
-      setData({
-        blockedToday:   countToday   ?? 0,
-        blocked7d:      count7d      ?? 0,
-        lastBlockedAt:  last?.created_at ?? null,
-        lastIdentifier: typeof lastDetail?.identifier === 'string' ? lastDetail.identifier : null,
-        lastRoute:      typeof lastDetail?.route      === 'string' ? lastDetail.route      : null,
-        byRoute,
-      });
+      if (!cancelled) {
+        setData({
+          blockedToday:   countToday   ?? 0,
+          blocked7d:      count7d      ?? 0,
+          lastBlockedAt:  last?.created_at ?? null,
+          lastIdentifier: typeof lastDetail?.identifier === 'string' ? lastDetail.identifier : null,
+          lastRoute:      typeof lastDetail?.route      === 'string' ? lastDetail.route      : null,
+          byRoute,
+        });
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      if (!cancelled) {
+        setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      }
     } finally {
-      setIsLoading(false);
+      if (!cancelled) {
+        setIsLoading(false);
+      }
     }
+
+    // Retourne la fonction de cleanup pour useEffect
+    return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
 
-  // ── État ──────────────────────────────────────────────────────────────────
+    const run = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const supabase   = createClient();
+        const startToday = startOfTodayUTC();
+        const start7d    = start7dUTC();
+
+        const { count: countToday, error: e1 } = await supabase
+          .from('app_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('action', 'rate_limit_blocked')
+          .gte('created_at', startToday);
+
+        if (e1) throw new Error(e1.message);
+
+        const { count: count7d, error: e2 } = await supabase
+          .from('app_logs')
+          .select('*', { count: 'exact', head: true })
+          .eq('action', 'rate_limit_blocked')
+          .gte('created_at', start7d);
+
+        if (e2) throw new Error(e2.message);
+
+        const { data: lastRows, error: e3 } = await supabase
+          .from('app_logs')
+          .select('created_at, details')
+          .eq('action', 'rate_limit_blocked')
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (e3) throw new Error(e3.message);
+
+        const last       = lastRows?.[0] ?? null;
+        const lastDetail = last?.details as Record<string, unknown> | null;
+
+        const { data: routeRows, error: e4 } = await supabase
+          .from('app_logs')
+          .select('details')
+          .eq('action', 'rate_limit_blocked')
+          .gte('created_at', start7d);
+
+        if (e4) throw new Error(e4.message);
+
+        const routeCounts: Record<string, number> = {};
+        for (const row of routeRows ?? []) {
+          const d     = row.details as Record<string, unknown> | null;
+          const route = typeof d?.route === 'string' ? d.route : 'unknown';
+          routeCounts[route] = (routeCounts[route] ?? 0) + 1;
+        }
+
+        const byRoute: RouteStats[] = Object.entries(routeCounts)
+          .map(([route, count]) => ({ route, label: labelForRoute(route), count }))
+          .sort((a, b) => b.count - a.count);
+
+        if (!cancelled) {
+          setData({
+            blockedToday:   countToday   ?? 0,
+            blocked7d:      count7d      ?? 0,
+            lastBlockedAt:  last?.created_at ?? null,
+            lastIdentifier: typeof lastDetail?.identifier === 'string' ? lastDetail.identifier : null,
+            lastRoute:      typeof lastDetail?.route      === 'string' ? lastDetail.route      : null,
+            byRoute,
+          });
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void run();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Bouton rafraîchir : même logique avec son propre flag
+  const handleRefresh = useCallback(() => {
+    void load();
+  }, [load]);
+
+  // ── État ─────────────────────────────────────────────────────────────────
   const isSuspicious = (data?.blockedToday ?? 0) >= ALERT_THRESHOLD;
   const hasActivity  = (data?.blocked7d    ?? 0) > 0;
 
-  // ── Rendu ─────────────────────────────────────────────────────────────────
+  // ── Rendu ────────────────────────────────────────────────────────────────
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -189,7 +301,6 @@ export function RateLimitWidget() {
             Rate Limiting — Tentatives bloquées
           </CardTitle>
           <div className="flex items-center gap-2">
-            {/* Badge statut global */}
             {!isLoading && data && (
               isSuspicious ? (
                 <Badge variant="destructive" className="gap-1">
@@ -207,7 +318,7 @@ export function RateLimitWidget() {
               variant="ghost"
               size="icon"
               className="size-7"
-              onClick={() => void load()}
+              onClick={handleRefresh}
               disabled={isLoading}
               aria-label="Rafraîchir"
             >
@@ -232,9 +343,7 @@ export function RateLimitWidget() {
             <div className="grid grid-cols-2 gap-4">
               <div className={cn(
                 'rounded-lg p-3 space-y-0.5',
-                isSuspicious
-                  ? 'bg-red-50 dark:bg-red-950/30'
-                  : 'bg-muted/50',
+                isSuspicious ? 'bg-red-50 dark:bg-red-950/30' : 'bg-muted/50',
               )}>
                 <p className="text-xs text-muted-foreground">Aujourd&apos;hui</p>
                 <p className={cn(
