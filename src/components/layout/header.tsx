@@ -18,13 +18,13 @@ function getAccountUrl(role: UserRole | null): string {
     case 'super-admin':
     case 'admin':
     case 'externe':
-      // Tous les utilisateurs internes utilisent /mon-compte
-      return '/mon-compte';
+      return '/admin/mon-compte';
     case 'company':
       return '/company/mon-compte';
     case 'professional':
+      return '/professional/mon-compte';
     default:
-      return '/mon-compte';
+      return '/login';
   }
 }
 
