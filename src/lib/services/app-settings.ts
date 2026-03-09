@@ -61,6 +61,9 @@ export type RgpdSettingKey = 'rgpd_data_retention_months' | 'rgpd_inactive_accou
 /** Clés de paramètres thème et apparence */
 export type ThemeSettingKey = 'theme_preset' | 'logo_white_url' | 'logo_dark_url';
 
+/** Clés de paramètres saison (dashboard) */
+export type SeasonSettingKey = 'season_start' | 'season_end';
+
 /** Toutes les clés de paramètres */
 export type AppSettingKey =
   | OrganizationSettingKey
@@ -143,6 +146,17 @@ export interface ThemeSettings {
   logo_dark_url: string | null;
 }
 
+/**
+ * Paramètres de saison pour le dashboard
+ * Format MM-DD (ex: "09-01" = 1er septembre)
+ */
+export interface SeasonSettings {
+  /** Début de saison, format MM-DD */
+  season_start: string;
+  /** Fin de saison, format MM-DD */
+  season_end: string;
+}
+
 // ============================================
 // CONSTANTES
 // ============================================
@@ -198,6 +212,12 @@ export const THEME_SETTING_KEYS: ThemeSettingKey[] = [
   'theme_preset',
   'logo_white_url',
   'logo_dark_url',
+];
+
+/** Clés des paramètres saison */
+export const SEASON_SETTING_KEYS: SeasonSettingKey[] = [
+  'season_start',
+  'season_end',
 ];
 
 /** Labels pour l'affichage des paramètres */
@@ -611,4 +631,75 @@ export async function setThemeSettings(
   }
 
   return getThemeSettings();
+}
+
+// ============================================
+// SAISON
+// ============================================
+
+/** Valeurs par défaut de la saison */
+const SEASON_DEFAULTS: SeasonSettings = {
+  season_start: '09-01',
+  season_end: '06-30',
+};
+
+/**
+ * Récupère les paramètres de saison
+ */
+export async function getSeasonSettings(): Promise<AppSettingResult<SeasonSettings>> {
+  const result = await getAppSettings(SEASON_SETTING_KEYS);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  // Strip des guillemets JSONB si nécessaire
+  const strip = (val: unknown, fallback: string): string => {
+    if (!val) return fallback;
+    return String(val).replace(/^"|"$/g, '') || fallback;
+  };
+
+  return {
+    data: {
+      season_start: strip(result.data?.season_start, SEASON_DEFAULTS.season_start),
+      season_end: strip(result.data?.season_end, SEASON_DEFAULTS.season_end),
+    },
+    error: null,
+  };
+}
+
+/**
+ * Met à jour les paramètres de saison.
+ * Utilise upsert pour garantir la création si les clés n'existent pas.
+ */
+export async function setSeasonSettings(
+  settings: Partial<SeasonSettings>
+): Promise<AppSettingResult<SeasonSettings>> {
+  try {
+    const supabase = createClient();
+    const entries = Object.entries(settings) as [string, string][];
+    const errors: string[] = [];
+
+    for (const [key, value] of entries) {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key, value }, { onConflict: 'key' });
+
+      if (error) {
+        logger.error('Erreur upsert season setting', { key, error: error.message });
+        errors.push(`${key}: ${error.message}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return { data: null, error: errors.join(', ') };
+    }
+
+    logger.info('Paramètres saison mis à jour', { keys: Object.keys(settings) });
+    return getSeasonSettings();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    logger.error('Exception setSeasonSettings', { message });
+    return { data: null, error: message };
+  }
 }

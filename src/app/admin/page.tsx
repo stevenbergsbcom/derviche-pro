@@ -4,8 +4,8 @@
  * Admin Dashboard Page
  * Derviche Diffusion
  *
- * Page d'accueil de l'interface d'administration
- * Orchestrateur léger - logique déléguée aux hooks et composants
+ * Page d'accueil de l'interface d'administration.
+ * Orchestrateur léger — logique déléguée aux hooks et composants.
  */
 
 import { useMemo } from 'react';
@@ -22,8 +22,11 @@ import {
   StatCard,
   StatsSkeleton,
   QuickLink,
-  UpcomingSlotsCard,
   RecentReservationsCard,
+  PeriodSelector,
+  ReservationsChart,
+  TopShowsCard,
+  Slots24hCard,
 } from './_dashboard/components';
 
 // ============================================
@@ -31,7 +34,8 @@ import {
 // ============================================
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, error, hasFullAccess, refresh } = useAdminDashboard();
+  const { data, isLoading, error, hasFullAccess, period, setPeriod, refresh } =
+    useAdminDashboard();
   const { firstName } = useUserFirstName();
 
   // Filtrer les liens d'accès rapide selon les permissions
@@ -42,26 +46,31 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec salutation */}
+      {/* En-tête avec salutation et sélecteur de période */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-derviche-dark">
             Bonjour{firstName ? ` ${firstName}` : ''} 👋
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Nous sommes le {formatTodayDate()}
-          </p>
+          <p className="text-muted-foreground mt-1">{formatTodayDate()}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => void refresh()}
-          disabled={isLoading}
-          aria-label="Actualiser le tableau de bord"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <PeriodSelector
+            value={period}
+            onChange={(p) => { setPeriod(p); void refresh(); }}
+            disabled={isLoading}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void refresh()}
+            disabled={isLoading}
+            aria-label="Actualiser le tableau de bord"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Message d'erreur */}
@@ -81,7 +90,9 @@ export default function AdminDashboardPage() {
           <StatCard
             title="Spectacles actifs"
             value={data.stats.total_shows_active}
-            description={hasFullAccess ? 'Publiés sur le catalogue' : 'Vos spectacles assignés'}
+            description={
+              hasFullAccess ? 'Publiés sur le catalogue' : 'Vos spectacles assignés'
+            }
             icon={Theater}
           />
           <StatCard
@@ -93,13 +104,8 @@ export default function AdminDashboardPage() {
           <StatCard
             title="Réservations"
             value={data.stats.total_reservations}
-            description={`${data.stats.reservations_today} aujourd'hui, ${data.stats.reservations_this_week} cette semaine`}
+            description={`${data.stats.reservations_today} aujourd'hui · ${data.stats.reservations_this_week} cette semaine`}
             icon={Ticket}
-            trend={
-              data.stats.reservations_today > 0
-                ? { value: data.stats.reservations_today, label: "aujourd'hui" }
-                : undefined
-            }
           />
           <StatCard
             title="Taux de remplissage"
@@ -109,6 +115,25 @@ export default function AdminDashboardPage() {
           />
         </div>
       ) : null}
+
+      {/* Graphique */}
+      <ReservationsChart
+        data={data?.chartData ?? []}
+        period={period}
+        isLoading={isLoading}
+      />
+
+      {/* Top spectacles + Créneaux 24h */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <TopShowsCard
+          shows={data?.topShows ?? []}
+          isLoading={isLoading}
+        />
+        <Slots24hCard
+          slots={data?.slots24h ?? []}
+          isLoading={isLoading}
+        />
+      </div>
 
       {/* Accès rapides */}
       <div>
@@ -126,19 +151,12 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Grille principale */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <UpcomingSlotsCard
-          slots={data?.upcomingSlots ?? []}
-          isLoading={isLoading}
-          hasFullAccess={hasFullAccess}
-        />
-        <RecentReservationsCard
-          reservations={data?.recentReservations ?? []}
-          isLoading={isLoading}
-          hasFullAccess={hasFullAccess}
-        />
-      </div>
+      {/* Réservations récentes */}
+      <RecentReservationsCard
+        reservations={data?.recentReservations ?? []}
+        isLoading={isLoading}
+        hasFullAccess={hasFullAccess}
+      />
     </div>
   );
 }

@@ -17,8 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { SettingsCard } from '../shared';
 
-import { useOrganizationSettings } from '@/hooks/useAppSettings';
-import type { OrganizationSettings } from '@/lib/services/app-settings';
+import { useOrganizationSettings, useSeasonSettings } from '@/hooks/useAppSettings';
+import type { OrganizationSettings, SeasonSettings } from '@/lib/services/app-settings';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -55,6 +55,20 @@ const organizationSchema = z.object({
 
 type OrganizationFormData = z.infer<typeof organizationSchema>;
 
+// Regex MM-DD
+const MM_DD_REGEX = /^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
+
+const seasonSchema = z.object({
+  season_start: z
+    .string()
+    .regex(MM_DD_REGEX, 'Format MM-JJ requis (ex: 09-01)'),
+  season_end: z
+    .string()
+    .regex(MM_DD_REGEX, 'Format MM-JJ requis (ex: 06-30)'),
+});
+
+type SeasonFormData = z.infer<typeof seasonSchema>;
+
 // ============================================
 // PROPS
 // ============================================
@@ -72,6 +86,12 @@ interface OrganizationSectionProps {
 
 export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSectionProps) {
   const { data, isLoading, isSaving, error, update } = useOrganizationSettings();
+  const {
+    data: seasonData,
+    isLoading: isSeasonLoading,
+    isSaving: isSeasonSaving,
+    update: updateSeason,
+  } = useSeasonSettings();
   const [hasChanges, setHasChanges] = useState(false);
 
   // Flag pour savoir si l'initialisation est faite
@@ -123,6 +143,37 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
     onDirtyChangeRef.current?.(isDirty);
   }, [isDirty, isInitialized]);
 
+  // Formulaire saison
+  const {
+    register: registerSeason,
+    handleSubmit: handleSubmitSeason,
+    reset: resetSeason,
+    formState: { errors: seasonErrors, isDirty: isSeasonDirty },
+  } = useForm<SeasonFormData>({
+    resolver: zodResolver(seasonSchema),
+    defaultValues: { season_start: '09-01', season_end: '06-30' },
+  });
+
+  // Initialiser le formulaire saison
+  useEffect(() => {
+    if (seasonData) {
+      resetSeason({
+        season_start: seasonData.season_start,
+        season_end: seasonData.season_end,
+      });
+    }
+  }, [seasonData, resetSeason]);
+
+  // Soumission saison
+  const onSubmitSeason = async (formData: SeasonFormData) => {
+    const result = await updateSeason(formData as Partial<SeasonSettings>);
+    if (result.success) {
+      toast.success('Saison enregistrée');
+    } else {
+      toast.error(result.error ?? 'Erreur lors de la sauvegarde');
+    }
+  };
+
   // Soumission du formulaire
   const onSubmit = async (formData: OrganizationFormData) => {
     const cleanedData: Partial<OrganizationSettings> = {
@@ -160,6 +211,7 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
   }
 
   return (
+    <>
     <SettingsCard
       icon={Building2}
       title="Organisation"
@@ -264,5 +316,47 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
         </p>
       </div>
     </SettingsCard>
+
+    {/* Saison du dashboard */}
+    <SettingsCard
+      icon={Building2}
+      title="Saison du dashboard"
+      description="Période utilisée pour le filtre ‘Saison’ du tableau de bord"
+      isLoading={isSeasonLoading}
+      isSaving={isSeasonSaving}
+      canEdit={canEdit}
+      hasChanges={isSeasonDirty}
+      onSubmit={handleSubmitSeason(onSubmitSeason)}
+    >
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="season_start">Début de saison</Label>
+          <Input
+            id="season_start"
+            placeholder="09-01"
+            disabled={!canEdit}
+            {...registerSeason('season_start')}
+          />
+          {seasonErrors.season_start && (
+            <p className="text-sm text-destructive">{seasonErrors.season_start.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">Format MM-JJ (ex : 09-01 = 1er septembre)</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="season_end">Fin de saison</Label>
+          <Input
+            id="season_end"
+            placeholder="06-30"
+            disabled={!canEdit}
+            {...registerSeason('season_end')}
+          />
+          {seasonErrors.season_end && (
+            <p className="text-sm text-destructive">{seasonErrors.season_end.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">Format MM-JJ (ex : 06-30 = 30 juin)</p>
+        </div>
+      </div>
+    </SettingsCard>
+    </>
   );
 }
