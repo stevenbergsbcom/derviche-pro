@@ -45,22 +45,25 @@ export function UpcomingReservationsCard({
 }: UpcomingReservationsCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold text-derviche-dark">
-          <ListChecks className="w-4 h-4 text-gold" />
-          Mes réservations à venir
-        </CardTitle>
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="gap-1 text-xs text-muted-foreground hover:text-derviche"
-        >
-          <Link href="/professional/reservations">
-            Voir tout
-            <ArrowRight className="w-3 h-3" />
-          </Link>
-        </Button>
+      <CardHeader>
+        {/* wrapper div — ne jamais mettre flex flex-row directement sur CardHeader (shadcn bug texte invisible) */}
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base font-semibold text-derviche-dark">
+            <ListChecks className="w-4 h-4 text-gold" />
+            Mes réservations à venir
+          </CardTitle>
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-xs text-muted-foreground hover:text-derviche"
+          >
+            <Link href="/professional/reservations">
+              Voir tout
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </Button>
+        </div>
       </CardHeader>
 
       <CardContent className="p-0">

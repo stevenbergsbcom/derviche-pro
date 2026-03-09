@@ -68,7 +68,7 @@ export interface UpcomingSlot {
   show: Pick<ShowRow, 'id' | 'title' | 'slug' | 'image_url'>;
   venue: Pick<VenueRow, 'id' | 'name' | 'city'>;
   reservations_count: number;
-  /** Nombre de pros ayant effectivement assisté (checkin_status != 'absent' && != null) */
+  /** Nombre de personnes ayant effectivement assisté = sum(num_places) où checkin_status != 'absent' && != null */
   checkin_count: number;
 }
 
@@ -316,9 +316,10 @@ export async function getUpcomingSlots(companyId: string, limit: number = 5): Pr
     if (!resError && reservations) {
       reservations.forEach((res: { slot_id: string; num_places: number; checkin_status: string | null }) => {
         reservationsBySlot[res.slot_id] = (reservationsBySlot[res.slot_id] || 0) + res.num_places;
-        // Présents = checkin_status défini et différent de 'absent'
+        // Présents = sum des num_places (checkin_status défini et différent de 'absent')
+        // Une réservation peut couvrir plusieurs personnes → sommer num_places
         if (res.checkin_status && res.checkin_status !== 'absent') {
-          checkinBySlot[res.slot_id] = (checkinBySlot[res.slot_id] || 0) + 1;
+          checkinBySlot[res.slot_id] = (checkinBySlot[res.slot_id] || 0) + res.num_places;
         }
       });
     }
