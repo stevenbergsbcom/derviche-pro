@@ -5,6 +5,9 @@
  * Appelée côté client juste après signInWithPassword.
  * Reçoit l'access_token pour authentifier la requête (les cookies ne sont
  * pas encore propagés côté serveur au moment du premier appel post-login).
+ *
+ * Sécurité :
+ * - Rate limiting : 5 req / 15 min par IP (anti brute-force sur le login)
  */
 
 import { NextResponse } from 'next/server';
@@ -12,6 +15,8 @@ import { z } from 'zod';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { logger } from '@/lib/logger';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { logSystem } from '@/lib/services/logs';
 
 const bodySchema = z.object({
   userId: z.string().uuid(),
@@ -20,6 +25,17 @@ const bodySchema = z.object({
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // 0. Rate limiting
+    const rl = await checkRateLimit('auth', request);
+    if (!rl.success) {
+      void logSystem('rate_limit_blocked', 'warning', {
+        route: '/api/auth/check-account-status',
+        identifier: rl.identifier,
+        limit: rl.limit,
+      });
+      return rateLimitResponse(rl);
+    }
+
     // 1. Valider le body
     let rawBody: unknown;
     try {
@@ -72,17 +88,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ status: 'ok' });
     }
 
-    if (!profile) {
-      return NextResponse.json({ status: 'not_found' });
-    }
-
-    if (profile.deleted_at) {
-      return NextResponse.json({ status: 'deleted' });
-    }
-
-    if (profile.disabled_at) {
-      return NextResponse.json({ status: 'disabled' });
-    }
+    if (!profile)          return NextResponse.json({ status: 'not_found' });
+    if (profile.deleted_at)  return NextResponse.json({ status: 'deleted' });
+    if (profile.disabled_at) return NextResponse.json({ status: 'disabled' });
 
     return NextResponse.json({ status: 'ok' });
 

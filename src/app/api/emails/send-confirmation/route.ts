@@ -6,6 +6,7 @@
  * L'envoi est non-bloquant : un échec email ne fait pas échouer la réservation.
  *
  * Sécurité :
+ * - Rate limiting : 20 req / 1h par IP (anti-spam emails)
  * - Validation stricte du payload entrant (Zod)
  * - Vérification que la réservation existe en base (via service role)
  * - Vérification que l'email correspond à la réservation
@@ -25,6 +26,8 @@ import { createAdminNotification } from '@/lib/services/notifications';
 import { createCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { logSystem } from '@/lib/services/logs';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -53,6 +56,17 @@ type SendConfirmationPayload = z.infer<typeof sendConfirmationSchema>;
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // 0. Rate limiting (anti-spam emails)
+    const rl = await checkRateLimit('emails', request);
+    if (!rl.success) {
+      void logSystem('rate_limit_blocked', 'warning', {
+        route: '/api/emails/send-confirmation',
+        identifier: rl.identifier,
+        limit: rl.limit,
+      });
+      return rateLimitResponse(rl);
+    }
+
     // 1. Parser et valider le body
     const rawBody: unknown = await request.json();
     const parseResult = sendConfirmationSchema.safeParse(rawBody);
@@ -70,7 +84,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     const payload: SendConfirmationPayload = parseResult.data;
 
     // 2. Vérifier que la réservation existe et que l'email correspond
-    // On utilise le service role pour bypasser les RLS (lecture sécurisée côté serveur)
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API /emails/send-confirmation] SUPABASE_SERVICE_ROLE_KEY manquant');
@@ -94,11 +107,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-confirmation] Réservation introuvable', {
         reservationId: payload.reservationId,
       });
-      // 200 intentionnel : on ne révèle pas si la réservation existe
       return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 200 });
     }
 
-    // Vérifier que l'email correspond à la réservation (guest_email ou email du compte)
     const reservationEmail = reservation.guest_email;
     const profileEmail = Array.isArray(reservation.profiles)
       ? reservation.profiles[0]?.email
@@ -112,12 +123,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-confirmation] Email ne correspond pas à la réservation', {
         reservationId: payload.reservationId,
       });
-      // 200 intentionnel : on ne révèle pas le motif du refus
       return NextResponse.json({ success: false, error: 'Email invalide' }, { status: 200 });
     }
 
-    // 3. Envoyer l'email de confirmation au professionnel
-    // Récupérer le manager Derviche pour le bloc contact
+    // 3. Envoyer l'email de confirmation
     let confirmManagerName: string | null = null;
     let confirmManagerEmail: string | null = null;
     let confirmManagerPhone: string | null = null;
@@ -164,11 +173,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
       return NextResponse.json(
         { success: false, error: "Erreur lors de l'envoi" },
-        { status: 200 } // 200 intentionnel : la réservation est déjà créée
+        { status: 200 }
       );
     }
 
-    // 4. Notifier le manager Derviche lié au spectacle (si préférence activée)
+    // 4. Notifier le manager Derviche (si préférence activée)
     try {
       const { data: notifPrefData } = await adminClient
         .from('app_settings')
@@ -182,7 +191,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
 
       if (notifEnabled) {
-        // Récupérer le derviche_manager_id depuis le spectacle via la réservation
         const { data: reservationDetails } = await adminClient
           .from('reservations')
           .select(`
@@ -244,14 +252,13 @@ export async function POST(request: Request): Promise<NextResponse> {
             });
           }
         } else {
-          logger.warn('[API /emails/send-confirmation] Notification activée mais aucun manager assigné au spectacle', {
+          logger.warn('[API /emails/send-confirmation] Notification activée mais aucun manager assigné', {
             showTitle: payload.showTitle,
             reservationId: payload.reservationId,
           });
         }
       }
     } catch (notifErr) {
-      // La notif manager ne doit jamais bloquer la réponse
       logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
     }
 
@@ -266,7 +273,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
       if (isBoolTrue(calPref?.value)) {
-        // Fetch données brutes du créneau (date ISO, heure, durée)
         const { data: slotRaw } = await adminClient
           .from('reservations')
           .select(`
@@ -288,22 +294,21 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         if (slot) {
           const calResult = await createCalendarEvent({
-            showTitle:            payload.showTitle,
-            guestFullName:        payload.guestFullName,
-            guestStructure:       (slotRaw as { guest_structure?: string | null } | null)?.guest_structure ?? null,
-            guestEmail:           payload.to,
-            reservationId:        payload.reservationId,
-            numPlaces:            payload.numPlaces,
-            slotDate:             slot.date,
-            slotTime:             slot.time,
-            durationMinutes:      slot.shows.duration_minutes,
-            venueName:            payload.venueName,
-            venueCity:            payload.venueCity,
+            showTitle:             payload.showTitle,
+            guestFullName:         payload.guestFullName,
+            guestStructure:        (slotRaw as { guest_structure?: string | null } | null)?.guest_structure ?? null,
+            guestEmail:            payload.to,
+            reservationId:         payload.reservationId,
+            numPlaces:             payload.numPlaces,
+            slotDate:              slot.date,
+            slotTime:              slot.time,
+            durationMinutes:       slot.shows.duration_minutes,
+            venueName:             payload.venueName,
+            venueCity:             payload.venueCity,
             sendEmailNotification: true,
           });
 
           if (calResult.success) {
-            // Stocker l'eventId pour pouvoir le modifier/supprimer plus tard
             await adminClient
               .from('reservations')
               .update({ google_calendar_event_id: calResult.eventId })
@@ -316,13 +321,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 6. Créer la notification admin en base (badge sidebar)
-    // Non-bloquant : createAdminNotification gère ses propres erreurs
     await createAdminNotification({
       type: 'new_reservation',
       reservation_id: payload.reservationId,
       professional_name: payload.guestFullName,
       show_title: payload.showTitle,
-      slot_date: null, // Date formatée uniquement disponible dans ce contexte
+      slot_date: null,
       message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
     });
 
