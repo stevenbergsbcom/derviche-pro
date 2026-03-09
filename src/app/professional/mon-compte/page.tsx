@@ -24,6 +24,8 @@ import {
     Building2,
     MapPin,
     Shield,
+    Trash2,
+    AlertTriangle,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
@@ -37,16 +39,13 @@ interface ProProfile {
     email: string;
     email2: string;
     createdAt: string;
-    // Informations personnelles
     firstName: string;
     lastName: string;
     phone: string;
     phone2: string;
-    // Informations professionnelles
     organization: string;
     function: string;
     afcNumber: string;
-    // Adresse
     address: string;
     postalCode: string;
     city: string;
@@ -75,6 +74,9 @@ interface PasswordData {
 }
 
 type EditingSection = 'personal' | 'professional' | 'address' | null;
+
+/** Étapes du dialog de suppression de compte */
+type DeleteStep = 'confirm' | 'deleting';
 
 // ============================================
 // SKELETON
@@ -151,8 +153,16 @@ export default function ProfessionalMonComptePage() {
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [profile, setProfile] = useState<ProProfile | null>(null);
     const [editingSection, setEditingSection] = useState<EditingSection>(null);
+
+    // Dialog mot de passe
     const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null);
+
+    // Dialog suppression de compte (RGPD)
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [deleteStep, setDeleteStep] = useState<DeleteStep>('confirm');
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState<FormData>({
         firstName: '',
@@ -421,6 +431,61 @@ export default function ProfessionalMonComptePage() {
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
         setPasswordError(null);
     }, []);
+
+    // ----------------------------------------
+    // SUPPRESSION DE COMPTE (RGPD Art. 17)
+    // ----------------------------------------
+
+    const handleOpenDeleteDialog = useCallback(() => {
+        setDeleteConfirmText('');
+        setDeleteError(null);
+        setDeleteStep('confirm');
+        setIsDeleteDialogOpen(true);
+    }, []);
+
+    const handleCloseDeleteDialog = useCallback(() => {
+        // Empêcher la fermeture pendant la suppression en cours
+        if (deleteStep === 'deleting') return;
+        setIsDeleteDialogOpen(false);
+        setDeleteConfirmText('');
+        setDeleteError(null);
+        setDeleteStep('confirm');
+    }, [deleteStep]);
+
+    const handleDeleteAccount = useCallback(async () => {
+        if (deleteConfirmText !== 'SUPPRIMER') {
+            setDeleteError('Veuillez taper exactement « SUPPRIMER » pour confirmer.');
+            return;
+        }
+
+        setDeleteError(null);
+        setDeleteStep('deleting');
+
+        try {
+            const response = await fetch('/api/professional/delete-account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+
+            const result = (await response.json()) as { success: boolean; error?: string };
+
+            if (!result.success) {
+                logger.error('[ProMonCompte] Erreur suppression compte', { error: result.error });
+                setDeleteError(result.error ?? 'Une erreur est survenue. Veuillez réessayer.');
+                setDeleteStep('confirm');
+                return;
+            }
+
+            // Succès — déconnexion puis redirection vers /login
+            const supabase = createClient();
+            await supabase.auth.signOut();
+            window.location.href = '/login?message=account_deleted';
+        } catch (err) {
+            logger.error('[ProMonCompte] Exception suppression compte', err instanceof Error ? err : new Error(String(err)));
+            setDeleteError('Une erreur inattendue est survenue. Veuillez réessayer.');
+            setDeleteStep('confirm');
+        }
+    }, [deleteConfirmText]);
 
     // ----------------------------------------
     // RENDER
@@ -848,6 +913,41 @@ export default function ProfessionalMonComptePage() {
             </div>
 
             {/* ------------------------------------------------ */}
+            {/* SECTION 5 — Zone dangereuse (hors grille 2 col)  */}
+            {/* ------------------------------------------------ */}
+            <Card className="border-destructive/40">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base text-destructive">
+                        <AlertTriangle className="w-4 h-4" />
+                        Zone dangereuse
+                    </CardTitle>
+                    <CardDescription>
+                        Actions irréversibles sur votre compte
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-start justify-between gap-4 p-4 rounded-lg border border-destructive/20 bg-destructive/5">
+                        <div className="space-y-1">
+                            <p className="font-medium text-sm">Supprimer mon compte</p>
+                            <p className="text-xs text-muted-foreground">
+                                Supprime définitivement votre compte et toutes vos données personnelles.
+                                Vos réservations futures seront annulées. Cette action est irréversible.
+                            </p>
+                        </div>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            className="shrink-0"
+                            onClick={handleOpenDeleteDialog}
+                        >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Supprimer
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* ------------------------------------------------ */}
             {/* MODALE — Changement de mot de passe              */}
             {/* ------------------------------------------------ */}
             <Dialog open={isPasswordDialogOpen} onOpenChange={handleClosePasswordDialog}>
@@ -924,6 +1024,97 @@ export default function ProfessionalMonComptePage() {
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             )}
                             Changer le mot de passe
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* ------------------------------------------------ */}
+            {/* MODALE — Suppression de compte (RGPD Art. 17)   */}
+            {/* ------------------------------------------------ */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={handleCloseDeleteDialog}>
+                <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="w-5 h-5" />
+                            Supprimer mon compte
+                        </DialogTitle>
+                        <DialogDescription className="text-left space-y-2 pt-1">
+                            <span className="block">
+                                Cette action est <strong>définitive et irréversible</strong>.
+                            </span>
+                            <span className="block">
+                                Vos données personnelles seront effacées et vos réservations futures
+                                annulées automatiquement. Vos réservations passées seront conservées
+                                de façon anonyme à des fins statistiques.
+                            </span>
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteStep === 'confirm' && (
+                        <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="deleteConfirm">
+                                    Tapez{' '}
+                                    <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono">
+                                        SUPPRIMER
+                                    </code>{' '}
+                                    pour confirmer
+                                </Label>
+                                <Input
+                                    id="deleteConfirm"
+                                    value={deleteConfirmText}
+                                    onChange={(e) => {
+                                        setDeleteConfirmText(e.target.value);
+                                        setDeleteError(null);
+                                    }}
+                                    placeholder="SUPPRIMER"
+                                    autoComplete="off"
+                                    autoCorrect="off"
+                                    spellCheck={false}
+                                />
+                            </div>
+                            {deleteError && (
+                                <p role="alert" className="text-sm text-destructive">
+                                    {deleteError}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {deleteStep === 'deleting' && (
+                        <div className="flex flex-col items-center gap-3 py-6">
+                            <Loader2 className="w-8 h-8 animate-spin text-destructive" />
+                            <p className="text-sm text-muted-foreground">
+                                Suppression en cours…
+                            </p>
+                        </div>
+                    )}
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={handleCloseDeleteDialog}
+                            className="w-full sm:w-auto"
+                            disabled={deleteStep === 'deleting'}
+                        >
+                            Annuler
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={() => void handleDeleteAccount()}
+                            className="w-full sm:w-auto"
+                            disabled={
+                                deleteStep === 'deleting' ||
+                                deleteConfirmText !== 'SUPPRIMER'
+                            }
+                        >
+                            {deleteStep === 'deleting' ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                                <Trash2 className="w-4 h-4 mr-2" />
+                            )}
+                            Supprimer définitivement
                         </Button>
                     </DialogFooter>
                 </DialogContent>

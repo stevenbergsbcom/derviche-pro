@@ -41,6 +41,9 @@ export interface CreateReservationData {
   userId?: string | null;
 }
 
+/** Codes d'erreur structurés pour une gestion fine côté UI */
+export type CreateReservationErrorCode = 'CAPACITY_FULL' | 'DUPLICATE' | 'GENERIC';
+
 /** Résultat de la création de réservation */
 export interface CreateReservationResult {
   success: boolean;
@@ -49,6 +52,8 @@ export interface CreateReservationResult {
     code: string;
   };
   error?: string;
+  /** Code machine pour permettre un affichage UI adapté (ex: HTTP 409) */
+  errorCode?: CreateReservationErrorCode;
 }
 
 // ============================================
@@ -73,10 +78,9 @@ function generateReservationCode(reservationId: string): string {
  * Créer une nouvelle réservation
  * 
  * Cette fonction:
- * 1. Vérifie que le créneau a assez de places disponibles
- * 2. Crée la réservation dans la table reservations
- * 3. Décrémente remaining_capacity du slot
- * 4. Retourne l'ID et le code de réservation
+ * 1. Appelle la RPC create_public_reservation (verrou atomique FOR UPDATE)
+ * 2. La RPC crée la réservation et le trigger décrémente remaining_capacity
+ * 3. Retourne l'ID et le code de réservation, ou un errorCode structuré
  * 
  * @param data - Données de la réservation
  * @returns Résultat avec l'ID de réservation ou une erreur
@@ -98,44 +102,12 @@ export async function createReservation(
     const supabase = createClient();
 
     // ============================================
-    // 1. Vérifier la capacité du créneau
+    // 1. Créer la réservation via RPC (bypass RLS)
     // ============================================
-    const { data: slot, error: slotError } = await supabase
-      .from('slots')
-      .select('id, remaining_capacity, capacity')
-      .eq('id', slotId)
-      .single();
-
-    if (slotError || !slot) {
-      logger.error('[reservations] Créneau non trouvé', { slotId, error: slotError });
-      return {
-        success: false,
-        error: 'Ce créneau n\'existe pas ou n\'est plus disponible.',
-      };
-    }
-
-    // Vérifier la capacité (999999 = illimité)
-    const isUnlimited = slot.capacity >= 999999;
-    // Pour les slots illimités, on vérifie quand même car le trigger fait la vraie vérification
-    const hasEnoughCapacity = isUnlimited || slot.remaining_capacity >= numPlaces;
-
-    if (!hasEnoughCapacity) {
-      logger.warn('[reservations] Capacité insuffisante', {
-        slotId,
-        requested: numPlaces,
-        remaining: slot.remaining_capacity,
-      });
-      return {
-        success: false,
-        error: `Il ne reste que ${slot.remaining_capacity} place(s) disponible(s) pour ce créneau.`,
-      };
-    }
-
-    // ============================================
-    // 2. Créer la réservation via RPC (bypass RLS)
-    // ============================================
-    // On utilise une fonction RPC avec SECURITY DEFINER pour permettre
-    // aux utilisateurs anonymes de créer des réservations
+    // La RPC create_public_reservation effectue un SELECT ... FOR UPDATE
+    // sur le slot AVANT l'INSERT, garantissant l'atomicité même en cas
+    // de réservations simultanées (migration 074).
+    // Plus besoin de pré-vérification côté client (non-atomique).
     const { data: reservationId, error: rpcError } = await supabase
       .rpc('create_public_reservation', {
         p_slot_id: slotId,
@@ -157,21 +129,38 @@ export async function createReservation(
       });
 
     if (rpcError) {
+      // Créneau complet au moment de l'INSERT (verrou atomique migration 074)
+      // Format : "CAPACITY_FULL:N place(s) restante(s)"
+      if (rpcError.message?.includes('CAPACITY_FULL:')) {
+        const remaining = rpcError.message.split('CAPACITY_FULL:')[1]?.split(' ')[0] ?? '0';
+        logger.warn('[reservations] Créneau complet (concurrence)', { slotId, remaining });
+        return {
+          success: false,
+          errorCode: 'CAPACITY_FULL',
+          error:
+            remaining === '0'
+              ? 'Ce créneau est complet. Il ne reste plus aucune place disponible.'
+              : `Ce créneau est complet. Il ne reste que ${remaining} place(s) disponible(s).`,
+        };
+      }
+
       // Détecter l'erreur de doublon email/slot (R-RESA-04)
       if (rpcError.message?.includes('DUPLICATE_EMAIL_SLOT:')) {
         const email = rpcError.message.split('DUPLICATE_EMAIL_SLOT:')[1]?.trim() || formData.email;
         logger.warn('[reservations] Doublon email/slot détecté', { slotId, email });
         return {
           success: false,
+          errorCode: 'DUPLICATE',
           error: `Vous avez déjà une réservation pour ce créneau avec l'adresse ${email}. Si vous souhaitez modifier votre réservation, veuillez nous contacter.`,
         };
       }
 
-      logger.error('[reservations] Erreur création réservation via RPC', { 
-        error: rpcError 
+      logger.error('[reservations] Erreur création réservation via RPC', {
+        error: rpcError,
       });
       return {
         success: false,
+        errorCode: 'GENERIC',
         error: 'Une erreur est survenue lors de la création de votre réservation. Veuillez réessayer.',
       };
     }
@@ -185,11 +174,13 @@ export async function createReservation(
     }
 
     // NOTE: Le trigger 'update_slot_capacity' gère automatiquement
-    // la décrémentation de remaining_capacity lors de l'INSERT
+    // la décrémentation de remaining_capacity lors de l'INSERT.
+    // Le verrou FOR UPDATE de la RPC garantit que ce trigger opère
+    // sur la bonne valeur même en cas de concurrence.
     const reservation = { id: reservationId as string };
 
     // ============================================
-    // 3. Retourner le succès
+    // 2. Retourner le succès
     // ============================================
     const code = generateReservationCode(reservation.id);
 
