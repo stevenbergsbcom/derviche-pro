@@ -19,7 +19,13 @@ const RESTRICTED_ADMIN_ROUTES: string[] = [
     '/admin/lieux',
     '/admin/compagnies',
     '/admin/utilisateurs',
+    '/admin/professionnels',
+];
+
+// Routes admin réservées exclusivement au super-admin
+const SUPER_ADMIN_ONLY_ROUTES: string[] = [
     '/admin/preferences',
+    '/admin/systeme',
 ];
 
 // Rôles autorisés pour l'interface compagnie
@@ -36,11 +42,20 @@ const PROFESSIONAL_ROLES: UserRole[] = ['professional'];
 // ============================================
 
 /**
- * Vérifie si un chemin correspond à une route restreinte
+ * Vérifie si un chemin correspond à une route restreinte aux admins complets
  * Gère les sous-routes (ex: /admin/lieux/123)
  */
 function isRestrictedAdminRoute(pathname: string): boolean {
     return RESTRICTED_ADMIN_ROUTES.some(
+        (route) => pathname === route || pathname.startsWith(route + '/')
+    );
+}
+
+/**
+ * Vérifie si un chemin correspond à une route réservée au super-admin uniquement
+ */
+function isSuperAdminOnlyRoute(pathname: string): boolean {
+    return SUPER_ADMIN_ONLY_ROUTES.some(
         (route) => pathname === route || pathname.startsWith(route + '/')
     );
 }
@@ -224,10 +239,18 @@ export async function middleware(request: NextRequest) {
                 return NextResponse.redirect(url);
             }
 
-            // Vérification supplémentaire pour les routes restreintes (externes interdits)
+            // Vérification — routes réservées au super-admin uniquement
+            if (isSuperAdminOnlyRoute(pathname) && userRole !== 'super-admin') {
+                const url = request.nextUrl.clone();
+                url.pathname = '/admin';
+                url.searchParams.set('error', 'restricted_route');
+                return NextResponse.redirect(url);
+            }
+
+            // Vérification — routes restreintes aux admins complets (super-admin + admin)
             if (isRestrictedAdminRoute(pathname) && !FULL_ADMIN_ROLES.includes(userRole)) {
                 const url = request.nextUrl.clone();
-                url.pathname = '/admin'; // Rediriger vers le dashboard admin
+                url.pathname = '/admin';
                 url.searchParams.set('error', 'restricted_route');
                 return NextResponse.redirect(url);
             }

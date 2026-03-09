@@ -39,7 +39,7 @@ interface QuotaData {
 // CONSTANTES
 // ============================================
 
-const FREE_QUOTA    = 3000;
+const FREE_QUOTA     = 3000;
 const WARN_THRESHOLD = 0.8;  // 80% → alerte orange
 const CRIT_THRESHOLD = 1.0;  // 100% → alerte rouge
 
@@ -63,56 +63,84 @@ function formatMonth(): string {
   return new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
 
+/**
+ * Normalise la valeur lue depuis app_settings (colonne JSONB).
+ *
+ * Supabase désérialise automatiquement le JSONB :
+ *   - Une chaîne stockée en JSON  → rendue comme string JS  (ex: "free")
+ *   - Un nombre stocké en JSON    → rendu  comme number JS  (ex: 3000)
+ *
+ * NB : les anciennes lignes stockées avec l'ancienne syntaxe '"free"'
+ * (guillemets inclus dans la valeur) sont gérées par le trim des quotes.
+ */
+function normalizePlan(raw: unknown): ResendPlan {
+  if (typeof raw !== 'string') return 'free';
+  const clean = raw.replace(/^"|"$/g, ''); // garde-fou si double-encodé
+  return clean === 'pro' ? 'pro' : 'free';
+}
+
+function normalizeQuota(raw: unknown): number {
+  if (typeof raw === 'number' && raw > 0) return raw;
+  // garde-fou : chaîne numérique
+  if (typeof raw === 'string') {
+    const n = parseInt(raw, 10);
+    if (!isNaN(n) && n > 0) return n;
+  }
+  return FREE_QUOTA;
+}
+
 // ============================================
 // COMPOSANT
 // ============================================
 
 export function ResendQuotaWidget() {
-  const [data,       setData]       = useState<QuotaData | null>(null);
-  const [isLoading,  setIsLoading]  = useState(true);
-  const [isSaving,   setIsSaving]   = useState(false);
+  const [data,         setData]         = useState<QuotaData | null>(null);
+  const [loadError,    setLoadError]    = useState<string | null>(null);
+  const [isLoading,    setIsLoading]    = useState(true);
+  const [isSaving,     setIsSaving]     = useState(false);
   const [proQuotaInput, setProQuotaInput] = useState('');
   const [showProInput,  setShowProInput]  = useState(false);
 
   // ── Chargement ─────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const supabase = createClient();
 
       // 1. Récupérer le plan et le quota depuis app_settings
-      const { data: settings } = await supabase
+      const { data: settings, error: settingsErr } = await supabase
         .from('app_settings')
         .select('key, value')
         .in('key', ['resend_plan', 'resend_monthly_quota']);
 
-      const plan: ResendPlan = (settings?.find(s => s.key === 'resend_plan')?.value as ResendPlan) ?? 'free';
-      const rawQuota         = settings?.find(s => s.key === 'resend_monthly_quota')?.value;
-      const monthlyQuota     = typeof rawQuota === 'number' ? rawQuota : FREE_QUOTA;
+      if (settingsErr) throw new Error(settingsErr.message);
+
+      const plan         = normalizePlan(settings?.find(s => s.key === 'resend_plan')?.value);
+      const monthlyQuota = normalizeQuota(settings?.find(s => s.key === 'resend_monthly_quota')?.value);
 
       // 2. Compter les emails envoyés ce mois-ci depuis app_logs
       const now        = new Date();
       const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-      const { count } = await supabase
+      const { count, error: countErr } = await supabase
         .from('app_logs')
         .select('*', { count: 'exact', head: true })
         .eq('category', 'email')
         .eq('status', 'success')
         .gte('created_at', startMonth);
 
-      setData({
-        sentThisMonth: count ?? 0,
-        plan,
-        monthlyQuota,
-      });
+      if (countErr) throw new Error(countErr.message);
+
+      setData({ sentThisMonth: count ?? 0, plan, monthlyQuota });
 
       // Pré-remplir l'input pro avec la valeur actuelle si plan pro
       if (plan === 'pro') {
         setProQuotaInput(String(monthlyQuota));
       }
-    } catch {
-      // Silencieux — le widget affiche un état vide
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      setLoadError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -125,17 +153,22 @@ export function ResendQuotaWidget() {
     setIsSaving(true);
     try {
       const supabase = createClient();
-      await supabase.from('app_settings')
-        .update({ value: '"free"' })
-        .eq('key', 'resend_plan');
-      await supabase.from('app_settings')
-        .update({ value: FREE_QUOTA })
-        .eq('key', 'resend_monthly_quota');
+
+      // Valeurs directes (string / number) — Supabase sérialise en JSONB automatiquement
+      const [r1, r2] = await Promise.all([
+        supabase.from('app_settings').update({ value: 'free' }).eq('key', 'resend_plan'),
+        supabase.from('app_settings').update({ value: FREE_QUOTA }).eq('key', 'resend_monthly_quota'),
+      ]);
+
+      if (r1.error) throw new Error(r1.error.message);
+      if (r2.error) throw new Error(r2.error.message);
+
       setShowProInput(false);
       toast.success('Plan passé en gratuit (3 000 emails/mois)');
       void load();
-    } catch {
-      toast.error('Erreur lors de la mise à jour du plan');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      toast.error(`Erreur lors de la mise à jour du plan : ${msg}`);
     } finally {
       setIsSaving(false);
     }
@@ -150,25 +183,29 @@ export function ResendQuotaWidget() {
     setIsSaving(true);
     try {
       const supabase = createClient();
-      await supabase.from('app_settings')
-        .update({ value: '"pro"' })
-        .eq('key', 'resend_plan');
-      await supabase.from('app_settings')
-        .update({ value: quota })
-        .eq('key', 'resend_monthly_quota');
+
+      const [r1, r2] = await Promise.all([
+        supabase.from('app_settings').update({ value: 'pro' }).eq('key', 'resend_plan'),
+        supabase.from('app_settings').update({ value: quota }).eq('key', 'resend_monthly_quota'),
+      ]);
+
+      if (r1.error) throw new Error(r1.error.message);
+      if (r2.error) throw new Error(r2.error.message);
+
       setShowProInput(false);
       toast.success(`Plan pro — quota mis à jour : ${quota.toLocaleString('fr-FR')} emails/mois`);
       void load();
-    } catch {
-      toast.error('Erreur lors de la mise à jour du plan');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      toast.error(`Erreur lors de la mise à jour du plan : ${msg}`);
     } finally {
       setIsSaving(false);
     }
   }, [proQuotaInput, load]);
 
   // ── Calculs ────────────────────────────────────────────────────────────────
-  const ratio    = data ? Math.min(data.sentThisMonth / data.monthlyQuota, 1) : 0;
-  const pct      = Math.round(ratio * 100);
+  const ratio     = data ? Math.min(data.sentThisMonth / data.monthlyQuota, 1) : 0;
+  const pct       = Math.round(ratio * 100);
   const isWarning = ratio >= WARN_THRESHOLD;
 
   // ── Rendu ──────────────────────────────────────────────────────────────────
@@ -206,6 +243,11 @@ export function ResendQuotaWidget() {
             <div className="h-4 w-1/2 rounded bg-muted animate-pulse" />
             <div className="h-3 w-full rounded bg-muted animate-pulse" />
           </div>
+        ) : loadError ? (
+          /* Erreur de chargement visible */
+          <p className="text-sm text-red-600">
+            Impossible de charger les données : {loadError}
+          </p>
         ) : data ? (
           <>
             {/* Compteur */}
