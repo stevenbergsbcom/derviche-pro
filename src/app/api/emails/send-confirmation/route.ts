@@ -320,14 +320,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', { calErr });
     }
 
-    // 6. Créer la notification admin en base (badge sidebar)
-    await createAdminNotification({
+    // 6. Créer la notification admin en base (badge sidebar) — non bloquant
+    void createAdminNotification({
       type: 'new_reservation',
       reservation_id: payload.reservationId,
       professional_name: payload.guestFullName,
       show_title: payload.showTitle,
       slot_date: null,
       message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
+    }).catch((err) => {
+      logger.error('[API /emails/send-confirmation] Erreur createAdminNotification (non-bloquant)', { err });
     });
 
     return NextResponse.json({ success: true, messageId: result.messageId });

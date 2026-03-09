@@ -7,11 +7,13 @@
  *
  * Sécurité :
  * - Rate limiting : 5 req / 15 min par IP (brute-force protection)
+ * - Validation Zod du body entrant
  * - Requiert une session active
  * - Ne modifie pas la session de l'utilisateur
  */
 
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
@@ -19,12 +21,16 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logSystem } from '@/lib/services/logs';
 
 // ============================================
-// TYPES
+// VALIDATION
 // ============================================
 
-interface VerifyPasswordRequest {
-  password: string;
-}
+const bodySchema = z.object({
+  password: z.string().min(1, 'Mot de passe requis'),
+});
+
+// ============================================
+// TYPES
+// ============================================
 
 interface VerifyPasswordResponse {
   success: boolean;
@@ -61,15 +67,26 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
       );
     }
 
-    // 2. Parser la requête
-    const body = await request.json() as VerifyPasswordRequest;
+    // 2. Valider le body avec Zod
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Corps de requête invalide' },
+        { status: 400 }
+      );
+    }
 
-    if (!body.password || typeof body.password !== 'string') {
+    const parseResult = bodySchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return NextResponse.json(
         { success: false, error: 'Mot de passe requis' },
         { status: 400 }
       );
     }
+
+    const { password } = parseResult.data;
 
     // 3. Créer un client Supabase isolé (sans cookies, sans session)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -95,7 +112,7 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
     // 4. Tenter une connexion avec le mot de passe fourni
     const { error: signInError } = await isolatedClient.auth.signInWithPassword({
       email: user.email!,
-      password: body.password,
+      password,
     });
 
     if (signInError) {
