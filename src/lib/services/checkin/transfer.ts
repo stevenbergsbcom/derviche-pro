@@ -303,6 +303,7 @@ export async function transferReservation(
     // 11. Transformer la réservation mise à jour
     const result: CheckinReservation = {
       id: updated.id,
+      userId: null, // non fetché ici — utilisé uniquement à la lecture initiale
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,

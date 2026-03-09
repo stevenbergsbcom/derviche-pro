@@ -25,6 +25,7 @@ import {
   NotesSection,
   FooterSection,
   CheckinEmailsSection,
+  RecentReservationsSection,
 } from './sections';
 import { CancelConfirmDialog } from './sections/CancelConfirmDialog';
 
@@ -133,6 +134,14 @@ export function CheckinDrawer({
             onInternalNotesChange={drawer.setInternalNotes}
             isStaffDD={drawer.isStaffDD}
           />
+
+          {/* Historique des 20 dernières réservations — staff DD uniquement */}
+          {drawer.isStaffDD && (
+            <RecentReservationsSection
+              userId={reservation.userId}
+              displayName={drawer.displayName}
+            />
+          )}
         </div>
 
         {/* Footer avec boutons */}

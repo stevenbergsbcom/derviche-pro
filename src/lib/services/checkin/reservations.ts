@@ -48,6 +48,7 @@ export async function getSlotReservations(
       .from('reservations')
       .select(`
         id,
+        user_id,
         guest_first_name,
         guest_last_name,
         guest_email,
@@ -93,6 +94,7 @@ export async function getSlotReservations(
     // Note: checkinInternalNotes masqué pour les non-admins
     const reservations: CheckinReservation[] = data.map((r) => ({
       id: r.id,
+      userId: (r as unknown as { user_id: string | null }).user_id,
       guestFirstName: r.guest_first_name,
       guestLastName: r.guest_last_name,
       guestEmail: r.guest_email,
@@ -397,6 +399,7 @@ export async function updateCheckinStatus(
     // 5. Transformer et retourner la réservation mise à jour
     const result: CheckinReservation = {
       id: updated.id,
+      userId: null, // non fetché ici — utilisé uniquement à la lecture initiale
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,
@@ -625,6 +628,7 @@ export async function updateGuestInfo(
     // 5. Transformer et retourner
     const result: CheckinReservation = {
       id: updated.id,
+      userId: null, // non fetché ici — utilisé uniquement à la lecture initiale
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,

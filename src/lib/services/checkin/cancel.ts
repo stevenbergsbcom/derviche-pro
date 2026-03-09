@@ -146,6 +146,7 @@ export async function cancelReservationFromPWA(
     // 5. Transformer et retourner
     const result: CheckinReservation = {
       id: updated.id,
+      userId: null, // non fetché ici — utilisé uniquement à la lecture initiale
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,
@@ -341,6 +342,7 @@ export async function reactivateReservation(
     // 6. Transformer et retourner
     const result: CheckinReservation = {
       id: updated.id,
+      userId: null, // non fetché ici — utilisé uniquement à la lecture initiale
       guestFirstName: updated.guest_first_name,
       guestLastName: updated.guest_last_name,
       guestEmail: updated.guest_email,
