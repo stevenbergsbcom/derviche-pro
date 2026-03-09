@@ -73,6 +73,23 @@ export async function GET(
       );
     }
 
+    // Autorisation : soi-même OU staff DD (super-admin, admin, externe)
+    if (currentUser.id !== userId) {
+      const { data: roleRow } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', currentUser.id)
+        .in('role', ['super-admin', 'admin', 'externe'])
+        .maybeSingle();
+
+      if (!roleRow) {
+        return NextResponse.json(
+          { success: false, error: 'Non autorisé' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Appel RPC via service_role
     const supabaseAdmin = createAdminClient();
     const { data, error: rpcError } = await supabaseAdmin.rpc(
