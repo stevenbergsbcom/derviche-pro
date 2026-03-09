@@ -56,14 +56,25 @@ export function calculateOccupancyRate(capacity: number, remainingCapacity: numb
 // ============================================
 
 /**
- * Retourne la date du jour au format ISO (YYYY-MM-DD)
+ * Formate une Date en YYYY-MM-DD en utilisant l'heure locale (pas UTC).
+ * Évite le décalage timezone que .toISOString() introduit (convertit en UTC avant).
  */
-export function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+function toLocalDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /**
- * Retourne le début de la semaine courante (lundi) au format ISO
+ * Retourne la date du jour au format ISO (YYYY-MM-DD) en heure locale
+ */
+export function getTodayISO(): string {
+  return toLocalDateISO(new Date());
+}
+
+/**
+ * Retourne le début de la semaine courante (lundi) au format ISO en heure locale
  */
 export function getWeekStartISO(): string {
   const now = new Date();
@@ -71,7 +82,7 @@ export function getWeekStartISO(): string {
   const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
   const monday = new Date(now);
   monday.setDate(now.getDate() - diffToMonday);
-  return monday.toISOString().split('T')[0];
+  return toLocalDateISO(monday);
 }
 
 /**

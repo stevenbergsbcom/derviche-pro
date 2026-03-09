@@ -65,19 +65,29 @@ export function groupSlotsByDate(slots: CheckinSlot[]): Map<string, CheckinSlot[
 }
 
 /**
- * Retourne la date d'aujourd'hui au format ISO (YYYY-MM-DD)
+ * Formate une Date en YYYY-MM-DD en heure locale (pas UTC).
+ */
+function toLocalDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${d}`;
+}
+
+/**
+ * Retourne la date d'aujourd'hui au format ISO (YYYY-MM-DD) en heure locale
  */
 export function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalDateISO(new Date());
 }
 
 /**
  * Calcule une date limite en soustrayant des jours
  * @param daysAgo Nombre de jours à soustraire
- * @returns Date au format ISO (YYYY-MM-DD)
+ * @returns Date au format ISO (YYYY-MM-DD) en heure locale
  */
 export function getDateDaysAgo(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split('T')[0];
+  return toLocalDateISO(date);
 }
