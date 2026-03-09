@@ -15,6 +15,11 @@ export type {
   AdminDashboardData,
   AdminDashboardResult,
   AdminDashboardOptions,
+  ReservationChartPoint,
+  TopShow,
+  Slot24h,
+  DashboardPeriod,
+  PeriodBounds,
 } from './types';
 
 // Fonction principale (seule exportée publiquement)

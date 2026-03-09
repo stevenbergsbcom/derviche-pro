@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S152 (complète ✅) — Fiche professionnel admin + historique réservations PWA + corrections audit — 9 mars 2026
+> Dernière mise à jour : Session S153 (complète ✅) — Rate limiting Upstash + assignations spectacles externes + widget monitoring — 9 mars 2026
 
 ---
 
@@ -11,7 +11,7 @@
 - Callback OAuth Supabase
 - Middleware : protection par rôle, redirection, compte désactivé
 - `SUPER_ADMIN_ONLY_ROUTES` : `/admin/preferences` + `/admin/systeme` — accès super-admin uniquement (S150)
-- Vérification mot de passe (API)
+- Vérification mot de passe (API) — validation Zod ajoutée S153
 
 ### ✅ Public - Catalogue & Réservation (100%)
 - Liste des spectacles (public)
@@ -63,7 +63,8 @@
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
 | Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (11), Google Calendar, RGPD |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
-| **Système** | ✅ Logs journal (email/calendar/réservation/système) + widget quota Resend — **S150** |
+| **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
+| **Utilisateurs** | ✅ CRUD comptes internes + vue assignations spectacles pour externes — S153 |
 
 ### ✅ Admin — Templates email (100%) — S148-S149
 - **11 templates** éditables dans /admin/préférences/Templates (3 groupes : transactionnels, rappels, post accueil)
@@ -76,16 +77,25 @@
 - Migration 071 : 8 nouvelles colonnes sur `email_templates`
 - **Sécurité** : helper `isSafeUrl()` dans `html-helpers.ts` — filtre les URLs non-http(s) avant insertion dans les `href` (XSS `javascript:`)
 
-### ✅ Admin — Système / Monitoring (100%) — S150
+### ✅ Admin — Système / Monitoring (100%) — S150 + S153
 - Page `/admin/systeme` — accès super-admin uniquement
-- **Widget quota Resend** : comptage local depuis `app_logs`, barre de progression (vert→orange→rouge), alerte >80%, switch plan free/pro avec quota personnalisé
-- **Journal des logs** : tableau paginé (50/page), filtres catégorie/niveau/statut, lignes dépliables avec détails JSONB
+- **Widget quota Resend** : comptage local depuis `app_logs`, barre de progression, alerte >80%, switch plan free/pro
+- **Widget rate limiting** : tentatives bloquées aujourd'hui + 7 jours, badge "Activité suspecte" si >10, dernière IP masquée, répartition par route — S153
+- **Journal des logs** : tableau paginé (50/page), filtres catégorie/niveau/statut, lignes dépliables
 - **Route `GET /api/admin/logs`** : protégée super-admin, filtrée, paginée
-- **Service `src/lib/services/logs/`** : `logEmail()`, `logCalendar()`, `logSystem()` — tous fire & forget (non-bloquants)
+- **Service `src/lib/services/logs/`** : `logEmail()`, `logCalendar()`, `logSystem()` — tous fire & forget
 - **Intégration email** : 5 fonctions de `services/email/index.ts` loggent succès + erreur
 - **Intégration Calendar** : create/update/delete loggés + notification `calendar_error` admin si échec
-- **Purge cron** : route `/api/cron/purge-logs` — supprime les logs > 90 jours, déclenchée par GitHub Actions (cron-daily.yml)
-- Entrée "Système" dans sidebar admin (icône `ServerCog`) — visible super-admin uniquement
+- **Purge cron** : route `/api/cron/purge-logs` — supprime les logs > 90 jours
+
+### ✅ Rate Limiting (100%) — S153
+- **`src/lib/rate-limit.ts`** : helper Upstash Redis, 3 limiters sliding window, fail-open, `NextResponse` 429
+- `auth` : 5 req / 15 min — `/api/auth/verify-password` + `/api/auth/check-account-status`
+- `emails` : 20 req / 1h — `/api/emails/send-confirmation`
+- `reservations` : 10 req / 10 min — prêt pour future route résa publique
+- Logs des blocages dans `app_logs` (action `rate_limit_blocked`) via `logSystem()`
+- Headers `Retry-After`, `X-RateLimit-*` sur toutes les réponses 429
+- Variables Upstash configurées en local (`.env.local`) et sur Vercel
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -141,147 +151,97 @@
 
 ---
 
-## Dernier travail (S152 — 9 mars 2026) [MERGÉ MAIN ✅]
+## Dernier travail (S153 — 9 mars 2026) [MERGÉ MAIN ✅]
+
+### S153-A — Assignations spectacles pour les externes
+- Route `GET /api/admin/users/[userId]/assignments` — accès super-admin + admin uniquement
+- Retourne `AssignedShow[]` : spectacles assignés via `slots.hosted_by_id`, agrégation JS (slot_count, next_slot_date)
+- `UserViewDialog` : section `AssignedShowsSection` avec lazy load, AbortController, badge statut, skeleton
+- Visible uniquement si `user.role === 'externe'`
+
+### S153-B — Rate Limiting Upstash Redis
+- `src/lib/rate-limit.ts` : helper complet, 3 limiters sliding window, fail-open si Redis absent
+- `rateLimitResponse()` retourne `NextResponse` (compatible tous route handlers)
+- Appliqué sur : `verify-password`, `check-account-status`, `send-confirmation`
+- Chaque blocage loggué dans `app_logs` (action `rate_limit_blocked`) via `void logSystem()`
+- Variables `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` dans `.env.local` et Vercel
+
+### S153-C — Widget monitoring rate limiting
+- `rate-limit-widget.tsx` : compteurs aujourd'hui + 7 jours, badge statut, dernière IP masquée, répartition par route
+- `startOfTodayUTC()` avec `Date.UTC()` — fix bug timezone non-UTC
+- Flag `cancelled` dans `useEffect` — pas de setState après unmount
+- Intégré dans `systeme-content.tsx` en grid 2 colonnes avec `ResendQuotaWidget`
+
+### S153-audit — Corrections post-audit Cursor
+- `verify-password` : validation Zod du body (score 8→9)
+- `send-confirmation` : `createAdminNotification` → `void .catch()` non bloquant
+- `rate-limit-widget` : `Date.UTC()` pour startOfToday + flag `cancelled` anti-unmount
+
+---
+
+## Travail précédent (S152 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S152-A — Page fiche professionnel admin
-- Page `/admin/professionnels/[id]` — URL partageable, accessible depuis le modal et le menu contextuel
-- En-tête fiche : avatar initiales, nom, statut actif/inactif, stats (réservations, confirmées, présences)
-- Colonne gauche : infos profil (structure, fonction, AFC, contact, adresse, notes internes)
-- Colonne droite : tableau historique complet (spectacle | date+heure | statut résa | statut checkin)
+- Page `/admin/professionnels/[id]` — URL partageable
+- En-tête : avatar initiales, nom, statut, stats (réservations, confirmées, présences)
+- Colonne gauche : infos profil. Colonne droite : tableau historique complet
 - Bouton "Voir la fiche complète" dans `ProfessionalsTable` + `ProfessionalModal`
-- Fix ambiguïté FK `profiles ↔ reservations` : count séparé (`.eq('user_id', ...)`) à la place de l'embed Supabase
 
 ### S152-B — Route API admin historique
-- `GET /api/admin/professionals/[professionalId]/history` — accès super-admin + admin uniquement
-- Validation UUID du paramètre, appel RPC via `createAdminClient()`
-- Type exporté : `ProfessionalReservationHistoryEntry`
+- `GET /api/admin/professionals/[professionalId]/history`
 
 ### S152-C — Historique PWA dans CheckinDrawer
-- `userId` propagé dans `CheckinReservation` → `ReservationRowData` → `useSlotDetails`
-- Route `GET /api/pwa/professional/[userId]/recent` — guard : soi-même OU staff DD (fix audit)
-- `RecentReservationsSection` : chargement lazy, reset sur changement de `userId` (fix bug stale history)
-- Visible uniquement pour `isStaffDD` dans `CheckinDrawer`
+- `RecentReservationsSection` : chargement lazy, reset sur changement de `userId`
+- Visible uniquement pour `isStaffDD`
 
 ### S152-D — Migration 077
-- RPC `get_professional_reservation_history(p_user_id)` — tout l'historique, SECURITY DEFINER, service_role uniquement
-- RPC `get_professional_recent_reservations(p_user_id)` — 20 dernières réservations pour la PWA
-
-### S152-audit — Corrections post-audit Cursor
-- **Critique** : Route `/api/pwa/professional/[userId]/recent` — ajout guard 403 (soi-même OU rôle staff DD)
-- **Bug** : `RecentReservationsSection` — `loadedForUserId` pour reset l'état quand `userId` change (évite historique périmé)
+- RPCs `get_professional_reservation_history` + `get_professional_recent_reservations`
 
 ---
 
-## Travail précédent (S151 — 9 mars 2026) [MERGÉ MAIN ✅]
-
-### S151-A — Verrou SQL atomique (réservations simultanées)
-- Migration 074 : `create_public_reservation` — `SELECT ... FOR UPDATE` sur le slot AVANT l'INSERT (verrou atomique)
-- Migration 074 : fix bug pays — ajout paramètre `p_country` / colonne `guest_country` (jamais enregistré avant)
-- Migration 074 : code d'erreur structuré `CAPACITY_FULL:N` pour réponse UI claire (distincte du doublon)
-- `src/lib/services/reservations.ts` : suppression du pre-check non-atomique côté client + gestion `CAPACITY_FULL` + `errorCode` typé
-- `CreateReservationErrorCode` : nouveau type exporté (`'CAPACITY_FULL' | 'DUPLICATE' | 'GENERIC'`)
-
-### S151-B — Index perf
-- Migration 075 : index composite partiel `idx_reservations_slot_status_active (slot_id, status) WHERE status != 'cancelled'`
-- Migration 075 : index partiel `idx_reservations_slot_confirmed (slot_id) WHERE status = 'confirmed'` (trigger + admin)
-
-### S151-C — RGPD Suppression de compte professionnel
-- Migration 076 : RPC `anonymize_and_delete_account()` — anonymisation PII complète (Option A : stats préservées), annulation réservations futures, SECURITY DEFINER
-- Route `POST /api/professional/delete-account` : double check auth+rôle, RPC → deleteUser cascade, notif admin si annulations
-- `/professional/mon-compte` : section "Zone dangereuse" + dialog RGPD double confirmation (saisie "SUPPRIMER")
-- `header.tsx` : `getAccountUrl()` corrigé par rôle + lien "Mon compte" masqué si `userRole === null` (desktop + mobile)
-- Suppression page orpheline `(protected)/mon-compte`
-
-### S151-audit — Corrections post-audit Cursor
-- **Critique** : `checkin_internal_notes` ajouté dans l'anonymisation RGPD (migration 076 ré-appliquée)
-- **Moyen** : Email anonymisé renforcé — `MD5(user_id + email)` 12 chars (anti-collision)
-- **Faible** : Header "Mon compte" masqué tant que `userRole === null` (desktop + mobile)
-
----
-
-## Travail précédent (S150 — 9 mars 2026) [MERGÉ MAIN ✅]
-
-### S150-A — Infrastructure logs (migrations + service)
-- Migration 072 : table `app_logs` — RLS super-admin, indexes optimisés
-- Migration 073 : type `calendar_error` dans `admin_notifications.type` + clés `resend_plan`/`resend_monthly_quota` dans `app_settings`
-- Service `src/lib/services/logs/` — `types.ts`, `queries.ts`, `index.ts`
-- Intégration dans `services/email/index.ts` : 5 fonctions loggent succès + erreur (fire & forget)
-- Intégration dans `services/google-calendar/queries.ts` : 3 opérations loggées + notification `calendar_error`
-- `src/components/admin/notifications/notification-item.tsx` : type `calendar_error` ajouté
-
-### S150-B — UI monitoring
-- Route `GET /api/admin/logs` — super-admin, filtres, pagination 50/page
-- Page `/admin/systeme` + composants : `systeme-content.tsx`, `resend-quota-widget.tsx`, `logs-table.tsx`
-- Sidebar admin : entrée "Système" (icône `ServerCog`, allowedRoles: ['super-admin'])
-- Route `/api/cron/purge-logs` — supprime app_logs > 90 jours
-- `cron-daily.yml` : step purge-logs ajouté (continue-on-error: true)
-- `src/types/supabase.ts` + `src/types/database.ts` : table `app_logs` déclarée
-
-### S150-audit — Corrections post-audit Cursor (9/10) [MERGÉ MAIN ✅]
-- **Critique** : `resend-quota-widget.tsx` — fix JSON double-encodage (`.update({ value: '"free"' })` → `.update({ value: 'free' })`) + helpers `normalizePlan()` / `normalizeQuota()` + erreur de chargement visible
-- **Important** : `middleware.ts` — ajout `SUPER_ADMIN_ONLY_ROUTES` (`/admin/preferences`, `/admin/systeme`) + `isSuperAdminOnlyRoute()` ; `/admin/professionnels` ajouté dans `RESTRICTED_ADMIN_ROUTES`
-
----
-
-## À faire — Backlog priorisé (mis à jour 9 mars 2026)
-
-### 🔴 CRITIQUE — Impact prod immédiat
-
-| # | Session | Fonctionnalité | Détail |
-|---|---------|----------------|--------|
-| 1 | ~~**S151**~~ | ~~Réservations simultanées — verrou SQL~~ | ✅ **Fait S151-A** — Migration 074 : `FOR UPDATE` dans RPC + fix bug pays |
-| 2 | ~~**S151**~~ | ~~Réservations simultanées — scalabilité~~ | ✅ **Fait S151-B** — Migration 075 : index composites/partiels |
-| 3 | ~~**S151**~~ | ~~RGPD — Suppression de compte~~ | ✅ **Fait S151-C** — Migration 076 + route API + UI `/professional/mon-compte` |
-
-### 🔴 HAUTE PRIORITÉ — Fonctionnalités manquantes CDC
-
-| # | Session | Fonctionnalité | Détail |
-|---|---------|----------------|--------|
-| 4 | ~~**S152**~~ | ~~Historique complet d'un pro (vue admin)~~ | ✅ **Fait S152** — Page `/admin/professionnels/[id]` + historique PWA dans CheckinDrawer |
-| 5 | **S153** | Gestion utilisateurs super-admin | Création compte externe-DD avec mot de passe temporaire + UI d'assignation/désassignation de spectacles. Table `user_show_assignments` existe, UI manque. |
-| 6 | **S153** | Rate limiting | Middleware Vercel Edge sur `/api/reservations` (POST), `/api/auth/*`, `/api/emails/*`. Solution légère sans Redis (`@vercel/edge-rate-limiter` ou compteur mémoire). |
+## À faire — Backlog priorisé (mis à jour S153 — 9 mars 2026)
 
 ### 🟡 MOYENNE PRIORITÉ — Expérience & dashboards
 
 | # | Session | Fonctionnalité | Détail |
 |---|---------|----------------|--------|
-| 7 | **S154** | Refonte dashboards par rôle | Enrichir et épurer chaque dashboard : admin (graphique temporel réservations, alertes spectacles quasi-complets), externe-DD (stats filtrées ses spectacles), compagnie (taux remplissage/présence par créneau, évolution), professionnel (prochain spectacle mis en avant). |
-| 8 | **S154** | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. Pas que les réservations brutes. |
-| 9 | **S155** | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles pour lesquels il a déjà réservé vs ceux non encore vus. |
-| 10 | **S155** | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC, non implémenté). |
-| 11 | **S156** | Notification push PWA | Pour les rôles staff uniquement (super-admin, admin, externe, compagnie assurant l'accueil). Rappel H-2 avant spectacle, nouvelle réservation, annulation. **PAS** pour les programmateurs. |
-| 12 | **S156** | Refacto fichiers trop gros | Par ordre d'urgence : `EmailTemplateForm.tsx` (27 KB 🚨), `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB). |
-| 13 | **S157** | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
+| 1 | **S154** | Refonte dashboards par rôle | Admin : graphique temporel réservations, alertes spectacles quasi-complets. Externe-DD : stats filtrées ses spectacles. Compagnie : taux remplissage/présence par créneau. Professionnel : prochain spectacle mis en avant. |
+| 2 | **S154** | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. |
+| 3 | **S155** | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles déjà vus vs non vus. |
+| 4 | **S155** | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC). |
+| 5 | **S156** | Notification push PWA | Pour les rôles staff uniquement (super-admin, admin, externe). Rappel H-2 avant spectacle, nouvelle réservation, annulation. PAS pour les programmateurs. |
+| 6 | **S156** | Refacto fichiers trop gros | Par ordre : `EmailTemplateForm.tsx` (27 KB 🚨), `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB). |
+| 7 | **S157** | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
 
 ### 🟡 MOYENNE PRIORITÉ — CDC V4 non implémenté
 
 | # | Session | Fonctionnalité | Détail |
 |---|---------|----------------|--------|
-| 14 | **S158** | Champs manquants dans les formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
-| 15 | **S158** | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque dans les formulaires admin. |
-| 16 | **S159** | Dashboard externe-DD dédié | Vue "mes spectacles assignés" + prochains créneaux. Actuellement ils partagent l'interface admin filtrée par RLS. |
+| 8 | **S158** | Champs manquants formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
+| 9 | **S158** | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque. |
+| 10 | **S159** | Dashboard externe-DD dédié | Vue "mes spectacles assignés" + prochains créneaux. |
 
 ### 🟢 BASSE PRIORITÉ
 
 | # | Fonctionnalité | Détail |
 |---|----------------|--------|
-| 17 | Vue calendrier compagnie | Représentations chronologiques de leurs spectacles |
-| 18 | Impression liste d'émargement | Export PDF de la liste de présence pour accueil sur place |
-| 19 | Réorganisation catégories | Drag & drop ou flèches haut/bas (champ `display_order` existe) |
-| 20 | Audit logs actions métier | Traçabilité RGPD : qui a modifié quoi (différent de `app_logs` qui est du monitoring) |
-| 21 | Pages légales | CGU, mentions légales, politique de confidentialité |
-| 22 | Champs org dans footer + emails | `contact_email`, `phone`, `address`, `website` stockés dans `app_settings` mais non consommés |
-| 23 | Redirection mobile auto au login | Selon device + rôle (prévu au CDC section 2.6) |
-| 24 | Stats compagnie avancées | Profil des programmateurs par fonction et région, évolution présence |
+| 11 | Vue calendrier compagnie | Représentations chronologiques de leurs spectacles |
+| 12 | Impression liste d'émargement | Export PDF de la liste de présence pour accueil sur place |
+| 13 | Réorganisation catégories | Drag & drop ou flèches haut/bas (champ `display_order` existe) |
+| 14 | Audit logs actions métier | Traçabilité RGPD : qui a modifié quoi |
+| 15 | Pages légales | CGU, mentions légales, politique de confidentialité |
+| 16 | Champs org dans footer + emails | `contact_email`, `phone`, `address`, `website` dans `app_settings` non consommés |
+| 17 | Redirection mobile auto au login | Selon device + rôle (prévu au CDC section 2.6) |
+| 18 | Stats compagnie avancées | Profil des programmateurs par fonction et région |
 
-### 🔭 Phase 2 — Post-MVP (optionnel)
+### 🔭 Phase 2 — Post-MVP
 
 | # | Fonctionnalité |
 |---|----------------|
-| 25 | White-label / Multi-tenant |
-| 26 | API publique partenaires |
-| 27 | Mode offline check-in PWA |
-| 28 | Analytics avancées (Google Analytics, Mixpanel) |
+| 19 | White-label / Multi-tenant |
+| 20 | API publique partenaires |
+| 21 | Mode offline check-in PWA |
+| 22 | Analytics avancées |
 
 ---
 
@@ -294,6 +254,7 @@
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
 | RGPD purge auto | — | Durées stockées, aucune purge automatique planifiée | 🟡 Basse |
+| Rate limiting routes manquantes | `rate-limit.ts` | `/api/emails/send-cancellation`, `/api/emails/send-modification`, `/api/emails/send-checkin-followup` non encore protégées | 🟡 Basse |
 
 ---
 
@@ -322,6 +283,8 @@
 | `is_simple_style` | true = fond blanc sobre (templates post-checkin) ; false = header bleu Derviche |
 | `app_logs` fire & forget | `void logEmail(...)` / `void logCalendar(...)` : intentionnel — une erreur de log ne bloque jamais l'opération métier |
 | `resend_plan` / `resend_monthly_quota` | Valeurs JSONB directes (string/number) — ne pas wrapper avec guillemets supplémentaires |
+| `rate-limit.ts` | Singleton Redis partagé entre invocations serverless — fail-open si Upstash down |
+| `startOfTodayUTC()` | Toujours utiliser `Date.UTC()` pour les bornes de requêtes — évite le bug timezone UTC+ |
 
 ---
 
@@ -352,7 +315,7 @@
 | 071 | `071_add_link_options_to_email_templates.sql` | 8 colonnes liens optionnels sur `email_templates` | ✅ |
 | 072 | `072_create_app_logs.sql` | Table `app_logs` — journal système, RLS super-admin, indexes | ✅ |
 | 073 | `073_add_calendar_error_and_resend_settings.sql` | Type `calendar_error` dans `admin_notifications` + clés `resend_plan`/`resend_monthly_quota` | ✅ |
-| 074 | `074_add_for_update_to_public_reservation_rpc.sql` | Verrou atomique `FOR UPDATE` dans `create_public_reservation` + fix `guest_country` + code `CAPACITY_FULL` | ✅ |
+| 074 | `074_add_for_update_to_public_reservation_rpc.sql` | Verrou atomique `FOR UPDATE` + fix `guest_country` + code `CAPACITY_FULL` | ✅ |
 | 075 | `075_add_composite_index_reservations_slot_status.sql` | Index composite `(slot_id, status)` partiel + index `slot_confirmed` | ✅ |
-| 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` — anonymisation PII + annulation réservations futures + SECURITY DEFINER | ✅ |
-| 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` — SECURITY DEFINER, service_role uniquement | ✅ |
+| 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` | ✅ |
+| 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` | ✅ |

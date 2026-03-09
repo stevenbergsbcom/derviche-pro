@@ -1,9 +1,10 @@
 /**
  * Hook useAdminDashboard
  * Derviche Diffusion
- * 
- * Gère l'état et le chargement des données du dashboard admin
- * Supporte le filtrage automatique pour les externes (spectacles assignés)
+ *
+ * Gère l'état et le chargement des données du dashboard admin.
+ * Supporte le filtrage automatique pour les externes (spectacles assignés).
+ * Gère la période sélectionnée (7j, 30j, saison).
  */
 
 'use client';
@@ -13,6 +14,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
   getAdminDashboard,
   type AdminDashboardData,
+  type DashboardPeriod,
 } from '@/lib/services/admin-dashboard';
 import type { InternalRole } from '@/types/database';
 
@@ -27,6 +29,10 @@ interface UseAdminDashboardReturn {
   userRole: InternalRole | null;
   /** L'utilisateur a-t-il un accès complet (super-admin ou admin) ? */
   hasFullAccess: boolean;
+  /** Période sélectionnée */
+  period: DashboardPeriod;
+  /** Changer la période (déclenche un rechargement) */
+  setPeriod: (period: DashboardPeriod) => void;
   refresh: () => Promise<void>;
 }
 
@@ -36,7 +42,8 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
   const [error, setError] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<InternalRole | null>(null);
   const [assignedShowIds, setAssignedShowIds] = useState<string[] | null>(null);
-  
+  const [period, setPeriod] = useState<DashboardPeriod>('7d');
+
   // Prevent race conditions
   const isLoadingRef = useRef(false);
   const roleLoadedRef = useRef(false);
@@ -46,7 +53,9 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
     const loadUserContext = async () => {
       try {
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
         if (!user) {
           roleLoadedRef.current = true;
@@ -76,7 +85,7 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
             .eq('user_id', user.id);
 
           if (!assignError && assignments) {
-            const showIds = assignments.map(a => a.show_id);
+            const showIds = assignments.map((a) => a.show_id);
             setAssignedShowIds(showIds);
           } else {
             // Pas d'assignations = aucun accès
@@ -97,26 +106,27 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
   const loadDashboard = useCallback(async () => {
     // Attendre que le rôle soit chargé
     if (!roleLoadedRef.current) return;
-    
+
     // Prevent concurrent loads
     if (isLoadingRef.current) return;
     isLoadingRef.current = true;
-    
+
     setIsLoading(true);
     setError(null);
 
     try {
       // Préparer les options de filtrage
-      const options = userRole === 'externe' && assignedShowIds !== null
-        ? { assignedShowIds }
-        : undefined;
+      const options =
+        userRole === 'externe' && assignedShowIds !== null
+          ? { assignedShowIds, period }
+          : { period };
 
       const result = await getAdminDashboard(options);
-      
+
       if (result.error) {
         setError(result.error);
       }
-      
+
       setData(result.data);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -125,13 +135,10 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
       setIsLoading(false);
       isLoadingRef.current = false;
     }
-  }, [userRole, assignedShowIds]);
+  }, [userRole, assignedShowIds, period]);
 
   // Charger le dashboard une fois le contexte utilisateur connu
   useEffect(() => {
-    // Attendre que le rôle soit chargé
-    // Pour admin/super-admin : userRole !== null suffit
-    // Pour externe : userRole !== null ET assignedShowIds !== null
     const roleReady = userRole !== null || roleLoadedRef.current;
     const assignmentsReady = userRole !== 'externe' || assignedShowIds !== null;
 
@@ -150,6 +157,8 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
     error,
     userRole,
     hasFullAccess: userRole !== null && FULL_ACCESS_ROLES.includes(userRole),
+    period,
+    setPeriod,
     refresh,
   };
 }

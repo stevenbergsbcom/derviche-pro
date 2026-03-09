@@ -4,6 +4,7 @@
  */
 
 import type { ShowRow, VenueRow, SlotHostedBy } from '@/types/database';
+import type { SeasonSettings } from '@/lib/services/app-settings';
 
 // ============================================
 // STATISTIQUES
@@ -64,6 +65,63 @@ export interface AdminRecentReservation {
 }
 
 // ============================================
+// GRAPHIQUE
+// ============================================
+
+/** Point de données pour le graphique des réservations */
+export interface ReservationChartPoint {
+  /** Date au format lisible (ex: "3 mars") */
+  label: string;
+  /** Date ISO pour le tri (ex: "2026-03-03") */
+  date: string;
+  /** Nombre de réservations ce jour */
+  count: number;
+}
+
+// ============================================
+// TOP SPECTACLES
+// ============================================
+
+/** Spectacle dans le top 3 avec stats */
+export interface TopShow {
+  id: string;
+  title: string;
+  slug: string;
+  /** Nombre total de réservations confirmées */
+  reservations_count: number;
+  /** Nombre de créneaux à venir */
+  upcoming_slots_count: number;
+}
+
+// ============================================
+// CRÉNEAUX < 24H
+// ============================================
+
+/** Créneau dans les prochaines 24 heures */
+export interface Slot24h {
+  id: string;
+  date: string;
+  time: string;
+  show_title: string;
+  show_slug: string;
+  venue_name: string;
+  reservations_count: number;
+}
+
+// ============================================
+// PÉRIODE
+// ============================================
+
+/** Identifiant de période sélectionnée */
+export type DashboardPeriod = '7d' | '30d' | 'season';
+
+/** Bornes de dates pour une période */
+export interface PeriodBounds {
+  start: string; // ISO date YYYY-MM-DD
+  end: string;   // ISO date YYYY-MM-DD
+}
+
+// ============================================
 // DASHBOARD COMPLET
 // ============================================
 
@@ -72,6 +130,14 @@ export interface AdminDashboardData {
   stats: AdminDashboardStats;
   upcomingSlots: AdminUpcomingSlot[];
   recentReservations: AdminRecentReservation[];
+  /** Données graphique (dépend de la période) */
+  chartData: ReservationChartPoint[];
+  /** Top 3 spectacles par réservations */
+  topShows: TopShow[];
+  /** Créneaux dans les prochaines 24h */
+  slots24h: Slot24h[];
+  /** Paramètres de saison */
+  seasonSettings: SeasonSettings;
 }
 
 /** Résultat d'une opération */
@@ -88,6 +154,8 @@ export interface AdminDashboardResult {
 export interface AdminDashboardOptions {
   /** Liste des show_id auxquels l'utilisateur a accès (null = accès complet) */
   assignedShowIds?: string[] | null;
+  /** Période sélectionnée (défaut : 7d) */
+  period?: DashboardPeriod;
 }
 
 // ============================================
