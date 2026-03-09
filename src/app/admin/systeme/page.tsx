@@ -2,15 +2,14 @@
  * Page Admin — Système
  * /admin/systeme
  *
- * Monitoring technique réservé au super-admin :
- *   - Widget quota Resend (emails du mois / limite du plan)
- *   - Journal des logs système (emails, Calendar, erreurs)
+ * Server Component minimal — délègue au wrapper client
+ * pour contourner la restriction ssr:false dans le App Router.
  *
  * Derviche Diffusion
  */
 
-import { SystemeContent } from './components/systeme-content';
+import { SystemeClientWrapper } from './components/systeme-client-wrapper';
 
 export default function AdminSystemePage() {
-  return <SystemeContent />;
+  return <SystemeClientWrapper />;
 }

@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S148-S149 — Templates post accueil UI admin complets + sécurité XSS + fixes Cursor, mergé main — 8 mars 2026
+> Dernière mise à jour : Session S150 — Système de logs super-admin (app_logs, monitoring, widget quota Resend, purge cron), mergé main — 9 mars 2026
 
 ---
 
@@ -10,6 +10,7 @@
 - Login, register, forgot/reset password
 - Callback OAuth Supabase
 - Middleware : protection par rôle, redirection, compte désactivé
+- `SUPER_ADMIN_ONLY_ROUTES` : `/admin/preferences` + `/admin/systeme` — accès super-admin uniquement (S150)
 - Vérification mot de passe (API)
 
 ### ✅ Public - Catalogue & Réservation (100%)
@@ -59,8 +60,9 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV |
-| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (7), Google Calendar, RGPD |
+| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (11), Google Calendar, RGPD |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
+| **Système** | ✅ Logs journal (email/calendar/réservation/système) + widget quota Resend — **S150** |
 
 ### ✅ Admin — Templates email (100%) — S148-S149
 - **11 templates** éditables dans /admin/préférences/Templates (3 groupes : transactionnels, rappels, post accueil)
@@ -72,8 +74,17 @@
 - `EmailConfig` enrichi : champ `appUrl` dérivé de `catalogueUrl`
 - Migration 071 : 8 nouvelles colonnes sur `email_templates`
 - **Sécurité** : helper `isSafeUrl()` dans `html-helpers.ts` — filtre les URLs non-http(s) avant insertion dans les `href` (XSS `javascript:`)
-- **Fix** : `encodeURIComponent(showSlug)` dans l'URL du lien réservation (au lieu de `escapeHtml`)
-- **Fix** : `currentFormValues()` cohérent avec `defaultValues` — utilise `??` partout (pas `||`)
+
+### ✅ Admin — Système / Monitoring (100%) — S150
+- Page `/admin/systeme` — accès super-admin uniquement
+- **Widget quota Resend** : comptage local depuis `app_logs`, barre de progression (vert→orange→rouge), alerte >80%, switch plan free/pro avec quota personnalisé
+- **Journal des logs** : tableau paginé (50/page), filtres catégorie/niveau/statut, lignes dépliables avec détails JSONB
+- **Route `GET /api/admin/logs`** : protégée super-admin, filtrée, paginée
+- **Service `src/lib/services/logs/`** : `logEmail()`, `logCalendar()`, `logSystem()` — tous fire & forget (non-bloquants)
+- **Intégration email** : 5 fonctions de `services/email/index.ts` loggent succès + erreur
+- **Intégration Calendar** : create/update/delete loggés + notification `calendar_error` admin si échec
+- **Purge cron** : route `/api/cron/purge-logs` — supprime les logs > 90 jours, déclenchée par GitHub Actions (cron-daily.yml)
+- Entrée "Système" dans sidebar admin (icône `ServerCog`) — visible super-admin uniquement
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -113,12 +124,13 @@
 - Badge cloche dans le header admin (polling 30s), badge rouge avec compteur
 - Sheet latéral : liste paginée (20/page), skeleton, état vide, erreur
 - Marquage lu individuel, "tout marquer lu", "vider" (soft delete par timestamp)
-- 3 types : nouvelle réservation (vert), annulation (rouge), modification (ambre)
+- 4 types : nouvelle réservation (vert), annulation (rouge), modification (ambre), erreur Calendar (orange) — S150
 
 ### ✅ Google Calendar (100%) — S138
 - Création / mise à jour / suppression événements Calendar
 - Auth OAuth2 refresh token (reservation.derviche@gmail.com)
 - Service `src/lib/services/google-calendar/` (4 modules)
+- Erreurs loggées en `app_logs` + notification admin `calendar_error` — S150
 
 ### ✅ Walk-in FAB (100%) — S140
 - ReservationFAB : bouton flottant gold visible partout dans /accueil
@@ -128,56 +140,27 @@
 
 ---
 
-## Dernier travail (S148-S149 — 8 mars 2026)
+## Dernier travail (S150 — 9 mars 2026)
 
-### S148 — Templates post-checkin dans l'UI admin
-- 3ème groupe accordéon "Emails post accueil" dans `templates-section.tsx`
-- Bandeau bleu informatif si `is_simple_style = true`
-- Champs `header_title`, `info_text`, `cta_text` masqués pour les templates style sobre
-- Route API PATCH : whitelist étendue aux 4 clés post-checkin (fix bug 400)
+### S150-A — Infrastructure logs (migrations + service)
+- Migration 072 : table `app_logs` — RLS super-admin, indexes optimisés
+- Migration 073 : type `calendar_error` dans `admin_notifications.type` + clés `resend_plan`/`resend_monthly_quota` dans `app_settings`
+- Service `src/lib/services/logs/` — `types.ts`, `queries.ts`, `index.ts`
+- Intégration dans `services/email/index.ts` : 5 fonctions loggent succès + erreur (fire & forget)
+- Intégration dans `services/google-calendar/queries.ts` : 3 opérations loggées + notification `calendar_error`
+- `src/components/admin/notifications/notification-item.tsx` : type `calendar_error` ajouté
 
-### S149 — Liens optionnels dans les templates post-checkin
-- Migration 071 : 8 colonnes sur `email_templates` (show_*/text pour folder/teaser/captation/booking)
-- Types `EmailTemplate` + `EmailTemplateUpdatePayload` mis à jour
-- Builder `simple.ts` : 4 blocs de liens conditionnels dans le HTML
-- Route `send-checkin-followup` : SELECT enrichi avec `slug`, `folder_url`, `teaser_url`, `captation_url`
-- UI `EmailTemplateForm.tsx` : section "Liens optionnels" (switch + input par lien)
-- Bloc de contact harmonisé (même pattern que les liens optionnels)
-- Popover ⓘ sur les badges variables (shadcn/ui Popover installé)
+### S150-B — UI monitoring
+- Route `GET /api/admin/logs` — super-admin, filtres, pagination 50/page
+- Page `/admin/systeme` + composants : `systeme-content.tsx`, `resend-quota-widget.tsx`, `logs-table.tsx`
+- Sidebar admin : entrée "Système" (icône `ServerCog`, allowedRoles: ['super-admin'])
+- Route `/api/cron/purge-logs` — supprime app_logs > 90 jours
+- `cron-daily.yml` : step purge-logs ajouté (continue-on-error: true)
+- `src/types/supabase.ts` + `src/types/database.ts` : table `app_logs` déclarée
 
-### S149-sec — Corrections audit Cursor (8,9/10)
-- `html-helpers.ts` : ajout helper `isSafeUrl()` (type guard, protocole http/https uniquement)
-- `simple.ts` : `isSafeUrl()` sur les 3 URLs optionnelles + `appUrl` ; `encodeURIComponent` pour `showSlug`
-- `send-checkin-followup/route.ts` : filtrage `isSafeUrl` avant passage au service email
-- `EmailTemplateForm.tsx` : `currentFormValues()` utilise `??` (cohérence avec defaultValues)
-
-## Historique — Dernier travail avant S148 (S144 → S147-fix)
-
-### S144 — Emails post-checkin (CheckinDrawer) — 8 mars 2026
-- `CheckinEmailsSection` : 4 boutons (présent, absent, coup de cœur, presse), état "déjà envoyé"
-- Table `checkin_followup_emails` + colonne `is_simple_style` (migration 068)
-- Contrainte UNIQUE `(reservation_id, template_key)` (migration 069)
-- Fix RLS INSERT (migration 070)
-
-### S145 — Auto-save statut PWA
-- `handleAutoSaveStatus` dans `useCheckinDrawer` — rollback sur erreur, `isSavingStatusRef`
-- `StatusButtonsSection` prop `onAutoSave`
-- `CheckinEmailsSection` repositionnée juste après les boutons statut
-
-### S146 — UX tableau admin
-- Suppression bouton check-in dédié (`checkin-dialog.tsx` supprimé)
-- `patchReservation` : mise à jour locale sans refetch, préserve l'ordre
-- Fix `checkin_followup_emails` inclus dans SELECT de `updateCheckinStatus`/`updateGuestInfo`
-
-### S147 — Étape success AddReservationDrawer
-- `AddReservationDrawerStep` : ajout `'success'`
-- Étape success : bandeau vert + CheckinEmailsSection + bouton Fermer
-- `ReservationFAB.handleSuccess` : ne ferme plus le drawer (géré en interne)
-- Route send-checkin-followup : `insert` → `upsert` anti-doublon
-- Resync `useEffect` sur `reservation.id` dans CheckinEmailsSection (2 endroits)
-
-### S147-fix — Correctif post-Cursor Bug Finder
-- `edit-reservation-dialog/index.tsx` : destructuration `{ error }` sur reset checkin null + `if (error) throw error`
+### S150-audit — Corrections post-audit Cursor (9/10)
+- **Critique** : `resend-quota-widget.tsx` — fix JSON double-encodage (`.update({ value: '"free"' })` → `.update({ value: 'free' })`) + helpers `normalizePlan()` / `normalizeQuota()` + erreur de chargement visible
+- **Important** : `middleware.ts` — ajout `SUPER_ADMIN_ONLY_ROUTES` (`/admin/preferences`, `/admin/systeme`) + `isSuperAdminOnlyRoute()` ; `/admin/professionnels` ajouté dans `RESTRICTED_ADMIN_ROUTES`
 
 ---
 
@@ -185,7 +168,7 @@
 
 | Session | Objectif | Priorité |
 |---------|----------|----------|
-| **S150** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
+| **S151** | RGPD — suppression de compte (`supabase.auth.admin.deleteUser`) | 🟡 Moyenne |
 
 ---
 
@@ -197,7 +180,7 @@
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais remplacées par 061 | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S149 |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S151 |
 
 ---
 
@@ -210,6 +193,7 @@
 | `lib/utils/export-professionals.ts` | CSV uniquement — xlsx/exceljs exclus (vulnérabilités) |
 | `api/cron/*/route.ts` | En dev sans `CRON_SECRET` : routes accessibles librement (warning loggé) |
 | `middleware.ts` | `api/cron` exclu du matcher — auth par `CRON_SECRET` uniquement |
+| `middleware.ts` | `SUPER_ADMIN_ONLY_ROUTES` : `/admin/preferences` + `/admin/systeme` — super-admin strict |
 | `api/admin/notifications/*` | INSERT `admin_notifications` uniquement via service role |
 | `app/admin/layout.tsx` | Hook `useNotifications` instancié ici (header) — pas dans la sidebar |
 | `src/lib/services/google-calendar/auth.ts` | Redirect URI localhost en dur — utilisé uniquement pour obtenir le refresh token |
@@ -223,6 +207,8 @@
 | Commentaires JSX multi-lignes | Toujours fermer avec `*/}` et non `*/` — erreur TS1005 sinon |
 | `checkin_followup_emails` | Upsert avec `onConflict: 'reservation_id,template_key'` — anti-doublon côté API |
 | `is_simple_style` | true = fond blanc sobre (templates post-checkin) ; false = header bleu Derviche |
+| `app_logs` fire & forget | `void logEmail(...)` / `void logCalendar(...)` : intentionnel — une erreur de log ne bloque jamais l'opération métier |
+| `resend_plan` / `resend_monthly_quota` | Valeurs JSONB directes (string/number) — ne pas wrapper avec guillemets supplémentaires |
 
 ---
 
@@ -251,3 +237,5 @@
 | 069 | `069_add_unique_constraint_checkin_followup_emails.sql` | UNIQUE `(reservation_id, template_key)` + dédoublonnage | ✅ |
 | 070 | `070_fix_rls_checkin_followup_emails_insert.sql` | RLS INSERT restreinte aux 4 rôles autorisés | ✅ |
 | 071 | `071_add_link_options_to_email_templates.sql` | 8 colonnes liens optionnels sur `email_templates` | ✅ |
+| 072 | `072_create_app_logs.sql` | Table `app_logs` — journal système, RLS super-admin, indexes | ✅ |
+| 073 | `073_add_calendar_error_and_resend_settings.sql` | Type `calendar_error` dans `admin_notifications` + clés `resend_plan`/`resend_monthly_quota` | ✅ |
