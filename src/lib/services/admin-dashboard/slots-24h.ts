@@ -26,8 +26,16 @@ export async function getSlots24h(
     const now = new Date();
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
-    const todayISO = now.toISOString().split('T')[0];
-    const tomorrowISO = in24h.toISOString().split('T')[0];
+    // Utiliser l'heure locale (pas UTC) pour éviter le décalage de timezone
+    const toLocalDateISO = (d: Date) => {
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${mo}-${da}`;
+    };
+
+    const todayISO = toLocalDateISO(now);
+    const tomorrowISO = toLocalDateISO(in24h);
 
     // Récupérer les slots dans la fenêtre [today, tomorrow] avec leurs détails
     let query = supabase

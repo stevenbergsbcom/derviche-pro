@@ -70,18 +70,26 @@ export async function getSeasonSettings(): Promise<SeasonSettings> {
  * si on est après season_start → saison en cours (ex: sept 2025 → juin 2026)
  * si on est avant season_start → saison précédente (ex: août 2025 → sept 2024 → juin 2025)
  */
+/** Formate une Date en YYYY-MM-DD en heure locale (pas UTC). */
+function toLocalDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function computePeriodBounds(
   period: DashboardPeriod,
   season: SeasonSettings
 ): PeriodBounds {
   const now = new Date();
-  const todayISO = now.toISOString().split('T')[0];
+  const todayISO = toLocalDateISO(now);
 
   if (period === '7d') {
     const start = new Date(now);
     start.setDate(start.getDate() - 6);
     return {
-      start: start.toISOString().split('T')[0],
+      start: toLocalDateISO(start),
       end: todayISO,
     };
   }
@@ -90,7 +98,7 @@ export function computePeriodBounds(
     const start = new Date(now);
     start.setDate(start.getDate() - 29);
     return {
-      start: start.toISOString().split('T')[0],
+      start: toLocalDateISO(start),
       end: todayISO,
     };
   }
@@ -132,8 +140,8 @@ export function computePeriodBounds(
   }
 
   return {
-    start: seasonStartDate.toISOString().split('T')[0],
-    end: seasonEndDate.toISOString().split('T')[0],
+    start: toLocalDateISO(seasonStartDate),
+    end: toLocalDateISO(seasonEndDate),
   };
 }
 
@@ -143,16 +151,19 @@ export function computePeriodBounds(
  */
 export function generateDateRange(start: string, end: string): string[] {
   const dates: string[] = [];
-  const startDate = new Date(start);
-  const endDate = new Date(end);
+  // Passer par UTC pour construire les objets Date depuis des strings YYYY-MM-DD
+  // puis utiliser les méthodes UTC pour éviter tout décalage
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
 
-  // Sécurité : max 366 jours
+  const current = new Date(sy!, (sm! - 1), sd!);
+  const endDate = new Date(ey!, (em! - 1), ed!);
+
   const maxDays = 366;
-  const current = new Date(startDate);
   let iterations = 0;
 
   while (current <= endDate && iterations < maxDays) {
-    dates.push(current.toISOString().split('T')[0]);
+    dates.push(toLocalDateISO(current));
     current.setDate(current.getDate() + 1);
     iterations++;
   }
