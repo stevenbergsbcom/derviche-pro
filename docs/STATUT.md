@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S148-S149 — Templates post-checkin UI admin + liens optionnels + popover variables, mergé main — 8 mars 2026
+> Dernière mise à jour : Session S148-S149 — Templates post accueil UI admin complets + sécurité XSS + fixes Cursor, mergé main — 8 mars 2026
 
 ---
 
@@ -66,11 +66,14 @@
 - **11 templates** éditables dans /admin/préférences/Templates (3 groupes : transactionnels, rappels, post accueil)
 - Groupe "Emails post accueil" : 4 templates avec bandeau bleu + champs masqués si `is_simple_style`
 - **4 liens optionnels** par template post-checkin : dossier, teaser, captation, réservation (switch + texte éditable)
-- Bloc de contact harmonisé (même pattern switch+input)
-- Popover ⓘ sur les badges variables : tableau complet de toutes les variables
+- Bloc de contact harmonisé (même pattern switch+input que les liens optionnels)
+- Popover ⓘ sur les badges variables : tableau complet de toutes les variables (shadcn Popover)
 - Route API `/api/admin/email-templates/[key]` : whitelist étendue aux 4 clés post-checkin
 - `EmailConfig` enrichi : champ `appUrl` dérivé de `catalogueUrl`
 - Migration 071 : 8 nouvelles colonnes sur `email_templates`
+- **Sécurité** : helper `isSafeUrl()` dans `html-helpers.ts` — filtre les URLs non-http(s) avant insertion dans les `href` (XSS `javascript:`)
+- **Fix** : `encodeURIComponent(showSlug)` dans l'URL du lien réservation (au lieu de `escapeHtml`)
+- **Fix** : `currentFormValues()` cohérent avec `defaultValues` — utilise `??` partout (pas `||`)
 
 ### ✅ Espace Professionnel (100%)
 - /professional/mon-compte : profil perso, pro, adresse, sécurité
@@ -125,9 +128,32 @@
 
 ---
 
-## Dernier travail (S144 → S147-fix — 8 mars 2026)
+## Dernier travail (S148-S149 — 8 mars 2026)
 
-### S144 — Emails post-checkin (CheckinDrawer)
+### S148 — Templates post-checkin dans l'UI admin
+- 3ème groupe accordéon "Emails post accueil" dans `templates-section.tsx`
+- Bandeau bleu informatif si `is_simple_style = true`
+- Champs `header_title`, `info_text`, `cta_text` masqués pour les templates style sobre
+- Route API PATCH : whitelist étendue aux 4 clés post-checkin (fix bug 400)
+
+### S149 — Liens optionnels dans les templates post-checkin
+- Migration 071 : 8 colonnes sur `email_templates` (show_*/text pour folder/teaser/captation/booking)
+- Types `EmailTemplate` + `EmailTemplateUpdatePayload` mis à jour
+- Builder `simple.ts` : 4 blocs de liens conditionnels dans le HTML
+- Route `send-checkin-followup` : SELECT enrichi avec `slug`, `folder_url`, `teaser_url`, `captation_url`
+- UI `EmailTemplateForm.tsx` : section "Liens optionnels" (switch + input par lien)
+- Bloc de contact harmonisé (même pattern que les liens optionnels)
+- Popover ⓘ sur les badges variables (shadcn/ui Popover installé)
+
+### S149-sec — Corrections audit Cursor (8,9/10)
+- `html-helpers.ts` : ajout helper `isSafeUrl()` (type guard, protocole http/https uniquement)
+- `simple.ts` : `isSafeUrl()` sur les 3 URLs optionnelles + `appUrl` ; `encodeURIComponent` pour `showSlug`
+- `send-checkin-followup/route.ts` : filtrage `isSafeUrl` avant passage au service email
+- `EmailTemplateForm.tsx` : `currentFormValues()` utilise `??` (cohérence avec defaultValues)
+
+## Historique — Dernier travail avant S148 (S144 → S147-fix)
+
+### S144 — Emails post-checkin (CheckinDrawer) — 8 mars 2026
 - `CheckinEmailsSection` : 4 boutons (présent, absent, coup de cœur, presse), état "déjà envoyé"
 - Table `checkin_followup_emails` + colonne `is_simple_style` (migration 068)
 - Contrainte UNIQUE `(reservation_id, template_key)` (migration 069)

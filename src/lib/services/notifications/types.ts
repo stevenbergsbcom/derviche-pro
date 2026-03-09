@@ -16,7 +16,8 @@
 export type NotificationType =
   | 'new_reservation'
   | 'cancellation'
-  | 'modification';
+  | 'modification'
+  | 'calendar_error';
 
 // ============================================
 // ENTITÉS
@@ -46,7 +47,8 @@ export interface AdminNotification {
 
 /**
  * Payload pour créer une nouvelle notification.
- * Appelé depuis les routes email après un événement réservation.
+ * Appelé depuis les routes email après un événement réservation,
+ * ou depuis le service Calendar en cas d'erreur.
  */
 export interface CreateNotificationData {
   type: NotificationType;
@@ -84,6 +86,6 @@ export interface UnreadCountResult {
 export function isNotificationType(value: unknown): value is NotificationType {
   return (
     typeof value === 'string' &&
-    ['new_reservation', 'cancellation', 'modification'].includes(value)
+    ['new_reservation', 'cancellation', 'modification', 'calendar_error'].includes(value)
   );
 }

@@ -12,6 +12,7 @@ import {
   UserCog,
   UserCheck,
   Settings,
+  ServerCog,
 } from 'lucide-react';
 import type { InternalRole } from '@/types/database';
 import type { AdminNavItem } from './types';
@@ -85,6 +86,13 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     href: '/admin/preferences',
     icon: Settings,
     tooltip: 'Paramètres',
+    allowedRoles: ['super-admin'], // Visible uniquement pour super-admin
+  },
+  {
+    label: 'Système',
+    href: '/admin/systeme',
+    icon: ServerCog,
+    tooltip: 'Logs & monitoring',
     allowedRoles: ['super-admin'], // Visible uniquement pour super-admin
   },
 ];
