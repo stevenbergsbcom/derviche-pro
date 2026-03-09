@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 import {
   getAdminDashboard,
   type AdminDashboardData,
@@ -95,7 +96,9 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
 
         roleLoadedRef.current = true;
       } catch (err) {
-        console.error('Erreur chargement contexte utilisateur:', err);
+        logger.error('Erreur chargement contexte utilisateur', {
+          message: err instanceof Error ? err.message : 'Erreur inconnue',
+        });
         roleLoadedRef.current = true;
       }
     };

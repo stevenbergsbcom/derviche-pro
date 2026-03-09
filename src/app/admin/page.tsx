@@ -57,7 +57,7 @@ export default function AdminDashboardPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <PeriodSelector
             value={period}
-            onChange={(p) => { setPeriod(p); void refresh(); }}
+            onChange={(p) => { setPeriod(p); }}
             disabled={isLoading}
           />
           <Button
