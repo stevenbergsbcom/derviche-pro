@@ -80,8 +80,19 @@ export function RecentReservationsSection({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
 
-  // Charger au premier dépliage uniquement
+  // Reset quand userId change (passage d'un pro à un autre dans le drawer)
+  useEffect(() => {
+    if (userId !== loadedForUserId) {
+      setReservations([]);
+      setHasLoaded(false);
+      setError(null);
+      setIsOpen(false);
+    }
+  }, [userId, loadedForUserId]);
+
+  // Charger au premier dépliage pour ce userId
   const load = useCallback(async () => {
     if (!userId) return;
     setIsLoading(true);
@@ -106,9 +117,10 @@ export function RecentReservationsSection({
 
     setIsLoading(false);
     setHasLoaded(true);
+    setLoadedForUserId(userId);
   }, [userId]);
 
-  // Chargement automatique à l'ouverture (une seule fois)
+  // Chargement automatique à l'ouverture si pas encore chargé pour ce userId
   useEffect(() => {
     if (isOpen && !hasLoaded) {
       void load();
