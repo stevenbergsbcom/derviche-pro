@@ -23,3 +23,5 @@ export type { FooterSectionProps } from './FooterSection';
 
 export { CheckinEmailsSection } from './CheckinEmailsSection';
 export type { CheckinEmailsSectionProps } from './CheckinEmailsSection';
+
+export { RecentReservationsSection } from './RecentReservationsSection';

@@ -34,7 +34,9 @@ import {
   UserX,
   Trash2,
   Mail,
+  ClipboardList,
 } from 'lucide-react';
+import Link from 'next/link';
 import { EmptyState } from '@/components/admin';
 import type { ProfessionalsTableProps } from '@/app/admin/professionnels/types';
 import { STATUS_BADGE_CLASSES, TABLE_COLUMNS, LABELS, MESSAGES } from '@/app/admin/professionnels/constants';
@@ -226,6 +228,14 @@ export function ProfessionalsTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {/* Fiche complète */}
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/professionnels/${pro.id}`}>
+                            <ClipboardList className="mr-2 h-4 w-4" />
+                            Voir la fiche complète
+                          </Link>
+                        </DropdownMenuItem>
+
                         {/* Mailto */}
                         <DropdownMenuItem asChild>
                           <a href={`mailto:${pro.email}`}>

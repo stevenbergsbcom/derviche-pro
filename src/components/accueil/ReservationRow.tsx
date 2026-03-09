@@ -59,6 +59,8 @@ export interface ReservationRowData {
   googleCalendarEventId?: string | null;
   /** Emails post-checkin déjà envoyés pour cette réservation */
   checkinFollowupEmails?: { templateKey: string; sentAt: string }[];
+  /** ID de l'utilisateur connecté (null pour les réservations invité) */
+  userId?: string | null;
 }
 
 export interface ReservationRowProps {

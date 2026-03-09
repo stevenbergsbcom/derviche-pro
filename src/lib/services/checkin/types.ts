@@ -69,6 +69,8 @@ export interface CheckinSlot {
 /** Réservation pour le check-in */
 export interface CheckinReservation {
   id: string;
+  /** ID de l'utilisateur connecté (null pour les réservations invité) */
+  userId: string | null;
   guestFirstName: string | null;
   guestLastName: string | null;
   guestEmail: string | null;

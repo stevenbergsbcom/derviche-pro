@@ -26,7 +26,9 @@ import {
   UserX,
   Trash2,
   IdCard,
+  ClipboardList,
 } from 'lucide-react';
+import Link from 'next/link';
 import { ProfessionalEditForm } from './ProfessionalEditForm';
 import { ProfessionalReservations } from './ProfessionalReservations';
 import type {
@@ -252,7 +254,7 @@ export function ProfessionalModal({
           </div>
 
           {/* Actions rapides */}
-          <div className="flex gap-2 pt-3">
+          <div className="flex gap-2 pt-3 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -261,6 +263,13 @@ export function ProfessionalModal({
             >
               <Pencil className="h-3.5 w-3.5 mr-1.5" />
               {LABELS.EDIT}
+            </Button>
+
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link href={`/admin/professionnels/${professional.id}`}>
+                <ClipboardList className="h-3.5 w-3.5 mr-1.5" />
+                Fiche complète
+              </Link>
             </Button>
 
             <Button variant="outline" size="sm" className="flex-1" asChild>

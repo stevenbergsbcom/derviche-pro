@@ -314,6 +314,7 @@ export function useSlotDetails({
         status: reservation.status,
         googleCalendarEventId: reservation.googleCalendarEventId,
         checkinFollowupEmails: reservation.checkinFollowupEmails,
+        userId: reservation.userId,
       };
       setSelectedReservation(rowData);
       setDrawerOpen(true);

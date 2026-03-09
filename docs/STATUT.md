@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S151 (en cours) — Verrou SQL atomique réservations simultanées + index perf — 9 mars 2026
+> Dernière mise à jour : Session S151 (complète ✅) — Verrou SQL atomique + index perf + RGPD suppression compte + corrections audit — 9 mars 2026
 
 ---
 
@@ -140,7 +140,7 @@
 
 ---
 
-## Dernier travail (S151 en cours — 9 mars 2026)
+## Dernier travail (S151 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S151-A — Verrou SQL atomique (réservations simultanées)
 - Migration 074 : `create_public_reservation` — `SELECT ... FOR UPDATE` sur le slot AVANT l'INSERT (verrou atomique)
@@ -153,8 +153,17 @@
 - Migration 075 : index composite partiel `idx_reservations_slot_status_active (slot_id, status) WHERE status != 'cancelled'`
 - Migration 075 : index partiel `idx_reservations_slot_confirmed (slot_id) WHERE status = 'confirmed'` (trigger + admin)
 
-### 🔜 À faire dans S151
-- S151-C : RGPD — Suppression de compte professionnel (anonymisation Option A + annulation réservations futures + notif admin)
+### S151-C — RGPD Suppression de compte professionnel
+- Migration 076 : RPC `anonymize_and_delete_account()` — anonymisation PII complète (Option A : stats préservées), annulation réservations futures, SECURITY DEFINER
+- Route `POST /api/professional/delete-account` : double check auth+rôle, RPC → deleteUser cascade, notif admin si annulations
+- `/professional/mon-compte` : section "Zone dangereuse" + dialog RGPD double confirmation (saisie "SUPPRIMER")
+- `header.tsx` : `getAccountUrl()` corrigé par rôle + lien "Mon compte" masqué si `userRole === null` (desktop + mobile)
+- Suppression page orpheline `(protected)/mon-compte`
+
+### S151-audit — Corrections post-audit Cursor
+- **Critique** : `checkin_internal_notes` ajouté dans l'anonymisation RGPD (migration 076 ré-appliquée)
+- **Moyen** : Email anonymisé renforcé — `MD5(user_id + email)` 12 chars (anti-collision)
+- **Faible** : Header "Mon compte" masqué tant que `userRole === null` (desktop + mobile)
 
 ---
 
@@ -190,7 +199,7 @@
 |---|---------|----------------|--------|
 | 1 | ~~**S151**~~ | ~~Réservations simultanées — verrou SQL~~ | ✅ **Fait S151-A** — Migration 074 : `FOR UPDATE` dans RPC + fix bug pays |
 | 2 | ~~**S151**~~ | ~~Réservations simultanées — scalabilité~~ | ✅ **Fait S151-B** — Migration 075 : index composites/partiels |
-| 3 | **S151** | RGPD — Suppression de compte | `supabase.auth.admin.deleteUser` + anonymisation Option A + annulation réservations futures + notif admin. Bouton dans `/professional/mon-compte`. |
+| 3 | ~~**S151**~~ | ~~RGPD — Suppression de compte~~ | ✅ **Fait S151-C** — Migration 076 + route API + UI `/professional/mon-compte` |
 
 ### 🔴 HAUTE PRIORITÉ — Fonctionnalités manquantes CDC
 
@@ -252,7 +261,7 @@
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais remplacées par 061 | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique | 🟡 S151-C |
+| RGPD purge auto | — | Durées stockées, aucune purge automatique planifiée | 🟡 Basse |
 
 ---
 
@@ -311,5 +320,6 @@
 | 071 | `071_add_link_options_to_email_templates.sql` | 8 colonnes liens optionnels sur `email_templates` | ✅ |
 | 072 | `072_create_app_logs.sql` | Table `app_logs` — journal système, RLS super-admin, indexes | ✅ |
 | 073 | `073_add_calendar_error_and_resend_settings.sql` | Type `calendar_error` dans `admin_notifications` + clés `resend_plan`/`resend_monthly_quota` | ✅ |
-| 074 | `074_add_for_update_to_public_reservation_rpc.sql` | Verrou atomique `FOR UPDATE` dans `create_public_reservation` + fix `guest_country` + code `CAPACITY_FULL` | ⏳ à appliquer |
-| 075 | `075_add_composite_index_reservations_slot_status.sql` | Index composite `(slot_id, status)` partiel + index `slot_confirmed` | ⏳ à appliquer |
+| 074 | `074_add_for_update_to_public_reservation_rpc.sql` | Verrou atomique `FOR UPDATE` dans `create_public_reservation` + fix `guest_country` + code `CAPACITY_FULL` | ✅ |
+| 075 | `075_add_composite_index_reservations_slot_status.sql` | Index composite `(slot_id, status)` partiel + index `slot_confirmed` | ✅ |
+| 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` — anonymisation PII + annulation réservations futures + SECURITY DEFINER | ✅ |
