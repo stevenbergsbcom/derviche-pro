@@ -3,11 +3,17 @@
  * @module professional-sidebar/constants
  */
 
-import { Calendar, User } from 'lucide-react';
+import { Calendar, User, LayoutDashboard } from 'lucide-react';
 import type { NavItem } from '@/components/shared-sidebar';
 
 /** Configuration des liens de navigation professionnels */
 export const PROFESSIONAL_NAV_ITEMS: NavItem[] = [
+  {
+    label: 'Tableau de bord',
+    href: '/professional',
+    icon: LayoutDashboard,
+    tooltip: 'Tableau de bord',
+  },
   {
     label: 'Mes réservations',
     href: '/professional/reservations',

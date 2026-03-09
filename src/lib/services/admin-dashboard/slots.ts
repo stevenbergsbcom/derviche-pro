@@ -1,7 +1,7 @@
 /**
  * Slots - Admin Dashboard Service
  * Derviche Diffusion
- * 
+ *
  * Récupère les créneaux à venir pour le dashboard
  */
 
@@ -12,21 +12,15 @@ import type { AdminUpcomingSlot, AdminDashboardOptions, QueryResult } from './ty
 import { isValidShow, isValidVenue } from './guards';
 import { calculateBooked, calculateOccupancyRate, getTodayISO } from './helpers';
 
-// ============================================
-// CONSTANTES
-// ============================================
-
-/** Nombre de créneaux par défaut */
 const DEFAULT_LIMIT = 10;
 
-// ============================================
-// FONCTION PRINCIPALE
-// ============================================
-
 /**
- * Récupère les prochains créneaux
- * @param limit - Nombre maximum de créneaux à retourner
- * @param options - Options de filtrage (assignedShowIds pour les externes)
+ * Récupère les prochains créneaux.
+ *
+ * Convention assignedShowIds :
+ *   undefined | null → accès complet
+ *   []               → externe sans assignation → []
+ *   ['id', ...]      → externe filtré
  */
 export async function getUpcomingSlots(
   limit: number = DEFAULT_LIMIT,
@@ -35,10 +29,17 @@ export async function getUpcomingSlots(
   try {
     const supabase = createClient();
     const today = getTodayISO();
-    const { assignedShowIds } = options || {};
-    const hasFilter = assignedShowIds && assignedShowIds.length > 0;
 
-    // Construire la requête
+    // Narrow : string[] si externe, null si accès complet
+    const showIdFilter: string[] | null = Array.isArray(options?.assignedShowIds)
+      ? options.assignedShowIds
+      : null;
+
+    // Externe sans assignation → liste vide
+    if (showIdFilter !== null && showIdFilter.length === 0) {
+      return { data: [], error: null };
+    }
+
     let query = supabase
       .from('slots')
       .select(`
@@ -51,9 +52,8 @@ export async function getUpcomingSlots(
       .order('time', { ascending: true })
       .limit(limit);
 
-    // Appliquer le filtre si externe
-    if (hasFilter) {
-      query = query.in('show_id', assignedShowIds);
+    if (showIdFilter !== null) {
+      query = query.in('show_id', showIdFilter);
     }
 
     const { data: slots, error: slotsError } = await query;
@@ -67,9 +67,7 @@ export async function getUpcomingSlots(
       return { data: [], error: null };
     }
 
-    // Transformer les données avec validation
-    const upcomingSlots: AdminUpcomingSlot[] = slots.map(slot => {
-      // Utiliser les type guards pour valider les données
+    const upcomingSlots: AdminUpcomingSlot[] = slots.map((slot) => {
       const show = isValidShow(slot.shows)
         ? slot.shows
         : { id: slot.show_id, title: 'Spectacle inconnu', slug: '', image_url: null };
@@ -77,9 +75,6 @@ export async function getUpcomingSlots(
       const venue = isValidVenue(slot.venues)
         ? slot.venues
         : { id: slot.venue_id, name: 'Lieu inconnu', city: '' };
-
-      const reservationsCount = calculateBooked(slot.capacity, slot.remaining_capacity);
-      const occupancyRate = calculateOccupancyRate(slot.capacity, slot.remaining_capacity);
 
       return {
         id: slot.id,
@@ -92,8 +87,8 @@ export async function getUpcomingSlots(
         hosted_by: slot.hosted_by as SlotHostedBy,
         show,
         venue,
-        reservations_count: reservationsCount,
-        occupancy_rate: occupancyRate,
+        reservations_count: calculateBooked(slot.capacity, slot.remaining_capacity),
+        occupancy_rate: calculateOccupancyRate(slot.capacity, slot.remaining_capacity),
       };
     });
 

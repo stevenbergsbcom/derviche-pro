@@ -14,17 +14,29 @@ const TOP_SHOWS_LIMIT = 3;
 
 /**
  * Récupère le top 3 des spectacles par nombre de réservations confirmées.
- * Pour les externes : filtré sur leurs spectacles assignés uniquement.
  *
- * @param options - Options de filtrage
+ * Convention assignedShowIds :
+ *   undefined | null → accès complet
+ *   []               → externe sans assignation → []
+ *   ['id', ...]      → externe filtré
  */
 export async function getTopShows(
   options?: AdminDashboardOptions
 ): Promise<QueryResult<TopShow[]>> {
   try {
     const supabase = createClient();
-    const { assignedShowIds } = options || {};
+
+    // Narrow : string[] si externe, null si accès complet
+    const showIdFilter: string[] | null = Array.isArray(options?.assignedShowIds)
+      ? options.assignedShowIds
+      : null;
+
     const today = getTodayISO();
+
+    // Externe sans assignation → liste vide
+    if (showIdFilter !== null && showIdFilter.length === 0) {
+      return { data: [], error: null };
+    }
 
     // Récupérer les spectacles publiés (avec filtre éventuel)
     let showsQuery = supabase
@@ -33,8 +45,8 @@ export async function getTopShows(
       .eq('status', 'published')
       .is('deleted_at', null);
 
-    if (assignedShowIds && assignedShowIds.length > 0) {
-      showsQuery = showsQuery.in('id', assignedShowIds);
+    if (showIdFilter !== null) {
+      showsQuery = showsQuery.in('id', showIdFilter);
     }
 
     const { data: shows, error: showsError } = await showsQuery;

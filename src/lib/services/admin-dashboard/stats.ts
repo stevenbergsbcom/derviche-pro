@@ -1,20 +1,20 @@
 /**
  * Stats - Admin Dashboard Service
  * Derviche Diffusion
- * 
+ *
  * Récupère les statistiques globales du dashboard
  */
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { AdminDashboardStats, AdminDashboardOptions, QueryResult } from './types';
-import { 
-  calculateOccupancyRate, 
-  getTodayISO, 
-  getWeekStartISO, 
+import {
+  calculateOccupancyRate,
+  getTodayISO,
+  getWeekStartISO,
   getTodayBounds,
   getSlotIdsForShows,
-  UNLIMITED_CAPACITY 
+  UNLIMITED_CAPACITY,
 } from './helpers';
 
 // ============================================
@@ -22,11 +22,12 @@ import {
 // ============================================
 
 /**
- * Compte les spectacles actifs
+ * Compte les spectacles actifs (publiés).
+ * @param showIdFilter  string[] = filtre externe | null = accès complet
  */
 async function countActiveShows(
   supabase: ReturnType<typeof createClient>,
-  assignedShowIds?: string[] | null
+  showIdFilter: string[] | null
 ): Promise<{ count: number; error: string | null }> {
   let query = supabase
     .from('shows')
@@ -34,8 +35,8 @@ async function countActiveShows(
     .eq('status', 'published')
     .is('deleted_at', null);
 
-  if (assignedShowIds && assignedShowIds.length > 0) {
-    query = query.in('id', assignedShowIds);
+  if (showIdFilter !== null) {
+    query = query.in('id', showIdFilter);
   }
 
   const { count, error } = await query;
@@ -49,20 +50,21 @@ async function countActiveShows(
 }
 
 /**
- * Compte les créneaux à venir
+ * Compte les créneaux à venir.
+ * @param showIdFilter  string[] = filtre externe | null = accès complet
  */
 async function countUpcomingSlots(
   supabase: ReturnType<typeof createClient>,
   today: string,
-  assignedShowIds?: string[] | null
+  showIdFilter: string[] | null
 ): Promise<{ count: number; error: string | null }> {
   let query = supabase
     .from('slots')
     .select('*', { count: 'exact', head: true })
     .gte('date', today);
 
-  if (assignedShowIds && assignedShowIds.length > 0) {
-    query = query.in('show_id', assignedShowIds);
+  if (showIdFilter !== null) {
+    query = query.in('show_id', showIdFilter);
   }
 
   const { count, error } = await query;
@@ -76,11 +78,12 @@ async function countUpcomingSlots(
 }
 
 /**
- * Compte les réservations confirmées
+ * Compte les réservations confirmées.
+ * @param slotIdFilter  string[] = filtre par slots | null = accès complet
  */
 async function countConfirmedReservations(
   supabase: ReturnType<typeof createClient>,
-  slotIdFilter?: string[] | null,
+  slotIdFilter: string[] | null,
   dateFilter?: { gte?: string; lte?: string }
 ): Promise<{ count: number; error: string | null }> {
   let query = supabase
@@ -88,7 +91,7 @@ async function countConfirmedReservations(
     .select('*', { count: 'exact', head: true })
     .eq('status', 'confirmed');
 
-  if (slotIdFilter && slotIdFilter.length > 0) {
+  if (slotIdFilter !== null) {
     query = query.in('slot_id', slotIdFilter);
   }
 
@@ -111,12 +114,13 @@ async function countConfirmedReservations(
 }
 
 /**
- * Calcule le taux de remplissage moyen
+ * Calcule le taux de remplissage moyen.
+ * @param showIdFilter  string[] = filtre externe | null = accès complet
  */
 async function calculateAverageOccupancy(
   supabase: ReturnType<typeof createClient>,
   today: string,
-  assignedShowIds?: string[] | null
+  showIdFilter: string[] | null
 ): Promise<{ rate: number; error: string | null }> {
   let query = supabase
     .from('slots')
@@ -124,8 +128,8 @@ async function calculateAverageOccupancy(
     .gte('date', today)
     .neq('capacity', UNLIMITED_CAPACITY);
 
-  if (assignedShowIds && assignedShowIds.length > 0) {
-    query = query.in('show_id', assignedShowIds);
+  if (showIdFilter !== null) {
+    query = query.in('show_id', showIdFilter);
   }
 
   const { data: slots, error } = await query;
@@ -143,9 +147,9 @@ async function calculateAverageOccupancy(
     return sum + calculateOccupancyRate(slot.capacity, slot.remaining_capacity);
   }, 0);
 
-  return { 
-    rate: Math.round(totalOccupancy / slots.length), 
-    error: null 
+  return {
+    rate: Math.round(totalOccupancy / slots.length),
+    error: null,
   };
 }
 
@@ -153,16 +157,38 @@ async function calculateAverageOccupancy(
 // FONCTION PRINCIPALE
 // ============================================
 
+/** Données vides (utilisateur externe sans assignation) */
+const EMPTY_STATS: AdminDashboardStats = {
+  total_shows_active: 0,
+  total_slots_upcoming: 0,
+  total_reservations: 0,
+  reservations_today: 0,
+  reservations_this_week: 0,
+  average_occupancy_rate: 0,
+};
+
 /**
- * Récupère les statistiques globales
- * @param options - Options de filtrage (assignedShowIds pour les externes)
+ * Récupère les statistiques globales.
+ *
+ * Convention :
+ *   assignedShowIds = undefined | null → accès complet (admin/super-admin)
+ *   assignedShowIds = []               → externe sans assignation → tout à 0
+ *   assignedShowIds = ['id', ...]      → externe avec assignations → filtré
  */
 export async function getStats(
   options?: AdminDashboardOptions
 ): Promise<QueryResult<AdminDashboardStats>> {
   const errors: string[] = [];
-  const { assignedShowIds } = options || {};
-  const hasFilter = assignedShowIds && assignedShowIds.length > 0;
+
+  // Narrow : string[] si externe, null si accès complet
+  const showIdFilter: string[] | null = Array.isArray(options?.assignedShowIds)
+    ? options.assignedShowIds
+    : null;
+
+  // Externe sans aucune assignation → tout à zéro, pas de requêtes
+  if (showIdFilter !== null && showIdFilter.length === 0) {
+    return { data: EMPTY_STATS, error: null };
+  }
 
   try {
     const supabase = createClient();
@@ -170,17 +196,18 @@ export async function getStats(
     const weekStart = getWeekStartISO();
     const todayBounds = getTodayBounds();
 
-    // Préparer le filtre par slots si externe
+    // Filtre par slot_id pour les réservations (externe seulement)
     let slotIdFilter: string[] | null = null;
-    if (hasFilter) {
-      const { slotIds, error: slotError } = await getSlotIdsForShows(supabase, assignedShowIds);
+    if (showIdFilter !== null) {
+      const { slotIds, error: slotError } = await getSlotIdsForShows(supabase, showIdFilter);
       if (slotError) {
         errors.push('slot_ids');
       }
+      // Si aucun slot trouvé pour ces spectacles, les comptages seront 0
       slotIdFilter = slotIds;
     }
 
-    // Exécuter tous les comptages en parallèle
+    // Tous les comptages en parallèle
     const [
       showsResult,
       slotsResult,
@@ -189,18 +216,17 @@ export async function getStats(
       weekResResult,
       occupancyResult,
     ] = await Promise.all([
-      countActiveShows(supabase, assignedShowIds),
-      countUpcomingSlots(supabase, today, assignedShowIds),
+      countActiveShows(supabase, showIdFilter),
+      countUpcomingSlots(supabase, today, showIdFilter),
       countConfirmedReservations(supabase, slotIdFilter),
-      countConfirmedReservations(supabase, slotIdFilter, { 
-        gte: todayBounds.start, 
-        lte: todayBounds.end 
+      countConfirmedReservations(supabase, slotIdFilter, {
+        gte: todayBounds.start,
+        lte: todayBounds.end,
       }),
       countConfirmedReservations(supabase, slotIdFilter, { gte: weekStart }),
-      calculateAverageOccupancy(supabase, today, assignedShowIds),
+      calculateAverageOccupancy(supabase, today, showIdFilter),
     ]);
 
-    // Collecter les erreurs
     if (showsResult.error) errors.push(showsResult.error);
     if (slotsResult.error) errors.push(slotsResult.error);
     if (totalResResult.error) errors.push('réservations totales');
@@ -222,16 +248,6 @@ export async function getStats(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception getStats', { message });
-    return {
-      data: {
-        total_shows_active: 0,
-        total_slots_upcoming: 0,
-        total_reservations: 0,
-        reservations_today: 0,
-        reservations_this_week: 0,
-        average_occupancy_rate: 0,
-      },
-      error: message,
-    };
+    return { data: EMPTY_STATS, error: message };
   }
 }

@@ -77,20 +77,23 @@ export function useAdminDashboard(): UseAdminDashboardReturn {
 
         const role = roleData.role as InternalRole;
         setUserRole(role);
-
-        // Si externe, récupérer les spectacles assignés
+        // Si externe, récupérer les spectacles assignés via slots.hosted_by_id
+        // (source de vérité depuis migration 040 — user_show_assignments n'est plus utilisé)
         if (role === 'externe') {
-          const { data: assignments, error: assignError } = await supabase
-            .from('user_show_assignments')
+          const { data: slots, error: slotsError } = await supabase
+            .from('slots')
             .select('show_id')
-            .eq('user_id', user.id);
+            .eq('hosted_by_id', user.id);
 
-          if (!assignError && assignments) {
-            const showIds = assignments.map((a) => a.show_id);
-            setAssignedShowIds(showIds);
-          } else {
-            // Pas d'assignations = aucun accès
+          if (slotsError) {
+            logger.error('Erreur chargement slots externes', {
+              message: slotsError.message,
+            });
             setAssignedShowIds([]);
+          } else {
+            // Dédupliquer les show_ids (un externe peut avoir plusieurs slots par spectacle)
+            const showIds = [...new Set((slots ?? []).map((s) => s.show_id as string))];
+            setAssignedShowIds(showIds);
           }
         }
 

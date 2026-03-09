@@ -1,7 +1,7 @@
 /**
  * Reservations - Admin Dashboard Service
  * Derviche Diffusion
- * 
+ *
  * Récupère les réservations récentes pour le dashboard
  */
 
@@ -11,21 +11,15 @@ import type { AdminRecentReservation, AdminDashboardOptions, QueryResult } from 
 import { isValidShow, isValidVenue, isValidSlot } from './guards';
 import { getSlotIdsForShows } from './helpers';
 
-// ============================================
-// CONSTANTES
-// ============================================
-
-/** Nombre de réservations par défaut */
 const DEFAULT_LIMIT = 10;
 
-// ============================================
-// FONCTION PRINCIPALE
-// ============================================
-
 /**
- * Récupère les réservations récentes
- * @param limit - Nombre maximum de réservations à retourner
- * @param options - Options de filtrage (assignedShowIds pour les externes)
+ * Récupère les réservations récentes.
+ *
+ * Convention assignedShowIds :
+ *   undefined | null → accès complet
+ *   []               → externe sans assignation → []
+ *   ['id', ...]      → externe filtré
  */
 export async function getRecentReservations(
   limit: number = DEFAULT_LIMIT,
@@ -33,28 +27,31 @@ export async function getRecentReservations(
 ): Promise<QueryResult<AdminRecentReservation[]>> {
   try {
     const supabase = createClient();
-    const { assignedShowIds } = options || {};
-    const hasFilter = assignedShowIds && assignedShowIds.length > 0;
 
-    // Si externe, récupérer d'abord les slot_ids de leurs spectacles
+    // Narrow : string[] si externe, null si accès complet
+    const showIdFilter: string[] | null = Array.isArray(options?.assignedShowIds)
+      ? options.assignedShowIds
+      : null;
+
+    // Externe sans assignation → liste vide
+    if (showIdFilter !== null && showIdFilter.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Si externe, récupérer les slot_ids pour filtrer les réservations
     let slotIdFilter: string[] | null = null;
-
-    if (hasFilter) {
-      const { slotIds, error } = await getSlotIdsForShows(supabase, assignedShowIds);
-      
+    if (showIdFilter !== null) {
+      const { slotIds, error } = await getSlotIdsForShows(supabase, showIdFilter);
       if (error) {
         return { data: [], error };
       }
-
-      // Aucun slot trouvé = aucune réservation possible
+      // Aucun slot = aucune réservation possible pour cet externe
       if (slotIds.length === 0) {
         return { data: [], error: null };
       }
-
       slotIdFilter = slotIds;
     }
 
-    // Construire la requête
     let query = supabase
       .from('reservations')
       .select(`
@@ -70,8 +67,7 @@ export async function getRecentReservations(
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    // Appliquer le filtre si externe
-    if (slotIdFilter) {
+    if (slotIdFilter !== null) {
       query = query.in('slot_id', slotIdFilter);
     }
 
@@ -86,13 +82,9 @@ export async function getRecentReservations(
       return { data: [], error: null };
     }
 
-    // Transformer les données avec validation
-    const recentReservations: AdminRecentReservation[] = reservations.map(res => {
-      // Utiliser le type guard pour valider le slot
+    const recentReservations: AdminRecentReservation[] = reservations.map((res) => {
       const slotData = res.slots;
       const slotIsValid = isValidSlot(slotData);
-
-      // Extraire les données du show et venue avec validation
       const showData = slotIsValid ? slotData.shows : null;
       const venueData = slotIsValid ? slotData.venues : null;
 

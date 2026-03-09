@@ -34,6 +34,7 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
 
 // ============================================
 // COMPOSANT LISTE DES SPECTACLES
+// Compact : rarement plus de 2 items — pas de grille, liste horizontale dense
 // ============================================
 
 interface ShowsListProps {
@@ -44,20 +45,22 @@ interface ShowsListProps {
 function ShowsList({ shows, isLoading }: ShowsListProps) {
     if (isLoading) {
         return (
-            <Card>
+            <Card className="py-5 gap-3">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
+                    <CardTitle className="flex items-center gap-2 text-lg text-derviche-dark">
                         <Film className="w-5 h-5 text-gold" />
                         Mes spectacles
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="p-4 bg-muted rounded-lg animate-pulse">
-                            <div className="h-5 w-48 bg-muted-foreground/20 rounded mb-2" />
-                            <div className="h-4 w-32 bg-muted-foreground/20 rounded" />
-                        </div>
-                    ))}
+                <CardContent className="p-0">
+                    <div className="flex flex-wrap gap-px divide-y">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="w-full px-4 py-3 animate-pulse">
+                                <div className="h-4 w-48 bg-muted rounded mb-1" />
+                                <div className="h-3 w-32 bg-muted rounded" />
+                            </div>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
         );
@@ -65,15 +68,15 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
 
     if (!shows || shows.length === 0) {
         return (
-            <Card>
+            <Card className="py-5 gap-3">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
+                    <CardTitle className="flex items-center gap-2 text-lg text-derviche-dark">
                         <Film className="w-5 h-5 text-gold" />
                         Mes spectacles
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-muted-foreground text-center py-8">
+                    <p className="text-muted-foreground text-center py-6 text-sm">
                         Aucun spectacle enregistré pour votre compagnie
                     </p>
                 </CardContent>
@@ -81,59 +84,51 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
         );
     }
 
-    // Afficher les 5 premiers spectacles
     const displayedShows = shows.slice(0, 5);
 
     return (
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                    <Film className="w-5 h-5 text-gold" />
-                    Mes spectacles
-                </CardTitle>
-                {shows.length > 5 && (
-                    <Link href="/company/spectacles">
-                        <Button variant="ghost" size="sm" className="gap-1 text-gold hover:text-gold/80">
-                            Voir tous
-                            <ArrowRight className="w-4 h-4" />
-                        </Button>
-                    </Link>
-                )}
+        <Card className="py-5 gap-3">
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-lg text-derviche-dark">
+                        <Film className="w-5 h-5 text-gold" />
+                        Mes spectacles
+                    </CardTitle>
+                    {shows.length > 5 && (
+                        <Link href="/company/spectacles">
+                            <Button variant="ghost" size="sm" className="gap-1 text-xs text-gold hover:text-gold/80">
+                                Voir tous
+                                <ArrowRight className="w-3 h-3" />
+                            </Button>
+                        </Link>
+                    )}
+                </div>
             </CardHeader>
             <CardContent className="p-0">
+                {/* Affichage en ligne horizontale : chaque spectacle sur une seule ligne dense */}
                 <div className="divide-y">
                     {displayedShows.map((show) => (
                         <div
                             key={show.id}
-                            className="p-4 hover:bg-muted/50 transition-colors"
+                            className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
                         >
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h4 className="font-medium text-derviche-dark">
-                                        {show.title}
-                                    </h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        {show.total_slots} représentation{show.total_slots > 1 ? 's' : ''} •{' '}
-                                        {show.total_reservations} réservation{show.total_reservations > 1 ? 's' : ''}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <span className={`text-sm font-medium ${
-                                        show.status === 'published' ? 'text-green-600' :
-                                        show.status === 'draft' ? 'text-yellow-600' :
-                                        'text-muted-foreground'
-                                    }`}>
-                                        {show.status === 'published' ? 'Publié' :
-                                         show.status === 'draft' ? 'Brouillon' :
-                                         'Archivé'}
-                                    </span>
-                                    {show.occupancy_rate > 0 && (
-                                        <p className="text-xs text-muted-foreground">
-                                            {show.occupancy_rate}% de remplissage
-                                        </p>
-                                    )}
-                                </div>
+                            <div className="flex items-center gap-3 min-w-0">
+                                <h4 className="font-medium text-sm text-derviche-dark truncate">
+                                    {show.title}
+                                </h4>
+                                <span className="text-xs text-muted-foreground shrink-0">
+                                    {show.total_slots} repré{show.total_slots > 1 ? 's' : ''} · {show.total_reservations} résa{show.total_reservations > 1 ? 's' : ''}
+                                </span>
                             </div>
+                            <span className={`text-xs font-medium shrink-0 ml-3 ${
+                                show.status === 'published' ? 'text-green-600' :
+                                show.status === 'draft' ? 'text-yellow-600' :
+                                'text-muted-foreground'
+                            }`}>
+                                {show.status === 'published' ? 'Publié' :
+                                 show.status === 'draft' ? 'Brouillon' :
+                                 'Archivé'}
+                            </span>
                         </div>
                     ))}
                 </div>
@@ -144,17 +139,19 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
 
 // ============================================
 // PAGE DASHBOARD
+// Layout empilé :
+//   1. Stats cards (3 cartes)
+//   2. Spectacles (pleine largeur, compact)
+//   3. Prochains créneaux (pleine largeur, peut être long)
 // ============================================
 
 export default function CompanyDashboardPage() {
     const { data, isLoading, error, refresh } = useCompanyDashboard();
 
-    // Affichage d'erreur
     if (error && !isLoading) {
         return <ErrorState error={error} onRetry={() => void refresh()} />;
     }
 
-    // Stats par défaut pendant le chargement
     const stats = data?.stats || {
         total_shows: 0,
         total_slots: 0,
@@ -190,20 +187,17 @@ export default function CompanyDashboardPage() {
                 </Button>
             </div>
 
-            {/* Cartes statistiques */}
+            {/* Cartes statistiques (3 cartes) */}
             <CompanyStatsCards stats={stats} isLoading={isLoading} />
 
-            {/* Grille : Spectacles + Créneaux à venir */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Liste des spectacles */}
-                <ShowsList shows={data?.shows} isLoading={isLoading} />
+            {/* Spectacles — compact, pleine largeur */}
+            <ShowsList shows={data?.shows} isLoading={isLoading} />
 
-                {/* Prochains créneaux */}
-                <CompanyUpcomingSlots
-                    slots={data?.upcomingSlots || []}
-                    isLoading={isLoading}
-                />
-            </div>
+            {/* Prochains créneaux — pleine largeur, peut être très long */}
+            <CompanyUpcomingSlots
+                slots={data?.upcomingSlots || []}
+                isLoading={isLoading}
+            />
         </div>
     );
 }
