@@ -150,13 +150,15 @@ export function Header() {
                   Mes réservations
                 </Link>
               )}
-              <Link
-                href={accountUrl}
-                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
-              >
-                <User className="w-4 h-4" />
-                Mon compte
-              </Link>
+              {userRole !== null && (
+                <Link
+                  href={accountUrl}
+                  className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-derviche transition"
+                >
+                  <User className="w-4 h-4" />
+                  Mon compte
+                </Link>
+              )}
               <LogoutButton variant="outline" className="text-base" />
             </>
           ) : (
@@ -222,14 +224,16 @@ export function Header() {
                     Mes réservations
                   </Link>
                 )}
-                <Link
-                  href={accountUrl}
-                  className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="w-5 h-5" />
-                  Mon compte
-                </Link>
+                {userRole !== null && (
+                  <Link
+                    href={accountUrl}
+                    className="flex items-center gap-2 text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    Mon compte
+                  </Link>
+                )}
                 <LogoutButton
                   variant="outline"
                   className="w-full max-w-xs text-lg"
