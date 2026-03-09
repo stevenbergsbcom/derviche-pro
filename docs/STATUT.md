@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S153 (complète ✅) — Rate limiting Upstash + assignations spectacles externes + widget monitoring — 9 mars 2026
+> Dernière mise à jour : Session S154 (complète ✅) — Dashboard admin enrichi (graphique, top 3, créneaux 24h, saison configurable) + corrections post-audit (timezone, race condition) — 9 mars 2026
 
 ---
 
@@ -54,7 +54,7 @@
 ### ✅ Admin (100%)
 | Module | État |
 |--------|------|
-| Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir |
+| Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison |
 | Réservations | ✅ Liste, filtres, pagination, détail, CRUD, check-in, export |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories, publics cibles, médias |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
@@ -151,7 +151,31 @@
 
 ---
 
-## Dernier travail (S153 — 9 mars 2026) [MERGÉ MAIN ✅]
+## Dernier travail (S154 — 9 mars 2026) [MERGÉ MAIN ✅]
+
+### S154-A — Dashboard admin enrichi
+- Sélecteur de période : 7 jours / 30 jours / Saison (configurable dans Préférences)
+- `ReservationsChart` : graphique area recharts, gradient bleu DD, tooltip personnalisé
+- `TopShowsCard` : top 3 spectacles par réservations confirmées, barres de progression relatives, médailles
+- `Slots24hCard` : créneaux dans les 24h avec lien direct check-in, badge réservations
+- `PeriodSelector` : composant boutons actif/inactif
+- Migration 078 : `season_start` / `season_end` dans `app_settings` (défauts 09-01 / 06-30)
+- Préférences Organisation : nouveau bloc "Saison du dashboard" (super-admin uniquement)
+- `setSeasonSettings` utilise `upsert` (crée les clés si inexistantes)
+- Hook `useSeasonSettings` + service `getSeasonSettings` / `setSeasonSettings` dans `app-settings.ts`
+
+### S154-B — Corrections post-audit Cursor (timezone + race condition)
+- **Bug timezone** : `toLocalDateISO()` remplace `.toISOString().split('T')[0]` partout
+  - `period.ts` : `computePeriodBounds`, `generateDateRange`
+  - `admin-dashboard/helpers.ts` : `getTodayISO`, `getWeekStartISO`
+  - `checkin/helpers.ts` : `getTodayISO`, `getDateDaysAgo`
+  - `slots-24h.ts` : bornes `todayISO` / `tomorrowISO`
+- **Race condition PeriodSelector** : suppression du `void refresh()` redondant dans `page.tsx` — `period` dans les deps de `loadDashboard` déclenche le rechargement automatiquement
+- **`console.error` → `logger.error`** dans `useAdminDashboard.ts`
+
+---
+
+## Travail précédent (S153 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S153-A — Assignations spectacles pour les externes
 - Route `GET /api/admin/users/[userId]/assignments` — accès super-admin + admin uniquement
@@ -205,21 +229,21 @@
 
 | # | Session | Fonctionnalité | Détail |
 |---|---------|----------------|--------|
-| 1 | **S154** | Refonte dashboards par rôle | Admin : graphique temporel réservations, alertes spectacles quasi-complets. Externe-DD : stats filtrées ses spectacles. Compagnie : taux remplissage/présence par créneau. Professionnel : prochain spectacle mis en avant. |
-| 2 | **S154** | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. |
-| 3 | **S155** | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles déjà vus vs non vus. |
-| 4 | **S155** | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC). |
-| 5 | **S156** | Notification push PWA | Pour les rôles staff uniquement (super-admin, admin, externe). Rappel H-2 avant spectacle, nouvelle réservation, annulation. PAS pour les programmateurs. |
-| 6 | **S156** | Refacto fichiers trop gros | Par ordre : `EmailTemplateForm.tsx` (27 KB 🚨), `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB). |
-| 7 | **S157** | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
+| 1 | **S155** | Dashboards par rôle (pro, company, externe) | Professionnel : prochain spectacle + mes réservations. Compagnie : taux remplissage/présence par créneau. Externe-DD : stats filtrées ses spectacles assignés. |
+| 2 | **S155** | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. |
+| 3 | **S156** | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles déjà vus vs non vus. |
+| 4 | **S156** | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC). |
+| 5 | **S157** | Notification push PWA | Pour les rôles staff uniquement (super-admin, admin, externe). Rappel H-2 avant spectacle, nouvelle réservation, annulation. PAS pour les programmateurs. |
+| 6 | **S157** | Refacto fichiers trop gros | Par ordre : `EmailTemplateForm.tsx` (27 KB 🚨), `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB). |
+| 7 | **S158** | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
 
 ### 🟡 MOYENNE PRIORITÉ — CDC V4 non implémenté
 
 | # | Session | Fonctionnalité | Détail |
 |---|---------|----------------|--------|
-| 8 | **S158** | Champs manquants formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
-| 9 | **S158** | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque. |
-| 10 | **S159** | Dashboard externe-DD dédié | Vue "mes spectacles assignés" + prochains créneaux. |
+| 8 | **S159** | Champs manquants formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
+| 9 | **S159** | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque. |
+| 10 | ~~S159~~ | ~~Dashboard externe-DD dédié~~ | Intégré dans S155 |
 
 ### 🟢 BASSE PRIORITÉ
 
@@ -319,3 +343,4 @@
 | 075 | `075_add_composite_index_reservations_slot_status.sql` | Index composite `(slot_id, status)` partiel + index `slot_confirmed` | ✅ |
 | 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` | ✅ |
 | 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` | ✅ |
+| 078 | `078_add_season_settings.sql` | `season_start` (09-01) + `season_end` (06-30) dans `app_settings` | ✅ |

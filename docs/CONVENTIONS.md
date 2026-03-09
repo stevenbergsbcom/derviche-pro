@@ -95,3 +95,73 @@ Pattern : `isInitialized` + ref pour notifier le parent
 6. Types
 
 Alias : `@/` → `./src/*`
+
+---
+
+## Pièges connus & leçons retenues
+
+### ⚠️ Timezone — ne jamais utiliser `.toISOString()` pour des dates locales
+
+**Problème** : `.toISOString()` convertit en UTC avant d'extraire la date. Pour un utilisateur en UTC+1 ou UTC+2, cette ligne retourne la date de la veille après 23h :
+```typescript
+// ❌ FAUX — peut retourner la mauvaise date en timezone non-UTC
+const today = new Date().toISOString().split('T')[0];
+```
+
+**Solution** : toujours utiliser les méthodes locales :
+```typescript
+// ✅ CORRECT — date locale garantie quel que soit le fuseau
+function toLocalDateISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+```
+
+**Fichiers corrigés (S154)** : `period.ts`, `admin-dashboard/helpers.ts`, `checkin/helpers.ts`, `slots-24h.ts`
+
+**Exception** : pour les bornes de requêtes Supabase (comparaison avec des timestamps UTC en base), utiliser `Date.UTC()` explicitement — voir `startOfTodayUTC()` dans `rate-limit-widget.tsx`.
+
+### ⚠️ Race condition — `setState` + appel async immédiat
+
+**Problème** : `setState` est asynchrone. Appeler une fonction qui dépend du nouveau state juste après `setState` utilise l'ancienne valeur (closure stale) :
+```typescript
+// ❌ FAUX — refresh() voit l'ancienne valeur de period
+onChange={(p) => { setPeriod(p); void refresh(); }}
+```
+
+**Solution** : si la fonction est dans un `useEffect` avec la variable en dépendance, le changement de state déclenchera automatiquement le rechargement :
+```typescript
+// ✅ CORRECT — l'effet se re-exécute quand period change
+onChange={(p) => { setPeriod(p); }}
+// ... dans le hook :
+useEffect(() => { void loadDashboard(); }, [loadDashboard, period]);
+```
+
+### ⚠️ `flex-row` direct sur `CardHeader` shadcn — texte invisible
+
+**Problème** : appliquer `flex flex-row` directement sur le composant `CardHeader` de shadcn/ui entre en conflit avec ses pseudo-sélecteurs CSS internes. Le `CardTitle` enfant hérite d'une couleur transparente et devient invisible sur fond blanc.
+
+**Solution** : ne jamais mettre `flex-row` sur `CardHeader`. Wrapper le contenu dans un `div` si layout flex nécessaire :
+```tsx
+// ❌ FAUX
+<CardHeader className="flex flex-row items-center justify-between">
+  <CardTitle>Titre</CardTitle>
+  <Button>Action</Button>
+</CardHeader>
+
+// ✅ CORRECT
+<CardHeader>
+  <div className="flex items-center justify-between">
+    <CardTitle>Titre</CardTitle>
+    <Button>Action</Button>
+  </div>
+</CardHeader>
+```
+
+### ⚠️ `setAppSettings` / `upsert` pour les nouvelles clés
+
+**Problème** : `setAppSettings` utilise `.update()` qui échoue silencieusement si la clé n'existe pas en base (0 lignes mises à jour, pas d'erreur Supabase).
+
+**Solution** : utiliser `.upsert({ key, value }, { onConflict: 'key' })` pour les paramètres qui pourraient ne pas encore exister (ex : nouvelles migrations).

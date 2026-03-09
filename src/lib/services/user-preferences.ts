@@ -51,23 +51,21 @@ export async function getUserPreference<T>(
       return { data: null, error: 'Utilisateur non connecté' };
     }
 
+    // .maybeSingle() retourne null sans erreur si 0 ligne (vs .single() qui retourne 406)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from as any)('user_preferences')
       .select('preference_value')
       .eq('user_id', user.id)
       .eq('preference_key', key)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      // PGRST116 = not found, ce n'est pas une erreur
-      if (error.code === 'PGRST116') {
-        return { data: null, error: null };
-      }
       logger.error('Erreur récupération préférence', { key, error: error.message });
       return { data: null, error: error.message };
     }
 
-    return { data: data.preference_value as T, error: null };
+    // data est null si aucune préférence enregistrée → le hook utilisera defaultValue
+    return { data: (data?.preference_value as T) ?? null, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception getUserPreference', { key, message });
@@ -91,9 +89,9 @@ export async function setUserPreference<T>(
       return { data: null, error: 'Utilisateur non connecté' };
     }
 
-    // Upsert (insert or update)
+    // Upsert sans .select().single() — évite le 406 quand la ligne n'existait pas encore
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from as any)('user_preferences')
+    const { error } = await (supabase.from as any)('user_preferences')
       .upsert({
         user_id: user.id,
         preference_key: key,
@@ -101,9 +99,7 @@ export async function setUserPreference<T>(
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id,preference_key',
-      })
-      .select('preference_value')
-      .single();
+      });
 
     if (error) {
       logger.error('Erreur sauvegarde préférence', { key, error: error.message });
@@ -111,7 +107,8 @@ export async function setUserPreference<T>(
     }
 
     logger.info('Préférence sauvegardée', { key });
-    return { data: data.preference_value as T, error: null };
+    // On retourne la valeur qu'on vient d'écrire (pas besoin de relire la DB)
+    return { data: value, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception setUserPreference', { key, message });

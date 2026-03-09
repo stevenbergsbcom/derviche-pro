@@ -16,14 +16,8 @@ import { getSlotIdsForShows } from './helpers';
 // FORMATAGE DES LABELS
 // ============================================
 
-/**
- * Formate une date ISO en label lisible court.
- * - 7j  : "3 mars"
- * - 30j : "3 mars"
- * - saison : "3 mars"
- */
 function formatChartLabel(isoDate: string): string {
-  const date = new Date(`${isoDate}T12:00:00`); // midi UTC pour éviter décalage TZ
+  const date = new Date(`${isoDate}T12:00:00`);
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 }
 
@@ -33,10 +27,11 @@ function formatChartLabel(isoDate: string): string {
 
 /**
  * Récupère les données pour le graphique des réservations.
- * Retourne un point par jour (count = 0 si aucune réservation ce jour).
  *
- * @param bounds - Bornes de la période (start, end au format YYYY-MM-DD)
- * @param options - Options de filtrage (assignedShowIds pour les externes)
+ * Convention assignedShowIds :
+ *   undefined | null → accès complet
+ *   []               → externe sans assignation → tous counts à 0
+ *   ['id', ...]      → externe filtré
  */
 export async function getChartData(
   bounds: PeriodBounds,
@@ -44,19 +39,31 @@ export async function getChartData(
 ): Promise<QueryResult<ReservationChartPoint[]>> {
   try {
     const supabase = createClient();
-    const { assignedShowIds } = options || {};
 
-    // Préparer filtre slot_ids si externe
+    // Narrow : string[] si externe, null si accès complet
+    const showIdFilter: string[] | null = Array.isArray(options?.assignedShowIds)
+      ? options.assignedShowIds
+      : null;
+
+    // Externe sans assignation → graphique vide (tous counts à 0)
+    if (showIdFilter !== null && showIdFilter.length === 0) {
+      const allDates = generateDateRange(bounds.start, bounds.end);
+      return {
+        data: allDates.map((date) => ({ label: formatChartLabel(date), date, count: 0 })),
+        error: null,
+      };
+    }
+
+    // Si externe, filtrer par slot_ids
     let slotIdFilter: string[] | null = null;
-    if (assignedShowIds && assignedShowIds.length > 0) {
-      const { slotIds, error: slotError } = await getSlotIdsForShows(supabase, assignedShowIds);
+    if (showIdFilter !== null) {
+      const { slotIds, error: slotError } = await getSlotIdsForShows(supabase, showIdFilter);
       if (slotError) {
         logger.error('Erreur slot_ids pour chart', { error: slotError });
       }
       slotIdFilter = slotIds;
     }
 
-    // Récupérer toutes les réservations confirmées sur la période
     let query = supabase
       .from('reservations')
       .select('created_at')
@@ -64,7 +71,7 @@ export async function getChartData(
       .gte('created_at', `${bounds.start}T00:00:00`)
       .lte('created_at', `${bounds.end}T23:59:59`);
 
-    if (slotIdFilter && slotIdFilter.length > 0) {
+    if (slotIdFilter !== null) {
       query = query.in('slot_id', slotIdFilter);
     }
 
@@ -77,7 +84,6 @@ export async function getChartData(
 
     // Agréger par jour
     const countsByDate = new Map<string, number>();
-
     for (const r of reservations ?? []) {
       const day = r.created_at.split('T')[0];
       if (day) {
@@ -85,9 +91,7 @@ export async function getChartData(
       }
     }
 
-    // Générer tous les jours de la période (avec count=0 si aucune résa)
     const allDates = generateDateRange(bounds.start, bounds.end);
-
     const chartData: ReservationChartPoint[] = allDates.map((date) => ({
       label: formatChartLabel(date),
       date,

@@ -1,6 +1,6 @@
 'use client';
 
-import { Film, Calendar, Users, TrendingUp } from 'lucide-react';
+import { Film, Calendar, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import type { CompanyDashboardStats } from '@/lib/services/company-dashboard';
 
@@ -27,8 +27,8 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon: Icon, description, isLoading }: StatCardProps) {
     return (
-        <Card className="bg-white">
-            <CardContent className="p-6">
+        <Card className="bg-white py-5 gap-3">
+            <CardContent className="px-6">
                 <div className="flex items-start justify-between">
                     <div className="space-y-2">
                         <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -56,7 +56,7 @@ function StatCard({ label, value, icon: Icon, description, isLoading }: StatCard
 
 export function CompanyStatsCards({ stats, isLoading = false }: CompanyStatsCardsProps) {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard
                 label="Spectacles"
                 value={stats.total_shows}
@@ -78,13 +78,7 @@ export function CompanyStatsCards({ stats, isLoading = false }: CompanyStatsCard
                 description="Places réservées (confirmées)"
                 isLoading={isLoading}
             />
-            <StatCard
-                label="Taux de remplissage"
-                value={`${stats.average_occupancy_rate}%`}
-                icon={TrendingUp}
-                description="Moyenne sur tous les créneaux"
-                isLoading={isLoading}
-            />
+
         </div>
     );
 }

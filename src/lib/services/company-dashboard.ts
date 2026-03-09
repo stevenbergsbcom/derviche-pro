@@ -68,6 +68,8 @@ export interface UpcomingSlot {
   show: Pick<ShowRow, 'id' | 'title' | 'slug' | 'image_url'>;
   venue: Pick<VenueRow, 'id' | 'name' | 'city'>;
   reservations_count: number;
+  /** Nombre de personnes ayant effectivement assisté = sum(num_places) où checkin_status != 'absent' && != null */
+  checkin_count: number;
 }
 
 /** Statistiques globales du dashboard */
@@ -300,18 +302,25 @@ export async function getUpcomingSlots(companyId: string, limit: number = 5): Pr
       return { data: [], error: null };
     }
 
-    // 3. Récupérer le nombre de réservations par créneau
+    // 3. Récupérer les réservations + statuts check-in par créneau
     const slotIds = slots.map(s => s.id);
     const { data: reservations, error: resError } = await supabase
       .from('reservations')
-      .select('slot_id, num_places')
+      .select('slot_id, num_places, checkin_status')
       .in('slot_id', slotIds)
       .eq('status', 'confirmed');
 
     const reservationsBySlot: Record<string, number> = {};
+    const checkinBySlot: Record<string, number> = {};
+
     if (!resError && reservations) {
-      reservations.forEach(res => {
+      reservations.forEach((res: { slot_id: string; num_places: number; checkin_status: string | null }) => {
         reservationsBySlot[res.slot_id] = (reservationsBySlot[res.slot_id] || 0) + res.num_places;
+        // Présents = sum des num_places (checkin_status défini et différent de 'absent')
+        // Une réservation peut couvrir plusieurs personnes → sommer num_places
+        if (res.checkin_status && res.checkin_status !== 'absent') {
+          checkinBySlot[res.slot_id] = (checkinBySlot[res.slot_id] || 0) + res.num_places;
+        }
       });
     }
 
@@ -335,6 +344,7 @@ export async function getUpcomingSlots(companyId: string, limit: number = 5): Pr
         show: show || { id: slot.show_id, title: 'Spectacle inconnu', slug: '', image_url: null },
         venue: venue || { id: slot.venue_id, name: 'Lieu inconnu', city: '' },
         reservations_count: reservationsBySlot[slot.id] || 0,
+        checkin_count: checkinBySlot[slot.id] || 0,
       };
     });
 
