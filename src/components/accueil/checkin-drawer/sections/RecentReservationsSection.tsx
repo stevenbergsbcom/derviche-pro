@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -80,26 +80,37 @@ export function RecentReservationsSection({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [loadedForUserId, setLoadedForUserId] = useState<string | null>(null);
 
-  // Reset quand userId change (passage d'un pro à un autre dans le drawer)
+  // Ref pour annuler les fetchs en cours si userId change
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Reset complet + annulation fetch quand userId change
   useEffect(() => {
-    if (userId !== loadedForUserId) {
-      setReservations([]);
-      setHasLoaded(false);
-      setError(null);
-      setIsOpen(false);
-    }
-  }, [userId, loadedForUserId]);
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setReservations([]);
+    setHasLoaded(false);
+    setError(null);
+    setIsOpen(false);
+    setIsLoading(false);
+  }, [userId]);
 
-  // Charger au premier dépliage pour ce userId
+  // Chargement pour le userId courant
   const load = useCallback(async () => {
     if (!userId) return;
+
+    // Annuler un éventuel fetch précédent
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/pwa/professional/${userId}/recent`);
+      const res = await fetch(`/api/pwa/professional/${userId}/recent`, {
+        signal: controller.signal,
+      });
       const result = (await res.json()) as {
         success: boolean;
         data?: PwaRecentReservationEntry[];
@@ -111,16 +122,18 @@ export function RecentReservationsSection({
       } else {
         setReservations(result.data ?? []);
       }
-    } catch {
+      setIsLoading(false);
+      setHasLoaded(true);
+    } catch (err) {
+      // Fetch annulé volontairement (changement de userId) — on ignore
+      if (err instanceof Error && err.name === 'AbortError') return;
       setError('Erreur réseau');
+      setIsLoading(false);
+      setHasLoaded(true);
     }
-
-    setIsLoading(false);
-    setHasLoaded(true);
-    setLoadedForUserId(userId);
   }, [userId]);
 
-  // Chargement automatique à l'ouverture si pas encore chargé pour ce userId
+  // Chargement automatique à l'ouverture si pas encore chargé
   useEffect(() => {
     if (isOpen && !hasLoaded) {
       void load();
