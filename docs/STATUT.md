@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S151 (complète ✅) — Verrou SQL atomique + index perf + RGPD suppression compte + corrections audit — 9 mars 2026
+> Dernière mise à jour : Session S152 (complète ✅) — Fiche professionnel admin + historique réservations PWA + corrections audit — 9 mars 2026
 
 ---
 
@@ -41,6 +41,7 @@
 - **S143** : Recherche globale (GlobalSearchSheet + useGlobalSearch + search.ts)
 - **S143-bis** : Harmonisation labels commentaires/notes (Notes accueil, Notes internes Derviche, Demandes spéciales)
 - **S143-bis** : Sécurité notes internes — `isStaffDD` (role !== 'company') → absent du DOM pour les compagnies
+- **S152** : Section "Historique des réservations" dans CheckinDrawer (staff DD uniquement) — 20 dernières réservations, chargement lazy, reset au changement de pro
 - **S144** : Emails post-checkin — CheckinEmailsSection dans CheckinDrawer (statuts présent, absent, coup de cœur, presse)
 - **S144** : 4 templates post-checkin en BDD (`checkin_thank_you`, `checkin_loved`, `checkin_press`, `checkin_followup_absent`)
 - **S144** : Table `checkin_followup_emails` (tracking envois) + colonne `is_simple_style` sur `email_templates`
@@ -59,7 +60,7 @@
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
-| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV |
+| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
 | Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (11), Google Calendar, RGPD |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
 | **Système** | ✅ Logs journal (email/calendar/réservation/système) + widget quota Resend — **S150** |
@@ -140,7 +141,38 @@
 
 ---
 
-## Dernier travail (S151 — 9 mars 2026) [MERGÉ MAIN ✅]
+## Dernier travail (S152 — 9 mars 2026) [MERGÉ MAIN ✅]
+
+### S152-A — Page fiche professionnel admin
+- Page `/admin/professionnels/[id]` — URL partageable, accessible depuis le modal et le menu contextuel
+- En-tête fiche : avatar initiales, nom, statut actif/inactif, stats (réservations, confirmées, présences)
+- Colonne gauche : infos profil (structure, fonction, AFC, contact, adresse, notes internes)
+- Colonne droite : tableau historique complet (spectacle | date+heure | statut résa | statut checkin)
+- Bouton "Voir la fiche complète" dans `ProfessionalsTable` + `ProfessionalModal`
+- Fix ambiguïté FK `profiles ↔ reservations` : count séparé (`.eq('user_id', ...)`) à la place de l'embed Supabase
+
+### S152-B — Route API admin historique
+- `GET /api/admin/professionals/[professionalId]/history` — accès super-admin + admin uniquement
+- Validation UUID du paramètre, appel RPC via `createAdminClient()`
+- Type exporté : `ProfessionalReservationHistoryEntry`
+
+### S152-C — Historique PWA dans CheckinDrawer
+- `userId` propagé dans `CheckinReservation` → `ReservationRowData` → `useSlotDetails`
+- Route `GET /api/pwa/professional/[userId]/recent` — guard : soi-même OU staff DD (fix audit)
+- `RecentReservationsSection` : chargement lazy, reset sur changement de `userId` (fix bug stale history)
+- Visible uniquement pour `isStaffDD` dans `CheckinDrawer`
+
+### S152-D — Migration 077
+- RPC `get_professional_reservation_history(p_user_id)` — tout l'historique, SECURITY DEFINER, service_role uniquement
+- RPC `get_professional_recent_reservations(p_user_id)` — 20 dernières réservations pour la PWA
+
+### S152-audit — Corrections post-audit Cursor
+- **Critique** : Route `/api/pwa/professional/[userId]/recent` — ajout guard 403 (soi-même OU rôle staff DD)
+- **Bug** : `RecentReservationsSection` — `loadedForUserId` pour reset l'état quand `userId` change (évite historique périmé)
+
+---
+
+## Travail précédent (S151 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S151-A — Verrou SQL atomique (réservations simultanées)
 - Migration 074 : `create_public_reservation` — `SELECT ... FOR UPDATE` sur le slot AVANT l'INSERT (verrou atomique)
@@ -167,7 +199,7 @@
 
 ---
 
-## Travail précédent (S150 — 9 mars 2026)
+## Travail précédent (S150 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S150-A — Infrastructure logs (migrations + service)
 - Migration 072 : table `app_logs` — RLS super-admin, indexes optimisés
@@ -205,7 +237,7 @@
 
 | # | Session | Fonctionnalité | Détail |
 |---|---------|----------------|--------|
-| 4 | **S152** | Historique complet d'un pro (vue admin) | Dans le drawer détail réservation OU dans `/admin/professionnels` : toutes les réservations d'un programmateur, tous spectacles confondus, avec statuts checkin. |
+| 4 | ~~**S152**~~ | ~~Historique complet d'un pro (vue admin)~~ | ✅ **Fait S152** — Page `/admin/professionnels/[id]` + historique PWA dans CheckinDrawer |
 | 5 | **S153** | Gestion utilisateurs super-admin | Création compte externe-DD avec mot de passe temporaire + UI d'assignation/désassignation de spectacles. Table `user_show_assignments` existe, UI manque. |
 | 6 | **S153** | Rate limiting | Middleware Vercel Edge sur `/api/reservations` (POST), `/api/auth/*`, `/api/emails/*`. Solution légère sans Redis (`@vercel/edge-rate-limiter` ou compteur mémoire). |
 
@@ -323,3 +355,4 @@
 | 074 | `074_add_for_update_to_public_reservation_rpc.sql` | Verrou atomique `FOR UPDATE` dans `create_public_reservation` + fix `guest_country` + code `CAPACITY_FULL` | ✅ |
 | 075 | `075_add_composite_index_reservations_slot_status.sql` | Index composite `(slot_id, status)` partiel + index `slot_confirmed` | ✅ |
 | 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` — anonymisation PII + annulation réservations futures + SECURITY DEFINER | ✅ |
+| 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` — SECURITY DEFINER, service_role uniquement | ✅ |
