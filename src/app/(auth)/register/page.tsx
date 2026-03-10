@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { logger } from '@/lib/logger';
 import { createClient } from '@/lib/supabase/client';
@@ -50,6 +51,7 @@ export default function RegisterPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const router = useRouter();
 
     const form = useForm<RegisterForm>({
         resolver: zodResolver(registerSchema),
@@ -67,7 +69,7 @@ export default function RegisterPage() {
 
         try {
             const supabase = createClient();
-            const { error } = await supabase.auth.signUp({
+            const { data: authData, error } = await supabase.auth.signUp({
                 email: data.email,
                 password: data.password,
                 options: {
@@ -85,8 +87,16 @@ export default function RegisterPage() {
                 return;
             }
 
-            toast.success('Vérifiez votre boîte email pour confirmer votre compte');
-            form.reset();
+            // Si la session est disponible immédiatement (confirmation email désactivée dans Supabase),
+            // on redirige directement vers le dashboard professionnel.
+            // Sinon (confirmation email activée), on affiche le message classique.
+            if (authData.session) {
+                toast.success('Bienvenue sur Derviche Pro !');
+                router.push('/professional');
+            } else {
+                toast.success('Vérifiez votre boîte email pour confirmer votre compte');
+                form.reset();
+            }
         } catch (error) {
             logger.error('[Register] Erreur lors de l\'inscription', error as Error);
             toast.error('Une erreur est survenue lors de l\'inscription');
@@ -257,4 +267,3 @@ export default function RegisterPage() {
         </div>
     );
 }
-
