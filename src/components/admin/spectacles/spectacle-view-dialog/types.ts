@@ -108,6 +108,8 @@ export interface MediaResourcesSectionProps {
   teaserUrl: string | null;
   captationAvailable: boolean;
   captationUrl: string | null;
+  /** URL du dossier photo — S170 */
+  photoFolderUrl: string | null;
 }
 
 /**

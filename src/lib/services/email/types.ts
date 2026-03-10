@@ -112,6 +112,8 @@ export interface CheckinFollowupEmailData extends ManagerContact {
   teaserUrl: string | null;
   /** URL de la captation vidéo (null si non renseignée) */
   captationUrl: string | null;
+  /** URL du dossier photo (null si non renseignée) — S170 */
+  photoFolderUrl: string | null;
   // Créneau
   slotDateFormatted: string;
   slotTimeFormatted: string;

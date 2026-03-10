@@ -37,6 +37,8 @@ export interface ShowForDisplay {
   teaserUrl?: string;
   captationAvailable: boolean;
   captationUrl?: string;
+  /** URL du dossier photo — S170 */
+  photoFolderUrl?: string;
 }
 
 /**

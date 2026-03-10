@@ -114,11 +114,18 @@ export function buildSimpleHtml(
        </td></tr>`
     : '';
 
-  const hasLinks = folderLinkBlock || teaserLinkBlock || captationLinkBlock || bookingLinkBlock;
+  // Dossier photo (S170)
+  const photoFolderLinkBlock = (template.show_photo_folder_link && isSafeUrl(data.photoFolderUrl))
+    ? `<tr><td style="padding:16px 0 0 0;">
+        <a href="${escapeHtml(data.photoFolderUrl)}" style="color:#1e3a5f;font-size:14px;">📷 ${escapeHtml(template.photo_folder_link_text)}</a>
+       </td></tr>`
+    : '';
+
+  const hasLinks = folderLinkBlock || teaserLinkBlock || captationLinkBlock || bookingLinkBlock || photoFolderLinkBlock;
   const linksBlock = hasLinks
     ? `<tr><td style="padding:20px 0 0 0;border-top:1px solid #e5e7eb;">
         <table width="100%" cellpadding="0" cellspacing="0">
-          ${folderLinkBlock}${teaserLinkBlock}${captationLinkBlock}${bookingLinkBlock}
+          ${folderLinkBlock}${teaserLinkBlock}${captationLinkBlock}${bookingLinkBlock}${photoFolderLinkBlock}
         </table>
        </td></tr>`
     : '';

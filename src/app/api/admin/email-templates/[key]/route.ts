@@ -73,6 +73,9 @@ const updatePayloadSchema = z.object({
   captation_link_text:   z.string().max(200),
   show_booking_link:     z.boolean(),
   booking_link_text:     z.string().max(200),
+  // Dossier photo (S170)
+  show_photo_folder_link: z.boolean(),
+  photo_folder_link_text: z.string().max(200),
 });
 
 // ============================================

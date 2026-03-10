@@ -4,6 +4,7 @@
  */
 
 import { Video, FolderOpen, Film, ExternalLink } from 'lucide-react';
+import { isSafeUrl } from '@/lib/services/email/html-helpers';
 import type { MediaResourcesSectionProps } from '../types';
 
 /**
@@ -37,6 +38,7 @@ export function MediaResourcesSection({
   teaserUrl,
   captationAvailable,
   captationUrl,
+  photoFolderUrl,
 }: MediaResourcesSectionProps) {
   return (
     <div className="border rounded-lg p-4 mb-4 bg-muted/10">
@@ -45,16 +47,16 @@ export function MediaResourcesSection({
         Ressources & Médias
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-        {/* URL du dossier */}
+        {/* URL du dossier de presse */}
         <div className="flex items-start gap-2">
           <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5" aria-hidden="true" />
           <div>
-            <p className="text-xs text-muted-foreground">Dossier</p>
-            {folderUrl ? (
+            <p className="text-xs text-muted-foreground">Dossier de presse</p>
+            {isSafeUrl(folderUrl) ? (
               <ExternalLinkItem 
                 href={folderUrl} 
                 label="Ouvrir le dossier"
-                ariaLabel="Ouvrir le dossier (nouvel onglet)"
+                ariaLabel="Ouvrir le dossier de presse (nouvel onglet)"
               />
             ) : (
               <p className="text-sm text-muted-foreground italic">Non renseigné</p>
@@ -67,11 +69,28 @@ export function MediaResourcesSection({
           <Film className="w-4 h-4 text-muted-foreground mt-0.5" aria-hidden="true" />
           <div>
             <p className="text-xs text-muted-foreground">Teaser</p>
-            {teaserUrl ? (
+            {isSafeUrl(teaserUrl) ? (
               <ExternalLinkItem 
                 href={teaserUrl} 
                 label="Voir le teaser"
                 ariaLabel="Voir le teaser (nouvel onglet)"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Non renseigné</p>
+            )}
+          </div>
+        </div>
+
+        {/* Dossier photo — S170 */}
+        <div className="flex items-start gap-2">
+          <FolderOpen className="w-4 h-4 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="text-xs text-muted-foreground">Dossier photo</p>
+            {isSafeUrl(photoFolderUrl) ? (
+              <ExternalLinkItem 
+                href={photoFolderUrl} 
+                label="Ouvrir le dossier photo"
+                ariaLabel="Ouvrir le dossier photo (nouvel onglet)"
               />
             ) : (
               <p className="text-sm text-muted-foreground italic">Non renseigné</p>
@@ -85,7 +104,7 @@ export function MediaResourcesSection({
           <div>
             <p className="text-xs text-muted-foreground">Captation</p>
             {captationAvailable ? (
-              captationUrl ? (
+              isSafeUrl(captationUrl) ? (
                 <ExternalLinkItem 
                   href={captationUrl} 
                   label="Voir la captation"

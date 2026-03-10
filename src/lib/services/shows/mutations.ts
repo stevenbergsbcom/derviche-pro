@@ -320,11 +320,13 @@ export async function deleteShow(id: string): Promise<ShowResult> {
       return { data: null, error: error.message };
     }
 
-    // Cast explicite pour les champs enum
+    // Cast explicite pour les champs enum + champs non couverts par les types Supabase
     const typedData = {
       ...data,
       status: data.status as ShowStatus,
       price_type: data.price_type as ShowPriceType,
+      // S170 : photo_folder_url ajouté après migration 083, cast nécessaire
+      photo_folder_url: (data as Record<string, unknown>).photo_folder_url as string | null ?? null,
     };
 
     logger.info(`Show supprimé (soft): ${typedData.title} (${typedData.id})`);

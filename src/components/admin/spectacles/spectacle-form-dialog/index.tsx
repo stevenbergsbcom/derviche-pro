@@ -200,12 +200,14 @@ export function SpectacleFormDialog({
                 teaserUrl={formData.teaserUrl}
                 captationAvailable={formData.captationAvailable}
                 captationUrl={formData.captationUrl}
+                photoFolderUrl={formData.photoFolderUrl}
                 imageUrl={formData.imageUrl}
                 isSubmitting={isSubmitting}
                 onFolderUrlChange={(value) => updateField('folderUrl', value)}
                 onTeaserUrlChange={(value) => updateField('teaserUrl', value)}
                 onCaptationAvailableChange={(value) => updateField('captationAvailable', value)}
                 onCaptationUrlChange={(value) => updateField('captationUrl', value)}
+                onPhotoFolderUrlChange={(value) => updateField('photoFolderUrl', value)}
                 onImageChange={handleImageChange}
               />
             </div>

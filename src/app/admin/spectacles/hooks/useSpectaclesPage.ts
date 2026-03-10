@@ -423,6 +423,7 @@ export function useSpectaclesPage() {
           teaser_url: formData.teaserUrl?.trim() || null,
           captation_available: formData.captationAvailable,
           captation_url: formData.captationAvailable ? formData.captationUrl?.trim() || null : null,
+          photo_folder_url: formData.photoFolderUrl?.trim() || null,
         };
 
         const result = await updateShow(editingShow.id, {
@@ -451,6 +452,7 @@ export function useSpectaclesPage() {
           teaser_url: formData.teaserUrl?.trim() || null,
           captation_available: formData.captationAvailable,
           captation_url: formData.captationAvailable ? formData.captationUrl?.trim() || null : null,
+          photo_folder_url: formData.photoFolderUrl?.trim() || null,
         };
 
         const createResult = await createShow({
