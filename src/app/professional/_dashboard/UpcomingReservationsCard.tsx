@@ -13,22 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ProUpcomingReservation } from '@/lib/services/pro-dashboard';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDate(dateISO: string): string {
-  const [y, m, d] = dateISO.split('-').map(Number);
-  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-function formatTime(time: string): string {
-  return time.slice(0, 5);
-}
+import { formatDateShort, formatTime } from './utils';
 
 // ============================================
 // COMPOSANT PRINCIPAL
@@ -102,7 +87,7 @@ export function UpcomingReservationsCard({
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <CalendarDays className="w-3 h-3 shrink-0" />
-                      {formatDate(r.slot_date)} · {formatTime(r.slot_time)}
+                      {formatDateShort(r.slot_date)} · {formatTime(r.slot_time)}
                     </span>
                     {venue && (
                       <span className="flex items-center gap-1 truncate">
