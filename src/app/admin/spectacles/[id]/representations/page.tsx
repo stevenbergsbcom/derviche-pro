@@ -63,6 +63,13 @@ export default function AdminRepresentationsPage() {
     filteredRepresentations,
     hasActiveFilters,
 
+    // Tri & masquage
+    sortDir,
+    hidePast,
+    pastCount,
+    setSortDir,
+    setHidePast,
+
     // États UI
     isLoading,
     loadingError,
@@ -111,6 +118,9 @@ export default function AdminRepresentationsPage() {
     // Actions - Refresh
     refreshAllData,
   } = useRepresentationsPage();
+
+  // Date du jour au format YYYY-MM-DD — même calcul que dans le hook
+  const todayStr = new Date().toISOString().split('T')[0] ?? '';
 
   // ============================================
   // ÉTATS DE CHARGEMENT ET D'ERREUR
@@ -224,6 +234,11 @@ export default function AdminRepresentationsPage() {
         usedVenues={usedVenues}
         dateSearch={dateSearch}
         onDateSearchChange={setDateSearch}
+        sortDir={sortDir}
+        onSortDirChange={setSortDir}
+        hidePast={hidePast}
+        onHidePastChange={setHidePast}
+        pastCount={pastCount}
       />
 
       {/* Tableau desktop */}
@@ -259,6 +274,7 @@ export default function AdminRepresentationsPage() {
                   onEdit={handleEdit}
                   onDelete={handleDeleteClick}
                   isSubmitting={isSubmitting}
+                  isPast={rep.date < todayStr}
                 />
               ))
             )}
@@ -284,6 +300,7 @@ export default function AdminRepresentationsPage() {
               onEdit={handleEdit}
               onDelete={handleDeleteClick}
               isSubmitting={isSubmitting}
+              isPast={rep.date < todayStr}
             />
           ))
         )}

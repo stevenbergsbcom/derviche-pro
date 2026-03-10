@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { MapPin, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatDate } from '../helpers';
 import { HostedByBadge } from './HostedByBadge';
 import { CapacityDisplay } from './CapacityDisplay';
@@ -18,11 +19,14 @@ export function RepresentationTableRow({
   onEdit,
   onDelete,
   isSubmitting,
+  isPast,
 }: RepresentationTableRowProps) {
   return (
-    <TableRow>
+    <TableRow className={cn(isPast && 'opacity-50')}>
       {/* Date */}
-      <TableCell className="font-medium">{formatDate(rep.date)}</TableCell>
+      <TableCell className={cn('font-medium', isPast && 'line-through text-muted-foreground')}>
+        {formatDate(rep.date)}
+      </TableCell>
       
       {/* Heure */}
       <TableCell>{rep.time}</TableCell>

@@ -81,6 +81,16 @@ export interface RepresentationFiltersProps {
   dateSearch: string;
   /** Callback pour changer la recherche */
   onDateSearchChange: (value: string) => void;
+  /** Direction du tri par date */
+  sortDir: 'asc' | 'desc';
+  /** Callback pour changer le sens du tri */
+  onSortDirChange: (dir: 'asc' | 'desc') => void;
+  /** Masquer les représentations passées */
+  hidePast: boolean;
+  /** Callback pour afficher/masquer les passées */
+  onHidePastChange: (hide: boolean) => void;
+  /** Nombre de représentations passées */
+  pastCount: number;
 }
 
 /** Props pour RepresentationTableRow */
@@ -97,6 +107,8 @@ export interface RepresentationTableRowProps {
   onDelete: (rep: MockRepresentation) => void;
   /** Indique si une action est en cours */
   isSubmitting: boolean;
+  /** Indique si la représentation est dans le passé */
+  isPast: boolean;
 }
 
 /** Props pour RepresentationCard (mobile) */
@@ -113,6 +125,8 @@ export interface RepresentationCardProps {
   onDelete: (rep: MockRepresentation) => void;
   /** Indique si une action est en cours */
   isSubmitting: boolean;
+  /** Indique si la représentation est dans le passé */
+  isPast: boolean;
 }
 
 /** Props pour HostedByBadge */
@@ -155,6 +169,11 @@ export interface RepresentationsPageState {
   usedVenues: MockVenue[];
   filteredRepresentations: MockRepresentation[];
   hasActiveFilters: boolean;
+
+  // Tri & masquage des passées
+  sortDir: 'asc' | 'desc';
+  hidePast: boolean;
+  pastCount: number;
   
   // États UI
   isLoading: boolean;
@@ -183,6 +202,8 @@ export interface RepresentationsPageActions {
   setVenueFilter: (value: string) => void;
   setDateSearch: (value: string) => void;
   resetFilters: () => void;
+  setSortDir: (dir: 'asc' | 'desc') => void;
+  setHidePast: (hide: boolean) => void;
   
   // Modales
   setIsFormDialogOpen: (open: boolean) => void;

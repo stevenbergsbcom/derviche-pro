@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Clock, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { formatDate } from '../helpers';
 import { HostedByBadge } from './HostedByBadge';
 import { CapacityDisplayMobile } from './CapacityDisplay';
@@ -18,16 +19,19 @@ export function RepresentationCard({
   onEdit,
   onDelete,
   isSubmitting,
+  isPast,
 }: RepresentationCardProps) {
   return (
-    <Card>
+    <Card className={cn(isPast && 'opacity-50')}>
       <CardContent className="p-3 space-y-3">
         {/* Date et heure */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <Calendar className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
-              <span className="font-medium">{formatDate(rep.date)}</span>
+              <span className={cn('font-medium', isPast && 'line-through text-muted-foreground')}>
+                {formatDate(rep.date)}
+              </span>
               <span className="text-muted-foreground">•</span>
               <Clock className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
               <span>{rep.time}</span>
