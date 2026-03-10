@@ -1172,7 +1172,7 @@ export default function SpectacleDetailPage() {
                                         )}
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                         <div className="absolute bottom-4 left-4 right-4">
-                                            <p className="text-white/80 text-sm mb-1">Derviche Diffusion</p>
+                                            <p className="text-white/80 text-sm mb-1">{show.companyName}</p>
                                             <h1 className="text-2xl md:text-3xl font-bold text-white">
                                                 {show.title}
                                             </h1>
