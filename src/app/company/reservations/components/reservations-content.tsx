@@ -266,7 +266,8 @@ function ReservationsContentComponent({
       <div className="hidden lg:block w-full overflow-hidden">
         <Card className="py-0">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            {/* overflow-x-auto uniquement — sticky thead + overflow-x-auto impossible en CSS pur (stacking context) */}
+              <div className="overflow-x-auto">
               <table 
                 className="w-full caption-bottom text-sm"
                 aria-label="Tableau des réservations"

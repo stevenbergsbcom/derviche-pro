@@ -121,6 +121,7 @@ export interface CompanyReservationStats {
   total: number;
   confirmed: number;
   cancelled: number;
+  noShow: number;
   presentLoved: number;
   presentPress: number;
   presentNeutral: number;
@@ -609,6 +610,7 @@ export async function getCompanyReservationStats(
       total: reservations.length,
       confirmed: 0,
       cancelled: 0,
+      noShow: 0,
       presentLoved: 0,
       presentPress: 0,
       presentNeutral: 0,
@@ -619,6 +621,7 @@ export async function getCompanyReservationStats(
     reservations.forEach(r => {
       if (r.status === 'confirmed') stats.confirmed++;
       else if (r.status === 'cancelled') stats.cancelled++;
+      else if (r.status === 'no_show') stats.noShow++;
 
       if (r.checkin_status === 'present_loved') stats.presentLoved++;
       else if (r.checkin_status === 'present_press') stats.presentPress++;

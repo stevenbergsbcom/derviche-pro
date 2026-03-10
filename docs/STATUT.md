@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S154 (complète ✅) — Dashboard admin enrichi (graphique, top 3, créneaux 24h, saison configurable) + corrections post-audit (timezone, race condition) — 9 mars 2026
+> Dernière mise à jour : Session S166 (complète ✅) — Espace Company : alignement UI admin, fix stats, fix reset filtres, refonte dashboard — 10 mars 2026
 
 ---
 
@@ -462,3 +462,74 @@ PaginationControls
 - Le header de colonnes n'est plus sticky — compromis accepté pour supprimer le double scroll
 
 > Audit Cursor S162+S163 : 9.1/10 global, zéro critique. Fixes post-audit appliqués (fallback tri + Math.max badge).
+
+---
+
+## S164 — Outils de maintenance `/admin/système` ✅ mergé main
+
+### Changements
+- RPCs purge notifications + reset data (migration 081)
+- Page `/admin/système` : section purge notifications + section reset données
+- Route `POST /api/admin/reset-auth-users` (super-admin uniquement)
+- **Bugfix** `admin/reservations` : `showIdInitializedRef` + rechargement liste sur changement `filters.showId`
+
+### Fichiers créés/modifiés
+| Fichier | Action |
+|---------|--------|
+| `supabase/migrations/081_maintenance_rpcs.sql` | RPCs purge + reset |
+| `src/lib/services/maintenance.ts` | Types + fonctions maintenance |
+| `src/app/api/admin/reset-auth-users/route.ts` | Route reset auth users |
+| `src/app/admin/systeme/components/notifications-purge-section.tsx` | UI purge |
+| `src/app/admin/systeme/components/data-reset-section.tsx` | UI reset data |
+| `src/app/admin/systeme/components/systeme-content.tsx` | Orchestrateur |
+
+---
+
+## S165 — Représentations admin : tri + masquage passées ✅ mergé main
+
+### Changements
+- `sortDir` state (`'asc'|'desc'`, défaut `'asc'`) dans `useRepresentationsPage`
+- `hidePast` state (défaut `true`) — représentations passées masquées par défaut
+- `todayStr` : `useState` (pas `useMemo`) — valeur locale, pas UTC
+- `pastCount` : compteur de représentations passées masquées (badge)
+- Représentations passées : `opacity-50` + `line-through` dans table et cards
+- `resetFilters` : remet `hidePast(true)` + `setSortDir('asc')` + autres filtres
+- `console.error` → `logger.error` (4 occurrences)
+- `todayStr` exposé dans le return du hook (plus de duplication dans `page.tsx`)
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/spectacles/[id]/representations/types.ts` | Ajout `sortDir`, `hidePast`, `pastCount`, `todayStr`, `isPast` |
+| `src/app/admin/spectacles/[id]/representations/hooks/useRepresentationsPage.ts` | Logique tri + masquage |
+| `src/app/admin/spectacles/[id]/representations/components/RepresentationFilters.tsx` | Toggle tri + badge passées |
+| `src/app/admin/spectacles/[id]/representations/components/RepresentationTableRow.tsx` | `isPast` → opacité |
+| `src/app/admin/spectacles/[id]/representations/components/RepresentationCard.tsx` | `isPast` → opacité |
+| `src/app/admin/spectacles/[id]/representations/page.tsx` | `todayStr` depuis hook uniquement |
+
+---
+
+## S166 — Espace Company : alignement admin + fixes audit ✅ mergé main
+
+### Changements
+- `search-and-actions.tsx` : Select spectacle + bouton Filtres (badge `advancedFiltersCount`) dans la barre principale
+- `filters-section.tsx` : filtre spectacle supprimé (déplacé), toggle mobile supprimé, `if (!filtersExpanded) return null`
+- `stats-cards.tsx` : card 1 = confirmées, card 2 = places + moyenne, card 3 = présents + progress bar + emojis, card 4 = annulées + absents
+- **Fix bug audit** : taux attrition card 4 = `(cancelled + absent) / (confirmed + cancelled + absent)` (cohérent avec le titre)
+- **Fix bug audit** : `handleResetFilters` remet maintenant TOUS les filtres (`showId`, `status`, `checkinStatus`, `dateFrom`, `dateTo`, `search`)
+- `company-reservations.ts` : tri `slot_date`/`slot_time` dites sur colonnes dénormalisées (migration 080)
+- `reservations-content.tsx` : suppression `max-h-[70vh]` → `overflow-x-auto` uniquement
+- `company-upcoming-slots.tsx` : refonte UI — layout titre+badge, date+lieu en ligne, barre présence redesignée
+- `company/spectacles/page.tsx` : `pt-0` sur Card (suppression padding top shadcn/ui)
+
+### Points techniques retenus
+- `useCompanyReservations.setFilters` recharge automatiquement les réservations (≠ admin) → ne jamais appeler `loadReservations` en plus dans les effets sous peine de boucle infinie
+- `advancedFiltersCount = Math.max(0, activeFiltersCount - (showId?1:0) - (appliedSearch?1:0))` — exclut les filtres déjà sur la barre principale
+- Supabase JS : `.order({ referencedTable })` ne trie JAMAIS la table parente → toujours utiliser colonnes dénormalisées
+
+### Migrations
+| # | Fichier | Description | Appliquée prod |
+|---|---------|-------------|---------------|
+| 081 | `081_maintenance_rpcs.sql` | RPCs purge notifications + reset data | ✅ |
+
+> Audit Cursor S166 : 9.2/10 global, zéro critique. Fixes post-audit appliqués (taux attrition + reset filtres complet).

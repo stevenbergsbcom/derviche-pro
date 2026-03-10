@@ -46,8 +46,9 @@ function CompanyStatsCardsComponent({ stats }: CompanyStatsCardsProps) {
 
     const cancelledAbs = stats.cancelled + stats.absent;
 
-    // Taux d'attrition global : (annulées + absents) / (confirmées + annulées + absents)
-    const totalEver = stats.confirmed + stats.cancelled + stats.absent;
+    // Taux d'attrition global : (annulées + absents + no_show) / (confirmées + annulées + absents + no_show)
+    // noShow est un statut BDD distinct de cancelled — doit être inclus dans le dénominateur
+    const totalEver = stats.confirmed + stats.cancelled + stats.absent + stats.noShow;
     const cancelledP = totalEver > 0
       ? Math.round((cancelledAbs / totalEver) * 100)
       : 0;
