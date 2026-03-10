@@ -4,12 +4,13 @@
  * 
  * Gestion des utilisateurs internes (super-admin, admin, externe) et compagnies.
  * Refactorisé en structure modulaire (Session 99).
+ * S158 - Ajout tri alphabétique par nom
  */
 
 'use client';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { AdminPageHeader, LoadingState, ErrorState } from '@/components/admin';
+import { AdminPageHeader, LoadingState, ErrorState, SortToggle } from '@/components/admin';
 
 import { useUtilisateursPage } from './hooks';
 import {
@@ -23,36 +24,28 @@ import { MESSAGES, LABELS } from './constants';
 
 export default function AdminUtilisateursPage() {
   const {
-    // Données
     users,
     filteredUsers,
     roleCounts,
     isLoading,
     error,
-    
-    // Utilisateur courant
     currentUserId,
     currentUserRole,
-    
-    // Filtres
     searchQuery,
     setSearchQuery,
     roleFilter,
     setRoleFilter,
     hasFilters,
-    
-    // États
+    // Tri
+    sortDir,
+    toggleSortDir,
     isSubmitting,
     formError,
     deleteError,
-    
-    // Modales
     isFormDialogOpen,
     editingUser,
     userToDelete,
     viewingUser,
-    
-    // Handlers
     refresh,
     handleCreate,
     handleEdit,
@@ -67,32 +60,17 @@ export default function AdminUtilisateursPage() {
     handleCreateUser,
     handleFormSubmit,
     handleToggleStatus,
-    
-    // Permissions
     canDeleteUser,
     canToggleStatus,
-    
-    // Formatage
     formatName,
   } = useUtilisateursPage();
 
-  // État de chargement initial
-  if (isLoading) {
-    return <LoadingState message={MESSAGES.LOADING} />;
-  }
+  if (isLoading) return <LoadingState message={MESSAGES.LOADING} />;
 
-  // Erreur de chargement
   if (error) {
     return (
-      <ErrorState 
-        message={`${MESSAGES.ERROR_PREFIX}${error}`}
-        onRetry={() => void refresh()}
-      >
-        <AdminPageHeader
-          title={LABELS.PAGE_TITLE}
-          actionLabel={LABELS.ADD_USER}
-          onAction={handleCreate}
-        />
+      <ErrorState message={`${MESSAGES.ERROR_PREFIX}${error}`} onRetry={() => void refresh()}>
+        <AdminPageHeader title={LABELS.PAGE_TITLE} actionLabel={LABELS.ADD_USER} onAction={handleCreate} />
       </ErrorState>
     );
   }
@@ -110,13 +88,22 @@ export default function AdminUtilisateursPage() {
         {/* Résumé par rôle */}
         <RoleSummaryBadges counts={roleCounts} />
 
-        {/* Filtres */}
-        <UsersFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          roleFilter={roleFilter}
-          onRoleFilterChange={setRoleFilter}
-        />
+        {/* Filtres + Tri */}
+        <div className="flex gap-3 items-start">
+          <div className="flex-1">
+            <UsersFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              roleFilter={roleFilter}
+              onRoleFilterChange={setRoleFilter}
+            />
+          </div>
+          <SortToggle
+            direction={sortDir}
+            onToggle={toggleSortDir}
+            label="Nom"
+          />
+        </div>
 
         {/* Compteur */}
         <p className="text-sm text-muted-foreground">

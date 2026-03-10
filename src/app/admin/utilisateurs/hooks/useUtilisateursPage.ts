@@ -1,6 +1,7 @@
 /**
  * Hook useUtilisateursPage - Logique de la page Admin Utilisateurs
  * Derviche Diffusion
+ * S158 - Ajout tri alphabétique par nom
  */
 
 'use client';
@@ -9,6 +10,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { searchMatch } from '@/lib/utils';
 import { toast } from 'sonner';
+import type { SortDirection } from '@/components/admin';
 
 import { 
   useManagedUsers,
@@ -29,12 +31,7 @@ import type {
 import { canDeleteUser, canToggleUserStatus } from '../helpers';
 import { MESSAGES } from '../constants';
 
-// ============================================
-// HOOK
-// ============================================
-
 export function useUtilisateursPage(): UseUtilisateursPageReturn {
-  // Hook Supabase pour les données (internes + company)
   const { 
     users, 
     isLoading, 
@@ -47,20 +44,22 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     formatName,
   } = useManagedUsers();
 
-  // ID et rôle de l'utilisateur connecté
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<InternalRole | null>(null);
 
-  // États locaux - Filtres
+  // Filtres
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
-  // États locaux - Soumission et erreurs
+  // Tri
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
+
+  // États
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // États des modales
+  // Modales
   const [isFormDialogOpen, setIsFormDialogOpen] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<ManagedUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
@@ -70,7 +69,6 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
   // EFFETS
   // ============================================
 
-  // Récupérer l'utilisateur connecté et son rôle au montage
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const supabase = createClient();
@@ -79,18 +77,15 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
       if (user) {
         setCurrentUserId(user.id);
         
-        // Récupérer tous les rôles de l'utilisateur (peut en avoir plusieurs)
         const { data: rolesData } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id);
         
         if (rolesData && rolesData.length > 0) {
-          // Priorité des rôles internes (du plus privilégié au moins privilégié)
           const rolePriority: InternalRole[] = ['super-admin', 'admin', 'externe'];
           const userRoles = rolesData.map(r => r.role);
           
-          // Trouver le rôle interne avec la plus haute priorité
           for (const role of rolePriority) {
             if (userRoles.includes(role)) {
               setCurrentUserRole(role);
@@ -107,21 +102,21 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
   // DONNÉES CALCULÉES
   // ============================================
 
-  // Indique si des filtres sont actifs
   const hasFilters = useMemo(() => {
     return searchQuery.trim() !== '' || roleFilter !== 'all';
   }, [searchQuery, roleFilter]);
 
-  // Filtrer les utilisateurs selon la recherche et le rôle
+  const toggleSortDir = useCallback(() => {
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  }, []);
+
   const filteredUsers = useMemo(() => {
     let result = users;
 
-    // Filtre par rôle
     if (roleFilter !== 'all') {
       result = result.filter((user) => user.role === roleFilter);
     }
 
-    // Filtre par recherche (nom, prénom, email, nom compagnie)
     if (searchQuery.trim()) {
       const query = searchQuery.trim();
       result = result.filter(
@@ -133,21 +128,26 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
       );
     }
 
-    return result;
-  }, [searchQuery, roleFilter, users]);
+    // Tri alphabétique par nom de famille, puis prénom
+    return [...result].sort((a, b) => {
+      const lastA = (a.last_name ?? '').toLowerCase();
+      const lastB = (b.last_name ?? '').toLowerCase();
+      const firstA = (a.first_name ?? '').toLowerCase();
+      const firstB = (b.first_name ?? '').toLowerCase();
+      const cmp = lastA.localeCompare(lastB, 'fr') || firstA.localeCompare(firstB, 'fr');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [searchQuery, roleFilter, users, sortDir]);
 
-  // Compteurs par rôle
-  const roleCounts = useMemo<RoleCounts>(() => {
-    return {
-      'super-admin': users.filter((u) => u.role === 'super-admin').length,
-      'admin': users.filter((u) => u.role === 'admin').length,
-      'externe': users.filter((u) => u.role === 'externe').length,
-      'company': users.filter((u) => u.role === 'company').length,
-    };
-  }, [users]);
+  const roleCounts = useMemo<RoleCounts>(() => ({
+    'super-admin': users.filter((u) => u.role === 'super-admin').length,
+    'admin': users.filter((u) => u.role === 'admin').length,
+    'externe': users.filter((u) => u.role === 'externe').length,
+    'company': users.filter((u) => u.role === 'company').length,
+  }), [users]);
 
   // ============================================
-  // PERMISSIONS (callbacks mémorisés)
+  // PERMISSIONS
   // ============================================
 
   const checkCanDeleteUser = useCallback((user: ManagedUser): boolean => {
@@ -159,7 +159,7 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
   }, [currentUserId, currentUserRole]);
 
   // ============================================
-  // HANDLERS - MODALES
+  // HANDLERS
   // ============================================
 
   const handleCreate = useCallback(() => {
@@ -174,16 +174,10 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     setIsFormDialogOpen(true);
   }, []);
 
-  const handleView = useCallback((user: ManagedUser) => {
-    setViewingUser(user);
-  }, []);
-
-  const handleCloseView = useCallback(() => {
-    setViewingUser(null);
-  }, []);
+  const handleView = useCallback((user: ManagedUser) => { setViewingUser(user); }, []);
+  const handleCloseView = useCallback(() => { setViewingUser(null); }, []);
 
   const handleDeleteClick = useCallback((user: ManagedUser) => {
-    // Empêcher l'auto-suppression
     if (currentUserId && user.id === currentUserId) {
       setDeleteError(MESSAGES.SELF_DELETE_ERROR);
       setUserToDelete(user);
@@ -211,24 +205,13 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
 
   const handleFormDialogChange = useCallback((open: boolean) => {
     setIsFormDialogOpen(open);
-    if (!open) {
-      setFormError(null);
-      setEditingUser(null);
-    }
+    if (!open) { setFormError(null); setEditingUser(null); }
   }, []);
 
   const handleDeleteDialogChange = useCallback((open: boolean) => {
-    if (!open) {
-      setUserToDelete(null);
-      setDeleteError(null);
-    }
+    if (!open) { setUserToDelete(null); setDeleteError(null); }
   }, []);
 
-  // ============================================
-  // HANDLERS - CRUD
-  // ============================================
-
-  /** Handler pour la création d'un utilisateur */
   const handleCreateUser = useCallback(async (formData: CreateUserFormData) => {
     setIsSubmitting(true);
     setFormError(null);
@@ -254,13 +237,10 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
       setFormError(result.error || 'Erreur lors de la création');
       toast.error(result.error || 'Erreur lors de la création');
     }
-
     setIsSubmitting(false);
   }, [create]);
 
-  /** Handler pour la mise à jour d'un utilisateur */
   const handleFormSubmit = useCallback(async (formData: UserFormData, isEditing: boolean) => {
-    // Guard clause - ne devrait jamais arriver en conditions normales
     if (!isEditing || !editingUser) {
       setIsSubmitting(false);
       setFormError('Erreur: utilisateur introuvable. Veuillez réessayer.');
@@ -270,14 +250,12 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     setIsSubmitting(true);
     setFormError(null);
 
-    // Préparer les données pour l'update
     const updateData: UpdateManagedUserData = {
       first_name: formData.first_name || null,
       last_name: formData.last_name || null,
       phone: formData.phone || null,
     };
 
-    // Ajouter le rôle seulement s'il a changé (et pas pour les utilisateurs company)
     if (formData.role !== editingUser.role && editingUser.role !== 'company') {
       updateData.role = formData.role;
     }
@@ -292,15 +270,12 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
       setFormError(result.error || 'Erreur lors de la mise à jour');
       toast.error(result.error || 'Erreur lors de la mise à jour');
     }
-
     setIsSubmitting(false);
   }, [editingUser, update]);
 
-  /** Handler pour confirmer la suppression */
   const handleConfirmDelete = useCallback(async () => {
     if (!userToDelete) return;
 
-    // Double vérification pour empêcher l'auto-suppression
     if (currentUserId && userToDelete.id === currentUserId) {
       setDeleteError(MESSAGES.SELF_DELETE_ERROR);
       return;
@@ -321,7 +296,6 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     }
   }, [userToDelete, currentUserId, remove]);
 
-  /** Handler pour activer/désactiver un utilisateur */
   const handleToggleStatus = useCallback(async (user: ManagedUser) => {
     if (!checkCanToggleStatus(user)) return;
     
@@ -331,10 +305,7 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     setIsSubmitting(false);
     
     if (result.success) {
-      toast.success(newDisabledState 
-        ? 'Utilisateur désactivé' 
-        : 'Utilisateur réactivé'
-      );
+      toast.success(newDisabledState ? 'Utilisateur désactivé' : 'Utilisateur réactivé');
     } else {
       toast.error(result.error || 'Erreur lors du changement de statut');
     }
@@ -345,36 +316,28 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
   // ============================================
 
   return {
-    // Données
     users,
     filteredUsers,
     roleCounts,
     isLoading,
     error,
-    
-    // Utilisateur courant
     currentUserId,
     currentUserRole,
-    
-    // Filtres
     searchQuery,
     setSearchQuery,
     roleFilter,
     setRoleFilter,
     hasFilters,
-    
-    // États
+    // Tri
+    sortDir,
+    toggleSortDir,
     isSubmitting,
     formError,
     deleteError,
-    
-    // Modales
     isFormDialogOpen,
     editingUser,
     userToDelete,
     viewingUser,
-    
-    // Handlers
     refresh,
     handleCreate,
     handleEdit,
@@ -389,12 +352,8 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     handleCreateUser,
     handleFormSubmit,
     handleToggleStatus,
-    
-    // Permissions
     canDeleteUser: checkCanDeleteUser,
     canToggleStatus: checkCanToggleStatus,
-    
-    // Formatage (du hook)
     formatName,
   };
 }

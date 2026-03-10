@@ -1,5 +1,6 @@
 /**
  * Types pour la page admin/spectacles
+ * S158 - Ajout type de tri
  */
 
 import type { ShowStatus, ShowPriceType, ShowCategoryRow, TargetAudienceRow } from '@/types/database';
@@ -42,6 +43,17 @@ export interface ShowForDisplay {
  * Mode d'affichage de la liste
  */
 export type ViewMode = 'list' | 'grid';
+
+/**
+ * Valeurs du select de tri spectacles : "champ_direction"
+ */
+export type SpectacleSortValue =
+  | 'title_asc'
+  | 'title_desc'
+  | 'companyName_asc'
+  | 'companyName_desc'
+  | 'representationsCount_desc'
+  | 'representationsCount_asc';
 
 /**
  * Option de compagnie pour les selects
@@ -96,6 +108,10 @@ export interface SpectacleFiltersBarProps {
   filteredCount: number;
   hasActiveFilters: boolean;
   onResetFilters: () => void;
+  /** Valeur courante du tri (ex: 'title_asc') */
+  sortValue: SpectacleSortValue;
+  /** Callback quand le tri change */
+  onSortChange: (value: SpectacleSortValue) => void;
 }
 
 /**

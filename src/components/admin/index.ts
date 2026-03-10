@@ -14,6 +14,9 @@ export type { AdminPageHeaderProps } from './admin-page-header';
 export { SearchInput } from './search-input';
 export type { SearchInputProps } from './search-input';
 
+export { SortToggle } from './sort-toggle';
+export type { SortToggleProps, SortDirection } from './sort-toggle';
+
 export { EmptyState } from './empty-state';
 export type { EmptyStateProps } from './empty-state';
 

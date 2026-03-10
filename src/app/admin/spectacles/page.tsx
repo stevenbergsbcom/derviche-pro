@@ -1,6 +1,7 @@
 /**
  * Page de gestion des spectacles - Admin
  * Orchestrateur minimal qui délègue la logique au hook et aux composants
+ * S158 - Ajout tri par select
  */
 
 'use client';
@@ -9,6 +10,7 @@ import { Suspense, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { AdminPageHeader } from '@/components/admin';
+import type { SpectacleSortValue } from './types';
 
 // Hook et composants locaux
 import { useSpectaclesPage } from './hooks';
@@ -20,19 +22,11 @@ import {
   SpectacleModals,
 } from './components';
 
-// ============================================================================
-// Composant wrapper avec Suspense
-// ============================================================================
-
 export default function AdminSpectaclesPage() {
   return (
     <Suspense
       fallback={
-        <div
-          className="flex items-center justify-center min-h-[400px]"
-          role="status"
-          aria-live="polite"
-        >
+        <div className="flex items-center justify-center min-h-[400px]" role="status" aria-live="polite">
           <div className="animate-pulse text-muted-foreground">
             <span className="sr-only">Chargement de la page spectacles</span>
             Chargement...
@@ -45,18 +39,11 @@ export default function AdminSpectaclesPage() {
   );
 }
 
-// ============================================================================
-// Composant principal
-// ============================================================================
-
 function AdminSpectaclesContent() {
   const {
-    // États de chargement
     isMounted,
     isLoading,
     loadingError,
-
-    // Données
     shows,
     filteredShows,
     rawCategories,
@@ -65,21 +52,15 @@ function AdminSpectaclesContent() {
     targetAudiences,
     companies,
     dervisheUsers,
-
-    // Permissions
     hasFullAccess,
-
-    // Recherche et filtres
     searchQuery,
     setSearchQuery,
     hasActiveFilters,
     resetFilters,
-
-    // Mode d'affichage
+    sortValue,
+    setSortValue,
     viewMode,
     setViewMode,
-
-    // États modales
     isFormDialogOpen,
     handleFormDialogOpenChange,
     editingShow,
@@ -97,15 +78,9 @@ function AdminSpectaclesContent() {
     setIsNewCompanyDialogOpen,
     newlyCreatedCompanyId,
     handleClearNewlyCreatedCompanyId,
-
-    // Erreurs
     operationError,
     clearOperationError,
-
-    // Refetch
     handleRefetch,
-
-    // Handlers CRUD
     handleCreate,
     handleEdit,
     handleView,
@@ -116,37 +91,21 @@ function AdminSpectaclesContent() {
     handleViewToDelete,
     handleCloseView,
     handleDeleteFromForm,
-
-    // Handlers catégories
     handleAddCategory,
     handleRemoveCategoryById,
-
-    // Handlers publics cibles
     handleAddTargetAudience,
     handleRemoveTargetAudience,
-
-    // Handlers compagnies
     handleCreateCompany,
     handleCompanyCreated,
-
-    // Navigation
     handleNavigateToRepresentations,
-
-    // Handlers stables pour modales
     handleOpenCategoriesManager,
     handleOpenTargetAudiencesManager,
     handleOpenNewCompanyDialog,
-
-    // Copie de lien
     copiedShowId,
     copyError,
     copyLink,
     clearCopyError,
   } = useSpectaclesPage();
-
-  // ============================================================================
-  // Props mémoïsées pour les vues (évite les re-renders inutiles)
-  // ============================================================================
 
   const viewProps = useMemo(
     () => ({
@@ -159,29 +118,12 @@ function AdminSpectaclesContent() {
       copiedShowId,
       hasFullAccess,
     }),
-    [
-      filteredShows,
-      handleView,
-      handleEdit,
-      handleDeleteClick,
-      copyLink,
-      handleNavigateToRepresentations,
-      copiedShowId,
-      hasFullAccess,
-    ]
+    [filteredShows, handleView, handleEdit, handleDeleteClick, copyLink, handleNavigateToRepresentations, copiedShowId, hasFullAccess]
   );
-
-  // ============================================================================
-  // États de chargement et erreurs
-  // ============================================================================
 
   if (!isMounted) {
     return (
-      <div
-        className="flex items-center justify-center min-h-[400px]"
-        role="status"
-        aria-live="polite"
-      >
+      <div className="flex items-center justify-center min-h-[400px]" role="status" aria-live="polite">
         <div className="animate-pulse text-muted-foreground">
           <span className="sr-only">Initialisation de la page</span>
           Chargement...
@@ -192,11 +134,7 @@ function AdminSpectaclesContent() {
 
   if (isLoading) {
     return (
-      <div
-        className="flex items-center justify-center min-h-[400px]"
-        role="status"
-        aria-live="polite"
-      >
+      <div className="flex items-center justify-center min-h-[400px]" role="status" aria-live="polite">
         <div className="animate-pulse text-muted-foreground">
           <span className="sr-only">Chargement des spectacles en cours</span>
           Chargement des spectacles...
@@ -207,26 +145,15 @@ function AdminSpectaclesContent() {
 
   if (loadingError) {
     return (
-      <div
-        className="flex flex-col items-center justify-center min-h-[400px] gap-4"
-        role="alert"
-        aria-live="assertive"
-      >
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4" role="alert" aria-live="assertive">
         <AlertCircle className="w-12 h-12 text-destructive" aria-hidden="true" />
         <p className="text-destructive">Erreur: {loadingError}</p>
-        <Button
-          onClick={() => void handleRefetch()}
-          aria-label="Réessayer le chargement des données"
-        >
+        <Button onClick={() => void handleRefetch()} aria-label="Réessayer le chargement des données">
           Réessayer
         </Button>
       </div>
     );
   }
-
-  // ============================================================================
-  // Rendu
-  // ============================================================================
 
   return (
     <div className="space-y-6">
@@ -239,47 +166,23 @@ function AdminSpectaclesContent() {
 
       {/* Message d'erreur global */}
       {operationError && (
-        <div
-          className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3"
-          role="alert"
-          aria-live="assertive"
-        >
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3" role="alert" aria-live="assertive">
           <AlertCircle className="w-5 h-5 text-destructive shrink-0" aria-hidden="true" />
           <p className="text-sm text-destructive">{operationError}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearOperationError}
-            className="ml-auto"
-            aria-label="Fermer le message d'erreur"
-          >
-            Fermer
-          </Button>
+          <Button variant="ghost" size="sm" onClick={clearOperationError} className="ml-auto" aria-label="Fermer le message d'erreur">Fermer</Button>
         </div>
       )}
 
       {/* Message d'erreur de copie */}
       {copyError && (
-        <div
-          className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3"
-          role="alert"
-          aria-live="polite"
-        >
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-center gap-3" role="alert" aria-live="polite">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" aria-hidden="true" />
           <p className="text-sm text-amber-700">{copyError}</p>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearCopyError}
-            className="ml-auto text-amber-700 hover:text-amber-900 hover:bg-amber-100"
-            aria-label="Fermer le message d'erreur de copie"
-          >
-            Fermer
-          </Button>
+          <Button variant="ghost" size="sm" onClick={clearCopyError} className="ml-auto text-amber-700 hover:text-amber-900 hover:bg-amber-100" aria-label="Fermer le message d'erreur de copie">Fermer</Button>
         </div>
       )}
 
-      {/* Filtres */}
+      {/* Filtres + Tri */}
       <SpectacleFiltersBar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -289,6 +192,8 @@ function AdminSpectaclesContent() {
         filteredCount={filteredShows.length}
         hasActiveFilters={hasActiveFilters}
         onResetFilters={resetFilters}
+        sortValue={sortValue}
+        onSortChange={(v: SpectacleSortValue) => setSortValue(v)}
       />
 
       {/* Vues */}
@@ -298,7 +203,6 @@ function AdminSpectaclesContent() {
 
       {/* Modales */}
       <SpectacleModals
-        // Form dialog
         isFormDialogOpen={isFormDialogOpen}
         onFormDialogOpenChange={handleFormDialogOpenChange}
         editingShowRaw={editingShowRaw}
@@ -313,7 +217,6 @@ function AdminSpectaclesContent() {
         onOpenTargetAudiencesManager={handleOpenTargetAudiencesManager}
         onOpenNewCompanyDialog={handleOpenNewCompanyDialog}
         onDeleteFromForm={editingShow ? handleDeleteFromForm : undefined}
-        // View dialog
         viewingShowRaw={viewingShowRaw}
         rawCategories={rawCategories}
         rawTargetAudiences={rawTargetAudiences}
@@ -323,22 +226,18 @@ function AdminSpectaclesContent() {
         onCopyLinkFromView={copyLink}
         copiedShowId={copiedShowId}
         onNavigateToRepresentations={handleNavigateToRepresentations}
-        // Category manager
         isCategoriesDialogOpen={isCategoriesDialogOpen}
         onCategoriesDialogOpenChange={setIsCategoriesDialogOpen}
         onAddCategory={handleAddCategory}
         onRemoveCategory={handleRemoveCategoryById}
-        // Target audience manager
         isAudiencesDialogOpen={isAudiencesDialogOpen}
         onAudiencesDialogOpenChange={setIsAudiencesDialogOpen}
         onAddTargetAudience={handleAddTargetAudience}
         onRemoveTargetAudience={handleRemoveTargetAudience}
-        // Company quick create
         isNewCompanyDialogOpen={isNewCompanyDialogOpen}
         onNewCompanyDialogOpenChange={setIsNewCompanyDialogOpen}
         onCreateCompany={handleCreateCompany}
         onCompanyCreated={handleCompanyCreated}
-        // Delete confirm
         showToDelete={showToDelete}
         deleteWarning={deleteWarning}
         isDeleting={isDeleting}

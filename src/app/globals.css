@@ -166,4 +166,9 @@ html {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Cursor pointer sur la croix de vidage des champs de recherche (Chrome/Safari) */
+  input[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+  }
 }

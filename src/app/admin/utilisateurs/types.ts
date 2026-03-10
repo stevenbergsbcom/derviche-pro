@@ -1,9 +1,11 @@
 /**
  * Types pour la page Admin Utilisateurs
  * Derviche Diffusion
+ * S158 - Ajout tri alphabétique
  */
 
 import type { InternalRole } from '@/types/database';
+import type { SortDirection } from '@/components/admin';
 import type { 
   ManagedUser, 
   ManagedRole,
@@ -103,9 +105,7 @@ export type UsersMobileCardsProps = UsersTableProps;
 
 /** Props pour le composant UsersModals */
 export interface UsersModalsProps {
-  // Formatage
   formatName: (user: ManagedUser) => string;
-  // Form Dialog
   isFormDialogOpen: boolean;
   onFormDialogChange: (open: boolean) => void;
   editingUser: ManagedUser | null;
@@ -113,13 +113,11 @@ export interface UsersModalsProps {
   onCreateUser: (formData: CreateUserFormData) => Promise<void>;
   isSubmitting: boolean;
   formError: string | null;
-  // View Dialog
   viewingUser: ManagedUser | null;
   onCloseView: () => void;
   onViewToEdit: () => void;
   onViewToDelete: () => void;
   canDeleteViewing: boolean;
-  // Delete Dialog
   userToDelete: ManagedUser | null;
   onDeleteDialogChange: (open: boolean) => void;
   onConfirmDelete: () => Promise<void>;
@@ -129,36 +127,28 @@ export interface UsersModalsProps {
 
 /** Retour du hook useUtilisateursPage */
 export interface UseUtilisateursPageReturn {
-  // Données
   users: ManagedUser[];
   filteredUsers: ManagedUser[];
   roleCounts: RoleCounts;
   isLoading: boolean;
   error: string | null;
-  
-  // Utilisateur courant
   currentUserId: string | null;
   currentUserRole: InternalRole | null;
-  
-  // Filtres
   searchQuery: string;
   setSearchQuery: (value: string) => void;
   roleFilter: RoleFilter;
   setRoleFilter: (value: RoleFilter) => void;
   hasFilters: boolean;
-  
-  // États
+  // Tri
+  sortDir: SortDirection;
+  toggleSortDir: () => void;
   isSubmitting: boolean;
   formError: string | null;
   deleteError: string | null;
-  
-  // Modales
   isFormDialogOpen: boolean;
   editingUser: ManagedUser | null;
   userToDelete: ManagedUser | null;
   viewingUser: ManagedUser | null;
-  
-  // Handlers
   refresh: () => Promise<void>;
   handleCreate: () => void;
   handleEdit: (user: ManagedUser) => void;
@@ -173,11 +163,7 @@ export interface UseUtilisateursPageReturn {
   handleCreateUser: (formData: CreateUserFormData) => Promise<void>;
   handleFormSubmit: (formData: UserFormData, isEditing: boolean) => Promise<void>;
   handleToggleStatus: (user: ManagedUser) => Promise<void>;
-  
-  // Permissions
   canDeleteUser: (user: ManagedUser) => boolean;
   canToggleStatus: (user: ManagedUser) => boolean;
-  
-  // Formatage (du hook)
   formatName: (user: ManagedUser) => string;
 }

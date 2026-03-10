@@ -2,6 +2,7 @@
  * Hook principal pour la page admin/compagnies
  * Centralise tous les états et handlers
  * Session 107 - Refactorisation + Corrections audit
+ * S158 - Ajout tri alphabétique + nb spectacles
  */
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
@@ -13,6 +14,7 @@ import type { CompanyInsert } from '@/types/database';
 import type { CompanyWithShowsCount } from '@/lib/services/companies';
 import type { ManagedUser } from '@/lib/services/internal-users';
 import type { CompanyFormData } from '@/components/admin/compagnies';
+import type { SortDirection } from '@/components/admin';
 import type { UseCompaniesPageReturn, CompanyHandlers, CompanyUserHandlers, ApiResponse } from '../types';
 
 export function useCompaniesPage(): UseCompaniesPageReturn {
@@ -37,6 +39,9 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
   // Recherche
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Tri
+  const [sortDir, setSortDir] = useState<SortDirection>('asc');
 
   // États de chargement
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +75,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   const companyUserRef = useRef(companyUser);
   companyUserRef.current = companyUser;
 
-  // Refs pour editingCompany et companyToDelete (correction audit #3)
   const editingCompanyRef = useRef(editingCompany);
   editingCompanyRef.current = editingCompany;
 
@@ -84,18 +88,14 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   // Effets
   // ============================================================================
 
-  // Charger l'utilisateur lié quand on visualise une compagnie
   const loadCompanyUser = useCallback(async (companyId: string) => {
     setIsLoadingUser(true);
     setCompanyUser(null);
-
     const result = await getCompanyUser(companyId);
-
     setCompanyUser(result.data);
     setIsLoadingUser(false);
   }, []);
 
-  // Effet pour charger l'utilisateur quand viewingCompany change
   useEffect(() => {
     if (viewingCompany) {
       void loadCompanyUser(viewingCompany.id);
@@ -105,21 +105,32 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   }, [viewingCompany, loadCompanyUser]);
 
   // ============================================================================
-  // Données filtrées
+  // Données filtrées + triées
   // ============================================================================
 
   const filteredCompanies = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return companies;
-    }
+    // Filtre recherche
     const query = searchQuery.trim();
-    return companies.filter(
-      (company) =>
-        searchMatch(company.name, query) ||
-        searchMatch(company.city || '', query) ||
-        searchMatch(company.contact_name || '', query)
-    );
-  }, [searchQuery, companies]);
+    const filtered = query
+      ? companies.filter(
+          (company) =>
+            searchMatch(company.name, query) ||
+            searchMatch(company.city || '', query) ||
+            searchMatch(company.contact_name || '', query)
+        )
+      : companies;
+
+    // Tri par nom
+    return [...filtered].sort((a, b) => {
+      const cmp = a.name.localeCompare(b.name, 'fr');
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [searchQuery, companies, sortDir]);
+
+  // Toggle direction
+  const toggleSortDir = useCallback(() => {
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+  }, []);
 
   // ============================================================================
   // Handlers CRUD
@@ -152,7 +163,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
       const { used, count } = await checkUsage(companyId);
 
-      // Protection contre les race conditions
       if (pendingDeleteCheckRef.current === companyId) {
         if (used) {
           setDeleteWarning(
@@ -172,7 +182,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     [router]
   );
 
-  // Utilise ref pour stabilité (correction audit #3)
   const handleConfirmDelete = useCallback(async () => {
     const current = companyToDeleteRef.current;
     const warning = deleteWarningRef.current;
@@ -202,7 +211,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     }
   }, []);
 
-  // Utilise ref pour stabilité (correction audit #3)
   const handleFormSubmit = useCallback(
     async (formData: CompanyFormData, isEditing: boolean) => {
       setIsSubmitting(true);
@@ -240,7 +248,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     const current = viewingCompanyRef.current;
     if (current) {
       setViewingCompany(null);
-      // Petit délai pour éviter les conflits de dialog
       setTimeout(() => {
         setEditingCompany(current);
         setFormError(null);
@@ -286,10 +293,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     }
   }, [loadCompanyUser, setCompanyHasUser]);
 
-  /**
-   * Fonction utilitaire factorisée pour dissocier un utilisateur d'une compagnie
-   * (correction audit #1 - factorisation handleChangeUser/handleUnlinkUser)
-   */
   const unlinkCompanyUser = useCallback(
     async (userId: string, companyId: string, openAssignDialog: boolean): Promise<boolean> => {
       setIsProcessingUser(true);
@@ -301,7 +304,6 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
           body: JSON.stringify({ company_id: null }),
         });
 
-        // Validation HTTP (correction audit #4)
         if (!response.ok) {
           console.error('HTTP Error:', response.status);
           return false;
@@ -335,16 +337,13 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   const handleChangeUser = useCallback(async () => {
     const currentUser = companyUserRef.current;
     const currentCompany = viewingCompanyRef.current;
-
     if (!currentUser || !currentCompany) return;
-
     await unlinkCompanyUser(currentUser.id, currentCompany.id, true);
   }, [unlinkCompanyUser]);
 
   const handleUnlinkUser = useCallback(async () => {
     const currentUser = companyUserRef.current;
     const currentCompany = viewingCompanyRef.current;
-
     if (!currentUser || !currentCompany) return;
 
     if (
@@ -392,6 +391,10 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     filteredCompanies,
     totalCount: companies.length,
     companyUser,
+
+    // Tri
+    sortDir,
+    toggleSortDir,
 
     // États de chargement
     isLoading,

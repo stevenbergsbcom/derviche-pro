@@ -2,11 +2,12 @@
  * Page admin des compagnies
  * Orchestrateur simplifié après refactorisation
  * Session 107 - Refactorisation (25.97 KB → ~5 KB)
+ * S158 - Ajout tri alphabétique + nb spectacles
  */
 
 'use client';
 
-import { AdminPageHeader, SearchInput, DeleteConfirmDialog } from '@/components/admin';
+import { AdminPageHeader, SearchInput, SortToggle, DeleteConfirmDialog } from '@/components/admin';
 import {
   CompanyFormDialog,
   CompanyViewDialog,
@@ -23,6 +24,10 @@ export default function AdminCompagniesPage() {
     filteredCompanies,
     totalCount,
     companyUser,
+
+    // Tri
+    sortDir,
+    toggleSortDir,
 
     // États de chargement
     isLoading,
@@ -97,12 +102,22 @@ export default function AdminCompagniesPage() {
         {searchQuery && ` (sur ${totalCount} au total)`}
       </p>
 
-      {/* Recherche */}
-      <SearchInput
-        value={searchQuery}
-        onChange={setSearchQuery}
-        placeholder="Rechercher une compagnie..."
-      />
+      {/* Recherche + Tri */}
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Rechercher une compagnie..."
+          />
+        </div>
+        {/* Tri par nom A→Z / Z→A */}
+        <SortToggle
+          direction={sortDir}
+          onToggle={toggleSortDir}
+          label="Nom"
+        />
+      </div>
 
       {/* Contenu (Table desktop + Cards mobile) */}
       <CompaniesContent

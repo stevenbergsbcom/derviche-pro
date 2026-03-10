@@ -1,9 +1,11 @@
 /**
  * Types pour la page Admin Professionnels
  * Derviche Diffusion
+ * S158 - Ajout tri alphabétique
  */
 
 import type { Professional, UpdateProfessionalData } from '@/hooks/useProfessionals';
+import type { SortDirection } from '@/components/admin';
 
 // ============================================
 // RÉEXPORTS
@@ -112,6 +114,10 @@ export interface UseProfessionalsPageReturn {
   cityFilter: string;
   setCityFilter: (v: string) => void;
   hasFilters: boolean;
+
+  // Tri
+  sortDir: SortDirection;
+  toggleSortDir: () => void;
 
   // Drawer
   drawerState: DrawerState;

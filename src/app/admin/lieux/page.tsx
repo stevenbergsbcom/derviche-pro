@@ -22,8 +22,10 @@ import { useVenues } from '@/hooks/useVenues';
 import {
     AdminPageHeader,
     SearchInput,
+    SortToggle,
     DeleteConfirmDialog,
 } from '@/components/admin';
+import type { SortDirection } from '@/components/admin';
 
 // Composants spécifiques aux lieux
 import {
@@ -41,6 +43,7 @@ export default function AdminLieuxPage() {
 
     // États locaux
     const [searchQuery, setSearchQuery] = useState<string>('');
+    const [sortDir, setSortDir] = useState<SortDirection>('asc');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCheckingUsage, setIsCheckingUsage] = useState(false);
 
@@ -51,18 +54,22 @@ export default function AdminLieuxPage() {
     const [viewingVenue, setViewingVenue] = useState<VenueRow | null>(null);
     const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
 
-    // Filtrer les lieux selon la recherche
+    // Filtrer et trier les lieux
     const filteredVenues = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return venues;
-        }
-        return venues.filter(
-            (venue) =>
-                searchMatch(venue.name, searchQuery) ||
-                searchMatch(venue.city, searchQuery) ||
-                searchMatch(venue.postal_code || '', searchQuery)
-        );
-    }, [searchQuery, venues]);
+        const filtered = searchQuery.trim()
+            ? venues.filter(
+                  (venue) =>
+                      searchMatch(venue.name, searchQuery) ||
+                      searchMatch(venue.city, searchQuery) ||
+                      searchMatch(venue.postal_code || '', searchQuery)
+              )
+            : venues;
+
+        return [...filtered].sort((a, b) => {
+            const cmp = a.name.localeCompare(b.name, 'fr');
+            return sortDir === 'asc' ? cmp : -cmp;
+        });
+    }, [searchQuery, venues, sortDir]);
 
     // === HANDLERS ===
 
@@ -81,18 +88,16 @@ export default function AdminLieuxPage() {
     };
 
     const handleDeleteClick = async (venue: VenueRow) => {
-        // Afficher le dialog avec un état de chargement pendant la vérification
         setIsCheckingUsage(true);
         setVenueToDelete(venue);
         setDeleteWarning(null);
-        
-        // Vérifier si le lieu est utilisé
+
         const { used, count } = await checkUsage(venue.id);
-        
+
         if (used) {
             setDeleteWarning(`Ce lieu est utilisé par ${count} représentation(s). Supprimez d'abord les représentations associées.`);
         }
-        
+
         setIsCheckingUsage(false);
     };
 
@@ -101,11 +106,10 @@ export default function AdminLieuxPage() {
             setIsSubmitting(true);
             const result = await remove(venueToDelete.id);
             setIsSubmitting(false);
-            
+
             if (result.success) {
                 setVenueToDelete(null);
             } else {
-                // Afficher l'erreur (on pourrait ajouter un toast ici)
                 console.error('Erreur suppression:', result.error);
             }
         }
@@ -199,12 +203,21 @@ export default function AdminLieuxPage() {
                 {searchQuery && ` (sur ${venues.length} au total)`}
             </p>
 
-            {/* Recherche */}
-            <SearchInput
-                value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Rechercher un lieu..."
-            />
+            {/* Recherche + Tri */}
+            <div className="flex gap-3">
+                <div className="flex-1">
+                    <SearchInput
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        placeholder="Rechercher un lieu..."
+                    />
+                </div>
+                <SortToggle
+                    direction={sortDir}
+                    onToggle={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+                    label="Nom"
+                />
+            </div>
 
             {/* Tableau desktop */}
             <div className="hidden lg:block rounded-md border bg-white">
@@ -361,8 +374,8 @@ export default function AdminLieuxPage() {
                 onConfirm={handleConfirmDelete}
                 title="Supprimer ce lieu ?"
                 description={
-                    deleteWarning 
-                        ? deleteWarning 
+                    deleteWarning
+                        ? deleteWarning
                         : `Êtes-vous sûr de vouloir supprimer le lieu « ${venueToDelete?.name} » ? Cette action est irréversible.`
                 }
                 confirmDisabled={!!deleteWarning || isCheckingUsage}
