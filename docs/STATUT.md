@@ -399,4 +399,14 @@
 
 | 080 | `080_add_slot_date_to_reservations.sql` | Colonnes `slot_date`/`slot_time` dénormalisées + trigger `sync_reservation_slot_datetime` + backfill + index | ✅ |
 
+---
+
+## S163 — Refonte UI filtres réservations admin
+
+### Changements
+- `SearchAndActions` : filtre Spectacle remonté sur la ligne principale + bouton Filtres avec badge
+- `FiltersSection` : panneau avancé caché par défaut (statut, tri, période, dates, reset)
+- `page.tsx` : props mises à jour en conséquence
+- Suppression du toggle mobile-only — le bouton Filtres gère toutes les tailles d'écran
+
 > Aucune migration en S157 ni S158 — modifications purement UI/hooks.

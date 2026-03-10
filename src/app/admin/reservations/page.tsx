@@ -398,9 +398,15 @@ function AdminReservationsContent() {
           isSearching={isSearching}
           isDebouncing={isDebouncing}
           isLoading={isLoading}
+          showId={filters.showId}
+          showsOptions={showsOptions}
+          isExterne={isExterne}
+          onShowFilter={filtersHook.handleShowFilter}
+          filtersExpanded={filtersHook.filtersExpanded}
+          activeFiltersCount={filtersHook.activeFiltersCount}
+          onToggleExpanded={filtersHook.toggleFiltersExpanded}
           isExporting={isExporting}
           reservationsCount={reservations.length}
-          activeFiltersCount={filtersHook.activeFiltersCount}
           onRefresh={handleRefresh}
           onOpenColumns={() => setColumnsDialogOpen(true)}
           onOpenExport={() => setExportDialogOpen(true)}
@@ -408,15 +414,11 @@ function AdminReservationsContent() {
 
         <FiltersSection
           filters={filters}
-          showsOptions={showsOptions}
-          isExterne={isExterne}
           filtersExpanded={filtersHook.filtersExpanded}
           activeFiltersCount={filtersHook.activeFiltersCount}
           datePreset={filtersHook.datePreset}
           dateFrom={filtersHook.dateFrom}
           dateTo={filtersHook.dateTo}
-          onToggleExpanded={filtersHook.toggleFiltersExpanded}
-          onShowFilter={filtersHook.handleShowFilter}
           onStatusFilter={filtersHook.handleStatusFilter}
           onSortChange={filtersHook.handleSortChange}
           onPeriodFilter={filtersHook.handlePeriodFilter}
