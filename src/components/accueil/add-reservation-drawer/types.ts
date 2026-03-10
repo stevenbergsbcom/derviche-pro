@@ -153,6 +153,8 @@ export interface CheckinSectionProps extends CollapsibleSectionProps {
 
 export interface FormFooterProps {
   isSubmitting: boolean;
+  /** ID du formulaire cible — permet de soumettre depuis un bouton hors du <form> */
+  formId: string;
 }
 
 export interface DuplicateDialogProps {
