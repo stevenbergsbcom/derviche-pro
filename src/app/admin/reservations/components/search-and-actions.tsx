@@ -93,9 +93,12 @@ export function SearchAndActions({
 }: SearchAndActionsProps) {
   const showLoader = isSearching || isDebouncing;
 
-  // Nombre de filtres avancés actifs (hors recherche et hors spectacle qui sont sur la ligne principale)
-  // On soustrait 1 si showId est actif car il est géré séparément
-  const advancedFiltersCount = activeFiltersCount - (showId ? 1 : 0) - (appliedSearch ? 1 : 0);
+  // Nombre de filtres avancés actifs (hors recherche et hors spectacle sur la ligne principale)
+  // Math.max(0, ...) garantit que le badge ne peut pas être négatif en cas d'état incohérent
+  const advancedFiltersCount = Math.max(
+    0,
+    activeFiltersCount - (showId ? 1 : 0) - (appliedSearch ? 1 : 0)
+  );
 
   return (
     <div className="space-y-1.5">

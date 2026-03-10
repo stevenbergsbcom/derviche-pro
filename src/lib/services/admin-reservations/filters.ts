@@ -165,10 +165,10 @@ export function applySorting(query: any, sortBy?: AdminReservationFilters['sortB
         .order('guest_first_name', { ascending: false });
     
     default:
-      // Fallback sur date slot croissante
+      // Fallback sur colonnes dénormalisées (migration 080) — cohérent avec slot_date_asc
       return query
-        .order('date', { referencedTable: 'slots', ascending: true })
-        .order('time', { referencedTable: 'slots', ascending: true });
+        .order('slot_date', { ascending: true })
+        .order('slot_time', { ascending: true });
   }
 }
 
