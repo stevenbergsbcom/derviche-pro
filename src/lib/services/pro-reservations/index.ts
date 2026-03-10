@@ -193,7 +193,10 @@ export async function getMyReservations(): Promise<ProReservationResult> {
     const { data, error } = await supabase
       .from('reservations')
       .select(PRO_RESERVATION_SELECT)
-      .order('created_at', { ascending: false });
+      // Tri par date de représentation (colonnes dénormalisées migration 080)
+      // Supabase JS ne peut pas trier sur une table jointe via .order({ referencedTable })
+      .order('slot_date', { ascending: true })
+      .order('slot_time', { ascending: true });
 
     if (error) {
       logger.error('Erreur chargement réservations pro', { error: error.message });

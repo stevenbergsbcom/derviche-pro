@@ -54,20 +54,43 @@ function formatTime(timeStr: string): string {
 }
 
 /**
- * Retourne true si la réservation peut encore être annulée (date du slot > maintenant + 24h).
+ * Retourne true si la réservation peut encore être annulée (date du slot > maintenant).
  * slot.date : YYYY-MM-DD, slot.time : HH:MM ou HH:MM:SS (format Supabase)
  * On normalise à HH:MM:SS pour garantir un ISO 8601 valide.
+ *
+ * Politique d'annulation (décision S167) :
+ * Le pro peut annuler jusqu'à l'heure exacte de début de la représentation.
+ * L'ancienne règle des 24h a été supprimée volontairement — Derviche Diffusion
+ * préfère libérer les places au dernier moment plutôt que les bloquer.
  */
 function isCancellable(reservation: ProReservation): boolean {
   if (reservation.status === 'cancelled' || reservation.status === 'no_show') return false;
   // Normalisation : HH:MM → HH:MM:00 pour éviter une Date invalide
-  const rawTime     = reservation.slot.time ?? '00:00:00';
-  const normalTime  = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+  const rawTime    = reservation.slot.time ?? '00:00:00';
+  const normalTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
   const slotDateTime = new Date(`${reservation.slot.date}T${normalTime}`);
   if (isNaN(slotDateTime.getTime())) return false; // date invalide → sécurité fail-closed
-  const now = new Date();
-  const cutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  return slotDateTime > cutoff;
+  return slotDateTime > new Date();
+}
+
+/**
+ * Retourne un label d'urgence si la représentation est dans moins de 24h, null sinon.
+ * Ex : "Dans 45 min", "Dans 3h", "Dans 12h30"
+ * Uniquement pour les réservations confirmées futures.
+ */
+function getUrgencyLabel(reservation: ProReservation): string | null {
+  if (reservation.status !== 'confirmed') return null;
+  const rawTime    = reservation.slot.time ?? '00:00:00';
+  const normalTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+  const slotDateTime = new Date(`${reservation.slot.date}T${normalTime}`);
+  if (isNaN(slotDateTime.getTime())) return null;
+  const diffMs      = slotDateTime.getTime() - Date.now();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes <= 0 || diffMinutes > 24 * 60) return null;
+  if (diffMinutes < 60) return `Dans ${diffMinutes} min`;
+  const hours   = Math.floor(diffMinutes / 60);
+  const minutes = diffMinutes % 60;
+  return minutes === 0 ? `Dans ${hours}h` : `Dans ${hours}h${String(minutes).padStart(2, '0')}`;
 }
 
 const STATUS_LABELS: Record<ProReservation['status'], string> = {
@@ -119,6 +142,12 @@ export function ProReservationCard({
   const canCancel = isCancellable(reservation);
   // Peut changer de créneau si la résa est confirmée et future
   const canChangeSlot = reservation.status === 'confirmed' && isCancellable(reservation);
+  // Représentation passée : confirmée ou no_show mais date dépassée
+  const isPast =
+    reservation.status !== 'cancelled' &&
+    !isCancellable(reservation);
+  // Badge d'urgence : affiché si la représentation est dans moins de 24h
+  const urgencyLabel = getUrgencyLabel(reservation);
 
   const handleConfirmCancel = async (reason?: string) => {
     const result = await onCancel(reservation.id, reason);
@@ -160,7 +189,7 @@ export function ProReservationCard({
           ${isCancelled ? 'opacity-60' : ''}
         `}
       >
-        {/* Titre + badge */}
+        {/* Titre + badge statut */}
         <div className="flex items-start justify-between gap-3">
           <h3 className="font-semibold text-derviche-dark leading-snug">
             {reservation.show_title}
@@ -169,6 +198,14 @@ export function ProReservationCard({
             {STATUS_LABELS[reservation.status]}
           </Badge>
         </div>
+        {/* Badge urgence < 24h */}
+        {urgencyLabel && (
+          <div>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200">
+              ⏰ {urgencyLabel}
+            </span>
+          </div>
+        )}
 
         {/* Infos */}
         <div className="space-y-1.5 text-sm text-muted-foreground">
@@ -227,6 +264,11 @@ export function ProReservationCard({
               Annuler la réservation
             </Button>
           )}
+          {isPast && !canCancel && !canChangeSlot && (
+            <p className="text-xs text-muted-foreground text-center pt-1">
+              Représentation passée — modifications non disponibles
+            </p>
+          )}
         </div>
       </div>
 
@@ -252,7 +294,14 @@ export function ProReservationCard({
 
         {/* Titre spectacle — col large */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-derviche-dark truncate">{reservation.show_title}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-semibold text-derviche-dark truncate">{reservation.show_title}</p>
+            {urgencyLabel && (
+              <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 border border-orange-200 shrink-0">
+                ⏰ {urgencyLabel}
+              </span>
+            )}
+          </div>
           {isCancelled && reservation.cancellation_reason && (
             <p className="text-xs text-muted-foreground italic truncate mt-0.5">
               Motif : {reservation.cancellation_reason}
@@ -290,8 +339,8 @@ export function ProReservationCard({
           </span>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Actions — largeur fixe w-56 alignée sur le header */}
+        <div className="flex items-center gap-2 shrink-0 w-56 justify-end">
           {reservation.show_slug && (
             <Button variant="ghost" size="sm" asChild className="text-derviche hover:text-derviche-dark">
               <Link href={`/spectacle/${reservation.show_slug}`} className="gap-1.5">
@@ -323,7 +372,12 @@ export function ProReservationCard({
               Annuler
             </Button>
           )}
-          {!canCancel && !canChangeSlot && !reservation.show_slug && (
+          {!canCancel && !canChangeSlot && isPast && (
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              Représentation passée
+            </span>
+          )}
+          {!canCancel && !canChangeSlot && !isPast && !reservation.show_slug && (
             <div className="w-16" aria-hidden="true" />
           )}
         </div>
