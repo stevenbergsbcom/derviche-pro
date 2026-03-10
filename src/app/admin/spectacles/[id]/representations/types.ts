@@ -174,6 +174,7 @@ export interface RepresentationsPageState {
   sortDir: 'asc' | 'desc';
   hidePast: boolean;
   pastCount: number;
+  todayStr: string;
   
   // États UI
   isLoading: boolean;

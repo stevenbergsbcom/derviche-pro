@@ -67,6 +67,7 @@ export default function AdminRepresentationsPage() {
     sortDir,
     hidePast,
     pastCount,
+    todayStr,
     setSortDir,
     setHidePast,
 
@@ -118,9 +119,6 @@ export default function AdminRepresentationsPage() {
     // Actions - Refresh
     refreshAllData,
   } = useRepresentationsPage();
-
-  // Date du jour au format YYYY-MM-DD — même calcul que dans le hook
-  const todayStr = new Date().toISOString().split('T')[0] ?? '';
 
   // ============================================
   // ÉTATS DE CHARGEMENT ET D'ERREUR
