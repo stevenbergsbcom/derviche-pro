@@ -323,6 +323,7 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
+| `user_preferences` `as any` | `user-preferences.ts` | À supprimer après regénération types Supabase | 🟡 Basse |
 | `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
 | Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais remplacées par 061 | 🟡 Basse |
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
@@ -395,3 +396,5 @@
 | 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` | ✅ |
 | 078 | `078_add_season_settings.sql` | `season_start` (09-01) + `season_end` (06-30) dans `app_settings` | ✅ |
 | 079 | `079_fix_rls_externe_dd_to_externe.sql` | Fix RLS `externe-dd`→`externe` sur 4 tables manquantes (user_show_assignments, profiles, shows, slots) | ✅ |
+
+> Aucune migration en S157 ni S158 — modifications purement UI/hooks.
