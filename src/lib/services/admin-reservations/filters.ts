@@ -137,14 +137,16 @@ export function applySorting(query: any, sortBy?: AdminReservationFilters['sortB
   
   switch (sort) {
     case 'slot_date_asc':
+      // slot_date est une colonne dénormalisée sur reservations (migration 080)
+      // .order({ referencedTable: 'slots' }) ne trie pas la table parente en Supabase JS
       return query
-        .order('date', { referencedTable: 'slots', ascending: true })
-        .order('time', { referencedTable: 'slots', ascending: true });
+        .order('slot_date', { ascending: true })
+        .order('slot_time', { ascending: true });
     
     case 'slot_date_desc':
       return query
-        .order('date', { referencedTable: 'slots', ascending: false })
-        .order('time', { referencedTable: 'slots', ascending: false });
+        .order('slot_date', { ascending: false })
+        .order('slot_time', { ascending: false });
     
     case 'created_at_asc':
       return query.order('created_at', { ascending: true });

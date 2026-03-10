@@ -130,6 +130,12 @@ function AdminReservationsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Recharger les stats quand le filtre spectacle change
+  useEffect(() => {
+    void loadStats(filters.showId ? { showId: filters.showId } : {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.showId]);
+
   // Mise à jour des refs
   useEffect(() => { filtersRef.current = filters; }, [filters]);
   useEffect(() => { pageSizeRef.current = pageSize; }, [pageSize]);
@@ -196,6 +202,12 @@ function AdminReservationsContent() {
   const isDebouncing = searchInput !== debouncedSearch;
   const columns = columnsLoading ? [] : visibleColumns;
   const globalLoading = isLoading || columnsLoading || permissionsLoading;
+
+  // Titre du spectacle filtré (pour le badge dans StatsCards)
+  const filteredShowTitle = useMemo(() => {
+    if (!filters.showId) return null;
+    return shows.find((s) => s.id === filters.showId)?.title ?? null;
+  }, [filters.showId, shows]);
 
   // Spectacles filtrés pour les externes
   const showsOptions = useMemo(() => {
@@ -367,7 +379,13 @@ function AdminReservationsContent() {
       />
 
       {/* Statistiques */}
-      {stats && <StatsCards stats={stats} isExterne={isExterne} />}
+      {stats && (
+        <StatsCards
+          stats={stats}
+          isExterne={isExterne}
+          filteredShowTitle={filteredShowTitle}
+        />
+      )}
 
       {/* Barre d'actions et filtres */}
       <div className="space-y-3">
@@ -382,6 +400,7 @@ function AdminReservationsContent() {
           isLoading={isLoading}
           isExporting={isExporting}
           reservationsCount={reservations.length}
+          activeFiltersCount={filtersHook.activeFiltersCount}
           onRefresh={handleRefresh}
           onOpenColumns={() => setColumnsDialogOpen(true)}
           onOpenExport={() => setExportDialogOpen(true)}

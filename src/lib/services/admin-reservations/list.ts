@@ -80,8 +80,9 @@ async function executeListQuery(
   // Appliquer le tri
   if (options.exportMode) {
     // Mode export : tri fixe par date de représentation puis nom
+    // slot_date = colonne dénormalisée sur reservations (migration 080)
     query = query
-      .order('date', { referencedTable: 'slots', ascending: true })
+      .order('slot_date', { ascending: true })
       .order('guest_last_name', { ascending: true });
   } else {
     query = applySorting(query, options.sortBy);

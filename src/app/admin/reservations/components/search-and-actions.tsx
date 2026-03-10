@@ -43,6 +43,8 @@ export interface SearchAndActionsProps {
   isExporting: boolean;
   /** Nombre de réservations disponibles pour l'export */
   reservationsCount: number;
+  /** Nombre de filtres actifs (pour afficher le compteur même sans recherche) */
+  activeFiltersCount: number;
   /** Handler pour rafraîchir les données */
   onRefresh: () => void;
   /** Handler pour ouvrir le dialog des colonnes */
@@ -66,6 +68,7 @@ export function SearchAndActions({
   isLoading,
   isExporting,
   reservationsCount,
+  activeFiltersCount,
   onRefresh,
   onOpenColumns,
   onOpenExport,
@@ -105,9 +108,10 @@ export function SearchAndActions({
           )}
         </div>
         {/* Compteur de résultats */}
-        {appliedSearch && !isLoading && (
+        {!isLoading && (appliedSearch || activeFiltersCount > 0) && (
           <p className="text-xs text-muted-foreground mt-1 ml-1">
-            {totalResults} résultat{totalResults > 1 ? 's' : ''} pour « {appliedSearch} »
+            {totalResults} réservation{totalResults > 1 ? 's' : ''}
+            {appliedSearch && ` pour « ${appliedSearch} »`}
           </p>
         )}
       </div>

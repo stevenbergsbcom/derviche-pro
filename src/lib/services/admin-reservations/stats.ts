@@ -70,7 +70,7 @@ export async function getReservationStats(
 
     const reservations = data || [];
     const stats: ReservationStats = {
-      total: reservations.length,
+      total: 0, // confirmées uniquement (hors annulées et no-show)
       confirmed: 0,
       cancelled: 0,
       noShow: 0,
@@ -93,8 +93,9 @@ export async function getReservationStats(
       else if (r.checkin_status === 'present_neutral') stats.presentNeutral++;
       else if (r.checkin_status === 'absent') stats.absent++;
 
-      // Total des places (uniquement confirmées)
+      // Places et total : uniquement les réservations confirmées (hors annulées)
       if (r.status === 'confirmed') {
+        stats.total++;
         stats.totalPlaces += r.num_places;
       }
     });
