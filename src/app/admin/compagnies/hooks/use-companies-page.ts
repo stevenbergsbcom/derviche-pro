@@ -11,6 +11,7 @@ import { searchMatch } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 import { getCompanyUser } from '@/lib/services/internal-users';
 import { useCompanies } from '@/hooks/useCompanies';
+import { toast } from 'sonner';
 import type { CompanyInsert } from '@/types/database';
 import type { CompanyWithShowsCount } from '@/lib/services/companies';
 import type { ManagedUser } from '@/lib/services/internal-users';
@@ -194,8 +195,10 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
       if (result.success) {
         setCompanyToDelete(null);
+        toast.success('Compagnie supprimée');
       } else {
         logger.error('Compagnies - Erreur suppression', { error: result.error });
+        toast.error('Erreur lors de la suppression');
       }
     }
   }, [remove]);
@@ -224,15 +227,19 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
         if (result.success) {
           setIsFormDialogOpen(false);
           setEditingCompany(null);
+          toast.success('Compagnie modifiée avec succès');
         } else {
           setFormError(result.error || 'Erreur lors de la mise à jour');
+          toast.error('Erreur lors de la modification');
         }
       } else {
         const result = await create(formData as CompanyInsert);
         if (result.success) {
           setIsFormDialogOpen(false);
+          toast.success('Compagnie créée avec succès');
         } else {
           setFormError(result.error || 'Erreur lors de la création');
+          toast.error('Erreur lors de la création');
         }
       }
 
