@@ -84,7 +84,7 @@ type DeleteStep = 'confirm' | 'deleting';
 
 function MonCompteSkeleton() {
     return (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6">
             <div>
                 <Skeleton className="h-8 w-48 mb-2" />
                 <Skeleton className="h-4 w-72" />
@@ -508,7 +508,7 @@ export default function ProfessionalMonComptePage() {
     if (!profile) return null;
 
     return (
-        <div className="space-y-6 max-w-4xl">
+        <div className="space-y-6">
             {/* En-tête */}
             <div>
                 <h1 className="text-2xl font-bold text-derviche-dark">Mon compte</h1>

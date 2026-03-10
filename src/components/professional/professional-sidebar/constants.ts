@@ -31,11 +31,8 @@ export const PROFESSIONAL_NAV_ITEMS: NavItem[] = [
 /** URL de base professionnelle */
 export const PROFESSIONAL_BASE_HREF = '/professional';
 
-/** URL page mon compte professionnelle */
-export const PROFESSIONAL_ACCOUNT_HREF = '/professional/mon-compte';
-
 /** Sous-titre de la sidebar professionnelle */
 export const PROFESSIONAL_SUBTITLE = 'Espace Professionnel';
 
 /** Label du rôle pour les professionnels */
-export const PROFESSIONAL_ROLE_LABEL = 'Programmateur';
+export const PROFESSIONAL_ROLE_LABEL = 'Professionnel';

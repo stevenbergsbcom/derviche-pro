@@ -533,3 +533,35 @@ PaginationControls
 | 081 | `081_maintenance_rpcs.sql` | RPCs purge notifications + reset data | ✅ |
 
 > Audit Cursor S166 : 9.2/10 global, zéro critique. Fixes post-audit appliqués (taux attrition + reset filtres complet).
+
+---
+
+## S167 — UX Espace Professionnel : corrections mobile ✅ mergé main
+
+### Changements
+- **Règle annulation** : suppression cutoff 24h → annulable jusqu'à l'heure exacte de la représentation (décision DD documentée dans JSDoc)
+- **Message contextuel** : "Représentation passée" affiché quand `isPast && !canCancel && !canChangeSlot` (mobile + desktop)
+- **Badge urgence** : ⏰ "Dans Xh" affiché si représentation dans < 24h (mobile + desktop)
+- **Tri réservations** : À venir = `slot_date/slot_time` ASC, Historique = DESC
+- **Alignement colonnes desktop** : actions header + card `w-56 justify-end`
+- **Mon compte** : suppression `max-w-4xl` (skeleton + return)
+- **Sidebar** : suppression doublon "Mon compte" footer + `PROFESSIONAL_ACCOUNT_HREF` (code mort)
+- **Label rôle** : "Programmateur" → "Professionnel"
+- **Titre header mobile** : dynamique selon la route (`getMobilePageTitle`)
+- **Sidebar mobile** : fermeture automatique au clic sur un lien (`useSidebar` + `setOpenMobile`)
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/professional/reservations/components/ProReservationCard.tsx` | Règle annulation, isPast, badge urgence, w-56 actions |
+| `src/app/professional/reservations/page.tsx` | Tri ASC/DESC, header w-56 |
+| `src/lib/services/pro-reservations/index.ts` | Tri slot_date/slot_time dénormalisés |
+| `src/app/professional/mon-compte/page.tsx` | Suppression max-w-4xl |
+| `src/components/professional/professional-sidebar/index.tsx` | Fermeture mobile + suppression SidebarAccountLink |
+| `src/components/professional/professional-sidebar/constants.ts` | Label Professionnel + suppression PROFESSIONAL_ACCOUNT_HREF |
+| `src/app/professional/layout.tsx` | Titre header mobile dynamique |
+
+### Migrations
+Aucune.
+
+> Audit Cursor S167 : 9.4/10 global → 9.5/10 après fix constants.ts. Zéro critique. Seul point signalé : alerte Cursor sur suppression règle 24h → documentée dans JSDoc.

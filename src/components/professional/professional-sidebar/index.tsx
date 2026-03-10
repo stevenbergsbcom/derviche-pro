@@ -19,12 +19,12 @@ import {
   SidebarMenuButton,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import {
   SidebarLogo,
   SidebarExternalLink,
   SidebarUserInfo,
-  SidebarAccountLink,
   SidebarLogoutButton,
   isRouteActive,
   useSidebarUserData,
@@ -33,7 +33,6 @@ import {
 import {
   PROFESSIONAL_NAV_ITEMS,
   PROFESSIONAL_BASE_HREF,
-  PROFESSIONAL_ACCOUNT_HREF,
   PROFESSIONAL_SUBTITLE,
   PROFESSIONAL_ROLE_LABEL,
 } from './constants';
@@ -63,6 +62,13 @@ function ProfessionalSidebarComponent() {
     (profile: Record<string, unknown>) => transformData(profile),
     []
   );
+
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  // Ferme la sidebar sur mobile lors d'un clic sur un lien
+  const handleNavClick = useCallback(() => {
+    if (isMobile) setOpenMobile(false);
+  }, [isMobile, setOpenMobile]);
 
   const { isLoading, displayName } = useSidebarUserData<BaseSidebarUserData>({
     selectQuery: SELECT_QUERY,
@@ -96,6 +102,7 @@ function ProfessionalSidebarComponent() {
                       <Link
                         href={item.href}
                         aria-current={isActive ? 'page' : undefined}
+                        onClick={handleNavClick}
                       >
                         <Icon aria-hidden="true" className="size-4" />
                         <span>{item.label}</span>
@@ -124,11 +131,6 @@ function ProfessionalSidebarComponent() {
               roleLabel={PROFESSIONAL_ROLE_LABEL}
               displayName={displayName}
             />
-          </SidebarMenuItem>
-
-          {/* Lien "Mon compte" */}
-          <SidebarMenuItem>
-            <SidebarAccountLink href={PROFESSIONAL_ACCOUNT_HREF} />
           </SidebarMenuItem>
 
           {/* Bouton déconnexion */}

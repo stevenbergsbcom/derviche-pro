@@ -32,6 +32,16 @@ function isHistory(reservation: ProReservation): boolean {
   return !isUpcoming(reservation);
 }
 
+/**
+ * Trie les réservations par date de créneau décroissante (la plus récente en premier)
+ * utilisé pour l'onglet Historique
+ */
+function sortBySlotDateDesc(a: ProReservation, b: ProReservation): number {
+  const dateA = new Date(`${a.slot.date}T${a.slot.time}`);
+  const dateB = new Date(`${b.slot.date}T${b.slot.time}`);
+  return dateB.getTime() - dateA.getTime();
+}
+
 // ============================================
 // COMPOSANT SKELETON
 // ============================================
@@ -69,7 +79,7 @@ function ReservationList({ reservations, onCancel, isCancelling, onChangeSlot, i
         <div className="w-44 shrink-0">Lieu</div>
         <div className="w-20 shrink-0">Places</div>
         <div className="w-28 shrink-0 text-center">Statut</div>
-        <div className="w-24 shrink-0" />{/* placeholder actions */}
+        <div className="w-56 shrink-0" />{/* placeholder actions — aligné sur la largeur réelle des boutons */}
       </div>
       {/* Liste */}
       {reservations.map((reservation) => (
@@ -115,8 +125,10 @@ export default function ProfessionalReservationsPage() {
   const { reservations, isLoading, error, isCancelling, isChangingSlot, cancelReservation, changeSlot, refresh } =
     useProReservations();
 
+  // À venir : tri ASC par date de créneau (depuis la query)
   const upcoming = reservations.filter(isUpcoming);
-  const history = reservations.filter(isHistory);
+  // Historique : on inverse l'ordre — la représentation la plus récente en premier
+  const history = reservations.filter(isHistory).sort(sortBySlotDateDesc);
 
   return (
     <div className="space-y-6">

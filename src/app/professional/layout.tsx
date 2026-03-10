@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { ProfessionalSidebar } from '@/components/professional';
 import {
   SidebarProvider,
@@ -12,6 +12,17 @@ import { Separator } from '@/components/ui/separator';
 import { LoadingScreen, AccessDenied } from '@/components/shared';
 import { useCurrentUserRole } from '@/hooks';
 import { logger } from '@/lib/logger';
+
+// ============================================
+// HELPER — titre de page mobile selon la route
+// ============================================
+
+function getMobilePageTitle(pathname: string): string {
+  if (pathname === '/professional') return 'Tableau de bord';
+  if (pathname.startsWith('/professional/reservations')) return 'Mes réservations';
+  if (pathname.startsWith('/professional/mon-compte')) return 'Mon compte';
+  return 'Espace Professionnel';
+}
 
 // ============================================
 // LAYOUT PRINCIPAL
@@ -25,6 +36,7 @@ export default function ProfessionalLayout({
   const { role, isLoading, isAuthenticated, hasRoleFetchError } =
     useCurrentUserRole();
   const router = useRouter();
+  const pathname = usePathname();
 
   // Filet de secours : si la navigation SPA ne se déclenche pas dans les 4s,
   // on passe redirectTimeout à true pour afficher un lien manuel vers /login
@@ -100,7 +112,7 @@ export default function ProfessionalLayout({
           <SidebarTrigger className="-ml-1" aria-label="Ouvrir/fermer le menu" />
           <Separator orientation="vertical" className="h-6" />
           <h1 className="text-lg font-semibold text-derviche-dark lg:hidden">
-            Espace Professionnel
+            {getMobilePageTitle(pathname)}
           </h1>
         </header>
 
