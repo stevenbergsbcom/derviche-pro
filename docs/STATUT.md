@@ -397,4 +397,16 @@
 | 078 | `078_add_season_settings.sql` | `season_start` (09-01) + `season_end` (06-30) dans `app_settings` | ✅ |
 | 079 | `079_fix_rls_externe_dd_to_externe.sql` | Fix RLS `externe-dd`→`externe` sur 4 tables manquantes (user_show_assignments, profiles, shows, slots) | ✅ |
 
+| 080 | `080_add_slot_date_to_reservations.sql` | Colonnes `slot_date`/`slot_time` dénormalisées + trigger `sync_reservation_slot_datetime` + backfill + index | ✅ |
+
+---
+
+## S163 — Refonte UI filtres réservations admin
+
+### Changements
+- `SearchAndActions` : filtre Spectacle remonté sur la ligne principale + bouton Filtres avec badge
+- `FiltersSection` : panneau avancé caché par défaut (statut, tri, période, dates, reset)
+- `page.tsx` : props mises à jour en conséquence
+- Suppression du toggle mobile-only — le bouton Filtres gère toutes les tailles d'écran
+
 > Aucune migration en S157 ni S158 — modifications purement UI/hooks.

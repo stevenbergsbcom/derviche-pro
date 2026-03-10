@@ -8,10 +8,10 @@
 export { StatsCards, type ReservationStats, type StatsCardsProps } from './stats-cards';
 
 // Search & Actions
-export { SearchAndActions, type SearchAndActionsProps } from './search-and-actions';
+export { SearchAndActions, type SearchAndActionsProps, type ShowOption } from './search-and-actions';
 
 // Filters
-export { FiltersSection, type FiltersSectionProps, type ShowOption } from './filters-section';
+export { FiltersSection, type FiltersSectionProps } from './filters-section';
 
 // Content
 export { ReservationsContent, type ReservationsContentProps } from './reservations-content';
