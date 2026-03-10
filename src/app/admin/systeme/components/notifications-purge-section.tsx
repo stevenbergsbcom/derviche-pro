@@ -93,7 +93,7 @@ export function NotificationsPurgeSection() {
                 'font-bold tabular-nums text-lg mr-1',
                 (count ?? 0) > 0 ? 'text-orange-500' : 'text-emerald-600',
               )}>
-                {count ?? 0}
+                {String(count ?? 0)}
               </span>
               notification{(count ?? 0) > 1 ? 's' : ''} de plus de 90 jours
             </span>
@@ -129,7 +129,7 @@ export function NotificationsPurgeSection() {
               <AlertDialogTitle>Confirmer la purge</AlertDialogTitle>
               <AlertDialogDescription>
                 Cette action va supprimer définitivement{' '}
-                <strong>{count} notification{(count ?? 0) > 1 ? 's' : ''}</strong> de
+                <strong>{String(count ?? 0)} notification{(count ?? 0) > 1 ? 's' : ''}</strong> de
                 plus de 90 jours. Cette opération est irréversible.
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -134,23 +134,30 @@ export async function resetData(options: ResetOptions): Promise<ResetResult> {
   }
 
   // ── 2. Suppression Auth Supabase (optionnel) ───────────────────────────────
+  // IMPORTANT : le reset SQL (étape 1) est déjà irreversible à ce stade.
+  // Si la suppression Auth échoue, on NE retourne PAS success:false — les données
+  // sont déjà supprimées. On retourne success:true avec un avertissement dans le log.
   if (options.authUsers) {
     try {
       const res = await fetch('/api/admin/reset-auth-users', { method: 'POST' });
-      const json = await res.json() as { success: boolean; deleted?: number; error?: string };
 
-      if (!json.success) {
-        logger.warn('[maintenance] reset-auth-users échoué', { json });
-        return {
-          success: false,
-          error: json.error ?? 'Erreur suppression comptes Auth',
-        };
+      // Bug 2 fix : vérifier res.ok avant d'appeler .json()
+      // (une réponse 500 peut retourner du HTML qui ferait planter .json())
+      if (!res.ok) {
+        logger.warn('[maintenance] reset-auth-users réponse non-ok', { status: res.status });
+        // Ne pas bloquer : les données SQL sont déjà supprimées
+      } else {
+        const json = await res.json() as { success: boolean; deleted?: number; error?: string };
+        if (!json.success) {
+          logger.warn('[maintenance] reset-auth-users partiel', { json });
+          // Idem : on continue, pas de rollback possible
+        } else {
+          logger.info('[maintenance] Comptes Auth supprimés', { deleted: json.deleted });
+        }
       }
-
-      logger.info('[maintenance] Comptes Auth supprimés', { deleted: json.deleted });
     } catch (err) {
-      logger.error('[maintenance] Erreur fetch reset-auth-users', { err });
-      return { success: false, error: 'Impossible de contacter la route reset-auth-users' };
+      // Erreur réseau — les données SQL sont déjà supprimées, on log sans bloquer
+      logger.error('[maintenance] Erreur fetch reset-auth-users (non bloquant)', { err });
     }
   }
 
