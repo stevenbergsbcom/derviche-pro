@@ -269,6 +269,56 @@
 
 ---
 
+---
+
+## S155 — Dashboards Pro + Company [MERGÉ MAIN ✅]
+
+**Fichiers créés**
+- `src/lib/services/pro-dashboard.ts` — `getProDashboard()` : prochain créneau, 3 prochaines résas, 3 spectacles non réservés
+- `src/hooks/useProDashboard.ts` — hook avec data/isLoading/error/refresh
+- `src/app/professional/_dashboard/NextShowCard.tsx` — card hero pleine largeur
+- `src/app/professional/_dashboard/UpcomingReservationsCard.tsx` — 3 prochaines résas
+- `src/app/professional/_dashboard/DiscoverShowsCard.tsx` — 3 spectacles non réservés
+- `src/app/professional/page.tsx` — layout dashboard pro
+- `src/lib/services/company-dashboard.ts` enrichi — `checkin_count` ajouté
+
+**Corrections**
+- `company-stats-cards.tsx` : taux de remplissage supprimé, grille 3 colonnes
+- `company-upcoming-slots.tsx` : barre présents/inscrits
+- Sidebar pro : "Tableau de bord" en 1ère position
+- Piège shadcn `CardHeader flex-row` → wrapper `div` interne (3 cartes)
+
+---
+
+## S156 — Dashboard externe + corrections console [MERGÉ MAIN ✅]
+
+**Bugs corrigés (4 en cascade)**
+
+1. **Filtre `assignedShowIds`** : pattern `Array.isArray()` dans tous les services admin-dashboard (`top-shows`, `stats`, `slots`, `slots-24h`, `reservations`, `chart`). Convention : `null` = accès complet, `[]` = externe sans assignation → vide, `[ids]` = filtre.
+2. **Source de vérité externe** : `useAdminDashboard` lit maintenant `slots.hosted_by_id` (pas `user_show_assignments` obsolète depuis migration 040). Déduplication via `Set`.
+3. **RLS migration 079** : policies `externe-dd` non corrigées sur 4 tables — appliquée en prod.
+4. **403 console** : `AdminNotificationsWrapper` créé — vérifie le rôle avant de monter `useNotifications`. Zéro 403 pour `externe`, `professional`, `company`.
+5. **406 console** (`user_preferences`) : `.single()` → `.maybeSingle()` pour GET ; upsert sans `.select().single()` pour SET.
+6. **`checkin_count`** : corrigé pour sommer `num_places` (pas compter les lignes) — une réservation peut couvrir plusieurs personnes.
+
+**Fichiers créés/modifiés**
+- `src/components/admin/notifications/admin-notifications-wrapper.tsx` (nouveau)
+- `src/app/admin/layout.tsx` (simplifié)
+- `src/lib/services/user-preferences.ts` (maybeSingle + upsert fix)
+- `src/hooks/useAdminDashboard.ts` (slots.hosted_by_id)
+- `src/lib/services/admin-dashboard/*.ts` (6 fichiers — Array.isArray)
+- `src/lib/services/company-dashboard.ts` (checkin_count fix)
+- `src/app/professional/_dashboard/DiscoverShowsCard.tsx` (CardHeader fix)
+- `src/app/professional/_dashboard/UpcomingReservationsCard.tsx` (CardHeader fix)
+
+**Audit S156** : 8,7/10 — zéro bloquant
+
+**Dette identifiée**
+- `user_preferences` : `as any` à supprimer après regénération des types Supabase
+- `formatDate` dupliqué dans les 3 cartes dashboard pro → à centraliser dans `_dashboard/utils.ts`
+
+---
+
 ## ⚠️ DETTE TECHNIQUE
 
 | Élément | Fichier | Description | Priorité |
@@ -344,3 +394,4 @@
 | 076 | `076_create_anonymize_and_delete_account_rpc.sql` | RGPD : RPC `anonymize_and_delete_account` | ✅ |
 | 077 | `077_create_professional_history_rpcs.sql` | RPCs `get_professional_reservation_history` + `get_professional_recent_reservations` | ✅ |
 | 078 | `078_add_season_settings.sql` | `season_start` (09-01) + `season_end` (06-30) dans `app_settings` | ✅ |
+| 079 | `079_fix_rls_externe_dd_to_externe.sql` | Fix RLS `externe-dd`→`externe` sur 4 tables manquantes (user_show_assignments, profiles, shows, slots) | ✅ |

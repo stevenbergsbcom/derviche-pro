@@ -16,24 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { ProNextReservation } from '@/lib/services/pro-dashboard';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDate(dateISO: string): string {
-  const [y, m, d] = dateISO.split('-').map(Number);
-  return new Date(y!, m! - 1, d!).toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function formatTime(time: string): string {
-  return time.slice(0, 5);
-}
+import { formatDateLong, formatTime } from './utils';
 
 // ============================================
 // ÉTATS
@@ -140,7 +123,7 @@ export function NextShowCard({ reservation, isLoading }: NextShowCardProps) {
               <div className="flex items-center gap-2">
                 <CalendarDays className="w-4 h-4 shrink-0 text-gold" />
                 <span>
-                  {formatDate(reservation.slot_date)} à {formatTime(reservation.slot_time)}
+                  {formatDateLong(reservation.slot_date)} à {formatTime(reservation.slot_time)}
                 </span>
               </div>
               {venue && (
