@@ -106,6 +106,10 @@ function AdminReservationsContent() {
   const pageSizeRef = useRef(pageSize);
   const loadReservationsRef = useRef(loadReservations);
 
+  // Ref pour ignorer le premier rendu de l'effet showId
+  // (le chargement initial est déjà géré par l'effet de montage)
+  const showIdInitializedRef = useRef(false);
+
   // États dialogs
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -130,9 +134,16 @@ function AdminReservationsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recharger les stats quand le filtre spectacle change
+  // Recharger les stats ET les réservations quand le filtre spectacle change
   useEffect(() => {
     void loadStats(filters.showId ? { showId: filters.showId } : {});
+    // Ignorer le premier rendu — le chargement initial est géré par l'effet de montage
+    if (!showIdInitializedRef.current) {
+      showIdInitializedRef.current = true;
+      return;
+    }
+    // Recharger les réservations avec les filtres courants, en revenant à la page 1
+    void loadReservationsRef.current(filtersRef.current, { page: 1, pageSize: pageSizeRef.current });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.showId]);
 
