@@ -401,12 +401,64 @@
 
 ---
 
-## S163 — Refonte UI filtres réservations admin
+## S162 — Stats cards + fix tri slot_date ✅ mergé main
 
 ### Changements
-- `SearchAndActions` : filtre Spectacle remonté sur la ligne principale + bouton Filtres avec badge
-- `FiltersSection` : panneau avancé caché par défaut (statut, tri, période, dates, reset)
-- `page.tsx` : props mises à jour en conséquence
-- Suppression du toggle mobile-only — le bouton Filtres gère toutes les tailles d'écran
+- `StatsCards` : rechargement automatique quand filtre spectacle change (`useEffect` sur `filters.showId`)
+- Badge contextuel `🎭 Stats pour : [titre]` au-dessus des cards
+- `stats.total` = confirmées uniquement (hors annulées) — Option A validée
+- Card **Places réservées** avec moyenne par réservation (`totalPlaces / total`)
+- Taux annulation calculé sur volume réel (`total + cancelled`)
+- **BUGFIX** : tri `slot_date_asc/desc` ne fonctionnait jamais (limitation Supabase JS — `.order({ referencedTable })` ne trie pas la table parente)
+- **Migration 080** : colonnes `slot_date`/`slot_time` dénormalisées + trigger `sync_reservation_slot_datetime` + backfill + index
+- `filters.ts` + `list.ts` : tous les tris de date utilisent `slot_date`/`slot_time` directs
 
-> Aucune migration en S157 ni S158 — modifications purement UI/hooks.
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/reservations/components/stats-cards.tsx` | Refonte complète — 4 cards, badge spectacle, logique stats |
+| `src/app/admin/reservations/page.tsx` | useEffect filtre spectacle → loadStats, filteredShowTitle |
+| `src/lib/services/admin-reservations/stats.ts` | total = confirmées uniquement |
+| `src/lib/services/admin-reservations/filters.ts` | Tri slot_date dénormalisé + fix fallback default |
+| `src/lib/services/admin-reservations/list.ts` | Export mode : slot_date dénormalisé |
+| `supabase/migrations/080_add_slot_date_to_reservations.sql` | Migration appliquée prod |
+
+---
+
+## S163 — Refonte UI filtres réservations admin ✅ mergé main
+
+### Changements
+- `SearchAndActions` : filtre Spectacle + bouton **Filtres** (avec badge) sur la ligne principale
+- `FiltersSection` : panneau avancé caché par défaut — statut, tri, période, dates, reset
+- `advancedFiltersCount` : exclut `showId` et `search` (déjà sur la ligne principale)
+- `Math.max(0, ...)` sur badge pour éviter valeur négative
+- Fallback `default` dans `filters.ts` corrigé sur colonnes dénormalisées
+- Scroll interne tableau supprimé (`overflow-x-auto` uniquement) — un seul scroll de page
+- Fix TS : `ShowOption` exporté depuis `search-and-actions`, retiré de `filters-section`
+
+### Structure UI finale page réservations
+```
+AdminPageHeader
+StatsCards (avec badge spectacle si filtre actif)
+[🔍 Recherche...] [Spectacle ▼] [Filtres (N)] [|] [↻] [⊞] [Export]  ← ligne principale
+┌─ Panneau avancé (caché par défaut) ──────────────────────────────┐
+│ [Statut ▼] [Tri ▼] [Période ▼] [Raccourci ▼] [Du] [Au] [Reset]  │
+└──────────────────────────────────────────────────────────────────┘
+ReservationsContent (tableau sans scroll interne)
+PaginationControls
+```
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/reservations/components/search-and-actions.tsx` | Refonte — spectacle + bouton Filtres |
+| `src/app/admin/reservations/components/filters-section.tsx` | Panneau avancé, advancedFiltersCount interne |
+| `src/app/admin/reservations/components/reservations-content.tsx` | Suppression max-h-[70vh] → overflow-x-auto |
+| `src/app/admin/reservations/components/index.ts` | Export ShowOption depuis search-and-actions |
+| `src/app/admin/reservations/page.tsx` | Props mises à jour |
+
+### Points techniques à retenir
+- `sticky thead` + `overflow-x-auto` sur même conteneur = **impossible en CSS pur** (crée un stacking context qui casse le sticky)
+- Le header de colonnes n'est plus sticky — compromis accepté pour supprimer le double scroll
+
+> Audit Cursor S162+S163 : 9.1/10 global, zéro critique. Fixes post-audit appliqués (fallback tri + Math.max badge).

@@ -10,9 +10,11 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { AdminPageHeader } from '@/components/admin';
-import { ResendQuotaWidget } from './resend-quota-widget';
-import { RateLimitWidget }   from './rate-limit-widget';
-import { LogsTable } from './logs-table';
+import { ResendQuotaWidget }         from './resend-quota-widget';
+import { RateLimitWidget }            from './rate-limit-widget';
+import { LogsTable }                  from './logs-table';
+import { NotificationsPurgeSection }  from './notifications-purge-section';
+import { DataResetSection }           from './data-reset-section';
 import type { AppLog } from '@/app/api/admin/logs/route';
 
 // ============================================
@@ -125,6 +127,12 @@ export function SystemeContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ResendQuotaWidget />
         <RateLimitWidget />
+      </div>
+
+      {/* Maintenance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <NotificationsPurgeSection />
+        <DataResetSection />
       </div>
 
       {/* Journal des logs */}
