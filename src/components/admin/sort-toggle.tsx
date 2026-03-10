@@ -9,6 +9,7 @@
 
 import { Button } from '@/components/ui/button';
 import { ArrowDownAZ, ArrowUpZA } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -29,7 +30,7 @@ export interface SortToggleProps {
  * @example
  * <SortToggle direction={sortDir} onToggle={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')} label="Nom" />
  */
-export function SortToggle({ direction, onToggle, label, className = '' }: SortToggleProps) {
+export function SortToggle({ direction, onToggle, label, className }: SortToggleProps) {
   const isAsc = direction === 'asc';
 
   return (
@@ -37,8 +38,9 @@ export function SortToggle({ direction, onToggle, label, className = '' }: SortT
       variant="outline"
       size="sm"
       onClick={onToggle}
-      className={`gap-1.5 shrink-0 ${className}`}
+      className={cn('gap-1.5 shrink-0', className)}
       aria-label={`Trier ${label ? `par ${label} ` : ''}${isAsc ? 'Z→A' : 'A→Z'} (actuellement ${isAsc ? 'A→Z' : 'Z→A'})`}
+      aria-pressed={true}
       title={isAsc ? 'Trier Z→A' : 'Trier A→Z'}
     >
       {isAsc ? (

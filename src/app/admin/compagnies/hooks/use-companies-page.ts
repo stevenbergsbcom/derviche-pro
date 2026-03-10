@@ -8,6 +8,7 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchMatch } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 import { getCompanyUser } from '@/lib/services/internal-users';
 import { useCompanies } from '@/hooks/useCompanies';
 import type { CompanyInsert } from '@/types/database';
@@ -194,7 +195,7 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
       if (result.success) {
         setCompanyToDelete(null);
       } else {
-        console.error('Erreur suppression:', result.error);
+        logger.error('Compagnies - Erreur suppression', { error: result.error });
       }
     }
   }, [remove]);
@@ -305,14 +306,14 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
         });
 
         if (!response.ok) {
-          console.error('HTTP Error:', response.status);
+          logger.error('Compagnies - HTTP Error dissociation', { status: response.status });
           return false;
         }
 
         const result = (await response.json()) as ApiResponse;
 
         if (!result.success) {
-          console.error('Erreur lors de la dissociation:', result.error);
+          logger.error('Compagnies - Erreur dissociation utilisateur', { error: result.error });
           return false;
         }
 
@@ -325,7 +326,7 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
         return true;
       } catch (error) {
-        console.error('Erreur lors de la dissociation:', error);
+        logger.error('Compagnies - Exception dissociation utilisateur', { error });
         return false;
       } finally {
         setIsProcessingUser(false);
