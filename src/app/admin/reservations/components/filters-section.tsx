@@ -33,7 +33,6 @@ import type { ReservationFiltersState } from '../hooks';
 export interface FiltersSectionProps {
   filters: ReservationFiltersState;
   filtersExpanded: boolean;
-  activeFiltersCount: number;
 
   // États locaux des dates
   datePreset: DatePreset | null;
@@ -57,7 +56,6 @@ export interface FiltersSectionProps {
 export function FiltersSection({
   filters,
   filtersExpanded,
-  activeFiltersCount,
   datePreset,
   dateFrom,
   dateTo,
@@ -70,6 +68,15 @@ export function FiltersSection({
   onResetFilters,
 }: FiltersSectionProps) {
   const hasDateFilters = !!(filters.dateFrom || filters.dateTo);
+
+  // Filtres avancés uniquement — exclut showId et search qui sont sur la ligne principale
+  const advancedFiltersCount = [
+    filters.status,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.period && filters.period !== 'upcoming' ? filters.period : null,
+    filters.sortBy && filters.sortBy !== 'slot_date_asc' ? filters.sortBy : null,
+  ].filter(Boolean).length;
 
   if (!filtersExpanded) return null;
 
@@ -185,19 +192,19 @@ export function FiltersSection({
         {/* Réinitialiser */}
         <div className="flex items-end">
           <Button
-            variant={activeFiltersCount > 0 ? 'default' : 'ghost'}
+            variant={advancedFiltersCount > 0 ? 'default' : 'ghost'}
             onClick={onResetFilters}
             size="sm"
             className={`w-full ${
-              activeFiltersCount > 0
+              advancedFiltersCount > 0
                 ? 'bg-derviche/10 text-derviche hover:bg-derviche/20 border border-derviche/30'
                 : ''
             }`}
           >
             Réinitialiser
-            {activeFiltersCount > 0 && (
+            {advancedFiltersCount > 0 && (
               <Badge className="ml-1.5 bg-derviche text-white text-xs px-1.5 py-0 h-4">
-                {activeFiltersCount}
+                {advancedFiltersCount}
               </Badge>
             )}
           </Button>

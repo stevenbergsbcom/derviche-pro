@@ -415,7 +415,6 @@ function AdminReservationsContent() {
         <FiltersSection
           filters={filters}
           filtersExpanded={filtersHook.filtersExpanded}
-          activeFiltersCount={filtersHook.activeFiltersCount}
           datePreset={filtersHook.datePreset}
           dateFrom={filtersHook.dateFrom}
           dateTo={filtersHook.dateTo}
