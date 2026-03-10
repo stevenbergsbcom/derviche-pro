@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S166 (complète ✅) — Espace Company : alignement UI admin, fix stats, fix reset filtres, refonte dashboard — 10 mars 2026
+> Dernière mise à jour : Session S168 (complète ✅) — Harmonisation footer PWA, rate limiting routes email, email contact compagnie optionnel — 10 mars 2026
 
 ---
 
@@ -329,6 +329,7 @@
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
 | RGPD purge auto | — | Durées stockées, aucune purge automatique planifiée | 🟡 Basse |
+| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
 
 ---
 
@@ -530,8 +531,60 @@ PaginationControls
 | # | Fichier | Description | Appliquée prod |
 |---|---------|-------------|---------------|
 | 081 | `081_maintenance_rpcs.sql` | RPCs purge notifications + reset data | ✅ |
+| 082 | `082_companies_contact_email_nullable.sql` | `DROP NOT NULL` sur `companies.contact_email` | ✅ |
 
 > Audit Cursor S166 : 9.2/10 global, zéro critique. Fixes post-audit appliqués (taux attrition + reset filtres complet).
+
+---
+
+## S168 — Corrections UX & dette technique ✅ mergé main
+
+### S168-A — Harmonisation footer AddReservationDrawer (PWA)
+- Footer aligné sur `FooterSection` du `CheckinDrawer` : taille standard shadcn, couleur primaire, label "Fermer"
+- Footer fixe hors du scroll via attribut HTML5 natif `form="add-reservation-form"` sur le bouton submit
+- Titres des 3 sections `RequiredFieldsSection` uniformisés en `text-base`
+- Pattern : `form#add-reservation-form` sur la balise `<form>`, `FormFooter` sorti du `div.overflow-y-auto`
+
+### S168-B — Rate limiting routes email manquantes (dette S153)
+- `send-cancellation`, `send-modification`, `send-checkin-followup` : ajout `checkRateLimit('emails', request)`
+- Limiter `emails` : 20 req / 1h par IP, fail-open si Redis absent
+- Blocages loggués dans `app_logs` (action `rate_limit_blocked`)
+- Dette technique STATUT.md soldée
+
+### S168-C — Email contact compagnie optionnel
+- Migration 082 : `DROP NOT NULL` sur `companies.contact_email`
+- `supabase.ts` + `database.ts` : `contact_email` nullable dans `Row` / `Insert` / `Update`
+- `CompanyOption` (spectacles/types.ts) : `contactEmail: string | null`
+- `company-quick-create-dialog` : `*` retiré, validation sur nom uniquement, message corrigé
+- `company-dialog` + `company-form-dialog` : null guards `?.trim() || null` + `?? ''`
+- `useSpectaclesPage` : `data.email.trim() || null` — passe `null` si email vide
+
+### Fichiers modifiés S168
+| Fichier | Action |
+|---------|--------|
+| `src/components/accueil/add-reservation-drawer/sections/FormFooter.tsx` | Footer harmonisé, `form={formId}` |
+| `src/components/accueil/add-reservation-drawer/types.ts` | `formId: string` dans `FormFooterProps` |
+| `src/components/accueil/add-reservation-drawer/index.tsx` | `form#add-reservation-form`, footer fixe |
+| `src/components/accueil/add-reservation-drawer/sections/RequiredFieldsSection.tsx` | `text-base` |
+| `src/app/api/emails/send-cancellation/route.ts` | Rate limiting |
+| `src/app/api/emails/send-modification/route.ts` | Rate limiting |
+| `src/app/api/emails/send-checkin-followup/route.ts` | Rate limiting |
+| `src/components/admin/spectacles/company-quick-create-dialog.tsx` | Email optionnel |
+| `src/types/database.ts` | `contact_email` nullable |
+| `src/types/supabase.ts` | `contact_email` nullable |
+| `src/app/admin/spectacles/types.ts` | `CompanyOption.contactEmail` nullable |
+| `src/components/admin/compagnies/company-dialog.tsx` | Null guards |
+| `src/components/admin/compagnies/company-form-dialog.tsx` | Null guards |
+| `src/lib/services/companies.ts` | Suppression contrainte inutile |
+| `src/app/admin/spectacles/hooks/useSpectaclesPage.ts` | `|| null` |
+| `supabase/migrations/082_companies_contact_email_nullable.sql` | Migration |
+
+### Migrations S168
+| # | Fichier | Description | Appliquée prod |
+|---|---------|-------------|---------------|
+| 082 | `082_companies_contact_email_nullable.sql` | `DROP NOT NULL` sur `companies.contact_email` | ✅ |
+
+> Audit Cursor S168-A : 9.75/10 → 10/10 après fix `cn` inutile. Zéro critique.
 
 ---
 
