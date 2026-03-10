@@ -329,7 +329,6 @@
 | Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
 | Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
 | RGPD purge auto | — | Durées stockées, aucune purge automatique planifiée | 🟡 Basse |
-| Rate limiting routes manquantes | `rate-limit.ts` | `/api/emails/send-cancellation`, `/api/emails/send-modification`, `/api/emails/send-checkin-followup` non encore protégées | 🟡 Basse |
 
 ---
 

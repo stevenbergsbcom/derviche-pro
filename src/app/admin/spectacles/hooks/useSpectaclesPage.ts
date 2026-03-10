@@ -536,7 +536,7 @@ export function useSpectaclesPage() {
   }, [rawTargetAudiences, checkTargetAudienceUsage, removeTargetAudience]);
 
   const handleCreateCompany = useCallback(async (data: { name: string; email: string }): Promise<string> => {
-    const result = await createCompany({ name: data.name.trim(), contact_email: data.email.trim() });
+    const result = await createCompany({ name: data.name.trim(), contact_email: data.email.trim() || null });
     if (result.error || !result.data) throw new Error(result.error || 'Erreur lors de la création de la compagnie');
     return result.data.id;
   }, [createCompany]);
