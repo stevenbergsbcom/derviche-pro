@@ -3,7 +3,7 @@
  * @module company-sidebar/constants
  */
 
-import { LayoutDashboard, Film, Calendar, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Film, Calendar } from 'lucide-react';
 import type { NavItem } from '@/components/shared-sidebar';
 
 /** Configuration des liens de navigation company */
@@ -25,12 +25,6 @@ export const COMPANY_NAV_ITEMS: NavItem[] = [
     href: '/company/reservations',
     icon: Calendar,
     tooltip: 'Voir les réservations',
-  },
-  {
-    label: 'Statistiques',
-    href: '/company/statistiques',
-    icon: BarChart3,
-    tooltip: 'Voir les statistiques',
   },
 ];
 
