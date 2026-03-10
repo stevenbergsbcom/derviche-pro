@@ -129,6 +129,7 @@ export function SpectacleViewDialog({
             teaserUrl={show.teaser_url}
             captationAvailable={show.captation_available}
             captationUrl={show.captation_url}
+            photoFolderUrl={show.photo_folder_url}
           />
 
           {/* Section: Gestion Derviche */}

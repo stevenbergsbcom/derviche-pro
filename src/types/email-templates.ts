@@ -91,6 +91,9 @@ export interface EmailTemplate {
   /** Afficher un lien vers la page de réservation publique du spectacle */
   show_booking_link: boolean;
   booking_link_text: string;
+  /** Afficher le lien vers le dossier photo (si photo_folder_url renseigné sur le spectacle) — S170 */
+  show_photo_folder_link: boolean;
+  photo_folder_link_text: string;
   /** Template actif ou désactivé */
   is_active: boolean;
   created_at: string;
@@ -124,6 +127,9 @@ export type EmailTemplateUpdatePayload = Pick<
   | 'captation_link_text'
   | 'show_booking_link'
   | 'booking_link_text'
+  // Dossier photo (S170)
+  | 'show_photo_folder_link'
+  | 'photo_folder_link_text'
 >;
 
 // ============================================

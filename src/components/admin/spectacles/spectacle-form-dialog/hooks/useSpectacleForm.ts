@@ -112,6 +112,7 @@ export function useSpectacleForm({
           teaserUrl: editingShow.teaser_url || '',
           captationAvailable: editingShow.captation_available,
           captationUrl: editingShow.captation_url || '',
+          photoFolderUrl: editingShow.photo_folder_url || '',
         });
       } else {
         // Mode création

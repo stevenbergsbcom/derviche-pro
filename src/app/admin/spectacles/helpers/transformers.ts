@@ -55,6 +55,7 @@ export function transformShowToDisplay(
     teaserUrl: show.teaser_url || undefined,
     captationAvailable: show.captation_available,
     captationUrl: show.captation_url || undefined,
+    photoFolderUrl: show.photo_folder_url || undefined,
   };
 }
 

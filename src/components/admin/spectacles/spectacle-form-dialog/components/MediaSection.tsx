@@ -16,24 +16,38 @@ export function MediaSection({
   teaserUrl,
   captationAvailable,
   captationUrl,
+  photoFolderUrl,
   imageUrl,
   isSubmitting,
   onFolderUrlChange,
   onTeaserUrlChange,
   onCaptationAvailableChange,
   onCaptationUrlChange,
+  onPhotoFolderUrlChange,
   onImageChange,
 }: MediaSectionProps) {
   return (
     <>
-      {/* URL du dossier */}
+      {/* URL du dossier de presse */}
       <div className="space-y-2">
-        <Label htmlFor="folderUrl">URL du dossier</Label>
+        <Label htmlFor="folderUrl">URL du dossier de presse</Label>
         <Input
           id="folderUrl"
           type="url"
           value={folderUrl}
           onChange={(e) => onFolderUrlChange(e.target.value)}
+          placeholder="https://drive.google.com/... ou https://dropbox.com/..."
+        />
+      </div>
+
+      {/* URL du dossier photo — S170 */}
+      <div className="space-y-2">
+        <Label htmlFor="photoFolderUrl">URL du dossier photo</Label>
+        <Input
+          id="photoFolderUrl"
+          type="url"
+          value={photoFolderUrl}
+          onChange={(e) => onPhotoFolderUrlChange(e.target.value)}
           placeholder="https://drive.google.com/... ou https://dropbox.com/..."
         />
       </div>

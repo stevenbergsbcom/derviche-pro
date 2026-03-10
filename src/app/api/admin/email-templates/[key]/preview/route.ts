@@ -149,6 +149,7 @@ const MOCK_CHECKIN_FOLLOWUP: CheckinFollowupEmailData = {
   folderUrl: 'https://drive.google.com/example-dossier',
   teaserUrl: 'https://youtube.com/example-teaser',
   captationUrl: 'https://vimeo.com/example-captation',
+  photoFolderUrl: 'https://drive.google.com/example-photos',
   slotDateFormatted: 'mercredi 15 avril 2026',
   slotTimeFormatted: '19h30',
   venueName: 'Théâtre de la Ville',
@@ -216,6 +217,9 @@ function buildTemplateFromParams(
     captation_link_text:   q.get('captation_link_text')   ?? 'Voir la captation vidéo',
     show_booking_link:     q.get('show_booking_link')     === 'true',
     booking_link_text:     q.get('booking_link_text')     ?? 'Réserver une place pour ce spectacle',
+    // Dossier photo (S170)
+    show_photo_folder_link: q.get('show_photo_folder_link') === 'true',
+    photo_folder_link_text: q.get('photo_folder_link_text') ?? 'Consulter le dossier photo',
   };
 }
 
@@ -362,6 +366,9 @@ export async function GET(
         captation_link_text:   dbTemplate.captation_link_text   ?? 'Voir la captation vidéo',
         show_booking_link:     dbTemplate.show_booking_link     ?? false,
         booking_link_text:     dbTemplate.booking_link_text     ?? 'Réserver une place pour ce spectacle',
+        // Dossier photo (S170)
+        show_photo_folder_link: dbTemplate.show_photo_folder_link ?? false,
+        photo_folder_link_text: dbTemplate.photo_folder_link_text ?? 'Consulter le dossier photo',
       };
     }
 

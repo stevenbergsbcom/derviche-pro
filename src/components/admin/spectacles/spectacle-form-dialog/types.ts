@@ -60,6 +60,8 @@ export interface SpectacleFormData {
   teaserUrl: string;
   captationAvailable: boolean;
   captationUrl: string;
+  /** URL du dossier photo — S170 */
+  photoFolderUrl: string;
 }
 
 // ============================================
@@ -182,6 +184,9 @@ export interface MediaSectionProps {
   onTeaserUrlChange: (value: string) => void;
   onCaptationAvailableChange: (value: boolean) => void;
   onCaptationUrlChange: (value: string) => void;
+  /** S170 — Dossier photo */
+  photoFolderUrl: string;
+  onPhotoFolderUrlChange: (value: string) => void;
   onImageChange: (file: File | null) => void;
 }
 

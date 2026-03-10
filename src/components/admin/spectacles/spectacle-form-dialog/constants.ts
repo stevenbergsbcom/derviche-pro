@@ -31,6 +31,7 @@ export const DEFAULT_FORM_DATA: SpectacleFormData = {
   teaserUrl: '',
   captationAvailable: false,
   captationUrl: '',
+  photoFolderUrl: '',
 };
 
 /**

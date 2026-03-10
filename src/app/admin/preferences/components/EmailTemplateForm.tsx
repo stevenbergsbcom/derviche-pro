@@ -62,6 +62,9 @@ const templateFormSchema = z.object({
   captation_link_text:   z.string().max(200),
   show_booking_link:     z.boolean(),
   booking_link_text:     z.string().max(200),
+  // Dossier photo (S170)
+  show_photo_folder_link: z.boolean(),
+  photo_folder_link_text: z.string().max(200),
 });
 
 type TemplateFormValues = z.infer<typeof templateFormSchema>;
@@ -212,6 +215,9 @@ export function EmailTemplateForm({
       captation_link_text:   template.captation_link_text ?? 'Voir la captation vidéo',
       show_booking_link:     template.show_booking_link   ?? false,
       booking_link_text:     template.booking_link_text   ?? 'Réserver une place pour ce spectacle',
+      // Dossier photo (S170)
+      show_photo_folder_link: template.show_photo_folder_link ?? false,
+      photo_folder_link_text: template.photo_folder_link_text ?? 'Consulter le dossier photo',
     },
   });
 
@@ -313,6 +319,9 @@ export function EmailTemplateForm({
       captation_link_text:   v.captation_link_text ?? '',
       show_booking_link:     v.show_booking_link   ?? false,
       booking_link_text:     v.booking_link_text   ?? '',
+      // Dossier photo (S170)
+      show_photo_folder_link: v.show_photo_folder_link ?? false,
+      photo_folder_link_text: v.photo_folder_link_text ?? '',
     };
   };
 
@@ -568,6 +577,32 @@ export function EmailTemplateForm({
                   {...register('booking_link_text')}
                   disabled={!canEdit}
                   placeholder="Ex: Réserver une place pour ce spectacle"
+                  className="text-sm"
+                />
+              )}
+            </div>
+
+            {/* Dossier photo — S170 */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor={`show_photo_folder_link-${template.template_key}`} className="text-sm font-medium">
+                    Lien dossier photo
+                  </Label>
+                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
+                </div>
+                <Switch
+                  id={`show_photo_folder_link-${template.template_key}`}
+                  checked={watch('show_photo_folder_link')}
+                  onCheckedChange={(checked) => setValue('show_photo_folder_link', checked, { shouldDirty: true })}
+                  disabled={!canEdit}
+                />
+              </div>
+              {watch('show_photo_folder_link') && (
+                <Input
+                  {...register('photo_folder_link_text')}
+                  disabled={!canEdit}
+                  placeholder="Ex: Consulter le dossier photo"
                   className="text-sm"
                 />
               )}

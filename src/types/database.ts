@@ -381,6 +381,8 @@ export interface ShowRow {
   teaser_url: string | null;
   captation_available: boolean;
   captation_url: string | null;
+  // S170 - Dossier photo
+  photo_folder_url: string | null;
   // Champs système
   deleted_at: string | null;
   created_at: string;
@@ -411,6 +413,8 @@ export interface ShowInsert {
   teaser_url?: string | null;
   captation_available?: boolean;
   captation_url?: string | null;
+  // S170 - Dossier photo
+  photo_folder_url?: string | null;
 }
 
 /** Données pour mettre à jour un spectacle */
@@ -437,6 +441,8 @@ export interface ShowUpdate {
   teaser_url?: string | null;
   captation_available?: boolean;
   captation_url?: string | null;
+  // S170 - Dossier photo
+  photo_folder_url?: string | null;
   // Champs système
   deleted_at?: string | null;
 }
