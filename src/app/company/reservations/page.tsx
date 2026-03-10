@@ -114,6 +114,14 @@ export default function CompanyReservationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Mettre à jour les stats quand le filtre spectacle change
+  // Note : setFilters dans le hook recharge déjà les réservations automatiquement
+  // — appeler loadReservations ici provoquerait une boucle infinie
+  useEffect(() => {
+    void loadStats(filters.showId ? { showId: filters.showId } : {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.showId]);
+
   // Mise à jour des refs
   useEffect(() => { filtersRef.current = filters; }, [filters]);
   useEffect(() => { pageSizeRef.current = pageSize; }, [pageSize]);
@@ -212,6 +220,12 @@ export default function CompanyReservationsPage() {
           isSearching={isSearching}
           isDebouncing={isDebouncing}
           isLoading={isLoading}
+          showId={filters.showId}
+          showsOptions={shows}
+          onShowFilter={filtersHook.handleShowFilter}
+          filtersExpanded={filtersHook.filtersExpanded}
+          activeFiltersCount={filtersHook.activeFiltersCount}
+          onToggleExpanded={filtersHook.handleToggleExpanded}
           isExporting={isExporting}
           reservationsCount={reservations.length}
           onRefresh={handleRefresh}
@@ -221,14 +235,11 @@ export default function CompanyReservationsPage() {
 
         <FiltersSection
           filters={filters}
-          showsOptions={shows}
           filtersExpanded={filtersHook.filtersExpanded}
           activeFiltersCount={filtersHook.activeFiltersCount}
           datePreset={filtersHook.datePreset as DatePreset | null}
           dateFrom={filtersHook.dateFrom}
           dateTo={filtersHook.dateTo}
-          onToggleExpanded={filtersHook.handleToggleExpanded}
-          onShowFilter={filtersHook.handleShowFilter}
           onStatusFilter={filtersHook.handleStatusFilter}
           onCheckinFilter={filtersHook.handleCheckinFilter}
           onSortChange={filtersHook.handleSortChange}

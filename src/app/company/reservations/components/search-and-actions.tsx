@@ -1,8 +1,8 @@
 /**
  * Composant SearchAndActions pour la page des réservations compagnie
- * Barre de recherche avec debounce + boutons d'action
- * Structure identique à admin/reservations
- * Derviche Diffusion - Session 119
+ * Barre principale : recherche + spectacle + filtres (toggle) + boutons d'action
+ * Aligné sur admin/reservations — S166
+ * Derviche Diffusion
  */
 
 'use client';
@@ -10,45 +10,60 @@
 import { memo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { 
-  Search, 
-  Loader2, 
-  X, 
-  RefreshCw, 
-  Settings2, 
-  Download 
+import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Search,
+  Loader2,
+  X,
+  RefreshCw,
+  Settings2,
+  Download,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 // ============================================
 // TYPES
 // ============================================
 
+export interface ShowOption {
+  id: string;
+  title: string;
+  slug?: string;
+}
+
 export interface SearchAndActionsProps {
-  /** Valeur actuelle de l'input de recherche */
+  // Recherche
   searchInput: string;
-  /** Handler pour mettre à jour l'input de recherche */
   onSearchChange: (value: string) => void;
-  /** Handler pour effacer la recherche */
   onClearSearch: () => void;
-  /** Valeur de recherche appliquée (après debounce) */
   appliedSearch?: string;
-  /** Total de résultats affichés */
   totalResults: number;
-  /** Indique si une recherche est en cours */
   isSearching: boolean;
-  /** Indique si le debounce est en cours */
   isDebouncing: boolean;
-  /** Indique si les données sont en chargement */
   isLoading: boolean;
-  /** Indique si l'export est en cours */
+
+  // Filtre spectacle (remonté depuis FiltersSection)
+  showId?: string;
+  showsOptions: ShowOption[];
+  onShowFilter: (showId: string) => void;
+
+  // Panneau avancé
+  filtersExpanded: boolean;
+  activeFiltersCount: number;
+  onToggleExpanded: () => void;
+
+  // Actions
   isExporting: boolean;
-  /** Nombre de réservations disponibles pour l'export */
   reservationsCount: number;
-  /** Handler pour rafraîchir les données */
   onRefresh: () => void;
-  /** Handler pour ouvrir le dialog des colonnes */
   onOpenColumns: () => void;
-  /** Handler pour ouvrir le dialog d'export */
   onOpenExport: () => void;
 }
 
@@ -65,6 +80,12 @@ function SearchAndActionsComponent({
   isSearching,
   isDebouncing,
   isLoading,
+  showId,
+  showsOptions,
+  onShowFilter,
+  filtersExpanded,
+  activeFiltersCount,
+  onToggleExpanded,
   isExporting,
   reservationsCount,
   onRefresh,
@@ -73,20 +94,29 @@ function SearchAndActionsComponent({
 }: SearchAndActionsProps) {
   const showLoader = isSearching || isDebouncing;
 
+  // Filtres avancés actifs (hors spectacle et recherche qui sont sur la ligne principale)
+  // Math.max(0, ...) : garantit que le badge ne peut pas être négatif
+  const advancedFiltersCount = Math.max(
+    0,
+    activeFiltersCount - (showId ? 1 : 0) - (appliedSearch ? 1 : 0)
+  );
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {/* Barre de recherche */}
-      <div className="flex-1 min-w-[200px]">
-        <div className="relative">
+    <div className="space-y-1.5">
+      {/* Ligne principale */}
+      <div className="flex flex-wrap gap-2 items-center">
+
+        {/* Barre de recherche */}
+        <div className="relative flex-1 min-w-[180px]">
           {showLoader ? (
-            <Loader2 
+            <Loader2
               aria-hidden="true"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-derviche animate-spin" 
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-derviche animate-spin"
             />
           ) : (
-            <Search 
+            <Search
               aria-hidden="true"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" 
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"
             />
           )}
           <Input
@@ -107,42 +137,90 @@ function SearchAndActionsComponent({
             </Button>
           )}
         </div>
-        {/* Compteur de résultats */}
-        {appliedSearch && !isLoading && (
-          <p className="text-xs text-muted-foreground mt-1 ml-1">
-            {totalResults} résultat{totalResults > 1 ? 's' : ''} pour « {appliedSearch} »
-          </p>
-        )}
-      </div>
 
-      {/* Boutons d'action */}
-      <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          size="icon" 
+        {/* Filtre spectacle */}
+        <div className="w-[200px] shrink-0">
+          <Select
+            value={showId || 'all'}
+            onValueChange={onShowFilter}
+          >
+            <SelectTrigger aria-label="Filtrer par spectacle">
+              <SelectValue placeholder="Tous vos spectacles" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous vos spectacles</SelectItem>
+              {showsOptions.map((show) => (
+                <SelectItem key={show.id} value={show.id}>
+                  {show.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Bouton filtres avancés */}
+        <Button
+          variant={filtersExpanded ? 'default' : 'outline'}
+          onClick={onToggleExpanded}
+          className={
+            filtersExpanded
+              ? 'bg-derviche/10 text-derviche hover:bg-derviche/20 border border-derviche/30'
+              : ''
+          }
+          aria-label="Filtres avancés"
+        >
+          <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+          <span className="ml-2 hidden sm:inline">Filtres</span>
+          {advancedFiltersCount > 0 && (
+            <Badge className="ml-1.5 bg-derviche text-white text-xs px-1.5 py-0 h-4">
+              {advancedFiltersCount}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Séparateur visuel */}
+        <div className="w-px h-7 bg-border hidden sm:block" />
+
+        {/* Actualiser */}
+        <Button
+          variant="outline"
+          size="icon"
           onClick={onRefresh}
           aria-label="Rafraîchir les données"
         >
           <RefreshCw className="w-4 h-4" aria-hidden="true" />
         </Button>
-        <Button 
-          variant="outline" 
-          size="icon" 
+
+        {/* Colonnes */}
+        <Button
+          variant="outline"
+          size="icon"
           onClick={onOpenColumns}
           aria-label="Configurer les colonnes"
         >
           <Settings2 className="w-4 h-4" aria-hidden="true" />
         </Button>
-        <Button 
-          variant="outline" 
-          onClick={onOpenExport} 
+
+        {/* Export */}
+        <Button
+          variant="outline"
+          onClick={onOpenExport}
           disabled={isExporting || reservationsCount === 0}
           aria-label="Exporter les réservations"
         >
           <Download className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline ml-2">Export</span>
         </Button>
+
       </div>
+
+      {/* Compteur de résultats */}
+      {!isLoading && (appliedSearch || activeFiltersCount > 0) && (
+        <p className="text-xs text-muted-foreground ml-1">
+          {totalResults} réservation{totalResults > 1 ? 's' : ''}
+          {appliedSearch && ` pour « ${appliedSearch} »`}
+        </p>
+      )}
     </div>
   );
 }
