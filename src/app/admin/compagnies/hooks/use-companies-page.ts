@@ -3,15 +3,16 @@
  * Centralise tous les états et handlers
  * Session 107 - Refactorisation + Corrections audit
  * S158 - Ajout tri alphabétique + nb spectacles
+ * S160 - Fusion viewingCompany + editingCompany → selectedCompany (dialog unifié)
  */
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { searchMatch } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { toast } from 'sonner';
 import { getCompanyUser } from '@/lib/services/internal-users';
 import { useCompanies } from '@/hooks/useCompanies';
-import { toast } from 'sonner';
 import type { CompanyInsert } from '@/types/database';
 import type { CompanyWithShowsCount } from '@/lib/services/companies';
 import type { ManagedUser } from '@/lib/services/internal-users';
@@ -22,7 +23,6 @@ import type { UseCompaniesPageReturn, CompanyHandlers, CompanyUserHandlers, ApiR
 export function useCompaniesPage(): UseCompaniesPageReturn {
   const router = useRouter();
 
-  // Hook Supabase pour les données
   const {
     companies,
     isLoading,
@@ -39,46 +39,39 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   // États locaux
   // ============================================================================
 
-  // Recherche
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Tri
   const [sortDir, setSortDir] = useState<SortDirection>('asc');
-
-  // États de chargement
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingUsage, setIsCheckingUsage] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Ref pour éviter les race conditions lors de la vérification d'usage
   const pendingDeleteCheckRef = useRef<string | null>(null);
 
-  // États des dialogs
-  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [editingCompany, setEditingCompany] = useState<CompanyWithShowsCount | null>(null);
+  // Dialog unifié — selectedCompany null = création, non-null = édition
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyWithShowsCount | null>(null);
+
+  // Suppression
   const [companyToDelete, setCompanyToDelete] = useState<CompanyWithShowsCount | null>(null);
-  const [viewingCompany, setViewingCompany] = useState<CompanyWithShowsCount | null>(null);
   const [deleteWarning, setDeleteWarning] = useState<string | null>(null);
 
-  // États utilisateur compagnie
+  // Utilisateur compagnie
   const [companyUser, setCompanyUser] = useState<ManagedUser | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const [isProcessingUser, setIsProcessingUser] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false);
+  const [isUnlinkConfirmOpen, setIsUnlinkConfirmOpen] = useState(false);
 
   // ============================================================================
   // Refs pour stabilité des callbacks
   // ============================================================================
 
-  const viewingCompanyRef = useRef(viewingCompany);
-  viewingCompanyRef.current = viewingCompany;
+  const selectedCompanyRef = useRef(selectedCompany);
+  selectedCompanyRef.current = selectedCompany;
 
   const companyUserRef = useRef(companyUser);
   companyUserRef.current = companyUser;
-
-  const editingCompanyRef = useRef(editingCompany);
-  editingCompanyRef.current = editingCompany;
 
   const companyToDeleteRef = useRef(companyToDelete);
   companyToDeleteRef.current = companyToDelete;
@@ -87,7 +80,7 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   deleteWarningRef.current = deleteWarning;
 
   // ============================================================================
-  // Effets
+  // Chargement utilisateur compagnie
   // ============================================================================
 
   const loadCompanyUser = useCallback(async (companyId: string) => {
@@ -98,20 +91,20 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     setIsLoadingUser(false);
   }, []);
 
+  // Charger l'utilisateur quand le dialog s'ouvre sur une compagnie existante
   useEffect(() => {
-    if (viewingCompany) {
-      void loadCompanyUser(viewingCompany.id);
+    if (isDialogOpen && selectedCompany) {
+      void loadCompanyUser(selectedCompany.id);
     } else {
       setCompanyUser(null);
     }
-  }, [viewingCompany, loadCompanyUser]);
+  }, [isDialogOpen, selectedCompany, loadCompanyUser]);
 
   // ============================================================================
   // Données filtrées + triées
   // ============================================================================
 
   const filteredCompanies = useMemo(() => {
-    // Filtre recherche
     const query = searchQuery.trim();
     const filtered = query
       ? companies.filter(
@@ -122,14 +115,12 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
         )
       : companies;
 
-    // Tri par nom
     return [...filtered].sort((a, b) => {
       const cmp = a.name.localeCompare(b.name, 'fr');
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [searchQuery, companies, sortDir]);
 
-  // Toggle direction
   const toggleSortDir = useCallback(() => {
     setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
   }, []);
@@ -139,19 +130,22 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   // ============================================================================
 
   const handleCreate = useCallback(() => {
-    setEditingCompany(null);
+    setSelectedCompany(null);
     setFormError(null);
-    setIsFormDialogOpen(true);
+    setIsDialogOpen(true);
   }, []);
 
   const handleEdit = useCallback((company: CompanyWithShowsCount) => {
-    setEditingCompany(company);
+    setSelectedCompany(company);
     setFormError(null);
-    setIsFormDialogOpen(true);
+    setIsDialogOpen(true);
   }, []);
 
+  // onView ouvre le même dialog que onEdit
   const handleView = useCallback((company: CompanyWithShowsCount) => {
-    setViewingCompany(company);
+    setSelectedCompany(company);
+    setFormError(null);
+    setIsDialogOpen(true);
   }, []);
 
   const handleDeleteClick = useCallback(
@@ -176,6 +170,15 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     },
     [checkUsage]
   );
+
+  // Suppression depuis le footer du dialog unifié
+  const handleDeleteFromDialog = useCallback(async () => {
+    const current = selectedCompanyRef.current;
+    if (!current) return;
+    // Fermer le dialog avant d'ouvrir la confirmation
+    setIsDialogOpen(false);
+    await handleDeleteClick(current);
+  }, [handleDeleteClick]);
 
   const handleViewShows = useCallback(
     (companyName: string) => {
@@ -207,11 +210,11 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   // Handlers formulaire
   // ============================================================================
 
-  const handleFormDialogChange = useCallback((open: boolean) => {
-    setIsFormDialogOpen(open);
+  const handleDialogChange = useCallback((open: boolean) => {
+    setIsDialogOpen(open);
     if (!open) {
       setFormError(null);
-      setEditingCompany(null);
+      setSelectedCompany(null);
     }
   }, []);
 
@@ -220,13 +223,13 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
       setIsSubmitting(true);
       setFormError(null);
 
-      const currentEditing = editingCompanyRef.current;
+      const currentSelected = selectedCompanyRef.current;
 
-      if (isEditing && currentEditing) {
-        const result = await update(currentEditing.id, formData);
+      if (isEditing && currentSelected) {
+        const result = await update(currentSelected.id, formData);
         if (result.success) {
-          setIsFormDialogOpen(false);
-          setEditingCompany(null);
+          setIsDialogOpen(false);
+          setSelectedCompany(null);
           toast.success('Compagnie modifiée avec succès');
         } else {
           setFormError(result.error || 'Erreur lors de la mise à jour');
@@ -235,7 +238,7 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
       } else {
         const result = await create(formData as CompanyInsert);
         if (result.success) {
-          setIsFormDialogOpen(false);
+          setIsDialogOpen(false);
           toast.success('Compagnie créée avec succès');
         } else {
           setFormError(result.error || 'Erreur lors de la création');
@@ -249,32 +252,8 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   );
 
   // ============================================================================
-  // Handlers view dialog
+  // Handlers suppression
   // ============================================================================
-
-  const handleViewToEdit = useCallback(() => {
-    const current = viewingCompanyRef.current;
-    if (current) {
-      setViewingCompany(null);
-      setTimeout(() => {
-        setEditingCompany(current);
-        setFormError(null);
-        setIsFormDialogOpen(true);
-      }, 100);
-    }
-  }, []);
-
-  const handleViewToDelete = useCallback(async () => {
-    const current = viewingCompanyRef.current;
-    if (current) {
-      setViewingCompany(null);
-      await handleDeleteClick(current);
-    }
-  }, [handleDeleteClick]);
-
-  const closeViewDialog = useCallback(() => {
-    setViewingCompany(null);
-  }, []);
 
   const closeDeleteDialog = useCallback(() => {
     setCompanyToDelete(null);
@@ -294,7 +273,7 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
   }, []);
 
   const handleUserCreated = useCallback(() => {
-    const current = viewingCompanyRef.current;
+    const current = selectedCompanyRef.current;
     if (current) {
       void loadCompanyUser(current.id);
       setCompanyHasUser(current.id, true);
@@ -344,24 +323,20 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
   const handleChangeUser = useCallback(async () => {
     const currentUser = companyUserRef.current;
-    const currentCompany = viewingCompanyRef.current;
+    const currentCompany = selectedCompanyRef.current;
     if (!currentUser || !currentCompany) return;
     await unlinkCompanyUser(currentUser.id, currentCompany.id, true);
   }, [unlinkCompanyUser]);
 
-  const handleUnlinkUser = useCallback(async () => {
+  const handleUnlinkUser = useCallback(() => {
+    setIsUnlinkConfirmOpen(true);
+  }, []);
+
+  const handleConfirmUnlink = useCallback(async () => {
     const currentUser = companyUserRef.current;
-    const currentCompany = viewingCompanyRef.current;
+    const currentCompany = selectedCompanyRef.current;
     if (!currentUser || !currentCompany) return;
-
-    if (
-      !window.confirm(
-        `Êtes-vous sûr de vouloir retirer l'accès de ${currentUser.email} à cette compagnie ?`
-      )
-    ) {
-      return;
-    }
-
+    setIsUnlinkConfirmOpen(false);
     await unlinkCompanyUser(currentUser.id, currentCompany.id, false);
   }, [unlinkCompanyUser]);
 
@@ -417,13 +392,13 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
 
     // États des dialogs
     dialogStates: {
-      isFormDialogOpen,
-      editingCompany,
+      isDialogOpen,
+      selectedCompany,
       companyToDelete,
-      viewingCompany,
       deleteWarning,
       isCreateUserDialogOpen,
       isAssignUserDialogOpen,
+      isUnlinkConfirmOpen,
     },
 
     // Recherche
@@ -434,18 +409,16 @@ export function useCompaniesPage(): UseCompaniesPageReturn {
     handlers,
     userHandlers,
 
-    // Handlers formulaire
-    handleFormDialogChange,
+    // Handlers dialog
+    handleDialogChange,
     handleFormSubmit,
+    handleDeleteFromDialog,
     handleConfirmDelete,
-
-    // Handlers view dialog
-    handleViewToEdit,
-    handleViewToDelete,
-    closeViewDialog,
+    closeDeleteDialog,
+    handleConfirmUnlink,
+    setIsUnlinkConfirmOpen,
 
     // Handlers dialog setters
-    closeDeleteDialog,
     setIsCreateUserDialogOpen,
     setIsAssignUserDialogOpen,
 

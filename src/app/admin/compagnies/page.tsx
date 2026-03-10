@@ -1,16 +1,13 @@
 /**
  * Page admin des compagnies
- * Orchestrateur simplifié après refactorisation
- * Session 107 - Refactorisation (25.97 KB → ~5 KB)
- * S158 - Ajout tri alphabétique + nb spectacles
+ * S160 — Dialog unifié (CompanyDialog remplace CompanyFormDialog + CompanyViewDialog)
  */
 
 'use client';
 
 import { AdminPageHeader, SearchInput, SortToggle, DeleteConfirmDialog } from '@/components/admin';
 import {
-  CompanyFormDialog,
-  CompanyViewDialog,
+  CompanyDialog,
   CreateCompanyUserDialog,
   AssignCompanyUserDialog,
 } from '@/components/admin/compagnies';
@@ -46,18 +43,16 @@ export default function AdminCompagniesPage() {
     handlers,
     userHandlers,
 
-    // Handlers formulaire
-    handleFormDialogChange,
+    // Handlers dialog
+    handleDialogChange,
     handleFormSubmit,
+    handleDeleteFromDialog,
     handleConfirmDelete,
-
-    // Handlers view dialog
-    handleViewToEdit,
-    handleViewToDelete,
-    closeViewDialog,
-
-    // Handlers dialog setters
     closeDeleteDialog,
+    handleConfirmUnlink,
+    setIsUnlinkConfirmOpen,
+
+    // Setters dialogs secondaires
     setIsCreateUserDialogOpen,
     setIsAssignUserDialogOpen,
 
@@ -68,7 +63,6 @@ export default function AdminCompagniesPage() {
     refresh,
   } = useCompaniesPage();
 
-  // État de chargement ou erreur : CompaniesContent gère l'affichage
   if (isLoading || error) {
     return (
       <CompaniesContent
@@ -79,7 +73,6 @@ export default function AdminCompagniesPage() {
         totalCount={totalCount}
         onRefresh={refresh}
         onCreate={handlers.onCreate}
-        onView={handlers.onView}
         onEdit={handlers.onEdit}
         onDelete={handlers.onDelete}
         onViewShows={handlers.onViewShows}
@@ -111,7 +104,6 @@ export default function AdminCompagniesPage() {
             placeholder="Rechercher une compagnie..."
           />
         </div>
-        {/* Tri par nom A→Z / Z→A */}
         <SortToggle
           direction={sortDir}
           onToggle={toggleSortDir}
@@ -128,69 +120,78 @@ export default function AdminCompagniesPage() {
         totalCount={totalCount}
         onRefresh={refresh}
         onCreate={handlers.onCreate}
-        onView={handlers.onView}
         onEdit={handlers.onEdit}
         onDelete={handlers.onDelete}
         onViewShows={handlers.onViewShows}
       />
 
-      {/* === DIALOGS === */}
-
-      <CompanyFormDialog
-        open={dialogStates.isFormDialogOpen}
-        onOpenChange={handleFormDialogChange}
-        editingCompany={dialogStates.editingCompany}
+      {/* === DIALOG UNIFIÉ === */}
+      <CompanyDialog
+        open={dialogStates.isDialogOpen}
+        onOpenChange={handleDialogChange}
+        company={dialogStates.selectedCompany}
         onSubmit={handleFormSubmit}
         isSubmitting={loadingStates.isSubmitting}
         error={formError}
-      />
-
-      <CompanyViewDialog
-        company={dialogStates.viewingCompany}
-        onClose={closeViewDialog}
-        onEdit={handleViewToEdit}
-        onDelete={() => void handleViewToDelete()}
-        showsCount={dialogStates.viewingCompany?.shows_count ?? 0}
-        onViewShows={() =>
-          dialogStates.viewingCompany &&
-          handlers.onViewShows(dialogStates.viewingCompany.name)
+        onDelete={() => void handleDeleteFromDialog()}
+        showsCount={dialogStates.selectedCompany?.shows_count ?? 0}
+        onViewShows={
+          dialogStates.selectedCompany
+            ? () => handlers.onViewShows(dialogStates.selectedCompany!.name)
+            : undefined
         }
         companyUser={companyUser}
         isLoadingUser={loadingStates.isLoadingUser}
         onCreateUser={userHandlers.onCreateUser}
         onAssignUser={userHandlers.onAssignUser}
-        onChangeUser={() => void userHandlers.onChangeUser()}
+        onChangeUser={() => userHandlers.onChangeUser()}
         onUnlinkUser={() => void userHandlers.onUnlinkUser()}
         isProcessing={loadingStates.isProcessingUser}
       />
 
       {/* Dialogue de création d'accès utilisateur */}
-      {dialogStates.viewingCompany && (
+      {dialogStates.selectedCompany && (
         <CreateCompanyUserDialog
           open={dialogStates.isCreateUserDialogOpen}
           onOpenChange={setIsCreateUserDialogOpen}
-          companyId={dialogStates.viewingCompany.id}
-          companyName={dialogStates.viewingCompany.name}
+          companyId={dialogStates.selectedCompany.id}
+          companyName={dialogStates.selectedCompany.name}
           onSuccess={handleUserCreated}
         />
       )}
 
       {/* Dialogue d'assignation d'utilisateur existant */}
-      {dialogStates.viewingCompany && (
+      {dialogStates.selectedCompany && (
         <AssignCompanyUserDialog
           open={dialogStates.isAssignUserDialogOpen}
           onOpenChange={setIsAssignUserDialogOpen}
-          companyId={dialogStates.viewingCompany.id}
-          companyName={dialogStates.viewingCompany.name}
+          companyId={dialogStates.selectedCompany.id}
+          companyName={dialogStates.selectedCompany.name}
           onSuccess={handleUserCreated}
         />
       )}
 
+      {/* Dialogue de confirmation de dissociation utilisateur */}
+      <DeleteConfirmDialog
+        open={dialogStates.isUnlinkConfirmOpen}
+        onOpenChange={(open) => { if (!open) setIsUnlinkConfirmOpen(false); }}
+        onConfirm={() => void handleConfirmUnlink()}
+        title="Retirer l'accès ?"
+        description={
+          <span>
+            L&apos;accès de{' '}
+            <strong className="text-foreground">{companyUser?.email}</strong>{' '}
+            à cette compagnie sera supprimé. La compagnie ne pourra plus se connecter à la plateforme.
+          </span>
+        }
+        confirmText="Retirer l'accès"
+        cancelText="Annuler"
+      />
+
+      {/* Dialogue de confirmation de suppression */}
       <DeleteConfirmDialog
         open={!!dialogStates.companyToDelete}
-        onOpenChange={(open) => {
-          if (!open) closeDeleteDialog();
-        }}
+        onOpenChange={(open) => { if (!open) closeDeleteDialog(); }}
         onConfirm={() => void handleConfirmDelete()}
         title="Supprimer cette compagnie ?"
         description={

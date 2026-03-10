@@ -9,12 +9,11 @@ import { memo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, Eye, Theater, CheckCircle, XCircle } from 'lucide-react';
+import { Pencil, Trash2, Theater, CheckCircle, XCircle } from 'lucide-react';
 import type { CompaniesListProps } from '../types';
 
 export const CompaniesCards = memo(function CompaniesCards({
   companies,
-  onView,
   onEdit,
   onDelete,
   onViewShows,
@@ -35,10 +34,10 @@ export const CompaniesCards = memo(function CompaniesCards({
     (e: React.KeyboardEvent, company: typeof companies[0]) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        onView(company);
+        onEdit(company);
       }
     },
-    [onView]
+    [onEdit]
   );
 
   if (companies.length === 0) {
@@ -56,9 +55,9 @@ export const CompaniesCards = memo(function CompaniesCards({
                   role="button"
                   tabIndex={0}
                   className="font-semibold cursor-pointer hover:text-derviche hover:underline"
-                  onClick={() => onView(company)}
+                  onClick={() => onEdit(company)}
                   onKeyDown={(e) => handleNameKeyDown(e, company)}
-                  aria-label={`Voir les détails de ${company.name}`}
+                  aria-label={`Modifier ${company.name}`}
                 >
                   {company.name}
                 </h3>
@@ -98,16 +97,6 @@ export const CompaniesCards = memo(function CompaniesCards({
               <p className="text-sm text-muted-foreground">{company.contact_name}</p>
             )}
             <div className="flex items-center gap-2 pt-2 border-t">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1"
-                onClick={() => onView(company)}
-                aria-label={`Voir ${company.name}`}
-              >
-                <Eye className="w-4 h-4 mr-2" aria-hidden="true" />
-                Voir
-              </Button>
               <Button
                 variant="ghost"
                 size="sm"

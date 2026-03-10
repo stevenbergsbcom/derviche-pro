@@ -23,7 +23,6 @@ export function CompaniesContent({
   // totalCount est passé mais non utilisé ici (utilisé dans page.tsx)
   onRefresh,
   onCreate,
-  onView,
   onEdit,
   onDelete,
   onViewShows,
@@ -82,7 +81,6 @@ export function CompaniesContent({
       ) : (
         <CompaniesTable
           companies={companies}
-          onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
           onViewShows={onViewShows}
@@ -101,7 +99,6 @@ export function CompaniesContent({
       ) : (
         <CompaniesCards
           companies={companies}
-          onView={onView}
           onEdit={onEdit}
           onDelete={onDelete}
           onViewShows={onViewShows}

@@ -16,12 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Pencil, Trash2, Eye, Theater, CheckCircle, XCircle } from 'lucide-react';
+import { Pencil, Trash2, Theater, CheckCircle, XCircle } from 'lucide-react';
 import type { CompaniesListProps } from '../types';
 
 export const CompaniesTable = memo(function CompaniesTable({
   companies,
-  onView,
   onEdit,
   onDelete,
   onViewShows,
@@ -42,10 +41,10 @@ export const CompaniesTable = memo(function CompaniesTable({
     (e: React.KeyboardEvent, company: typeof companies[0]) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        onView(company);
+        onEdit(company);
       }
     },
-    [onView]
+    [onEdit]
   );
 
   if (companies.length === 0) {
@@ -70,10 +69,10 @@ export const CompaniesTable = memo(function CompaniesTable({
             <TableRow key={company.id}>
               <TableCell className="font-medium">
                 <button
-                  onClick={() => onView(company)}
+                  onClick={() => onEdit(company)}
                   onKeyDown={(e) => handleNameKeyDown(e, company)}
                   className="cursor-pointer hover:text-derviche hover:underline text-left"
-                  aria-label={`Voir les détails de ${company.name}`}
+                  aria-label={`Modifier ${company.name}`}
                 >
                   {company.name}
                 </button>
@@ -111,15 +110,6 @@ export const CompaniesTable = memo(function CompaniesTable({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex items-center justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => onView(company)}
-                    aria-label={`Voir ${company.name}`}
-                  >
-                    <Eye className="w-4 h-4" aria-hidden="true" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
