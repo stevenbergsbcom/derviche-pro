@@ -9,6 +9,7 @@
  * "Déjà envoyé le XX/XX" dans l'UI du CheckinDrawer.
  *
  * Sécurité :
+ * - Rate limiting : 20 req / 1h par IP (anti-spam emails)
  * - Authentification requise
  * - Rôles autorisés : admin, super-admin, externe, company
  * - Externe : uniquement les réservations de ses spectacles assignés (hosted_by_id)
@@ -24,6 +25,8 @@ import { isSafeUrl } from '@/lib/services/email/html-helpers';
 import { formatDuration } from '@/lib/services/email/builders/simple';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
 import type { UserRole } from '@/types/database';
 import type { CheckinFollowupTemplateKey } from '@/types/email-templates';
@@ -92,6 +95,17 @@ interface ReservationForFollowup {
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // 0. Rate limiting (anti-spam emails)
+    const rl = await checkRateLimit('emails', request);
+    if (!rl.success) {
+      void logSystem('rate_limit_blocked', 'warning', {
+        route: '/api/emails/send-checkin-followup',
+        identifier: rl.identifier,
+        limit: rl.limit,
+      });
+      return rateLimitResponse(rl);
+    }
+
     // 1. Valider le body
     const rawBody: unknown = await request.json();
     const parseResult = schema.safeParse(rawBody);
