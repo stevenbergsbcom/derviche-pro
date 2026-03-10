@@ -18,7 +18,7 @@ export function RequiredFieldsSection({ form, isSubmitting }: SectionProps) {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      <h3 className="text-base font-semibold text-muted-foreground uppercase tracking-wide">
         Informations obligatoires
       </h3>
 

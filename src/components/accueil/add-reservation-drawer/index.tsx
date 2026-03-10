@@ -169,7 +169,7 @@ export function AddReservationDrawer({
 
             {/* Étape 3 : Formulaire */}
             {state.step === 'form' && (
-              <form onSubmit={onFormSubmit}>
+              <form id="add-reservation-form" onSubmit={onFormSubmit}>
                 <div className="p-5 space-y-5">
                   <RequiredFieldsSection form={form} isSubmitting={state.isSubmitting} />
                   <Separator />
@@ -190,7 +190,7 @@ export function AddReservationDrawer({
                 </div>
 
                 {/* Notifications */}
-                <div className="px-5 pb-2">
+                <div className="px-5 pb-5">
                   <NotificationSwitches
                     value={notifOptions}
                     onChange={setNotifOptions}
@@ -198,8 +198,6 @@ export function AddReservationDrawer({
                     label="Notifier le professionnel"
                   />
                 </div>
-
-                <FormFooter isSubmitting={state.isSubmitting} />
               </form>
             )}
 
@@ -236,6 +234,14 @@ export function AddReservationDrawer({
               </div>
             )}
           </div>
+
+          {/* Footer fixe — hors du scroll, visible uniquement à l'étape formulaire */}
+          {state.step === 'form' && (
+            <FormFooter
+              isSubmitting={state.isSubmitting}
+              formId="add-reservation-form"
+            />
+          )}
         </DrawerContent>
       </Drawer>
 

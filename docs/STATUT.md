@@ -565,3 +565,13 @@ PaginationControls
 Aucune.
 
 > Audit Cursor S167 : 9.4/10 global → 9.5/10 après fix constants.ts. Zéro critique. Seul point signalé : alerte Cursor sur suppression règle 24h → documentée dans JSDoc.
+
+### Bugfixes post-audit (avant merge final)
+- **Bug 1** `pro-reservations/index.ts` : `slot_date`/`slot_time` absentes du SELECT → ajoutées dans `PRO_RESERVATION_SELECT` (tri Supabase nécessite les colonnes dans le SELECT)
+- **Bug 2** `ProReservationCard.tsx` : `isPast` basé sur `isCancellable()` qui retourne `false` sur `no_show` quelle que soit la date → nouvelle fonction pure `isSlotPast()` basée sur la date réelle, indépendante du statut
+
+### Points techniques retenus (S167)
+- Supabase `.order()` nécessite que les colonnes soient présentes dans le SELECT — même pour les colonnes dénormalisées
+- `isPast` ne doit jamais dépendre d'une fonction qui court-circuite sur le statut (`isCancellable`) — toujours calculer depuis la date réelle
+- shadcn/ui `useSidebar()` expose `isMobile` + `setOpenMobile` → pattern standard pour fermer la sidebar mobile sur navigation
+- `getMobilePageTitle(pathname)` : fonction pure dans le layout, pas de hook nécessaire — re-render naturel au changement de `pathname`
