@@ -217,7 +217,7 @@ export type Database = {
         }
         Insert: {
           city?: string | null
-          contact_email: string
+          contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -231,7 +231,7 @@ export type Database = {
         }
         Update: {
           city?: string | null
-          contact_email?: string
+          contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string

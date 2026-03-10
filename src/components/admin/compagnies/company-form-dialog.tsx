@@ -64,7 +64,7 @@ function isValidEmail(email: string): boolean {
 function sanitizeFormData(data: CompanyFormData): CompanyFormData {
     return {
         name: data.name.trim(),
-        contact_email: data.contact_email.trim(),
+        contact_email: data.contact_email?.trim() || null,
         description: data.description?.trim() || null,
         city: data.city?.trim() || null,
         contact_name: data.contact_name?.trim() || null,
@@ -161,7 +161,7 @@ export function CompanyFormDialog({
         const nameError = validateField('name', formData.name);
         if (nameError) errors.name = nameError;
         
-        const emailError = validateField('contact_email', formData.contact_email);
+        const emailError = validateField('contact_email', formData.contact_email ?? '');
         if (emailError) errors.contact_email = emailError;
         
         setValidationErrors(errors);
@@ -177,7 +177,7 @@ export function CompanyFormDialog({
         await onSubmit(cleanedData, editingCompany !== null);
     };
 
-    const isValid = formData.name.trim() && formData.contact_email.trim() && isValidEmail(formData.contact_email.trim());
+    const isValid = formData.name.trim() && (formData.contact_email ?? '').trim() && isValidEmail((formData.contact_email ?? '').trim());
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => {

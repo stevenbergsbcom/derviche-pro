@@ -77,7 +77,7 @@ export interface AppLogInsert {
 export interface CompanyRow {
   id: string;
   name: string;
-  contact_email: string;
+  contact_email: string | null;
   contact_phone: string | null;
   website: string | null;
   description: string | null;
@@ -94,7 +94,7 @@ export interface CompanyRow {
 /** Données pour créer une nouvelle compagnie */
 export interface CompanyInsert {
   name: string;
-  contact_email: string;
+  contact_email?: string | null;
   contact_phone?: string | null;
   website?: string | null;
   description?: string | null;
@@ -107,7 +107,7 @@ export interface CompanyInsert {
 /** Données pour mettre à jour une compagnie */
 export interface CompanyUpdate {
   name?: string;
-  contact_email?: string;
+  contact_email?: string | null;
   contact_phone?: string | null;
   website?: string | null;
   description?: string | null;

@@ -47,7 +47,7 @@ export function CompanyQuickCreateDialog({
     };
 
     const handleSubmit = async () => {
-        if (!formData.name.trim() || !formData.email.trim()) {
+        if (!formData.name.trim()) {
             return;
         }
 
@@ -80,7 +80,7 @@ export function CompanyQuickCreateDialog({
         }
     };
 
-    const isValid = formData.name.trim() && formData.email.trim();
+    const isValid = formData.name.trim();
 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
@@ -115,10 +115,10 @@ export function CompanyQuickCreateDialog({
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="newCompanyEmail">
-                            Email contact <span className="text-destructive">*</span>
+                            Email contact
                         </Label>
                         <p className="text-xs text-muted-foreground">
-                            Cet email sera utilisé par la compagnie pour se connecter à la plateforme.
+                            Email de contact de la compagnie. Pour lui donner accès à la plateforme, rendez-vous dans la gestion des compagnies.
                         </p>
                         <Input
                             id="newCompanyEmail"

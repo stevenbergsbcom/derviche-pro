@@ -62,7 +62,7 @@ export type SpectacleSortValue =
 export interface CompanyOption {
   id: string;
   name: string;
-  contactEmail: string;
+  contactEmail: string | null;
   contactPhone: string | null;
 }
 
