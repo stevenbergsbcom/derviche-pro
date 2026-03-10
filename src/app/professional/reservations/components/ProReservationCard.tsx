@@ -74,6 +74,20 @@ function isCancellable(reservation: ProReservation): boolean {
 }
 
 /**
+ * Retourne true si la date/heure du slot est dépassée (maintenant > slotDateTime).
+ * Calcul indépendant du statut — évite le faux positif sur les réservations
+ * no_show avec une date future (isCancellable() retourne false sur no_show
+ * quel que soit la date, ce qui faussait isPast).
+ */
+function isSlotPast(reservation: ProReservation): boolean {
+  const rawTime    = reservation.slot.time ?? '00:00:00';
+  const normalTime = rawTime.length === 5 ? `${rawTime}:00` : rawTime;
+  const slotDateTime = new Date(`${reservation.slot.date}T${normalTime}`);
+  if (isNaN(slotDateTime.getTime())) return false;
+  return slotDateTime <= new Date();
+}
+
+/**
  * Retourne un label d'urgence si la représentation est dans moins de 24h, null sinon.
  * Ex : "Dans 45 min", "Dans 3h", "Dans 12h30"
  * Uniquement pour les réservations confirmées futures.
@@ -142,10 +156,12 @@ export function ProReservationCard({
   const canCancel = isCancellable(reservation);
   // Peut changer de créneau si la résa est confirmée et future
   const canChangeSlot = reservation.status === 'confirmed' && isCancellable(reservation);
-  // Représentation passée : confirmée ou no_show mais date dépassée
+  // Représentation passée : date dépassée ET non annulée
+  // Basé sur isSlotPast() (date réelle) et non isCancellable() (statut-dépendant)
+  // — évite le faux positif sur no_show avec date future
   const isPast =
     reservation.status !== 'cancelled' &&
-    !isCancellable(reservation);
+    isSlotPast(reservation);
   // Badge d'urgence : affiché si la représentation est dans moins de 24h
   const urgencyLabel = getUrgencyLabel(reservation);
 
