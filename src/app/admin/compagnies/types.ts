@@ -1,11 +1,15 @@
 /**
  * Types locaux pour la page admin/compagnies
  * Session 107 - Refactorisation
+ * S158 - Ajout types de tri
  */
 
 import type { CompanyWithShowsCount } from '@/lib/services/companies';
 import type { ManagedUser } from '@/lib/services/internal-users';
 import type { CompanyFormData } from '@/components/admin/compagnies';
+import type { SortDirection } from '@/components/admin';
+
+
 
 // ============================================================================
 // Types pour les réponses API
@@ -124,6 +128,10 @@ export interface UseCompaniesPageReturn {
   totalCount: number;
   /** Utilisateur lié à la compagnie visualisée */
   companyUser: ManagedUser | null;
+
+  // Tri
+  sortDir: SortDirection;
+  toggleSortDir: () => void;
 
   // États de chargement
   /** Chargement initial des données */

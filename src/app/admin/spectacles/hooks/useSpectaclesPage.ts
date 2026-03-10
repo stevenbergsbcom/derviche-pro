@@ -1,6 +1,7 @@
 /**
  * Hook principal pour la page admin/spectacles
  * Gère tous les états, effets et handlers
+ * S158 - Ajout tri par select
  */
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
@@ -25,7 +26,7 @@ import type { ShowWithRelations } from '@/lib/services/shows';
 import type { SpectacleFormData } from '@/components/admin/spectacles/spectacle-form-dialog';
 
 // Types et helpers locaux
-import type { ShowForDisplay, ViewMode } from '../types';
+import type { ShowForDisplay, ViewMode, SpectacleSortValue } from '../types';
 import { DEFAULT_VIEW_MODE, REOPEN_VIEW_DELAY } from '../constants';
 import {
   transformShowsToDisplay,
@@ -37,6 +38,31 @@ import {
 
 // Hook de copie
 import { useCopyLink } from './useCopyLink';
+
+// ============================================================================
+// Helpers de tri
+// ============================================================================
+
+function sortShows(shows: ShowForDisplay[], sortValue: SpectacleSortValue): ShowForDisplay[] {
+  return [...shows].sort((a, b) => {
+    switch (sortValue) {
+      case 'title_asc':
+        return a.title.localeCompare(b.title, 'fr');
+      case 'title_desc':
+        return b.title.localeCompare(a.title, 'fr');
+      case 'companyName_asc':
+        return a.companyName.localeCompare(b.companyName, 'fr');
+      case 'companyName_desc':
+        return b.companyName.localeCompare(a.companyName, 'fr');
+      case 'representationsCount_desc':
+        return b.representationsCount - a.representationsCount;
+      case 'representationsCount_asc':
+        return a.representationsCount - b.representationsCount;
+      default:
+        return 0;
+    }
+  });
+}
 
 export function useSpectaclesPage() {
   const router = useRouter();
@@ -114,6 +140,9 @@ export function useSpectaclesPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const urlSearchParam = searchParams.get('search') || '';
 
+  // Tri
+  const [sortValue, setSortValue] = useState<SpectacleSortValue>('title_asc');
+
   // Mode d'affichage
   const [viewMode, setViewMode] = useState<ViewMode>(DEFAULT_VIEW_MODE);
 
@@ -167,7 +196,7 @@ export function useSpectaclesPage() {
     [rawInternalUsers]
   );
 
-  // Filtrage des spectacles
+  // Filtrage + tri des spectacles
   const filteredShows = useMemo(() => {
     // 1. Filtrer par assignations si externe
     let filtered = shows;
@@ -176,20 +205,22 @@ export function useSpectaclesPage() {
     }
 
     // 2. Filtrer par recherche
-    if (!searchQuery.trim()) {
-      return filtered;
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim();
+      filtered = filtered.filter(
+        (show) =>
+          searchMatch(show.title, query) ||
+          searchMatch(show.companyName, query) ||
+          show.categories.some((cat) => searchMatch(cat, query))
+      );
     }
-    const query = searchQuery.trim();
-    return filtered.filter(
-      (show) =>
-        searchMatch(show.title, query) ||
-        searchMatch(show.companyName, query) ||
-        show.categories.some((cat) => searchMatch(cat, query))
-    );
-  }, [searchQuery, shows, isExterne, assignedShowIds]);
+
+    // 3. Tri
+    return sortShows(filtered, sortValue);
+  }, [searchQuery, shows, isExterne, assignedShowIds, sortValue]);
 
   // États dérivés
-  const hasActiveFilters = searchQuery.trim() !== '';
+  const hasActiveFilters = searchQuery.trim() !== '' || sortValue !== 'title_asc';
   const isLoading =
     isLoadingShows ||
     isLoadingCategories ||
@@ -204,17 +235,14 @@ export function useSpectaclesPage() {
   // Effets
   // ============================================================================
 
-  // Fix d'hydratation
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Synchroniser la recherche avec le paramètre URL
   useEffect(() => {
     setSearchQuery(urlSearchParam);
   }, [urlSearchParam]);
 
-  // Rouvrir la vue après édition
   useEffect(() => {
     if (showIdToReopen && !isFormDialogOpen) {
       const timeout = setTimeout(() => {
@@ -235,7 +263,6 @@ export function useSpectaclesPage() {
   // Handlers
   // ============================================================================
 
-  // Refetch toutes les données (pour le bouton "Réessayer")
   const handleRefetch = useCallback(async () => {
     await Promise.all([
       refreshShows(),
@@ -248,8 +275,9 @@ export function useSpectaclesPage() {
 
   const resetFilters = useCallback(() => {
     setSearchQuery('');
+    setSortValue('title_asc');
     router.push('/admin/spectacles');
-  }, [router]);
+  }, [router, setSortValue]);
 
   const handleCreate = useCallback(() => {
     setOperationError(null);
@@ -295,10 +323,7 @@ export function useSpectaclesPage() {
 
       const usage = await checkShowUsage(show.id);
 
-      // Vérifier que c'est toujours le même spectacle
-      if (pendingDeleteCheckRef.current !== show.id) {
-        return;
-      }
+      if (pendingDeleteCheckRef.current !== show.id) return;
 
       if (usage.error) {
         setDeleteWarning(
@@ -321,7 +346,6 @@ export function useSpectaclesPage() {
 
     setIsDeleting(true);
     try {
-      // Supprimer l'image associée si elle existe
       const rawShow = rawShows.find((s) => s.id === showToDelete.id);
       if (rawShow?.image_url) {
         await deleteShowImage(rawShow.image_url);
@@ -369,17 +393,10 @@ export function useSpectaclesPage() {
       let finalImageUrl: string | null = formData.imageUrl;
 
       if (isEditing && editingShow) {
-        // Mode édition
         if (formData.imageFile) {
           const oldImageUrl = editingShowRaw?.image_url || null;
-          const uploadResult = await replaceShowImage(
-            formData.imageFile,
-            editingShow.id,
-            oldImageUrl
-          );
-          if (!uploadResult.success) {
-            throw new Error(uploadResult.error || "Erreur lors de l'upload de l'image");
-          }
+          const uploadResult = await replaceShowImage(formData.imageFile, editingShow.id, oldImageUrl);
+          if (!uploadResult.success) throw new Error(uploadResult.error || "Erreur lors de l'upload de l'image");
           finalImageUrl = uploadResult.url || null;
         } else if (formData.imageRemoved && editingShowRaw?.image_url) {
           await deleteShowImage(editingShowRaw.image_url);
@@ -404,9 +421,7 @@ export function useSpectaclesPage() {
           folder_url: formData.folderUrl?.trim() || null,
           teaser_url: formData.teaserUrl?.trim() || null,
           captation_available: formData.captationAvailable,
-          captation_url: formData.captationAvailable
-            ? formData.captationUrl?.trim() || null
-            : null,
+          captation_url: formData.captationAvailable ? formData.captationUrl?.trim() || null : null,
         };
 
         const result = await updateShow(editingShow.id, {
@@ -414,12 +429,8 @@ export function useSpectaclesPage() {
           category_ids: formData.categoryIds,
           target_audience_ids: formData.targetAudienceIds,
         });
-
-        if (result.error) {
-          throw new Error(result.error);
-        }
+        if (result.error) throw new Error(result.error);
       } else {
-        // Mode création
         const showData = {
           slug: formData.slug || generateSlug(formData.title),
           title: formData.title.trim(),
@@ -438,9 +449,7 @@ export function useSpectaclesPage() {
           folder_url: formData.folderUrl?.trim() || null,
           teaser_url: formData.teaserUrl?.trim() || null,
           captation_available: formData.captationAvailable,
-          captation_url: formData.captationAvailable
-            ? formData.captationUrl?.trim() || null
-            : null,
+          captation_url: formData.captationAvailable ? formData.captationUrl?.trim() || null : null,
         };
 
         const createResult = await createShow({
@@ -461,9 +470,7 @@ export function useSpectaclesPage() {
             setIsFormDialogOpen(false);
             setEditingShow(null);
             setEditingShowRaw(null);
-            setOperationError(
-              `Le spectacle a été créé, mais l'image n'a pas pu être uploadée: ${uploadResult.error || 'Erreur inconnue'}`
-            );
+            setOperationError(`Le spectacle a été créé, mais l'image n'a pas pu être uploadée: ${uploadResult.error || 'Erreur inconnue'}`);
             return;
           }
 
@@ -471,9 +478,7 @@ export function useSpectaclesPage() {
             setIsFormDialogOpen(false);
             setEditingShow(null);
             setEditingShowRaw(null);
-            setOperationError(
-              "Le spectacle a été créé, mais l'URL de l'image n'a pas été générée. Vous pouvez réessayer en modifiant le spectacle."
-            );
+            setOperationError("Le spectacle a été créé, mais l'URL de l'image n'a pas été générée. Vous pouvez réessayer en modifiant le spectacle.");
             return;
           }
 
@@ -487,9 +492,7 @@ export function useSpectaclesPage() {
             setIsFormDialogOpen(false);
             setEditingShow(null);
             setEditingShowRaw(null);
-            setOperationError(
-              "Le spectacle a été créé, mais l'image n'a pas pu être liée. Vous pouvez la réajouter en modifiant le spectacle."
-            );
+            setOperationError("Le spectacle a été créé, mais l'image n'a pas pu être liée. Vous pouvez la réajouter en modifiant le spectacle.");
             return;
           }
         }
@@ -502,97 +505,40 @@ export function useSpectaclesPage() {
     [editingShow, editingShowRaw, createShow, updateShow, generateSlug]
   );
 
-  // Handlers catégories
-  const handleAddCategory = useCallback(
-    async (categoryName: string) => {
-      const result = await createCategory(categoryName);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-    },
-    [createCategory]
-  );
+  const handleAddCategory = useCallback(async (categoryName: string) => {
+    const result = await createCategory(categoryName);
+    if (result.error) throw new Error(result.error);
+  }, [createCategory]);
 
-  const handleRemoveCategoryById = useCallback(
-    async (categoryId: string) => {
-      const category = rawCategories.find((c) => c.id === categoryId);
-      const categoryName = category?.name || 'cette catégorie';
+  const handleRemoveCategoryById = useCallback(async (categoryId: string) => {
+    const category = rawCategories.find((c) => c.id === categoryId);
+    const categoryName = category?.name || 'cette catégorie';
+    const usage = await checkCategoryUsage(categoryId);
+    if (usage.error) throw new Error(`Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`);
+    if (usage.used) throw new Error(`Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`);
+    const result = await removeCategory(categoryId);
+    if (result.error) throw new Error(result.error);
+  }, [rawCategories, checkCategoryUsage, removeCategory]);
 
-      const usage = await checkCategoryUsage(categoryId);
+  const handleAddTargetAudience = useCallback(async (name: string) => {
+    const result = await createTargetAudience(name);
+    if (result.error) throw new Error(result.error);
+  }, [createTargetAudience]);
 
-      if (usage.error) {
-        throw new Error(
-          `Impossible de vérifier l'utilisation de "${categoryName}". Veuillez réessayer.`
-        );
-      }
+  const handleRemoveTargetAudience = useCallback(async (id: string) => {
+    const audienceName = rawTargetAudiences.find((ta) => ta.id === id)?.name || 'ce public cible';
+    const usage = await checkTargetAudienceUsage(id);
+    if (usage.error) throw new Error(`Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`);
+    if (usage.used) throw new Error(`Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`);
+    const result = await removeTargetAudience(id);
+    if (result.error) throw new Error(result.error);
+  }, [rawTargetAudiences, checkTargetAudienceUsage, removeTargetAudience]);
 
-      if (usage.used) {
-        throw new Error(
-          `Impossible de supprimer "${categoryName}" : cette catégorie est utilisée par ${usage.count} spectacle(s).`
-        );
-      }
-
-      const result = await removeCategory(categoryId);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-    },
-    [rawCategories, checkCategoryUsage, removeCategory]
-  );
-
-  // Handlers publics cibles
-  const handleAddTargetAudience = useCallback(
-    async (name: string) => {
-      const result = await createTargetAudience(name);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-    },
-    [createTargetAudience]
-  );
-
-  const handleRemoveTargetAudience = useCallback(
-    async (id: string) => {
-      const audienceName = rawTargetAudiences.find((ta) => ta.id === id)?.name || 'ce public cible';
-
-      const usage = await checkTargetAudienceUsage(id);
-
-      if (usage.error) {
-        throw new Error(
-          `Impossible de vérifier l'utilisation de "${audienceName}". Veuillez réessayer.`
-        );
-      }
-
-      if (usage.used) {
-        throw new Error(
-          `Impossible de supprimer "${audienceName}" : ce public cible est utilisé par ${usage.count} spectacle(s).`
-        );
-      }
-
-      const result = await removeTargetAudience(id);
-      if (result.error) {
-        throw new Error(result.error);
-      }
-    },
-    [rawTargetAudiences, checkTargetAudienceUsage, removeTargetAudience]
-  );
-
-  // Handler création compagnie
-  const handleCreateCompany = useCallback(
-    async (data: { name: string; email: string }): Promise<string> => {
-      const result = await createCompany({
-        name: data.name.trim(),
-        contact_email: data.email.trim(),
-      });
-
-      if (result.error || !result.data) {
-        throw new Error(result.error || 'Erreur lors de la création de la compagnie');
-      }
-
-      return result.data.id;
-    },
-    [createCompany]
-  );
+  const handleCreateCompany = useCallback(async (data: { name: string; email: string }): Promise<string> => {
+    const result = await createCompany({ name: data.name.trim(), contact_email: data.email.trim() });
+    if (result.error || !result.data) throw new Error(result.error || 'Erreur lors de la création de la compagnie');
+    return result.data.id;
+  }, [createCompany]);
 
   const handleCompanyCreated = useCallback((companyId: string) => {
     setNewlyCreatedCompanyId(companyId);
@@ -602,33 +548,22 @@ export function useSpectaclesPage() {
     setNewlyCreatedCompanyId(null);
   }, []);
 
-  // Navigation
-  const handleNavigateToRepresentations = useCallback(
-    (showId: string) => {
-      router.push(`/admin/spectacles/${showId}/representations`);
-    },
-    [router]
-  );
+  const handleNavigateToRepresentations = useCallback((showId: string) => {
+    router.push(`/admin/spectacles/${showId}/representations`);
+  }, [router]);
 
-  // Handlers modales - stables pour éviter les re-renders
   const handleFormDialogOpenChange = useCallback((open: boolean) => {
     setIsFormDialogOpen(open);
-    if (!open) {
-      setEditingShow(null);
-      setEditingShowRaw(null);
-    }
+    if (!open) { setEditingShow(null); setEditingShowRaw(null); }
   }, []);
 
-  const handleDeleteDialogOpenChange = useCallback(
-    (open: boolean) => {
-      if (!open && !isDeleting) {
-        setShowToDelete(null);
-        setDeleteWarning(null);
-        pendingDeleteCheckRef.current = null;
-      }
-    },
-    [isDeleting]
-  );
+  const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
+    if (!open && !isDeleting) {
+      setShowToDelete(null);
+      setDeleteWarning(null);
+      pendingDeleteCheckRef.current = null;
+    }
+  }, [isDeleting]);
 
   const handleDeleteFromForm = useCallback(() => {
     if (editingShow) {
@@ -637,34 +572,19 @@ export function useSpectaclesPage() {
     }
   }, [editingShow, handleDeleteClick]);
 
-  const clearOperationError = useCallback(() => {
-    setOperationError(null);
-  }, []);
-
-  // Handlers stables pour l'ouverture des modales (P2 - Performance)
-  const handleOpenCategoriesManager = useCallback(() => {
-    setIsCategoriesDialogOpen(true);
-  }, []);
-
-  const handleOpenTargetAudiencesManager = useCallback(() => {
-    setIsAudiencesDialogOpen(true);
-  }, []);
-
-  const handleOpenNewCompanyDialog = useCallback(() => {
-    setIsNewCompanyDialogOpen(true);
-  }, []);
+  const clearOperationError = useCallback(() => { setOperationError(null); }, []);
+  const handleOpenCategoriesManager = useCallback(() => { setIsCategoriesDialogOpen(true); }, []);
+  const handleOpenTargetAudiencesManager = useCallback(() => { setIsAudiencesDialogOpen(true); }, []);
+  const handleOpenNewCompanyDialog = useCallback(() => { setIsNewCompanyDialogOpen(true); }, []);
 
   // ============================================================================
   // Return
   // ============================================================================
 
   return {
-    // États de chargement
     isMounted,
     isLoading,
     loadingError,
-
-    // Données transformées
     shows,
     filteredShows,
     rawShows,
@@ -674,21 +594,16 @@ export function useSpectaclesPage() {
     targetAudiences,
     companies,
     dervisheUsers,
-
-    // Permissions
     hasFullAccess,
-
-    // Recherche et filtres
     searchQuery,
     setSearchQuery,
     hasActiveFilters,
     resetFilters,
-
-    // Mode d'affichage
+    // Tri spectacles
+    sortValue,
+    setSortValue,
     viewMode,
     setViewMode,
-
-    // États modales
     isFormDialogOpen,
     handleFormDialogOpenChange,
     editingShow,
@@ -706,15 +621,9 @@ export function useSpectaclesPage() {
     setIsNewCompanyDialogOpen,
     newlyCreatedCompanyId,
     handleClearNewlyCreatedCompanyId,
-
-    // Erreurs
     operationError,
     clearOperationError,
-
-    // Refetch
     handleRefetch,
-
-    // Handlers CRUD spectacles
     handleCreate,
     handleEdit,
     handleView,
@@ -725,28 +634,16 @@ export function useSpectaclesPage() {
     handleViewToDelete,
     handleCloseView,
     handleDeleteFromForm,
-
-    // Handlers catégories
     handleAddCategory,
     handleRemoveCategoryById,
-
-    // Handlers publics cibles
     handleAddTargetAudience,
     handleRemoveTargetAudience,
-
-    // Handlers compagnies
     handleCreateCompany,
     handleCompanyCreated,
-
-    // Navigation
     handleNavigateToRepresentations,
-
-    // Handlers stables pour modales (P2 - Performance)
     handleOpenCategoriesManager,
     handleOpenTargetAudiencesManager,
     handleOpenNewCompanyDialog,
-
-    // Copie de lien
     copiedShowId,
     copyError,
     copyLink,

@@ -4,6 +4,7 @@
  *
  * Gestion des comptes programmateurs (professionnels).
  * Session 128 - Architecture modulaire.
+ * S158 - Ajout tri alphabétique par nom
  */
 
 'use client';
@@ -12,7 +13,7 @@ import { useState } from 'react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Columns2, Download, Loader2 } from 'lucide-react';
-import { AdminPageHeader, LoadingState, ErrorState } from '@/components/admin';
+import { AdminPageHeader, LoadingState, ErrorState, SortToggle } from '@/components/admin';
 import { DeleteConfirmDialog } from '@/components/admin/delete-confirm-dialog';
 import { useProfessionalsPage } from './hooks';
 import {
@@ -51,6 +52,10 @@ export default function AdminProfessionnelsPage() {
     cityFilter,
     setCityFilter,
     hasFilters,
+
+    // Tri
+    sortDir,
+    toggleSortDir,
 
     // Drawer
     drawerState,
@@ -103,22 +108,12 @@ export default function AdminProfessionnelsPage() {
     }
   };
 
-  // ---- État de chargement ----
-  if (isLoading) {
-    return <LoadingState message={MESSAGES.LOADING} />;
-  }
+  if (isLoading) return <LoadingState message={MESSAGES.LOADING} />;
 
-  // ---- Erreur ----
   if (error) {
     return (
-      <ErrorState
-        message={`${MESSAGES.ERROR_PREFIX}${error}`}
-        onRetry={() => void refresh()}
-      >
-        <AdminPageHeader
-          title={LABELS.PAGE_TITLE}
-          subtitle={LABELS.PAGE_SUBTITLE}
-        />
+      <ErrorState message={`${MESSAGES.ERROR_PREFIX}${error}`} onRetry={() => void refresh()}>
+        <AdminPageHeader title={LABELS.PAGE_TITLE} subtitle={LABELS.PAGE_SUBTITLE} />
       </ErrorState>
     );
   }
@@ -128,10 +123,7 @@ export default function AdminProfessionnelsPage() {
       <div className="space-y-6">
         {/* ---- Header ---- */}
         <div className="flex items-start justify-between gap-4">
-          <AdminPageHeader
-            title={LABELS.PAGE_TITLE}
-            subtitle={LABELS.PAGE_SUBTITLE}
-          />
+          <AdminPageHeader title={LABELS.PAGE_TITLE} subtitle={LABELS.PAGE_SUBTITLE} />
           <div className="flex items-center gap-2 shrink-0 pt-1">
             {/* Bouton colonnes */}
             <Button
@@ -161,16 +153,26 @@ export default function AdminProfessionnelsPage() {
           </div>
         </div>
 
-        {/* ---- Filtres ---- */}
-        <ProfessionalsFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          cityFilter={cityFilter}
-          onCityFilterChange={setCityFilter}
-          availableCities={availableCities}
-        />
+        {/* ---- Filtres + Tri ---- */}
+        <div className="flex gap-3 items-start">
+          <div className="flex-1">
+            <ProfessionalsFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              cityFilter={cityFilter}
+              onCityFilterChange={setCityFilter}
+              availableCities={availableCities}
+            />
+          </div>
+          <SortToggle
+            direction={sortDir}
+            onToggle={toggleSortDir}
+            label="Nom"
+            className="mt-0"
+          />
+        </div>
 
         {/* ---- Compteur ---- */}
         <p className="text-sm text-muted-foreground">
@@ -236,8 +238,7 @@ export default function AdminProfessionnelsPage() {
                   <strong>{formatNameShort(professionalToDelete)}</strong>.
                 </p>
                 <p>
-                  Cette action est irréversible et supprimera également toutes
-                  ses réservations.
+                  Cette action est irréversible et supprimera également toutes ses réservations.
                 </p>
               </div>
             ) : (
