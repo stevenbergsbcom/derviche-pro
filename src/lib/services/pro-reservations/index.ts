@@ -111,6 +111,8 @@ const PRO_RESERVATION_SELECT = `
   created_at,
   cancelled_at,
   cancellation_reason,
+  slot_date,
+  slot_time,
   slots!inner (
     id,
     date,
