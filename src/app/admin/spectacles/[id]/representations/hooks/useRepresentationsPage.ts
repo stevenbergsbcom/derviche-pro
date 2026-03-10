@@ -12,6 +12,7 @@ import { useShows } from '@/hooks/useShows';
 import { useInternalUsers } from '@/hooks/useInternalUsers';
 import { useAdminPermissions } from '@/hooks/useAdminPermissions';
 import { getRepresentationById } from '@/lib/services/representations';
+import { logger } from '@/lib/logger';
 
 // Types et constantes
 import { UNLIMITED_CAPACITY, UUID_REGEX } from '../constants';
@@ -173,6 +174,8 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
     setMonthFilter('all');
     setVenueFilter('all');
     setDateSearch('');
+    setHidePast(true);
+    setSortDir('asc');
   }, []);
 
   const availableMonths = useMemo(() => {
@@ -193,8 +196,10 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
       .filter(Boolean) as MockVenue[];
   }, [representations, venues]);
 
-  // Date du jour au format YYYY-MM-DD pour comparer avec rep.date
-  const todayStr = useMemo(() => new Date().toISOString().split('T')[0] ?? '', []);
+  // Date du jour au format YYYY-MM-DD.
+  // useState (pas useMemo) pour pouvoir être mis à jour si la page reste ouverte la nuit.
+  // On recalcule à chaque rendu : new Date() est O(1), pas besoin de mémoïser.
+  const todayStr = new Date().toISOString().split('T')[0] ?? '';
 
   // Nombre de représentations passées (date strictement inférieure à aujourd'hui)
   const pastCount = useMemo(() => {
@@ -290,7 +295,7 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
         }
 
         if (result.error) {
-          console.error('Erreur vérification réservations (handleEdit):', result.error);
+          logger.error('[representations] Erreur vérification réservations (handleEdit)', { error: result.error });
           toast.error('Échec de la vérification', {
             description: 'Impossible de vérifier les réservations. Veuillez réessayer.',
           });
@@ -325,7 +330,7 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
         }
 
         if (result.error) {
-          console.error('Erreur vérification réservations:', result.error);
+          logger.error('[representations] Erreur vérification réservations (handleDeleteClick)', { error: result.error });
           toast.error('Échec de la vérification', {
             description: 'Impossible de vérifier les réservations. Veuillez réessayer.',
           });
@@ -362,12 +367,12 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
       } else {
         const errorMessage = result.error || 'Une erreur est survenue lors de la suppression';
         setDeleteError(errorMessage);
-        console.error('Erreur suppression:', result.error);
+        logger.error('[representations] Erreur suppression', { error: result.error });
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Une erreur inattendue est survenue';
       setDeleteError(errorMessage);
-      console.error('Erreur suppression:', error);
+      logger.error('[representations] Exception suppression', { error });
     } finally {
       setIsDeleting(false);
     }
@@ -548,6 +553,7 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
     sortDir,
     hidePast,
     pastCount,
+    todayStr,
 
     // États UI
     isLoading,
