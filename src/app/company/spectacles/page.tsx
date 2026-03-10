@@ -91,7 +91,7 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
 
 function ShowCard({ show }: { show: CompanyShowWithStats }) {
   return (
-    <Card className="overflow-hidden flex flex-col">
+    <Card className="overflow-hidden flex flex-col pt-0">
       {/* Image */}
       <div className="relative h-40 bg-derviche/5 shrink-0">
         {show.image_url ? (

@@ -6,6 +6,6 @@
 
 export { CompanyStatsCards } from './stats-cards';
 export { SearchAndActions, type SearchAndActionsProps } from './search-and-actions';
-export { FiltersSection, type FiltersSectionProps, type ShowOption } from './filters-section';
+export { FiltersSection, type FiltersSectionProps } from './filters-section';
 export { ReservationsContent, type ReservationsContentProps } from './reservations-content';
 export { PaginationControls, type PaginationControlsProps } from './pagination-controls';

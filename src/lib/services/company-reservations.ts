@@ -364,17 +364,19 @@ export async function getCompanyReservations(
     }
 
     // Tri (défaut: date représentation croissante)
+    // Note: on utilise slot_date/slot_time (colonnes dénormalisées sur reservations, migration 080)
+    // car .order({ referencedTable: 'slots' }) ne trie PAS la table parente en Supabase JS
     const sortBy = filters.sortBy || 'slot_date_asc';
     switch (sortBy) {
       case 'slot_date_asc':
         query = query
-          .order('date', { referencedTable: 'slots', ascending: true })
-          .order('time', { referencedTable: 'slots', ascending: true });
+          .order('slot_date', { ascending: true })
+          .order('slot_time', { ascending: true });
         break;
       case 'slot_date_desc':
         query = query
-          .order('date', { referencedTable: 'slots', ascending: false })
-          .order('time', { referencedTable: 'slots', ascending: false });
+          .order('slot_date', { ascending: false })
+          .order('slot_time', { ascending: false });
         break;
       case 'created_at_asc':
         query = query.order('created_at', { ascending: true });
@@ -540,8 +542,10 @@ export async function getAllCompanyReservationsForExport(
     }
 
     // Tri par date de représentation puis nom
+    // Note: slot_date col dénormalisée (migration 080) — .order({ referencedTable }) ne trie pas la table parente
     query = query
-      .order('date', { referencedTable: 'slots', ascending: true })
+      .order('slot_date', { ascending: true })
+      .order('slot_time', { ascending: true })
       .order('guest_last_name', { ascending: true });
 
     const { data, error } = await query;

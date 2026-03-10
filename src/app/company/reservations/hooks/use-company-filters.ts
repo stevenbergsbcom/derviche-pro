@@ -281,10 +281,16 @@ export function useCompanyFilters({
     setDatePreset(null);
     previousSearchRef.current = '';
     
-    // Reset filtres API
+    // Reset TOUS les filtres API (showId, status, checkinStatus inclus)
     onFiltersChange({
       period: DEFAULT_PERIOD,
       sortBy: DEFAULT_SORT,
+      showId: undefined,
+      status: undefined,
+      checkinStatus: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+      search: undefined,
     });
   }, [onFiltersChange]);
   

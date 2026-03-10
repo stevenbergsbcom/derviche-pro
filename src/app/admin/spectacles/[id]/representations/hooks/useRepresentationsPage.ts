@@ -168,7 +168,7 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
   // Masquer les passées par défaut
   const [hidePast, setHidePast] = useState<boolean>(true);
 
-  const hasActiveFilters = monthFilter !== 'all' || venueFilter !== 'all' || dateSearch.trim() !== '' || !hidePast;
+  const hasActiveFilters = monthFilter !== 'all' || venueFilter !== 'all' || dateSearch.trim() !== '' || !hidePast || sortDir !== 'asc';
 
   const resetFilters = useCallback(() => {
     setMonthFilter('all');

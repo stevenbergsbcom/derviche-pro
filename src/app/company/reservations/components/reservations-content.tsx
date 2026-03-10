@@ -266,12 +266,12 @@ function ReservationsContentComponent({
       <div className="hidden lg:block w-full overflow-hidden">
         <Card className="py-0">
           <CardContent className="p-0">
-            <div className="max-h-[70vh] overflow-auto">
+            <div className="overflow-x-auto">
               <table 
                 className="w-full caption-bottom text-sm"
                 aria-label="Tableau des réservations"
               >
-                <thead className="[&_tr]:border-b bg-muted/80 border-b-2 border-border sticky top-0 z-10 shadow-sm">
+                <thead className="[&_tr]:border-b bg-muted/80 border-b-2 border-border">
                   <tr className="border-b transition-colors">
                     {columns.map((col) => (
                       <SortableHeader
