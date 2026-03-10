@@ -9,6 +9,7 @@
  * L'envoi est non-bloquant : un échec email ne fait pas échouer la modification.
  *
  * Sécurité :
+ * - Rate limiting : 20 req / 1h par IP (anti-spam emails)
  * - Validation du payload entrant (Zod)
  * - Vérification que l'utilisateur connecté est propriétaire de la réservation
  *   (ou admin/super-admin)
@@ -30,6 +31,8 @@ import { createAdminNotification } from '@/lib/services/notifications';
 import { updateCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
+import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
 import type { UserRole } from '@/types/database';
 
@@ -88,6 +91,17 @@ interface SlotDetails {
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    // 0. Rate limiting (anti-spam emails)
+    const rl = await checkRateLimit('emails', request);
+    if (!rl.success) {
+      void logSystem('rate_limit_blocked', 'warning', {
+        route: '/api/emails/send-modification',
+        identifier: rl.identifier,
+        limit: rl.limit,
+      });
+      return rateLimitResponse(rl);
+    }
+
     // 1. Parser et valider le body
     const rawBody: unknown = await request.json();
     const parseResult = sendModificationSchema.safeParse(rawBody);
