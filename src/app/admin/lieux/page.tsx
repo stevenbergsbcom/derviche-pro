@@ -17,6 +17,7 @@ import type { VenueRow, VenueInsert } from '@/types/database';
 
 // Hook Supabase
 import { useVenues } from '@/hooks/useVenues';
+import { logger } from '@/lib/logger';
 
 // Composants admin réutilisables
 import {
@@ -110,7 +111,7 @@ export default function AdminLieuxPage() {
             if (result.success) {
                 setVenueToDelete(null);
             } else {
-                console.error('Erreur suppression:', result.error);
+                logger.error('Lieux - Erreur suppression', { error: result.error });
             }
         }
     };
@@ -140,14 +141,14 @@ export default function AdminLieuxPage() {
                 setIsFormDialogOpen(false);
                 setEditingVenue(null);
             } else {
-                console.error('Erreur mise à jour:', result.error);
+                logger.error('Lieux - Erreur mise à jour', { error: result.error });
             }
         } else {
             const result = await create(formData as VenueInsert);
             if (result.success) {
                 setIsFormDialogOpen(false);
             } else {
-                console.error('Erreur création:', result.error);
+                logger.error('Lieux - Erreur création', { error: result.error });
             }
         }
 

@@ -220,7 +220,8 @@ export function useSpectaclesPage() {
   }, [searchQuery, shows, isExterne, assignedShowIds, sortValue]);
 
   // États dérivés
-  const hasActiveFilters = searchQuery.trim() !== '' || sortValue !== 'title_asc';
+  // Note : le tri n'est pas un filtre (il ne réduit pas la liste) → exclu de hasActiveFilters
+  const hasActiveFilters = searchQuery.trim() !== '';
   const isLoading =
     isLoadingShows ||
     isLoadingCategories ||
