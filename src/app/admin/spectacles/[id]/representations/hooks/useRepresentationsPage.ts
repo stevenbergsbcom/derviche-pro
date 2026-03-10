@@ -163,8 +163,11 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [venueFilter, setVenueFilter] = useState<string>('all');
   const [dateSearch, setDateSearch] = useState<string>('');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  // Masquer les passées par défaut
+  const [hidePast, setHidePast] = useState<boolean>(true);
 
-  const hasActiveFilters = monthFilter !== 'all' || venueFilter !== 'all' || dateSearch.trim() !== '';
+  const hasActiveFilters = monthFilter !== 'all' || venueFilter !== 'all' || dateSearch.trim() !== '' || !hidePast;
 
   const resetFilters = useCallback(() => {
     setMonthFilter('all');
@@ -190,8 +193,21 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
       .filter(Boolean) as MockVenue[];
   }, [representations, venues]);
 
+  // Date du jour au format YYYY-MM-DD pour comparer avec rep.date
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0] ?? '', []);
+
+  // Nombre de représentations passées (date strictement inférieure à aujourd'hui)
+  const pastCount = useMemo(() => {
+    return representations.filter((rep) => rep.date < todayStr).length;
+  }, [representations, todayStr]);
+
   const filteredRepresentations = useMemo(() => {
     let filtered = [...representations];
+
+    // Masquer les passées si demandé
+    if (hidePast) {
+      filtered = filtered.filter((rep) => rep.date >= todayStr);
+    }
 
     if (monthFilter !== 'all') {
       filtered = filtered.filter((rep) => getMonthFromDate(rep.date) === monthFilter);
@@ -211,9 +227,10 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
     return filtered.sort((a, b) => {
       const dateA = new Date(`${a.date}T${a.time}`);
       const dateB = new Date(`${b.date}T${b.time}`);
-      return dateA.getTime() - dateB.getTime();
+      const diff = dateA.getTime() - dateB.getTime();
+      return sortDir === 'asc' ? diff : -diff;
     });
-  }, [representations, monthFilter, venueFilter, dateSearch]);
+  }, [representations, monthFilter, venueFilter, dateSearch, hidePast, sortDir, todayStr]);
 
   // ============================================
   // ÉTATS DE CHARGEMENT
@@ -527,6 +544,11 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
     filteredRepresentations,
     hasActiveFilters,
 
+    // Tri & masquage
+    sortDir,
+    hidePast,
+    pastCount,
+
     // États UI
     isLoading,
     loadingError,
@@ -551,6 +573,8 @@ export function useRepresentationsPage(): RepresentationsPageState & Representat
     setVenueFilter,
     setDateSearch,
     resetFilters,
+    setSortDir,
+    setHidePast,
 
     // Actions - Modales
     setIsFormDialogOpen,
