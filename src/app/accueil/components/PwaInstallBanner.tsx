@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 // TYPES
 // ============================================
 
-type Platform = 'ios' | 'android' | 'desktop' | 'unknown';
+type Platform = 'ios-safari' | 'ios-chrome' | 'android' | 'desktop' | 'unknown';
 
 // ============================================
 // HELPERS
@@ -40,6 +40,8 @@ function isInstalledAsPwa(): boolean {
 
 /**
  * Détecte la plateforme de l'utilisateur
+ * Note : sur iOS, Chrome et tous les autres navigateurs tiers utilisent WebKit
+ * et ne peuvent pas installer de PWA — seul Safari le permet.
  */
 function detectPlatform(): Platform {
   if (typeof navigator === 'undefined') return 'unknown';
@@ -47,8 +49,11 @@ function detectPlatform(): Platform {
   const isIos = /iphone|ipad|ipod/i.test(ua);
   const isAndroid = /android/i.test(ua);
   const isMobile = isIos || isAndroid;
+  // CriOS = Chrome sur iOS ; FxiOS = Firefox sur iOS
+  const isIosNonSafari = isIos && /crios|fxios|opios|mercury/i.test(ua);
 
-  if (isIos) return 'ios';
+  if (isIos && isIosNonSafari) return 'ios-chrome';
+  if (isIos) return 'ios-safari';
   if (isAndroid) return 'android';
   if (!isMobile) return 'desktop';
   return 'unknown';
@@ -86,6 +91,7 @@ function InstallStep({
 export function PwaInstallBanner() {
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<Platform>('unknown');
+  const [pwaUrl, setPwaUrl] = useState('');
 
   useEffect(() => {
     // Ne pas afficher si déjà installée, sur desktop, ou déjà dismissée dans cette session
@@ -96,6 +102,7 @@ export function PwaInstallBanner() {
       sessionStorage.getItem(SESSION_KEY) === '1'
     ) return;
 
+    setPwaUrl(window.location.href);
     setPlatform(detected);
     setVisible(true);
   }, []);
@@ -129,7 +136,7 @@ export function PwaInstallBanner() {
 
       {/* Instructions selon la plateforme */}
       <ul className="mt-2 space-y-1.5 text-blue-800">
-        {platform === 'ios' && (
+        {platform === 'ios-safari' && (
           <>
             <InstallStep
               icon={Share}
@@ -147,6 +154,29 @@ export function PwaInstallBanner() {
                 <>
                   Puis sur{' '}
                   <strong>&laquo;&nbsp;Sur l&apos;écran d&apos;accueil&nbsp;&raquo;</strong>
+                </>
+              }
+            />
+          </>
+        )}
+
+        {platform === 'ios-chrome' && (
+          <>
+            <InstallStep
+              icon={Share}
+              text={
+                <>
+                  L&apos;installation n&apos;est possible que depuis{' '}
+                  <strong>Safari</strong> sur iPhone et iPad
+                </>
+              }
+            />
+            <InstallStep
+              icon={PlusSquare}
+              text={
+                <>
+                  Ouvrez ce lien dans Safari :{' '}
+                  <strong className="break-all">{pwaUrl}</strong>
                 </>
               }
             />
