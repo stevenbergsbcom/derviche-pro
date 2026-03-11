@@ -83,7 +83,7 @@ function QrCodeModalComponent() {
         <DialogHeader>
           <DialogTitle>QR Code — Application Accueil</DialogTitle>
           <DialogDescription>
-            Scannez ce QR code pour accéder directement à l&apos;application d'Accueil. Téléchargez-le
+            Scannez ce QR code pour accéder directement à l&apos;application d&apos;Accueil. Téléchargez-le
             en PNG pour l&apos;imprimer.
           </DialogDescription>
         </DialogHeader>
