@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S171 (complète ✅) — Connexion domaine derviche-pro.fr + migrations 083+084 prod — 11 mars 2026
+> Dernière mise à jour : Session S172 (✅ mergé main) — FAB walk-in company + fix doublon nom compagnie PWA — 11 mars 2026
 
 ---
 
@@ -713,3 +713,51 @@ Unique correction : import `isSafeUrl` dans `MediaResourcesSection` pour protég
 Aucune (infra uniquement).
 
 ### Prochaine session : S172 — à définir
+
+---
+
+## S172 — FAB walk-in pour les compagnies + fix doublon nom compagnie PWA ✅ mergé main
+
+### Objectif
+Permettre aux compagnies en charge de l'accueil d'ajouter une réservation walk-in via le FAB sur la PWA `/accueil`.
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/components/accueil/ReservationFAB.tsx` | FAB visible pour `company` + vérification `canAccessSlot` pour slotId pré-rempli |
+| `src/components/accueil/add-reservation-drawer/SelectSlotStep.tsx` | Filtre `hostedBy='company'` lors du chargement des créneaux |
+| `src/lib/services/admin-reservations/constants.ts` | `hosted_by` ajouté dans `SLOT_SELECT_QUERY` |
+| `src/lib/services/admin-reservations/stats.ts` | `getAvailableSlotsForShow` accepte `options?: { hostedBy? }` |
+| `src/lib/services/admin-reservations/index.ts` | Export `GetAvailableSlotsOptions` |
+| `src/app/accueil/components/HeaderSection.tsx` | Suppression préfixe 'Compagnie' hardcodé (doublon avec nom compagnie) |
+
+### Décisions
+- `isVisible` FAB : `super-admin || admin || externe || company`
+- Pour `company` + `rawSlotId` dans l'URL : `verifiedSlotId` initialisé à `undefined`, mis à `rawSlotId` uniquement après `canAccessSlot(...) === true` (fix audit)
+- `getAvailableSlotsForShow(showId)` sans options = rétrocompatible (admin/externe voient tous les créneaux)
+- `NotificationSwitches` (email au pro) reste visible pour les compagnies
+- Notes internes Derviche (`isStaffDD`) : déjà masquées pour `company` — aucun changement nécessaire
+
+### Points techniques retenus
+- `useState(initialValue)` avec une valeur dépendant d'un état async (`role`) → toujours initialiser à `undefined` et laisser le `useEffect` setter après vérification
+- `canAccessSlot` vérifie `hosted_by === 'company'` + même `company_id` côté service ; la RLS reste le garde ultime
+- `SLOT_SELECT_QUERY` inclut désormais `hosted_by` (non breaking : `transformAvailableSlots` n'expose que les champs nécessaires)
+
+### Migrations
+Aucune.
+
+### Audit S172 : 8.5/10 → 10/10
+Point corrigé : `verifiedSlotId` initialisé à `undefined` pour `company` quand `rawSlotId` présent dans l'URL (évite drawer pré-rempli non vérifié). Aucun autre point bloquant.
+
+---
+
+### Prochaine session : S173 — à définir
+
+**Candidats backlog (par priorité) :**
+| # | Fonctionnalité | Complexité | Valeur |
+|---|----------------|-----------|--------|
+| 1 | Magic Link | Moyenne | CDC + UX pros |
+| 2 | Refacto `EmailTemplateForm.tsx` (27 KB 🚨) | Moyenne | Maintenabilité |
+| 3 | Champs manquants formulaires (venues PMR, shows période) | Faible | Données terrain |
+| 4 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 5 | QR Code à la publication | Faible | Util terrain |
