@@ -13,3 +13,4 @@ export { PeriodSelector } from './PeriodSelector';
 export { ReservationsChart } from './ReservationsChart';
 export { TopShowsCard } from './TopShowsCard';
 export { Slots24hCard } from './Slots24hCard';
+export { QrCodeModal } from './QrCodeModal';

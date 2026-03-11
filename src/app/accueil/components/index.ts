@@ -10,3 +10,4 @@ export { ShowCardSkeleton } from './ShowCardSkeleton';
 export { HeaderSection } from './HeaderSection';
 export { TabFilters } from './TabFilters';
 export { ShowsList, EmptyTabMessage } from './ShowsList';
+export { PwaInstallBanner } from './PwaInstallBanner';

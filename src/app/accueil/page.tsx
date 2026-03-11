@@ -24,6 +24,7 @@ import {
   TabFilters,
   ShowsList,
   EmptyTabMessage,
+  PwaInstallBanner,
 } from './components';
 import { isShowListItem } from './types';
 
@@ -84,6 +85,9 @@ export default function AccueilPage() {
     <div className="pb-6">
       {/* En-tête contextuel */}
       <HeaderSection isAdmin={isAdmin} role={role} companyName={companyName} />
+
+      {/* Bannière installation PWA */}
+      <PwaInstallBanner />
 
       {/* Onglets À venir / Passés */}
       {showTabs && (

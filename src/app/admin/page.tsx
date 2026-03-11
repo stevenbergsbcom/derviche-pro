@@ -27,6 +27,7 @@ import {
   ReservationsChart,
   TopShowsCard,
   Slots24hCard,
+  QrCodeModal,
 } from './_dashboard/components';
 
 // ============================================
@@ -148,6 +149,8 @@ export default function AdminDashboardPage() {
               description={link.description}
             />
           ))}
+          {/* QR Code d'accès rapide à la PWA check-in */}
+          <QrCodeModal />
         </div>
       </div>
 
