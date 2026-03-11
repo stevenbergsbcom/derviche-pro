@@ -23,12 +23,19 @@ type Platform = 'ios' | 'android' | 'desktop' | 'unknown';
 // HELPERS
 // ============================================
 
+/** Clé sessionStorage pour persister le dismiss */
+const SESSION_KEY = 'pwa-banner-dismissed';
+
 /**
- * Détecte si l'app tourne déjà en mode standalone (PWA installée)
+ * Détecte si l'app tourne déjà en mode installé (standalone, fullscreen ou minimal-ui)
  */
 function isInstalledAsPwa(): boolean {
   if (typeof window === 'undefined') return true;
-  return window.matchMedia('(display-mode: standalone)').matches;
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches ||
+    window.matchMedia('(display-mode: minimal-ui)').matches
+  );
 }
 
 /**
@@ -81,9 +88,13 @@ export function PwaInstallBanner() {
   const [platform, setPlatform] = useState<Platform>('unknown');
 
   useEffect(() => {
-    // Ne pas afficher si déjà installée ou sur desktop
+    // Ne pas afficher si déjà installée, sur desktop, ou déjà dismissée dans cette session
     const detected = detectPlatform();
-    if (isInstalledAsPwa() || detected === 'desktop') return;
+    if (
+      isInstalledAsPwa() ||
+      detected === 'desktop' ||
+      sessionStorage.getItem(SESSION_KEY) === '1'
+    ) return;
 
     setPlatform(detected);
     setVisible(true);
@@ -106,7 +117,10 @@ export function PwaInstallBanner() {
           variant="ghost"
           size="icon"
           className="h-6 w-6 shrink-0 text-blue-700 hover:bg-blue-100 -mt-0.5 -mr-1"
-          onClick={() => setVisible(false)}
+          onClick={() => {
+            sessionStorage.setItem(SESSION_KEY, '1');
+            setVisible(false);
+          }}
           aria-label="Fermer ce message"
         >
           <X aria-hidden="true" className="h-4 w-4" />
