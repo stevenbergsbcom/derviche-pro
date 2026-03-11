@@ -9,8 +9,8 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Share, PlusSquare, Menu, Download } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Share, PlusSquare, Menu, Download, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // ============================================
@@ -81,6 +81,69 @@ function InstallStep({
       />
       <span>{text}</span>
     </li>
+  );
+}
+
+/**
+ * Bannière spécifique Chrome iOS — bouton "Copier le lien" pour ouvrir dans Safari
+ */
+function IosChromeBanner({ pwaUrl }: { pwaUrl: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(pwaUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback si clipboard API indisponible
+      const input = document.createElement('input');
+      input.value = pwaUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }, [pwaUrl]);
+
+  return (
+    <>
+      <InstallStep
+        icon={Share}
+        text={
+          <>
+            L&apos;installation n&apos;est possible que depuis{' '}
+            <strong>Safari</strong> sur iPhone et iPad
+          </>
+        }
+      />
+      <InstallStep
+        icon={PlusSquare}
+        text={
+          <>
+            Copiez ce lien et ouvrez-le dans Safari :
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void handleCopy()}
+              className="mt-2 flex items-center gap-2 h-9 w-full border-blue-300 bg-white text-blue-800 hover:bg-blue-50"
+              aria-label="Copier le lien pour Safari"
+            >
+              {copied ? (
+                <Check aria-hidden="true" className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy aria-hidden="true" className="h-4 w-4" />
+              )}
+              <span className="truncate text-xs">
+                {copied ? 'Lien copié !' : pwaUrl}
+              </span>
+            </Button>
+          </>
+        }
+      />
+    </>
   );
 }
 
@@ -161,26 +224,7 @@ export function PwaInstallBanner() {
         )}
 
         {platform === 'ios-chrome' && (
-          <>
-            <InstallStep
-              icon={Share}
-              text={
-                <>
-                  L&apos;installation n&apos;est possible que depuis{' '}
-                  <strong>Safari</strong> sur iPhone et iPad
-                </>
-              }
-            />
-            <InstallStep
-              icon={PlusSquare}
-              text={
-                <>
-                  Ouvrez ce lien dans Safari :{' '}
-                  <strong className="break-all">{pwaUrl}</strong>
-                </>
-              }
-            />
-          </>
+          <IosChromeBanner pwaUrl={pwaUrl} />
         )}
 
         {platform === 'android' && (
