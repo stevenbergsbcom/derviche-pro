@@ -15,6 +15,7 @@ export {
 export {
   applyTheme,
   applyThemeAuto,
+  applyThemeColors,
   resetTheme,
   getCurrentTheme,
   isDarkModeActive,
@@ -22,3 +23,11 @@ export {
   dispatchLogoChange,
   onLogoChange,
 } from './apply-theme';
+
+export {
+  generateCustomTheme,
+  DEFAULT_CUSTOM_SEEDS,
+  type CustomThemeSeeds,
+} from './generate-custom-theme';
+
+export { hexToOklch, oklchToHex } from './color-utils';
