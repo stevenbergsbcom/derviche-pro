@@ -154,8 +154,6 @@ export async function middleware(request: NextRequest) {
         // Routes de redirection (legacy)
         '/pro-dashboard',
         '/admin-dashboard',
-        // Page de debug temporaire (PWA banner — S173, à supprimer après diagnostic)
-        '/accueil/debug',
     ];
 
     // Vérifier si la route est publique
@@ -209,8 +207,7 @@ export async function middleware(request: NextRequest) {
     // Routes nécessitant une vérification de rôle
     const isAdminRoute = pathname.startsWith('/admin');
     const isCompanyRoute = pathname.startsWith('/company');
-    // Exclure /accueil/debug (page temporaire de diagnostic, publique)
-    const isAccueilRoute = pathname.startsWith('/accueil') && !pathname.startsWith('/accueil/debug');
+    const isAccueilRoute = pathname.startsWith('/accueil');
     const isProfessionalRoute = pathname.startsWith('/professional');
 
     // Si c'est une route protégée par rôle et que l'utilisateur est connecté
