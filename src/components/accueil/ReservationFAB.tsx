@@ -44,8 +44,14 @@ export function ReservationFAB() {
   const rawSlotId = parseSlotIdFromPath(pathname ?? '');
 
   // Pour le rôle company : on vérifie que le slot est hosted_by='company'
-  // avant de le transmettre au drawer. null = vérification en cours.
-  const [verifiedSlotId, setVerifiedSlotId] = useState<string | undefined>(rawSlotId);
+  // avant de le transmettre au drawer.
+  // Initialisation à undefined pour éviter qu'un slotId non vérifié soit
+  // passé au drawer pendant la vérification async (company uniquement).
+  const [verifiedSlotId, setVerifiedSlotId] = useState<string | undefined>(
+    // Si company + rawSlotId → undefined jusqu'à confirmation de canAccessSlot
+    // Sinon on fait confiance à l'URL (RLS reste le garde ultime)
+    role === 'company' && rawSlotId ? undefined : rawSlotId,
+  );
 
   useEffect(() => {
     // Pas de slotId dans l'URL → rien à vérifier
@@ -58,7 +64,8 @@ export function ReservationFAB() {
       setVerifiedSlotId(rawSlotId);
       return;
     }
-    // Rôle company : vérification explicite
+    // Rôle company : vérification explicite — on part de undefined
+    setVerifiedSlotId(undefined);
     if (!userId) return;
 
     let cancelled = false;
