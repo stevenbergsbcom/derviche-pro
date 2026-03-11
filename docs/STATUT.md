@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S168 (complète ✅) — Harmonisation footer PWA, rate limiting routes email, email contact compagnie optionnel — 10 mars 2026
+> Dernière mise à jour : Session S171 (complète ✅) — Connexion domaine derviche-pro.fr + migrations 083+084 prod — 11 mars 2026
 
 ---
 
@@ -627,3 +627,89 @@ Aucune.
 - `isPast` ne doit jamais dépendre d'une fonction qui court-circuite sur le statut (`isCancellable`) — toujours calculer depuis la date réelle
 - shadcn/ui `useSidebar()` expose `isMobile` + `setOpenMobile` → pattern standard pour fermer la sidebar mobile sur navigation
 - `getMobilePageTitle(pathname)` : fonction pure dans le layout, pas de hook nécessaire — re-render naturel au changement de `pathname`
+
+---
+
+## S168 — Corrections UX & dette technique ✅ mergé main
+
+### S168-A — Harmonisation footer AddReservationDrawer (PWA)
+- Footer aligné sur `FooterSection` du `CheckinDrawer` : taille standard shadcn, couleur primaire, label "Fermer"
+- Footer fixe hors du scroll via attribut HTML5 natif `form="add-reservation-form"` sur le bouton submit
+- Titres des 3 sections `RequiredFieldsSection` uniformisés en `text-base`
+- Pattern : `form#add-reservation-form` sur `<form>`, `FormFooter` sorti du `div.overflow-y-auto`
+
+### S168-B — Rate limiting routes email manquantes (dette S153)
+- `send-cancellation`, `send-modification`, `send-checkin-followup` : ajout `checkRateLimit('emails', request)` (20 req / 1h)
+
+### S168-C — Email contact compagnie optionnel
+- Migration 082 : `DROP NOT NULL` sur `companies.contact_email`
+- `supabase.ts` + `database.ts` : `contact_email` nullable
+- `CompanyOption` : `contactEmail: string | null`
+- Dialogs company : null guards `?.trim() || null`
+
+### Migrations S168
+| # | Fichier | Description | Prod |
+|---|---------|-------------|------|
+| 082 | `082_companies_contact_email_nullable.sql` | `DROP NOT NULL` sur `companies.contact_email` | ✅ |
+
+> Audit Cursor S168-A : 9.75/10 → 10/10 après fix `cn` inutile.
+
+---
+
+## S169 — Fix hero image page spectacle public ✅ mergé main
+
+- `src/app/(public)/spectacle/[slug]/page.tsx` : remplacement du texte hardcodé `'Derviche Diffusion'` par `{show.companyName}` sur la carte hero.
+
+---
+
+## S170 — Champ photo_folder_url (dossier photo spectacles) ✅ mergé main
+
+### Décisions
+- `photo_folder_url TEXT` nullable sur `shows`
+- Formulaire admin (MediaSection), vue admin (MediaResourcesSection), email post-checkin (toggle + texte dans préférences Templates)
+
+### Migrations
+| # | Fichier | Description | Prod |
+|---|---------|-------------|------|
+| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable | ⏳ **À appliquer** |
+| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` | ⏳ **À appliquer** |
+
+### Points techniques
+- `isSafeUrl()` de `html-helpers.ts` est une pure function importable dans les composants UI
+- `MediaResourcesSection` : toutes les URLs (`folderUrl`, `teaserUrl`, `photoFolderUrl`, `captationUrl`) validées via `isSafeUrl()` avant rendu `href`
+- Label "Dossier" → **"Dossier de presse"** pour cohérence avec le formulaire
+
+### Audit S170 : 9.9/10 → 10/10
+Unique correction : import `isSafeUrl` dans `MediaResourcesSection` pour protéger tous les `href` (XSS `javascript:`).
+
+### Migrations S170
+| # | Fichier | Description | Prod |
+|---|---------|-------------|------|
+| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable | ✅ |
+| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` | ✅ |
+
+---
+
+## S171 — Connexion domaine derviche-pro.fr ✅ (sans merge Git — infra uniquement)
+
+### Changements
+- **DNS o2switch** : A record `derviche-pro.fr` → `216.198.79.1` (Vercel)
+- **DNS o2switch** : CNAME `www.derviche-pro.fr` → `822ac9d73fc0889c.vercel-dns-017.com`
+- **Supabase Auth** : Site URL mis à jour → `https://derviche-pro.fr` + Redirect URLs complètes
+- **Vercel** : `NEXT_PUBLIC_APP_URL=https://derviche-pro.fr` (déjà correct depuis le 2 mars)
+- **Code source** : zéro URL `derviche-pro.vercel.app` hardcodée trouvée
+- **Migrations 083+084** appliquées en prod — champ "Dossier photo" fonctionnel
+
+### Redirect URLs Supabase actives
+- `https://derviche-pro.vercel.app/**` (conservé pour compatibilité)
+- `http://localhost:3000/**`
+- `http://localhost:3001/**`
+- `https://derviche-pro.fr`
+- `https://www.derviche-pro.fr`
+- `https://derviche-pro.fr/**`
+- `https://www.derviche-pro.fr/**`
+
+### Migrations
+Aucune (infra uniquement).
+
+### Prochaine session : S172 — à définir

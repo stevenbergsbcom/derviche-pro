@@ -88,6 +88,8 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   }, [userId, role, companyId]);
 
   // Charger les créneaux quand un spectacle est sélectionné
+  // Pour le rôle company : filtre hosted_by='company' pour ne voir
+  // que les créneaux dont elle est responsable de l'accueil.
   const handleShowChange = useCallback(async (showId: string) => {
     setSelectedShowId(showId);
     setShowListOpen(false);
@@ -98,7 +100,8 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
 
     setLoadingSlots(true);
     try {
-      const result = await getAvailableSlotsForShow(showId);
+      const options = role === 'company' ? { hostedBy: 'company' as const } : undefined;
+      const result = await getAvailableSlotsForShow(showId, options);
       if (!result.error) {
         setSlots(
           result.data.map((s) => ({
@@ -115,7 +118,7 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
     } finally {
       setLoadingSlots(false);
     }
-  }, []);
+  }, [role]);
 
   const canContinue = !!selectedSlotId && !disabled;
 

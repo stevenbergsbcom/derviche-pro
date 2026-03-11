@@ -13,7 +13,7 @@ export function HeaderSection({ isAdmin, role, companyName }: HeaderSectionProps
   // Sous-titre selon le rôle (mémorisé)
   const subtitle = useMemo(() => {
     if (role === 'company' && companyName) {
-      return `Compagnie ${companyName}`;
+      return companyName;
     }
     if (isAdmin) {
       return 'Accès à toutes les représentations';

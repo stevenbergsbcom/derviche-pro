@@ -7,16 +7,20 @@
  *   /accueil/[showSlug]            → pas de slotId (étape select-slot)
  *   /accueil/[showSlug]/[slotId]   → slotId pré-fourni (étape search)
  *
- * Visible uniquement pour super-admin, admin, externe.
+ * Visible pour : super-admin, admin, externe, company.
+ * Pour le rôle company : le slotId pré-fourni est vérifié côté service
+ * (canAccessSlot) avant ouverture du drawer — la RLS BDD reste le garde ultime.
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
+import { useCheckinAccess } from '@/hooks/useCheckinAccess';
+import { canAccessSlot } from '@/lib/services/checkin';
 import { AddReservationDrawer } from './add-reservation-drawer';
 
 // UUID v4 regex
@@ -34,11 +38,52 @@ export function ReservationFAB() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { role } = useCurrentUserRole();
+  const { userId, companyId } = useCheckinAccess();
+
+  // slotId pré-rempli depuis l'URL (peut être undefined)
+  const rawSlotId = parseSlotIdFromPath(pathname ?? '');
+
+  // Pour le rôle company : on vérifie que le slot est hosted_by='company'
+  // avant de le transmettre au drawer.
+  // Initialisation à undefined pour éviter qu'un slotId non vérifié soit
+  // passé au drawer pendant la vérification async (company uniquement).
+  const [verifiedSlotId, setVerifiedSlotId] = useState<string | undefined>(
+    // Si company + rawSlotId → undefined jusqu'à confirmation de canAccessSlot
+    // Sinon on fait confiance à l'URL (RLS reste le garde ultime)
+    role === 'company' && rawSlotId ? undefined : rawSlotId,
+  );
+
+  useEffect(() => {
+    // Pas de slotId dans l'URL → rien à vérifier
+    if (!rawSlotId) {
+      setVerifiedSlotId(undefined);
+      return;
+    }
+    // Rôles non-company : on fait confiance à l'URL (RLS protège en BDD)
+    if (role !== 'company') {
+      setVerifiedSlotId(rawSlotId);
+      return;
+    }
+    // Rôle company : vérification explicite — on part de undefined
+    setVerifiedSlotId(undefined);
+    if (!userId) return;
+
+    let cancelled = false;
+    void (async () => {
+      const ok = await canAccessSlot(rawSlotId, userId, role, companyId);
+      if (!cancelled) {
+        // Si le slot n'est pas accessible, on repasse en mode select-slot
+        setVerifiedSlotId(ok ? rawSlotId : undefined);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [rawSlotId, role, userId, companyId]);
 
   const isVisible =
-    role === 'super-admin' || role === 'admin' || role === 'externe';
-
-  const slotId = parseSlotIdFromPath(pathname ?? '');
+    role === 'super-admin' ||
+    role === 'admin' ||
+    role === 'externe' ||
+    role === 'company';
 
   // Le drawer gère lui-même sa fermeture via onOpenChange.
   // handleSuccess sert uniquement à déclencher le refresh de la liste parente
@@ -69,7 +114,7 @@ export function ReservationFAB() {
       </button>
 
       <AddReservationDrawer
-        slotId={slotId}
+        slotId={verifiedSlotId}
         open={open}
         onOpenChange={setOpen}
         onSuccess={handleSuccess}
