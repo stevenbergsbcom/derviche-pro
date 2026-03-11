@@ -98,6 +98,7 @@ export const RESERVATION_STATS_SELECT_QUERY = `
 /**
  * Query SELECT pour les slots disponibles
  * Utilisée par : getAvailableSlotsForShow
+ * Note : hosted_by inclus pour permettre le filtrage par type d'accueil
  */
 export const SLOT_SELECT_QUERY = `
   id,
@@ -105,6 +106,7 @@ export const SLOT_SELECT_QUERY = `
   time,
   capacity,
   remaining_capacity,
+  hosted_by,
   venues (
     id,
     name,

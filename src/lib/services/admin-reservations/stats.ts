@@ -162,35 +162,62 @@ export async function getReservationsBySlot(slotId: string): Promise<AdminReserv
 // ============================================
 
 /**
+ * Options pour getAvailableSlotsForShow
+ */
+export interface GetAvailableSlotsOptions {
+  /**
+   * Filtre sur le type d'accueil.
+   * - Omis ou undefined : tous les slots (admin/externe)
+   * - 'company' : uniquement les slots hosted_by='company' (rôle company)
+   */
+  hostedBy?: 'derviche' | 'company' | 'externe';
+}
+
+/**
  * Récupère tous les slots disponibles pour un spectacle
  * Utile pour le changement de créneau dans le formulaire de modification
- * 
+ * et pour le drawer walk-in (rôle company).
+ *
  * @param showId - UUID du spectacle
+ * @param options - Options de filtrage optionnelles
  * @returns Liste des slots à venir avec capacité restante
- * 
+ *
  * @remarks
  * - Filtre uniquement les dates futures (>= aujourd'hui)
  * - Triés par date puis heure croissante
  * - Inclut la capacité restante pour affichage
- * 
+ * - Quand `hostedBy` est fourni, filtre les slots sur ce type d'accueil
+ *
  * @example
  * ```ts
+ * // Admin : tous les slots
  * const result = await getAvailableSlotsForShow('show-uuid');
- * const slotsWithCapacity = result.data.filter(s => s.remainingCapacity > 0);
+ *
+ * // Company : uniquement les slots qu'elle accueille
+ * const result = await getAvailableSlotsForShow('show-uuid', { hostedBy: 'company' });
  * ```
  */
-export async function getAvailableSlotsForShow(showId: string): Promise<AvailableSlotsResult> {
+export async function getAvailableSlotsForShow(
+  showId: string,
+  options?: GetAvailableSlotsOptions,
+): Promise<AvailableSlotsResult> {
   try {
     const supabase = createClient();
     const today = getTodayDate();
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('slots')
       .select(SLOT_SELECT_QUERY)
       .eq('show_id', showId)
       .gte('date', today)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
+
+    if (options?.hostedBy) {
+      query = query.eq('hosted_by', options.hostedBy);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       logger.error(ERROR_MESSAGES.FETCH_SLOTS, { showId, error: error.message });
@@ -204,6 +231,7 @@ export async function getAvailableSlotsForShow(showId: string): Promise<Availabl
         time: string;
         capacity: number;
         remaining_capacity: number;
+        hosted_by: string;
         venues: { id: string; name: string; city: string } | null;
       }>
     );

@@ -61,6 +61,8 @@ export type {
   AvailableSlotsResult,
 } from './types';
 
+export type { GetAvailableSlotsOptions } from './stats';
+
 // ============================================
 // FONCTIONS - LISTE
 // ============================================
