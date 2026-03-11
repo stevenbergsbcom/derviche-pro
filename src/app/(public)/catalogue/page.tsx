@@ -163,46 +163,55 @@ export default function CataloguePage() {
     setSearchQuery('');
   };
 
-  // Filtrer les spectacles selon les critères actifs
+  // Filtrer et trier les spectacles selon les critères actifs
   const filteredSpectacles = useMemo(() => {
-    return spectacles.filter((spectacle) => {
-      // Filtre par genre
-      if (genreFilter !== 'Tous' && spectacle.genre !== genreFilter) {
-        return false;
-      }
+    const statusOrder: Record<SpectacleStatus, number> = {
+      available: 0,
+      coming_soon: 1,
+      closed: 2,
+    };
 
-      // Filtre par mois
-      if (moisFilter !== 'Tous') {
-        const spectacleMonth = getMonthFromDateFr(spectacle.nextDate);
-        if (spectacleMonth !== moisFilter) {
+    return spectacles
+      .filter((spectacle) => {
+        // Filtre par genre
+        if (genreFilter !== 'Tous' && spectacle.genre !== genreFilter) {
           return false;
         }
-      }
 
-      // Filtre par lieu (vérifie si le lieu est dans la liste des lieux du spectacle)
-      if (lieuFilter !== 'Tous' && !spectacle.venues.includes(lieuFilter)) {
-        return false;
-      }
+        // Filtre par mois
+        if (moisFilter !== 'Tous') {
+          const spectacleMonth = getMonthFromDateFr(spectacle.nextDate);
+          if (spectacleMonth !== moisFilter) {
+            return false;
+          }
+        }
 
-      // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
-      if (onlyAvailable) {
-        if (spectacle.status === 'coming_soon') return false;
-        if (spectacle.status === 'closed') return false;
-        if (spectacle.remainingSlots !== undefined && spectacle.remainingSlots === 0) return false;
-      }
-
-      // Filtre par recherche (title et company, insensible aux accents et à la casse)
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.trim();
-        const matchesTitle = searchMatch(spectacle.title, query);
-        const matchesCompany = searchMatch(spectacle.company, query);
-        if (!matchesTitle && !matchesCompany) {
+        // Filtre par lieu (vérifie si le lieu est dans la liste des lieux du spectacle)
+        if (lieuFilter !== 'Tous' && !spectacle.venues.includes(lieuFilter)) {
           return false;
         }
-      }
 
-      return true;
-    });
+        // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
+        if (onlyAvailable) {
+          if (spectacle.status === 'coming_soon') return false;
+          if (spectacle.status === 'closed') return false;
+          if (spectacle.remainingSlots !== undefined && spectacle.remainingSlots === 0)
+            return false;
+        }
+
+        // Filtre par recherche (title et company, insensible aux accents et à la casse)
+        if (searchQuery.trim() !== '') {
+          const query = searchQuery.trim();
+          const matchesTitle = searchMatch(spectacle.title, query);
+          const matchesCompany = searchMatch(spectacle.company, query);
+          if (!matchesTitle && !matchesCompany) {
+            return false;
+          }
+        }
+
+        return true;
+      })
+      .sort((a, b) => (statusOrder[a.status ?? 'closed'] ?? 2) - (statusOrder[b.status ?? 'closed'] ?? 2));
   }, [spectacles, genreFilter, moisFilter, lieuFilter, onlyAvailable, searchQuery]);
 
   // Attendre que le composant soit monté pour éviter les erreurs d'hydratation
@@ -275,7 +284,7 @@ export default function CataloguePage() {
       <section className="py-6 md:py-8 bg-white border-b">
         <div className="container mx-auto px-4">
           <Card>
-            <CardContent className="p-4 md:p-6">
+            <CardContent className="px-4 md:px-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 {/* Select Genre */}
                 <div className="space-y-2">

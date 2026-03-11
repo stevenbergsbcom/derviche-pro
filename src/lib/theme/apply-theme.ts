@@ -90,6 +90,20 @@ export function applyTheme(themeId: string, isDarkMode: boolean = false): void {
 
   const theme = getThemePreset(themeId);
   const colors = isDarkMode ? theme.colors.dark : theme.colors.light;
+  applyThemeColors(colors, themeId);
+}
+
+/**
+ * Applique directement un jeu de couleurs ThemeColors au document
+ * Utile pour le thème personnalisé dont les couleurs sont générées dynamiquement
+ * @param colors - Les couleurs à appliquer
+ * @param themeId - ID du thème (par défaut 'custom')
+ */
+export function applyThemeColors(colors: ThemeColors, themeId: string = 'custom'): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+
   const root = document.documentElement;
 
   // Appliquer chaque couleur
