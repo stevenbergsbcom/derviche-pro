@@ -154,6 +154,8 @@ export async function middleware(request: NextRequest) {
         // Routes de redirection (legacy)
         '/pro-dashboard',
         '/admin-dashboard',
+        // Page de debug temporaire (PWA banner — S173, à supprimer après diagnostic)
+        '/accueil/debug',
     ];
 
     // Vérifier si la route est publique
