@@ -3,8 +3,8 @@
  * Derviche Diffusion
  *
  * Accepte des props optionnelles `settings` (HomepageFooter) et `organization`.
- * Sans props, affiche les valeurs par défaut (rétro-compatible).
- * Le logo blanc est chargé dynamiquement depuis les paramètres Apparence.
+ * Sans props, les données sont chargées automatiquement depuis app_settings (DB).
+ * Le logo blanc est toujours chargé dynamiquement depuis les paramètres Apparence.
  */
 
 'use client';
@@ -13,7 +13,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Facebook, Instagram } from 'lucide-react';
-import { getThemeSettings } from '@/lib/services/app-settings';
+import {
+  getThemeSettings,
+  getHomepageSettings,
+  getOrganizationSettings,
+} from '@/lib/services/app-settings';
 import type { HomepageFooter, OrganizationSettings } from '@/lib/services/app-settings';
 
 // ============================================
@@ -43,31 +47,55 @@ const DEFAULT_ADDRESS = '13, rue de Cotte - 75012 Paris';
 
 export function Footer({ settings, organization }: FooterProps = {}) {
   const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO);
+  const [fetchedSettings, setFetchedSettings] = useState<HomepageFooter | null>(null);
+  const [fetchedOrg, setFetchedOrg] = useState<OrganizationSettings | null>(null);
 
-  // Charger le logo blanc depuis les paramètres Apparence
+  // Charger le logo + données footer/organisation depuis app_settings
+  // Si les props sont fournies (homepage), on ne re-fetch pas ces données.
   useEffect(() => {
-    const loadLogo = async () => {
+    const loadData = async () => {
       try {
-        const result = await getThemeSettings();
-        if (result.data?.logo_white_url) {
-          setLogoUrl(result.data.logo_white_url);
+        // Logo blanc (toujours chargé dynamiquement)
+        const themeResult = await getThemeSettings();
+        if (themeResult.data?.logo_white_url) {
+          setLogoUrl(themeResult.data.logo_white_url);
+        }
+
+        // Footer settings (si pas fournis en props)
+        if (!settings) {
+          const hpResult = await getHomepageSettings();
+          if (hpResult.data?.homepage_footer) {
+            setFetchedSettings(hpResult.data.homepage_footer);
+          }
+        }
+
+        // Organisation (si pas fournie en props)
+        if (!organization) {
+          const orgResult = await getOrganizationSettings();
+          if (orgResult.data) {
+            setFetchedOrg(orgResult.data);
+          }
         }
       } catch {
-        // Fallback silencieux sur le logo par défaut
+        // Fallback silencieux sur les valeurs par défaut
       }
     };
-    void loadLogo();
-  }, []);
+    void loadData();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const description = settings?.description || DEFAULT_DESCRIPTION;
-  const facebookUrl = settings?.facebook_url || DEFAULT_FACEBOOK;
-  const instagramUrl = settings?.instagram_url || DEFAULT_INSTAGRAM;
-  const copyrightText = settings?.copyright_text
-    ? settings.copyright_text.replace('{year}', String(new Date().getFullYear()))
+  // Résolution : props > données DB > defaults hardcodés
+  const effectiveSettings = settings || fetchedSettings;
+  const effectiveOrg = organization || fetchedOrg;
+
+  const description = effectiveSettings?.description || DEFAULT_DESCRIPTION;
+  const facebookUrl = effectiveSettings?.facebook_url || DEFAULT_FACEBOOK;
+  const instagramUrl = effectiveSettings?.instagram_url || DEFAULT_INSTAGRAM;
+  const copyrightText = effectiveSettings?.copyright_text
+    ? effectiveSettings.copyright_text.replace('{year}', String(new Date().getFullYear()))
     : `© ${new Date().getFullYear()} Derviche Diffusion. Tous droits réservés.`;
-  const email = organization?.organization_contact_email || DEFAULT_EMAIL;
-  const address = organization?.organization_address
-    ? organization.organization_address.replace(/\n/g, ' - ')
+  const email = effectiveOrg?.organization_contact_email || DEFAULT_EMAIL;
+  const address = effectiveOrg?.organization_address
+    ? effectiveOrg.organization_address.replace(/\n/g, ' - ')
     : DEFAULT_ADDRESS;
 
   return (

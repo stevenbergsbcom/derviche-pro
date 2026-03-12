@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 import { logger } from '@/lib/logger';
@@ -74,6 +74,7 @@ function LoginForm() {
     const searchParams = useSearchParams();
     const [isLoadingEmailPassword, setIsLoadingEmailPassword] = useState(false);
     const [isLoadingMagicLink, setIsLoadingMagicLink] = useState(false);
+    const [magicLinkSentEmail, setMagicLinkSentEmail] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
 
     // Récupérer l'URL de redirection depuis les paramètres
@@ -166,26 +167,40 @@ function LoginForm() {
 
         try {
             const supabase = createClient();
-            
+
             // Construire l'URL de callback avec le paramètre next si présent et sécurisé
             const callbackUrl = new URL('/auth/callback', window.location.origin);
             if (nextUrl && isSafeRedirectUrl(nextUrl)) {
                 callbackUrl.searchParams.set('next', nextUrl);
             }
-            
+
             const { error } = await supabase.auth.signInWithOtp({
                 email: data.email,
                 options: {
+                    shouldCreateUser: false,
                     emailRedirectTo: callbackUrl.toString(),
                 },
             });
 
             if (error) {
-                toast.error(error.message || 'Erreur lors de l\'envoi du lien');
+                // Message identique succès/échec pour ne pas révéler si le compte existe
+                if (error.message?.includes('Signups not allowed')) {
+                    toast.success(
+                        'Si un compte existe avec cet email, un lien de connexion a été envoyé.'
+                    );
+                    setMagicLinkSentEmail(data.email);
+                    magicLinkForm.reset();
+                    return;
+                }
+                toast.error('Erreur lors de l\'envoi du lien');
                 return;
             }
 
-            toast.success('Vérifiez votre boîte email !');
+            // Même message que l'erreur "Signups not allowed" (anti-énumération)
+            toast.success(
+                'Si un compte existe avec cet email, un lien de connexion a été envoyé.'
+            );
+            setMagicLinkSentEmail(data.email);
             magicLinkForm.reset();
         } catch (error) {
             logger.error('[Login] Erreur magic link', error as Error);
@@ -297,46 +312,71 @@ function LoginForm() {
 
                 {/* Onglet Magic Link */}
                 <TabsContent value="magic-link" className="space-y-4">
-                    <Form {...magicLinkForm}>
-                        <form
-                            onSubmit={magicLinkForm.handleSubmit(handleMagicLinkSubmit)}
-                            className="space-y-4"
-                        >
-                            <FormField
-                                control={magicLinkForm.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="email"
-                                                placeholder="votre@email.com"
-                                                autoComplete="email"
-                                                disabled={isLoadingMagicLink}
-                                                {...field}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                        <p className="text-xs text-muted-foreground">
-                                            Un lien de connexion sera envoyé à cette adresse email
-                                        </p>
-                                    </FormItem>
-                                )}
-                            />
-
+                    {magicLinkSentEmail ? (
+                        <div className="flex flex-col items-center gap-4 py-4">
+                            <div className="rounded-full bg-primary/10 p-3">
+                                <Mail className="size-6 text-primary" />
+                            </div>
+                            <div className="text-center space-y-1">
+                                <p className="text-sm font-medium">
+                                    Un lien de connexion a été envoyé à{' '}
+                                    <strong>{magicLinkSentEmail}</strong>
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Vérifiez votre boîte de réception et vos spams
+                                </p>
+                            </div>
                             <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={isLoadingMagicLink}
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setMagicLinkSentEmail(null)}
                             >
-                                {isLoadingMagicLink && (
-                                    <Loader2 className="mr-2 size-4 animate-spin" />
-                                )}
-                                Envoyer le lien
+                                Renvoyer un lien
                             </Button>
-                        </form>
-                    </Form>
+                        </div>
+                    ) : (
+                        <Form {...magicLinkForm}>
+                            <form
+                                onSubmit={magicLinkForm.handleSubmit(handleMagicLinkSubmit)}
+                                className="space-y-4"
+                            >
+                                <FormField
+                                    control={magicLinkForm.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input
+                                                    type="email"
+                                                    placeholder="votre@email.com"
+                                                    autoComplete="email"
+                                                    disabled={isLoadingMagicLink}
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                            <p className="text-xs text-muted-foreground">
+                                                Un lien de connexion sera envoyé à cette adresse
+                                                email
+                                            </p>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <Button
+                                    type="submit"
+                                    className="w-full"
+                                    disabled={isLoadingMagicLink}
+                                >
+                                    {isLoadingMagicLink && (
+                                        <Loader2 className="mr-2 size-4 animate-spin" />
+                                    )}
+                                    Envoyer le lien
+                                </Button>
+                            </form>
+                        </Form>
+                    )}
                 </TabsContent>
             </Tabs>
 
