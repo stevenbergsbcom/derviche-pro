@@ -22,6 +22,11 @@ export interface EmailConfig {
   signature: string;
   footerText: string;
   organizationName: string;
+  /** Champs contact organisation — affichés dans le footer email */
+  organizationContactEmail: string;
+  organizationContactPhone: string;
+  organizationAddress: string;
+  organizationWebsite: string;
 }
 
 // ============================================
@@ -39,6 +44,10 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       'email_signature',
       'email_footer_text',
       'organization_name',
+      'organization_contact_email',
+      'organization_contact_phone',
+      'organization_address',
+      'organization_website',
     ];
 
     const { data, error } = await supabase
@@ -59,27 +68,34 @@ export async function getEmailConfig(): Promise<EmailConfig> {
     const appUrl = (() => { try { return new URL(catalogueUrl).origin; } catch { return 'https://derviche-pro.vercel.app'; } })();
 
     return {
-      fromName:         settings['email_from_name']      ?? 'Derviche Diffusion',
-      fromAddress:      settings['email_from_address']   ?? 'reservations@derviche-pro.fr',
-      replyTo:          settings['email_reply_to']       ?? 'contact@derviche-pro.fr',
-      // ⚠️ Mettre à jour la clé email_catalogue_url en DB vers derviche-pro.fr/catalogue
+      fromName:                 settings['email_from_name']              ?? 'Derviche Diffusion',
+      fromAddress:              settings['email_from_address']           ?? 'reservations@derviche-pro.fr',
+      replyTo:                  settings['email_reply_to']              ?? 'contact@derviche-pro.fr',
       catalogueUrl,
       appUrl,
-      signature:        settings['email_signature']      ?? "L'équipe Derviche Diffusion",
-      footerText:       settings['email_footer_text']    ?? 'Derviche Diffusion — contact@derviche-pro.fr',
-      organizationName: settings['organization_name']    ?? 'Derviche Diffusion',
+      signature:                settings['email_signature']             ?? "L'équipe Derviche Diffusion",
+      footerText:               settings['email_footer_text']           ?? 'Derviche Diffusion — contact@derviche-pro.fr',
+      organizationName:         settings['organization_name']           ?? 'Derviche Diffusion',
+      organizationContactEmail: settings['organization_contact_email']  ?? '',
+      organizationContactPhone: settings['organization_contact_phone']  ?? '',
+      organizationAddress:      settings['organization_address']        ?? '',
+      organizationWebsite:      settings['organization_website']        ?? '',
     };
   } catch (err) {
     logger.error('[email] Exception getEmailConfig', { err });
     return {
-      fromName:         'Derviche Diffusion',
-      fromAddress:      'reservations@derviche-pro.fr',
-      replyTo:          'contact@derviche-pro.fr',
-      catalogueUrl:     'https://derviche-pro.vercel.app/catalogue',
-      appUrl:           'https://derviche-pro.vercel.app',
-      signature:        "L'équipe Derviche Diffusion",
-      footerText:       'Derviche Diffusion — contact@derviche-pro.fr',
-      organizationName: 'Derviche Diffusion',
+      fromName:                 'Derviche Diffusion',
+      fromAddress:              'reservations@derviche-pro.fr',
+      replyTo:                  'contact@derviche-pro.fr',
+      catalogueUrl:             'https://derviche-pro.vercel.app/catalogue',
+      appUrl:                   'https://derviche-pro.vercel.app',
+      signature:                "L'équipe Derviche Diffusion",
+      footerText:               'Derviche Diffusion — contact@derviche-pro.fr',
+      organizationName:         'Derviche Diffusion',
+      organizationContactEmail: '',
+      organizationContactPhone: '',
+      organizationAddress:      '',
+      organizationWebsite:      '',
     };
   }
 }

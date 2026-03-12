@@ -19,6 +19,7 @@ import {
   buildSignatureBlock,
   buildCtaBlock,
   buildFooterRow,
+  orgContactFromConfig,
 } from '../html-helpers';
 
 export function buildModificationHtml(
@@ -132,7 +133,7 @@ export function buildModificationHtml(
         ${buildInfoBlock(resolvedInfo)}
         ${buildContactBlock(template, data.managerName, data.managerEmail, data.managerPhone)}
         ${buildSignatureBlock(safeSalutation, safeSignature)}
-        ${buildFooterRow(safeFooterText)}
+        ${buildFooterRow(safeFooterText, orgContactFromConfig(config))}
 
       </table>
     </td></tr>

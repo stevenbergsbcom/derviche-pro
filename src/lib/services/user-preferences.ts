@@ -5,13 +5,12 @@
  * Stocke et récupère les préférences utilisateur depuis Supabase
  * Exemples: colonnes visibles, paramètres UI, etc.
  * 
- * Note: Les casts `as any` sont nécessaires car la table user_preferences
- * n'est pas encore dans les types Supabase auto-générés.
- * TODO: Regénérer les types avec `npx supabase gen types typescript`
+ * Utilise la table user_preferences (types générés dans supabase.ts).
  */
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import type { Json } from '@/types/supabase';
 
 // ============================================
 // TYPES
@@ -52,8 +51,7 @@ export async function getUserPreference<T>(
     }
 
     // .maybeSingle() retourne null sans erreur si 0 ligne (vs .single() qui retourne 406)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from as any)('user_preferences')
+    const { data, error } = await supabase.from('user_preferences')
       .select('preference_value')
       .eq('user_id', user.id)
       .eq('preference_key', key)
@@ -90,12 +88,11 @@ export async function setUserPreference<T>(
     }
 
     // Upsert sans .select().single() — évite le 406 quand la ligne n'existait pas encore
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from as any)('user_preferences')
+    const { error } = await supabase.from('user_preferences')
       .upsert({
         user_id: user.id,
         preference_key: key,
-        preference_value: value as unknown,
+        preference_value: value as unknown as Json,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'user_id,preference_key',
@@ -131,8 +128,7 @@ export async function deleteUserPreference(
       return { success: false, error: 'Utilisateur non connecté' };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from as any)('user_preferences')
+    const { error } = await supabase.from('user_preferences')
       .delete()
       .eq('user_id', user.id)
       .eq('preference_key', key);
@@ -167,8 +163,7 @@ export async function getAllUserPreferences(): Promise<{
       return { data: {}, error: 'Utilisateur non connecté' };
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from as any)('user_preferences')
+    const { data, error } = await supabase.from('user_preferences')
       .select('preference_key, preference_value')
       .eq('user_id', user.id);
 

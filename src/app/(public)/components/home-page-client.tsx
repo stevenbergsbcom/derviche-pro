@@ -97,11 +97,19 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
   // Hook Supabase pour les données
   const { shows: publicShows, isLoading, error, refresh } = usePublicCatalog();
 
-  // Transformer les PublicShow en Spectacle
+  // Transformer les PublicShow en Spectacle (disponibles en premier, comme le catalogue)
   const spectacles = useMemo(() => {
+    const statusOrder: Record<SpectacleStatus, number> = {
+      available: 0,
+      coming_soon: 1,
+      closed: 2,
+    };
     return publicShows
       .map(transformShowToSpectacle)
-      .filter((s) => s.status !== 'closed');
+      .filter((s) => s.status !== 'closed')
+      .sort((a, b) =>
+        (statusOrder[a.status ?? 'closed'] ?? 2) - (statusOrder[b.status ?? 'closed'] ?? 2)
+      );
   }, [publicShows]);
 
   // Spectacles avec image pour le Hero Slider

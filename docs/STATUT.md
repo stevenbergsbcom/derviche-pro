@@ -232,49 +232,46 @@
 
 ---
 
-## À faire — Backlog priorisé (mis à jour S153 — 9 mars 2026)
+## À faire — Backlog priorisé (mis à jour S177 — 12 mars 2026)
 
 ### 🟡 MOYENNE PRIORITÉ — Expérience & dashboards
 
-| # | Session | Fonctionnalité | Détail |
-|---|---------|----------------|--------|
-| 1 | **S155** | Dashboards par rôle (pro, company, externe) | Professionnel : prochain spectacle + mes réservations. Compagnie : taux remplissage/présence par créneau. Externe-DD : stats filtrées ses spectacles assignés. |
-| 2 | **S155** | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. |
-| 3 | **S156** | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles déjà vus vs non vus. |
-| 4 | **S156** | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC). |
-| 5 | **S157** | Notification push PWA | Pour les rôles staff uniquement (super-admin, admin, externe). Rappel H-2 avant spectacle, nouvelle réservation, annulation. PAS pour les programmateurs. |
-| 6 | **S157** | Refacto fichiers trop gros | Par ordre : `EmailTemplateForm.tsx` (27 KB 🚨), `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB). |
-| 7 | **S158** | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
+| # | Fonctionnalité | Détail |
+|---|----------------|--------|
+| 1 | Exports enrichis | CSV global par période — taux présence par spectacle, par compagnie. Rapport de fin de saison. |
+| 2 | Filtre "Mes spectacles" catalogue | Pour un pro connecté : badge/filtre pour voir en 1 clic les spectacles déjà vus vs non vus. |
+| 3 | Magic Link | Connexion sans mot de passe pour les professionnels uniquement (prévu au CDC). |
+| 4 | QR Code à la publication | Généré automatiquement vers `/catalogue/[slug]` quand un spectacle passe en `published`. |
 
 ### 🟡 MOYENNE PRIORITÉ — CDC V4 non implémenté
 
-| # | Session | Fonctionnalité | Détail |
-|---|---------|----------------|--------|
-| 8 | **S159** | Champs manquants formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
-| 9 | **S159** | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque. |
-| 10 | ~~S159~~ | ~~Dashboard externe-DD dédié~~ | Intégré dans S155 |
+| # | Fonctionnalité | Détail |
+|---|----------------|--------|
+| 5 | Champs manquants formulaires | `venues` : capacité, PMR, parking, transports. `shows` : période, responsable Derviche, politique invitation, dates relâche. `companies` : ville, contact. |
+| 6 | Upload logos compagnies + photos salles | Supabase Storage existe, UI d'upload manque. |
 
 ### 🟢 BASSE PRIORITÉ
 
 | # | Fonctionnalité | Détail |
 |---|----------------|--------|
-| 11 | Vue calendrier compagnie | Représentations chronologiques de leurs spectacles |
-| 12 | Impression liste d'émargement | Export PDF de la liste de présence pour accueil sur place |
-| 13 | Réorganisation catégories | Drag & drop ou flèches haut/bas (champ `display_order` existe) |
-| 14 | Audit logs actions métier | Traçabilité RGPD : qui a modifié quoi |
-| 15 | Pages légales | CGU, mentions légales, politique de confidentialité |
-| 16 | Champs org dans footer + emails | `contact_email`, `phone`, `address`, `website` dans `app_settings` non consommés |
-| 17 | Redirection mobile auto au login | Selon device + rôle (prévu au CDC section 2.6) |
-| 18 | Stats compagnie avancées | Profil des programmateurs par fonction et région |
+| 7 | Vue calendrier compagnie | Représentations chronologiques de leurs spectacles |
+| 8 | Impression liste d'émargement | Export PDF de la liste de présence pour accueil sur place |
+| 9 | Réorganisation catégories | Drag & drop ou flèches haut/bas (champ `display_order` existe) |
+| 10 | Audit logs actions métier | Traçabilité RGPD : qui a modifié quoi |
+| 11 | Pages légales | CGU, mentions légales, politique de confidentialité |
+| 12 | Champs org dans emails | `contact_email`, `phone`, `address`, `website` — footer ✅ S176, emails ✅ S177 |
+| 13 | Redirection mobile auto au login | Selon device + rôle (prévu au CDC section 2.6) |
+| 14 | Stats compagnie avancées | Profil des programmateurs par fonction et région |
+| 15 | Refacto fichiers trop gros | `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB) |
 
 ### 🔭 Phase 2 — Post-MVP
 
 | # | Fonctionnalité |
 |---|----------------|
-| 19 | White-label / Multi-tenant |
-| 20 | API publique partenaires |
-| 21 | Mode offline check-in PWA |
-| 22 | Analytics avancées |
+| 16 | White-label / Multi-tenant |
+| 17 | API publique partenaires |
+| 18 | Mode offline check-in PWA |
+| 19 | Analytics avancées |
 
 ---
 
@@ -332,13 +329,8 @@
 
 | Élément | Fichier | Description | Priorité |
 |---------|---------|-------------|----------|
-| `user_preferences` `as any` | `user-preferences.ts` | À supprimer après regénération types Supabase | 🟡 Basse |
-| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
-| Migrations 059/060 obsolètes | `supabase/migrations/` | Appliquées en base mais remplacées par 061 | 🟡 Basse |
-| Timezone crons | `reminders/queries.ts` | UTC naïf | 🟡 Basse |
-| Champs org non consommés | `app_settings` | `contact_email`, `phone`, `address`, `website` absents du footer et emails | 🟡 Basse |
-| RGPD purge auto | — | Durées stockées, aucune purge automatique planifiée | 🟡 Basse |
-| `slot_date` null confirmation | `send-confirmation/route.ts` | Payload ne contient pas l'ISO date du créneau | 🟡 Basse |
+| Timezone crons | `reminders/queries.ts` | UTC naïf — nécessite timezone configurable | 🟡 Basse |
+| RGPD purge auto | — | Durées stockées dans préférences, aucune purge cron planifiée | 🟡 Basse |
 
 ---
 
@@ -407,6 +399,12 @@
 | 079 | `079_fix_rls_externe_dd_to_externe.sql` | Fix RLS `externe-dd`→`externe` sur 4 tables manquantes (user_show_assignments, profiles, shows, slots) | ✅ |
 
 | 080 | `080_add_slot_date_to_reservations.sql` | Colonnes `slot_date`/`slot_time` dénormalisées + trigger `sync_reservation_slot_datetime` + backfill + index | ✅ |
+| 081 | `081_maintenance_rpcs.sql` | RPCs purge notifications + reset data | ✅ |
+| 082 | `082_companies_contact_email_nullable.sql` | `DROP NOT NULL` sur `companies.contact_email` | ✅ |
+| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable sur `shows` | ✅ |
+| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` sur `email_templates` | ✅ |
+| 085 | `085_add_custom_theme_colors.sql` | `custom_theme_colors` JSONB dans `app_settings` | ✅ |
+| 086 | `086_add_homepage_settings.sql` | 6 clés JSONB homepage (hero, avantages, spectacles, impact, contact, footer) | ✅ |
 
 ---
 
@@ -639,32 +637,6 @@ Aucune.
 
 ---
 
-## S168 — Corrections UX & dette technique ✅ mergé main
-
-### S168-A — Harmonisation footer AddReservationDrawer (PWA)
-- Footer aligné sur `FooterSection` du `CheckinDrawer` : taille standard shadcn, couleur primaire, label "Fermer"
-- Footer fixe hors du scroll via attribut HTML5 natif `form="add-reservation-form"` sur le bouton submit
-- Titres des 3 sections `RequiredFieldsSection` uniformisés en `text-base`
-- Pattern : `form#add-reservation-form` sur `<form>`, `FormFooter` sorti du `div.overflow-y-auto`
-
-### S168-B — Rate limiting routes email manquantes (dette S153)
-- `send-cancellation`, `send-modification`, `send-checkin-followup` : ajout `checkRateLimit('emails', request)` (20 req / 1h)
-
-### S168-C — Email contact compagnie optionnel
-- Migration 082 : `DROP NOT NULL` sur `companies.contact_email`
-- `supabase.ts` + `database.ts` : `contact_email` nullable
-- `CompanyOption` : `contactEmail: string | null`
-- Dialogs company : null guards `?.trim() || null`
-
-### Migrations S168
-| # | Fichier | Description | Prod |
-|---|---------|-------------|------|
-| 082 | `082_companies_contact_email_nullable.sql` | `DROP NOT NULL` sur `companies.contact_email` | ✅ |
-
-> Audit Cursor S168-A : 9.75/10 → 10/10 après fix `cn` inutile.
-
----
-
 ## S169 — Fix hero image page spectacle public ✅ mergé main
 
 - `src/app/(public)/spectacle/[slug]/page.tsx` : remplacement du texte hardcodé `'Derviche Diffusion'` par `{show.companyName}` sur la carte hero.
@@ -680,8 +652,8 @@ Aucune.
 ### Migrations
 | # | Fichier | Description | Prod |
 |---|---------|-------------|------|
-| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable | ⏳ **À appliquer** |
-| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` | ⏳ **À appliquer** |
+| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable | ✅ |
+| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` | ✅ |
 
 ### Points techniques
 - `isSafeUrl()` de `html-helpers.ts` est une pure function importable dans les composants UI
@@ -690,12 +662,6 @@ Aucune.
 
 ### Audit S170 : 9.9/10 → 10/10
 Unique correction : import `isSafeUrl` dans `MediaResourcesSection` pour protéger tous les `href` (XSS `javascript:`).
-
-### Migrations S170
-| # | Fichier | Description | Prod |
-|---|---------|-------------|------|
-| 083 | `083_add_photo_folder_url_to_shows.sql` | `photo_folder_url TEXT` nullable | ✅ |
-| 084 | `084_add_photo_folder_link_to_email_templates.sql` | `show_photo_folder_link BOOL` + `photo_folder_link_text TEXT` | ✅ |
 
 ---
 
@@ -757,8 +723,6 @@ Aucune.
 
 ### Audit S172 : 8.5/10 → 10/10
 Point corrigé : `verifiedSlotId` initialisé à `undefined` pour `company` quand `rawSlotId` présent dans l'URL (évite drawer pré-rempli non vérifié). Aucun autre point bloquant.
-
----
 
 ---
 
@@ -862,7 +826,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `supabase/migrations/086_add_homepage_settings.sql` | 6 clés JSONB (hero, avantages, spectacles, impact, contact, footer) |
 | `src/lib/services/app-settings.ts` | Types `Homepage*`, `HOMEPAGE_DEFAULTS`, `get/setHomepageSettings`, `HomepageImpact.enabled` |
 | `src/lib/services/homepage-settings.server.ts` | Nouveau — fetch serveur (admin client bypass RLS) pour la page publique |
-| `src/app/admin/preferences/components/sections/homepage-section.tsx` | Nouveau — 6 SettingsCard (Hero, Avantages, Spectacles, Impact, Contact, Footer) |
+| `src/app/admin/preferences/components/sections/homepage/` | 6 SettingsCard extraites en sous-composants (1 orchestrateur + 6 cards + types) |
 | `src/app/(public)/page.tsx` | Refactorisé en Server Component (fetch `getHomepageData()`) |
 | `src/app/(public)/components/home-page-client.tsx` | Nouveau — Client Component pour le rendu interactif |
 | `src/app/(public)/components/icon-map.ts` | Nouveau — mapping string → LucideIcon pour les cartes avantages |
@@ -889,12 +853,33 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
-### Prochaine session : S177 — à définir
+### S177 — Solder la dette technique ✅
+
+**Corrections :**
+- Fix `slot_date: null` dans `send-confirmation` (notification admin recevait date null)
+- Suppression 4× `as any` dans `user-preferences.ts` (types Supabase existants depuis S155)
+- Ajout champs organisation (`contact_email`, `phone`, `address`, `website`) dans `EmailConfig` + footer emails (7 builders)
+- Refactoring `homepage-section.tsx` (1015 lignes → 8 fichiers dans `homepage/`)
+- Nettoyage `STATUT.md` : doublon S168, statuts migrations S170, backlog obsolète, table DETTE
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `src/app/api/emails/send-confirmation/route.ts` | `slot_date: null` → `payload.slotDateFormatted` |
+| `src/lib/services/user-preferences.ts` | 4× `as any` → appels typés, import `Json` |
+| `src/lib/services/email/config.ts` | +4 champs org dans `EmailConfig` + `getEmailConfig()` |
+| `src/lib/services/email/html-helpers.ts` | `OrgContact` + `orgContactFromConfig` + `buildFooterRow` enrichi |
+| `src/lib/services/email/builders/*.ts` | 7 builders : footer avec `orgContactFromConfig(config)` |
+| `src/app/admin/preferences/components/sections/homepage/` | 1015→8 fichiers (orchestrateur + 6 cards + types) |
+| `docs/STATUT.md` | Nettoyage global |
+
+---
+
+### Prochaine session : S178 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
 | 1 | Magic Link | Moyenne | CDC + UX pros |
 | 2 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
-| 3 | Extraire les 6 cartes de homepage-section.tsx en sous-composants | Faible | Maintenabilité |
-| 4 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 3 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |

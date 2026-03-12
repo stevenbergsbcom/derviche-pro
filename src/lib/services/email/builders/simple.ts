@@ -22,6 +22,7 @@ import {
   buildContactBlock,
   buildSignatureBlock,
   buildFooterRow,
+  orgContactFromConfig,
 } from '../html-helpers';
 
 // ============================================
@@ -198,7 +199,7 @@ export function buildSimpleHtml(
           </tr>
 
           <!-- Footer -->
-          ${buildFooterRow(safeFooterText)}
+          ${buildFooterRow(safeFooterText, orgContactFromConfig(config))}
 
         </table>
       </td>

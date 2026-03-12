@@ -23,6 +23,7 @@ import {
   buildSignatureBlock,
   buildCtaBlock,
   buildFooterRow,
+  orgContactFromConfig,
 } from '../html-helpers';
 
 export function buildReminder2dHtml(
@@ -138,7 +139,7 @@ export function buildReminder2dHtml(
         ${buildInfoBlock(resolvedInfo, '#c2410c', '#fff7ed', '#fed7aa')}
         ${buildContactBlock(template, data.managerName, data.managerEmail, data.managerPhone)}
         ${buildSignatureBlock(safeSalutation, safeSignature)}
-        ${buildFooterRow(safeFooterText)}
+        ${buildFooterRow(safeFooterText, orgContactFromConfig(config))}
 
       </table>
     </td></tr>

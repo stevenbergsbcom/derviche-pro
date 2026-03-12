@@ -8,6 +8,7 @@
  */
 
 import type { EmailTemplate } from '@/types/email-templates';
+import type { EmailConfig } from './config';
 
 // ============================================
 // UTILS TEXTE
@@ -144,10 +145,29 @@ export function buildCtaBlock(safeCtaText: string, href: string, color = '#1e3a5
           </tr>`;
 }
 
+/** Données contact organisation optionnelles pour le footer email. */
+export interface OrgContact {
+  email?: string;
+  phone?: string;
+  address?: string;
+  website?: string;
+}
+
 /**
  * Ligne footer commune à tous les emails.
+ * Si `orgContact` est fourni et contient au moins un champ renseigné,
+ * une seconde ligne de coordonnées est ajoutée sous le footerText.
  */
-export function buildFooterRow(safeFooterText: string): string {
+export function buildFooterRow(safeFooterText: string, orgContact?: OrgContact): string {
+  const parts: string[] = [];
+  if (orgContact?.email) parts.push(escapeHtml(orgContact.email));
+  if (orgContact?.phone) parts.push(escapeHtml(orgContact.phone));
+  if (orgContact?.address) parts.push(escapeHtml(orgContact.address));
+  if (orgContact?.website) parts.push(escapeHtml(orgContact.website));
+  const contactLine = parts.length > 0
+    ? `<p style="margin:4px 0 0;font-size:12px;color:#9ca3af;">${parts.join(' — ')}</p>`
+    : '';
+
   return `
           <tr>
             <td style="height:24px;"></td>
@@ -155,6 +175,21 @@ export function buildFooterRow(safeFooterText: string): string {
           <tr>
             <td style="background-color:#f8f9fa;border-top:1px solid #e5e7eb;padding:20px 40px;text-align:center;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">${safeFooterText}</p>
+              ${contactLine}
             </td>
           </tr>`;
+}
+
+/**
+ * Extrait les champs org contact depuis un EmailConfig.
+ * Renvoie `undefined` si tous les champs sont vides (aucune ligne contact ajoutée).
+ */
+export function orgContactFromConfig(config: EmailConfig): OrgContact | undefined {
+  const contact: OrgContact = {
+    email: config.organizationContactEmail || undefined,
+    phone: config.organizationContactPhone || undefined,
+    address: config.organizationAddress || undefined,
+    website: config.organizationWebsite || undefined,
+  };
+  return Object.values(contact).some(Boolean) ? contact : undefined;
 }
