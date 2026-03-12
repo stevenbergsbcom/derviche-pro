@@ -26,7 +26,8 @@ export type EmailAction =
 export type CalendarAction =
   | 'calendar_create'
   | 'calendar_update'
-  | 'calendar_delete';
+  | 'calendar_delete'
+  | 'calendar_health_check';
 
 export type ReservationAction =
   | 'reservation_create'

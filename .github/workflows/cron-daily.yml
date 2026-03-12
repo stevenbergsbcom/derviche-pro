@@ -15,7 +15,7 @@ jobs:
         run: |
           response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://derviche-pro.vercel.app/api/cron/reminders/daily)
+            https://derviche-pro.fr/api/cron/reminders/daily)
 
           echo "HTTP Status: $response"
           echo "Response body:"
@@ -32,7 +32,7 @@ jobs:
         run: |
           response=$(curl -s -o /tmp/purge-response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://derviche-pro.vercel.app/api/cron/purge-logs)
+            https://derviche-pro.fr/api/cron/purge-logs)
 
           echo "HTTP Status: $response"
           echo "Response body:"
@@ -44,4 +44,22 @@ jobs:
             echo "✅ Purge des logs terminée"
           fi
         # Ne pas faire échouer le workflow si la purge échoue
+        continue-on-error: true
+
+      - name: Vérification santé token Google Calendar
+        run: |
+          response=$(curl -s -o /tmp/gcal-health-response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://derviche-pro.fr/api/cron/google-calendar-health)
+
+          echo "HTTP Status: $response"
+          echo "Response body:"
+          cat /tmp/gcal-health-response.json
+
+          if [ "$response" != "200" ]; then
+            echo "⚠️ Health check Google Calendar — erreur HTTP $response (non bloquant)"
+          else
+            echo "✅ Vérification token Google Calendar terminée"
+          fi
+        # Non bloquant — ne pas faire échouer le workflow
         continue-on-error: true

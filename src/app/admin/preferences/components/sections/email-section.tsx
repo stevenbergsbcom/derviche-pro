@@ -59,7 +59,7 @@ const DEFAULT_VALUES: EmailFormData = {
   email_from_address: '',
   email_reply_to: '',
   email_signature: "L'équipe Derviche Diffusion",
-  email_footer_text: 'Derviche Diffusion — reservation.derviche@gmail.com',
+  email_footer_text: 'Derviche Diffusion — reservation@derviche-pro.fr',
 };
 
 // ============================================
@@ -209,7 +209,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
           <Input
             id="email_from_address"
             type="email"
-            placeholder="reservation.derviche@gmail.com"
+            placeholder="reservation@derviche-pro.fr"
             disabled={!canEdit}
             {...register('email_from_address')}
           />
@@ -227,7 +227,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
           <Input
             id="email_reply_to"
             type="email"
-            placeholder="reservation.derviche@gmail.com"
+            placeholder="reservation@derviche-pro.fr"
             disabled={!canEdit}
             {...register('email_reply_to')}
           />
@@ -273,7 +273,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         <Label htmlFor="email_footer_text">Pied de page</Label>
         <Textarea
           id="email_footer_text"
-          placeholder="Derviche Diffusion — reservation.derviche@gmail.com"
+          placeholder="Derviche Diffusion — reservation@derviche-pro.fr"
           rows={2}
           disabled={!canEdit}
           {...register('email_footer_text')}
