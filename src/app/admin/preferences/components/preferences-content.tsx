@@ -28,6 +28,7 @@ import {
   RgpdSection,
   EmailTemplatesSection,
   GoogleCalendarSection,
+  LegalSection,
 } from './sections';
 
 // ============================================
@@ -107,6 +108,7 @@ function PreferencesInnerContent({
   const handleTemplatesDirty      = useCallback((d: boolean) => onDirtyChange('templates',       d), [onDirtyChange]);
   const handleGoogleCalendarDirty = useCallback((d: boolean) => onDirtyChange('google-calendar', d), [onDirtyChange]);
   const handleRgpdDirty           = useCallback((d: boolean) => onDirtyChange('rgpd',            d), [onDirtyChange]);
+  const handleLegalDirty          = useCallback((d: boolean) => onDirtyChange('legal',           d), [onDirtyChange]);
 
   return (
     <>
@@ -139,6 +141,9 @@ function PreferencesInnerContent({
         )}
         {activeTab === 'rgpd' && (
           <RgpdSection           canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
+        )}
+        {activeTab === 'legal' && (
+          <LegalSection          canEdit={canEdit} onDirtyChange={handleLegalDirty} />
         )}
       </div>
 
