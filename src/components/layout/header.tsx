@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { Menu, X, User, CalendarDays } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getThemeSettings } from '@/lib/services/app-settings';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import type { UserRole } from '@/types/database';
+
+const DEFAULT_LOGO = '/images/logos/logo-derviche-bleu.png';
 
 /**
  * Retourne l'URL de "Mon compte" selon le rôle
@@ -33,6 +36,7 @@ export function Header() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [logoUrl, setLogoUrl] = useState(DEFAULT_LOGO);
 
   // Fonction pour charger le rôle utilisateur
   const loadUserRole = useCallback(async (userId: string) => {
@@ -97,6 +101,21 @@ export function Header() {
     };
   }, [loadUserRole]);
 
+  // Charger le logo sombre depuis les paramètres Apparence
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const result = await getThemeSettings();
+        if (result.data?.logo_dark_url) {
+          setLogoUrl(result.data.logo_dark_url);
+        }
+      } catch {
+        // Fallback silencieux sur le logo par défaut
+      }
+    };
+    void loadLogo();
+  }, []);
+
   const accountUrl = getAccountUrl(userRole);
 
   return (
@@ -107,7 +126,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <Image
-              src="/images/logos/logo-derviche-bleu.png"
+              src={logoUrl}
               alt="Derviche Diffusion"
               width={180}
               height={70}
