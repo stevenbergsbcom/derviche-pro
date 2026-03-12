@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S173 (✅ mergé main) — QR Code dashboard + Bannière installation PWA — 11 mars 2026
+> Dernière mise à jour : Session S176 (✅ mergé main) — Page d'accueil configurable via préférences admin — 12 mars 2026
 
 ---
 
@@ -12,6 +12,15 @@
 - Middleware : protection par rôle, redirection, compte désactivé
 - `SUPER_ADMIN_ONLY_ROUTES` : `/admin/preferences` + `/admin/systeme` — accès super-admin uniquement (S150)
 - Vérification mot de passe (API) — validation Zod ajoutée S153
+
+### ✅ Public - Page d'accueil configurable (100%) — S176
+- Contenu 100% dynamique depuis les préférences admin (6 sections : Hero, Avantages, Spectacles, Chiffres clés, Contact, Footer)
+- Split Server Component (fetch admin) / Client Component (rendu interactif)
+- Carousel spectacles publiés avec navigation et responsive
+- Section Impact désactivable via toggle admin (enabled/disabled)
+- Logos Header/Footer dynamiques depuis l'onglet Apparence (theme settings)
+- Contact : email, téléphone, site web (données Organisation)
+- Footer : réseaux sociaux, copyright avec `{year}` dynamique
 
 ### ✅ Public - Catalogue & Réservation (100%)
 - Liste des spectacles (public)
@@ -61,7 +70,7 @@
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
-| Préférences | ✅ Organisation, Apparence, Email, Notifications, Rappels, Templates (11), Google Calendar, RGPD |
+| Préférences | ✅ Organisation, Apparence (thème custom S174), Email, Notifications, Rappels, Templates (11, UX DRY S175), Google Calendar, RGPD, **Page d'accueil (S176)** |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
 | **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
 | **Utilisateurs** | ✅ CRUD comptes internes + vue assignations spectacles pour externes — S153 |
@@ -790,12 +799,102 @@ Corrections appliquées : sessionStorage persist dismiss (priorité 1), isInstal
 
 ---
 
-### Prochaine session : S174 — à définir
+## S174 — Thème personnalisé + améliorations UX préférences ✅ mergé main
+
+### Objectif
+Permettre la personnalisation du thème (couleurs primary, accent, sidebar) avec des color pickers, et améliorer l'UX des onglets Organisation et Email dans les préférences admin.
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/preferences/components/sections/appearance-section.tsx` | 3 color pickers (react-colorful) remplacent le preset Sable, palette OKLCH auto-générée (culori) |
+| `src/app/admin/preferences/components/sections/email-section.tsx` | Grille 2 colonnes, icônes sous-titres, aperçu signature/footer |
+| `src/app/admin/preferences/components/sections/organization-section.tsx` | Grille 2 colonnes, card saison séparée |
+| `src/components/shared-sidebar/components/SidebarLogo.tsx` | useReducer pour forcer le refresh au changement de thème |
+| `src/app/(public)/catalogue/page.tsx` | Tri par date de représentation, padding mobile corrigé |
+| `src/lib/theme/color-utils.ts` | Nouveau — utilitaires conversion hex/oklch |
+| `src/lib/theme/generate-custom-theme.ts` | Nouveau — génération palette OKLCH depuis 3 seeds |
+| `src/lib/theme/apply-theme.ts` | Nouveau — application CSS variables depuis les seeds |
+| `src/hooks/useAppSettings.ts` | Hook `useThemeSettings` enrichi |
+| `src/lib/services/app-settings.ts` | `custom_theme_colors` dans ThemeSettings |
+| `supabase/migrations/085_add_custom_theme_colors.sql` | Migration custom_theme_colors dans app_settings |
+
+### Décisions techniques
+- **OKLCH** : espace couleur perceptuellement uniforme, meilleur que HSL pour générer des palettes harmonieuses
+- **react-colorful** + **culori** : packages légers (tree-shakable) vs lourds (react-color)
+- **Validation hex** : regex `/^#[0-9a-fA-F]{6}$/` avant conversion, fallback sur seeds par défaut
+- **Typage** : `Partial<ThemeSettings>` pour `setThemeSettings` — mise à jour partielle sans écraser les autres champs
+
+### Migrations
+- `085_add_custom_theme_colors.sql` : 1 clé `custom_theme_colors` dans `app_settings` (JSONB)
+
+---
+
+## S175 — UX/UI templates email — DRY, badges, distinction visuelle ✅ mergé main
+
+### Objectif
+Améliorer l'UX et la maintenabilité du formulaire de templates email : extraction composant DRY, badges, structuration visuelle.
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/preferences/components/EmailTemplateForm.tsx` | OptionalLinkToggle extrait (DRY ~130→60 lignes), useWatch au lieu de watch (React Compiler), variables uniques en haut, sous-titres icônes |
+| `src/app/admin/preferences/components/sections/templates-section.tsx` | Badges type par template, aperçu subject tronqué, distinction visuelle template ouvert (bordure, ombre, ring) |
+
+### Décisions techniques
+- **`useWatch()` vs `watch()`** : `useWatch` est compatible React Compiler (pas d'appel conditionnel) ; 7 champs migrés
+- **OptionalLinkToggle** : composant réutilisable pour les 5 blocs switch+input de liens optionnels, avec `id` + `aria-label`
+- **Badges** : `GROUP_BADGE_CONFIG` avec couleurs par type (Transactionnel/Rappel/Post-accueil)
+
+### Migrations
+Aucune.
+
+---
+
+## S176 — Page d'accueil configurable via préférences admin ✅ mergé main
+
+### Objectif
+Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page d'accueil » des préférences admin, avec 6 sections éditables.
+
+### Fichiers modifiés/créés
+| Fichier | Action |
+|---------|--------|
+| `supabase/migrations/086_add_homepage_settings.sql` | 6 clés JSONB (hero, avantages, spectacles, impact, contact, footer) |
+| `src/lib/services/app-settings.ts` | Types `Homepage*`, `HOMEPAGE_DEFAULTS`, `get/setHomepageSettings`, `HomepageImpact.enabled` |
+| `src/lib/services/homepage-settings.server.ts` | Nouveau — fetch serveur (admin client bypass RLS) pour la page publique |
+| `src/app/admin/preferences/components/sections/homepage-section.tsx` | Nouveau — 6 SettingsCard (Hero, Avantages, Spectacles, Impact, Contact, Footer) |
+| `src/app/(public)/page.tsx` | Refactorisé en Server Component (fetch `getHomepageData()`) |
+| `src/app/(public)/components/home-page-client.tsx` | Nouveau — Client Component pour le rendu interactif |
+| `src/app/(public)/components/icon-map.ts` | Nouveau — mapping string → LucideIcon pour les cartes avantages |
+| `src/app/(public)/components/index.ts` | Barrel export |
+| `src/components/layout/footer.tsx` | Logo dynamique (theme settings), props settings/organization |
+| `src/components/layout/header.tsx` | Logo dynamique (theme settings) |
+| `src/hooks/useAppSettings.ts` | Hook `useHomepageSettings` |
+| `src/app/admin/preferences/components/preferences-content.tsx` | Onglet Homepage intégré |
+| `src/app/admin/preferences/components/preferences-tabs.tsx` | Tab Homepage + badge Organisation → Actif |
+| `src/app/admin/preferences/components/sections/index.ts` | Export HomepageSection |
+| `src/app/admin/preferences/components/sections/organization-section.tsx` | Fix NOT NULL (|| '' uniforme), suppression `organization_logo_url` |
+
+### Décisions techniques
+- **Split Server/Client** : `page.tsx` = Server Component (fetch données), `home-page-client.tsx` = Client Component (carousel, animations)
+- **Deep merge avec spread** : `{ ...HOMEPAGE_DEFAULTS.homepage_impact, ...data }` pour rétro-compatibilité quand de nouveaux champs sont ajoutés (ex: `enabled`)
+- **Toggle Impact** : `homepage_impact.enabled` avec Switch dans l'admin, rendu conditionnel `{homepage_impact.enabled && (<section>...)}`
+- **Logos dynamiques** : `useState` + `useEffect` + `getThemeSettings()` avec fallback hardcodé (même pattern que `SidebarLogo.tsx`)
+- **Contact** : site web (Globe) à la place de l'adresse (MapPin) — `organization_website` affiché sans protocole
+- **`organization_logo_url` supprimé** : non utilisé nulle part (audit confirmé) ; les logos sont gérés via l'onglet Apparence (`logo_white_url`, `logo_dark_url`)
+- **NOT NULL constraint** : `app_settings.value` est NOT NULL → tous les champs optionnels utilisent `|| ''` (pas `|| null`)
+
+### Migrations
+- `086_add_homepage_settings.sql` : 6 clés JSONB dans `app_settings` avec contenu par défaut, `ON CONFLICT DO NOTHING`
+
+---
+
+### Prochaine session : S177 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
 | 1 | Magic Link | Moyenne | CDC + UX pros |
-| 2 | Refacto `EmailTemplateForm.tsx` (27 KB 🚨) | Moyenne | Maintenabilité |
-| 3 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
+| 2 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
+| 3 | Extraire les 6 cartes de homepage-section.tsx en sous-composants | Faible | Maintenabilité |
 | 4 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
