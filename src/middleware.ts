@@ -148,6 +148,8 @@ export async function middleware(request: NextRequest) {
     // Routes publiques avec préfixe (pour les sous-routes)
     const publicRoutePrefixes = [
         '/auth/callback',
+        // OAuth Google Calendar (sécurité gérée dans les routes elles-mêmes)
+        '/api/auth/google',
         // Routes publiques
         '/catalogue',
         '/spectacle',

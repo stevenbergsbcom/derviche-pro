@@ -168,7 +168,7 @@ export async function createCalendarEvent(
   }
 
   try {
-    const auth     = getGoogleAuthClient();
+    const auth     = await getGoogleAuthClient();
     const calendar = google.calendar({ version: 'v3', auth });
     const body     = buildEventBody(data);
 
@@ -232,7 +232,7 @@ export async function updateCalendarEvent(
   }
 
   try {
-    const auth     = getGoogleAuthClient();
+    const auth     = await getGoogleAuthClient();
     const calendar = google.calendar({ version: 'v3', auth });
     const body     = buildEventBody(data);
 
@@ -287,7 +287,7 @@ export async function deleteCalendarEvent(
   }
 
   try {
-    const auth     = getGoogleAuthClient();
+    const auth     = await getGoogleAuthClient();
     const calendar = google.calendar({ version: 'v3', auth });
 
     await calendar.events.delete({

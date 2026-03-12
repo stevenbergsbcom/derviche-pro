@@ -7,4 +7,7 @@
  */
 
 export { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from './queries';
+export { checkGoogleCalendarTokenHealth } from './health';
+export { getGoogleRedirectUri, CALENDAR_SCOPE } from './auth';
 export type { CalendarEventData, CalendarResult } from './types';
+export type { GoogleCalendarHealthResult } from './health';

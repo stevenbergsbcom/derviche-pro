@@ -71,7 +71,7 @@ export async function sendReminderEmail(
     };
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://derviche-pro.vercel.app';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://derviche-pro.fr';
 
   try {
     // 1. Claim du slot avant envoi (optimistic lock anti race condition)
