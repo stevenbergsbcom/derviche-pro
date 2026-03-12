@@ -25,7 +25,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse> {
   const url       = new URL(request.url);
-  const appUrl    = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  const isDev     = process.env.NODE_ENV === 'development';
+  const appUrl    = isDev
+    ? 'http://localhost:3000'
+    : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://derviche-pro.fr');
   const systemUrl = `${appUrl}/admin/systeme`;
 
   try {
