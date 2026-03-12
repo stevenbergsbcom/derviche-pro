@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S176 (✅ mergé main) — Page d'accueil configurable via préférences admin — 12 mars 2026
+> Dernière mise à jour : Session S178 — Magic Link sécurisé — 12 mars 2026
 
 ---
 
@@ -860,6 +860,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 - Suppression 4× `as any` dans `user-preferences.ts` (types Supabase existants depuis S155)
 - Ajout champs organisation (`contact_email`, `phone`, `address`, `website`) dans `EmailConfig` + footer emails (7 builders)
 - Refactoring `homepage-section.tsx` (1015 lignes → 8 fichiers dans `homepage/`)
+- Tri spectacles homepage : disponibles en premier (aligné avec le catalogue)
 - Nettoyage `STATUT.md` : doublon S168, statuts migrations S170, backlog obsolète, table DETTE
 
 **Fichiers modifiés :**
@@ -871,15 +872,34 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/lib/services/email/html-helpers.ts` | `OrgContact` + `orgContactFromConfig` + `buildFooterRow` enrichi |
 | `src/lib/services/email/builders/*.ts` | 7 builders : footer avec `orgContactFromConfig(config)` |
 | `src/app/admin/preferences/components/sections/homepage/` | 1015→8 fichiers (orchestrateur + 6 cards + types) |
+| `src/app/(public)/components/home-page-client.tsx` | Tri `statusOrder` (available → coming_soon → closed) |
 | `docs/STATUT.md` | Nettoyage global |
 
 ---
 
-### Prochaine session : S178 — à définir
+### S178 — Magic Link sécurisé ✅
+
+**Corrections sécurité :**
+- Ajout `shouldCreateUser: false` dans `signInWithOtp()` — empêche la création de comptes non autorisés
+- Message anti-énumération d'emails (même réponse succès/échec)
+- Vérification `deleted_at`/`disabled_at` dans `/auth/callback` (defense-in-depth, complète le middleware)
+
+**UX :**
+- Écran de confirmation après envoi du magic link (icône Mail + email affiché + bouton Renvoyer)
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `src/app/(auth)/login/page.tsx` | `shouldCreateUser: false`, anti-énumération, état `magicLinkSentEmail` |
+| `src/app/auth/callback/route.ts` | Vérification statut compte (deleted/disabled) après échange code |
+
+---
+
+### Prochaine session : S179 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Magic Link | Moyenne | CDC + UX pros |
-| 2 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
-| 3 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 1 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
+| 2 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 3 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |

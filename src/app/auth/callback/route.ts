@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getUserRoleServer } from '@/lib/auth/get-user-role-server';
 import { isSafeRedirectUrl, getRedirectUrlByRole } from '@/lib/auth/redirect-utils';
+import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { logger } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
@@ -30,6 +31,49 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Vérifier le statut du compte (deleted_at, disabled_at)
+        // Defense-in-depth : le middleware fait la même chose, mais ici on bloque immédiatement
+        const userId = data.user?.id;
+        if (userId) {
+            const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+            if (serviceRoleKey) {
+                try {
+                    const { createClient: createAdminSupabase } = await import(
+                        '@supabase/supabase-js'
+                    );
+                    const adminClient = createAdminSupabase(
+                        NEXT_PUBLIC_SUPABASE_URL,
+                        serviceRoleKey,
+                        { auth: { autoRefreshToken: false, persistSession: false } }
+                    );
+                    const { data: profile } = await adminClient
+                        .from('profiles')
+                        .select('disabled_at, deleted_at')
+                        .eq('id', userId)
+                        .maybeSingle();
+
+                    if (profile?.deleted_at) {
+                        await supabase.auth.signOut();
+                        return NextResponse.redirect(
+                            new URL('/login?error=account_deleted', requestUrl.origin)
+                        );
+                    }
+                    if (profile?.disabled_at) {
+                        await supabase.auth.signOut();
+                        return NextResponse.redirect(
+                            new URL('/login?error=account_disabled', requestUrl.origin)
+                        );
+                    }
+                } catch (statusError) {
+                    // Fail-open : le middleware prendra le relais
+                    logger.warn(
+                        '[Auth Callback] Vérification statut échouée, middleware prend le relais',
+                        { error: String(statusError) }
+                    );
+                }
+            }
+        }
+
         // Déterminer la redirection
         let redirectUrl: string;
 
@@ -41,7 +85,6 @@ export async function GET(request: NextRequest) {
             redirectUrl = next;
         } else {
             // Redirection selon le rôle de l'utilisateur
-            const userId = data.user?.id;
             if (userId) {
                 const role = await getUserRoleServer(userId);
                 redirectUrl = getRedirectUrlByRole(role);
