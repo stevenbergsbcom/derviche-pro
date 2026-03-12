@@ -54,16 +54,29 @@ async function writeHealthStatus(
   try {
     const supabase = createAdminClient();
 
-    await Promise.all([
+    const [statusResult, checkResult] = await Promise.all([
       supabase
         .from('app_settings')
-        .update({ value: status as Json })
+        .update({ value: JSON.stringify(status) as Json })
         .eq('key', 'google_calendar_token_status'),
       supabase
         .from('app_settings')
-        .update({ value: checkedAt as Json })
+        .update({ value: JSON.stringify(checkedAt) as Json })
         .eq('key', 'google_calendar_last_health_check'),
     ]);
+
+    if (statusResult.error) {
+      logger.error('[GoogleCalendar/Health] Erreur écriture token_status', {
+        error: statusResult.error.message,
+        code: statusResult.error.code,
+      });
+    }
+    if (checkResult.error) {
+      logger.error('[GoogleCalendar/Health] Erreur écriture last_health_check', {
+        error: checkResult.error.message,
+        code: checkResult.error.code,
+      });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error('[GoogleCalendar/Health] Erreur écriture app_settings', { error: message });
