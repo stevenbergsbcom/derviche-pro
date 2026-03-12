@@ -20,6 +20,7 @@ import { PreferencesTabs, usePreferencesTab } from './preferences-tabs';
 import { UnsavedChangesDialog } from './shared';
 import {
   OrganizationSection,
+  HomepageSection,
   AppearanceSection,
   EmailSection,
   NotificationsSection,
@@ -98,6 +99,7 @@ function PreferencesInnerContent({
 
   // Callbacks stables par section
   const handleOrganizationDirty  = useCallback((d: boolean) => onDirtyChange('organization',  d), [onDirtyChange]);
+  const handleHomepageDirty      = useCallback((d: boolean) => onDirtyChange('homepage',      d), [onDirtyChange]);
   const handleAppearanceDirty    = useCallback((d: boolean) => onDirtyChange('appearance',    d), [onDirtyChange]);
   const handleEmailDirty         = useCallback((d: boolean) => onDirtyChange('email',         d), [onDirtyChange]);
   const handleNotificationsDirty = useCallback((d: boolean) => onDirtyChange('notifications', d), [onDirtyChange]);
@@ -113,6 +115,9 @@ function PreferencesInnerContent({
       <div className="mt-6">
         {activeTab === 'organization' && (
           <OrganizationSection  canEdit={canEdit} onDirtyChange={handleOrganizationDirty} />
+        )}
+        {activeTab === 'homepage' && (
+          <HomepageSection      canEdit={canEdit} onDirtyChange={handleHomepageDirty} />
         )}
         {activeTab === 'appearance' && (
           <AppearanceSection    canEdit={canEdit} onDirtyChange={handleAppearanceDirty} />

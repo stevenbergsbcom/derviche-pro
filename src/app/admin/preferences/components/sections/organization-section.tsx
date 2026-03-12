@@ -26,7 +26,6 @@ import type { OrganizationSettings, SeasonSettings } from '@/lib/services/app-se
 
 const organizationSchema = z.object({
   organization_name: z.string().min(1, 'Le nom est requis').max(100, 'Maximum 100 caractères'),
-  organization_logo_url: z.string().url('URL invalide').optional().nullable().or(z.literal('')),
   organization_contact_email: z
     .string()
     .email('Email invalide')
@@ -112,7 +111,6 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
     resolver: zodResolver(organizationSchema),
     defaultValues: {
       organization_name: '',
-      organization_logo_url: '',
       organization_contact_email: '',
       organization_contact_phone: '',
       organization_address: '',
@@ -125,7 +123,6 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
     if (data && !isInitialized) {
       reset({
         organization_name: data.organization_name || '',
-        organization_logo_url: data.organization_logo_url || '',
         organization_contact_email: data.organization_contact_email || '',
         organization_contact_phone: data.organization_contact_phone || '',
         organization_address: data.organization_address || '',
@@ -176,13 +173,13 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
 
   // Soumission du formulaire
   const onSubmit = async (formData: OrganizationFormData) => {
+    // Garder les chaînes vides (pas de null) — la colonne value est NOT NULL
     const cleanedData: Partial<OrganizationSettings> = {
-      organization_name: formData.organization_name || null,
-      organization_logo_url: formData.organization_logo_url || null,
-      organization_contact_email: formData.organization_contact_email || null,
-      organization_contact_phone: formData.organization_contact_phone || null,
-      organization_address: formData.organization_address || null,
-      organization_website: formData.organization_website || null,
+      organization_name: formData.organization_name?.trim() || '',
+      organization_contact_email: formData.organization_contact_email?.trim() || '',
+      organization_contact_phone: formData.organization_contact_phone?.trim() || '',
+      organization_address: formData.organization_address?.trim() || '',
+      organization_website: formData.organization_website?.trim() || '',
     };
 
     const result = await update(cleanedData);
@@ -287,21 +284,6 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
             <p className="text-sm text-destructive">{errors.organization_website.message}</p>
           )}
           <p className="text-xs text-muted-foreground">URL complète incluant https://</p>
-        </div>
-
-        {/* URL du logo */}
-        <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="organization_logo_url">URL du logo</Label>
-          <Input
-            id="organization_logo_url"
-            type="url"
-            placeholder="https://example.com/logo.png"
-            disabled={!canEdit}
-            {...register('organization_logo_url')}
-          />
-          {errors.organization_logo_url && (
-            <p className="text-sm text-destructive">{errors.organization_logo_url.message}</p>
-          )}
         </div>
 
         {/* Adresse postale */}

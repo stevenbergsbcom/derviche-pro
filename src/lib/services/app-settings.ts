@@ -21,7 +21,6 @@ import type { Json } from '@/types/supabase';
 /** Clés de paramètres organisation */
 export type OrganizationSettingKey =
   | 'organization_name'
-  | 'organization_logo_url'
   | 'organization_contact_email'
   | 'organization_contact_phone'
   | 'organization_address'
@@ -68,6 +67,15 @@ export type ThemeSettingKey =
 /** Clés de paramètres saison (dashboard) */
 export type SeasonSettingKey = 'season_start' | 'season_end';
 
+/** Clés de paramètres page d'accueil */
+export type HomepageSettingKey =
+  | 'homepage_hero'
+  | 'homepage_avantages'
+  | 'homepage_spectacles'
+  | 'homepage_impact'
+  | 'homepage_contact'
+  | 'homepage_footer';
+
 /** Toutes les clés de paramètres */
 export type AppSettingKey =
   | OrganizationSettingKey
@@ -77,6 +85,7 @@ export type AppSettingKey =
   | ReminderSettingKey
   | RgpdSettingKey
   | ThemeSettingKey
+  | HomepageSettingKey
   | string;
 
 /** Ligne de paramètre depuis la base */
@@ -97,7 +106,6 @@ export interface AppSettingResult<T> {
 /** Paramètres d'organisation groupés */
 export interface OrganizationSettings {
   organization_name: string | null;
-  organization_logo_url: string | null;
   organization_contact_email: string | null;
   organization_contact_phone: string | null;
   organization_address: string | null;
@@ -170,13 +178,92 @@ export interface SeasonSettings {
 }
 
 // ============================================
+// TYPES — PAGE D'ACCUEIL
+// ============================================
+
+/** Structure Hero de la page d'accueil */
+export interface HomepageHero {
+  title: string;
+  description: string;
+  secondary_text: string;
+  cta_primary_text: string;
+  cta_primary_url: string;
+  cta_secondary_text: string;
+  cta_secondary_url: string;
+}
+
+/** Carte avantage (icône + titre + description) */
+export interface HomepageAvantageCard {
+  /** Nom de l'icône Lucide : 'search' | 'calendar' | 'message-circle' etc. */
+  icon: string;
+  title: string;
+  description: string;
+}
+
+/** Structure section Avantages */
+export interface HomepageAvantages {
+  label: string;
+  title: string;
+  cards: HomepageAvantageCard[];
+}
+
+/** Structure section Spectacles */
+export interface HomepageSpectacles {
+  label: string;
+  title: string;
+  subtitle: string;
+  cta_text: string;
+}
+
+/** Carte stat (chiffre + label) */
+export interface HomepageStatCard {
+  number: string;
+  label: string;
+}
+
+/** Structure section Chiffres clés / Impact */
+export interface HomepageImpact {
+  /** Afficher ou masquer cette section sur la homepage */
+  enabled: boolean;
+  label: string;
+  title: string;
+  description: string;
+  stats: HomepageStatCard[];
+}
+
+/** Structure section Contact (coordonnées depuis Organisation) */
+export interface HomepageContact {
+  label: string;
+  title: string;
+  description: string;
+}
+
+/** Structure Footer */
+export interface HomepageFooter {
+  description: string;
+  facebook_url: string;
+  instagram_url: string;
+  /** Texte du copyright — {year} est remplacé par l'année courante au rendu */
+  copyright_text: string;
+}
+
+/** Tous les paramètres homepage groupés */
+export interface HomepageSettings {
+  homepage_hero: HomepageHero;
+  homepage_avantages: HomepageAvantages;
+  homepage_spectacles: HomepageSpectacles;
+  homepage_impact: HomepageImpact;
+  homepage_contact: HomepageContact;
+  homepage_footer: HomepageFooter;
+}
+
+// ============================================
 // CONSTANTES
 // ============================================
 
 /** Clés des paramètres organisation */
 export const ORGANIZATION_SETTING_KEYS: OrganizationSettingKey[] = [
   'organization_name',
-  'organization_logo_url',
   'organization_contact_email',
   'organization_contact_phone',
   'organization_address',
@@ -233,10 +320,89 @@ export const SEASON_SETTING_KEYS: SeasonSettingKey[] = [
   'season_end',
 ];
 
+/** Clés des paramètres page d'accueil */
+export const HOMEPAGE_SETTING_KEYS: HomepageSettingKey[] = [
+  'homepage_hero',
+  'homepage_avantages',
+  'homepage_spectacles',
+  'homepage_impact',
+  'homepage_contact',
+  'homepage_footer',
+];
+
+/** Valeurs par défaut — contenu actuel hardcodé de la homepage */
+export const HOMEPAGE_DEFAULTS: HomepageSettings = {
+  homepage_hero: {
+    title: 'Découvrez les spectacles\naccompagnés par Derviche Diffusion',
+    description:
+      'Derviche est une agence de production et de diffusion innovante, transparente et mutualiste, offrant un accompagnement sur mesure aux compagnies de spectacles vivants et aux artistes.',
+    secondary_text:
+      'Comme les derviches tourneurs, les spectacles ont besoin de tourner pour vivre et grandir !',
+    cta_primary_text: 'Réserver ma place',
+    cta_primary_url: '/catalogue',
+    cta_secondary_text: 'Découvrir la plateforme',
+    cta_secondary_url: '#avantages',
+  },
+  homepage_avantages: {
+    label: 'La plateforme',
+    title: 'Simplifiez votre programmation',
+    cards: [
+      {
+        icon: 'search',
+        title: 'Accès direct',
+        description:
+          'Parcourez notre catalogue complet et réservez les spectacles qui correspondent à votre programmation en quelques clics.',
+      },
+      {
+        icon: 'calendar',
+        title: 'Gestion simple',
+        description:
+          'Gérez vos réservations, suivez vos confirmations et accédez à tous les détails de vos spectacles en un seul endroit.',
+      },
+      {
+        icon: 'message-circle',
+        title: 'Accompagnement',
+        description:
+          'Notre équipe est à vos côtés et reste joignable pour toutes informations complémentaires sur les spectacles et compagnies.',
+      },
+    ],
+  },
+  homepage_spectacles: {
+    label: 'Sélection',
+    title: 'Spectacles à découvrir',
+    subtitle: 'Explorez les spectacles en tournée cette saison',
+    cta_text: 'Voir tout le catalogue',
+  },
+  homepage_impact: {
+    enabled: true,
+    label: 'Notre impact',
+    title: 'Les chiffres qui parlent de notre engagement',
+    description:
+      'Depuis 2016, Derviche rassemble les meilleurs spectacles vivants et les programmateurs les plus engagés. Plus de 200 000 spectateurs ont déjà applaudi nos artistes lors de leurs tournées !',
+    stats: [
+      { number: '120', label: 'Spectacles représentés' },
+      { number: '850', label: 'Programmateurs actifs' },
+      { number: '18', label: 'Compagnies partenaires' },
+    ],
+  },
+  homepage_contact: {
+    label: 'Contact',
+    title: 'Nous contacter',
+    description:
+      'Une question ? Notre équipe est à votre disposition pour vous accompagner.',
+  },
+  homepage_footer: {
+    description:
+      'Agence de production et de diffusion de spectacles vivants depuis 2016. Nous accompagnons les compagnies artistiques et les programmateurs.',
+    facebook_url: 'https://www.facebook.com/Derviche-Diffusion-104081770023884',
+    instagram_url: 'https://www.instagram.com/dervichediffusion/',
+    copyright_text: '© {year} Derviche Diffusion. Tous droits réservés.',
+  },
+};
+
 /** Labels pour l'affichage des paramètres */
 export const SETTING_LABELS: Record<string, string> = {
   organization_name: 'Nom de l\'organisation',
-  organization_logo_url: 'URL du logo',
   organization_contact_email: 'Email de contact',
   organization_contact_phone: 'Téléphone de contact',
   organization_address: 'Adresse postale',
@@ -435,7 +601,6 @@ export async function getOrganizationSettings(): Promise<AppSettingResult<Organi
   return {
     data: {
       organization_name: (result.data?.organization_name as string) || null,
-      organization_logo_url: (result.data?.organization_logo_url as string) || null,
       organization_contact_email: (result.data?.organization_contact_email as string) || null,
       organization_contact_phone: (result.data?.organization_contact_phone as string) || null,
       organization_address: (result.data?.organization_address as string) || null,
@@ -447,11 +612,18 @@ export async function getOrganizationSettings(): Promise<AppSettingResult<Organi
 
 /**
  * Met à jour les paramètres d'organisation
+ * Note: Les null sont convertis en chaînes vides pour respecter la contrainte NOT NULL sur value
  */
 export async function setOrganizationSettings(
   settings: Partial<OrganizationSettings>
 ): Promise<AppSettingResult<OrganizationSettings>> {
-  const result = await setAppSettings(settings);
+  // Convertir les null en chaînes vides (contrainte NOT NULL sur value)
+  const sanitizedSettings: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(settings)) {
+    sanitizedSettings[key] = value ?? '';
+  }
+
+  const result = await setAppSettings(sanitizedSettings);
 
   if (result.error) {
     return { data: null, error: result.error };
@@ -731,4 +903,58 @@ export async function setSeasonSettings(
     logger.error('Exception setSeasonSettings', { message });
     return { data: null, error: message };
   }
+}
+
+// ============================================
+// PAGE D'ACCUEIL
+// ============================================
+
+/**
+ * Récupère les paramètres de la page d'accueil
+ * Chaque clé est un objet JSON structuré, avec fallback sur HOMEPAGE_DEFAULTS
+ */
+export async function getHomepageSettings(): Promise<AppSettingResult<HomepageSettings>> {
+  const result = await getAppSettings(HOMEPAGE_SETTING_KEYS);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  return {
+    data: {
+      homepage_hero:
+        (result.data?.homepage_hero as HomepageHero) ?? HOMEPAGE_DEFAULTS.homepage_hero,
+      homepage_avantages:
+        (result.data?.homepage_avantages as HomepageAvantages) ??
+        HOMEPAGE_DEFAULTS.homepage_avantages,
+      homepage_spectacles:
+        (result.data?.homepage_spectacles as HomepageSpectacles) ??
+        HOMEPAGE_DEFAULTS.homepage_spectacles,
+      homepage_impact: {
+        ...HOMEPAGE_DEFAULTS.homepage_impact,
+        ...((result.data?.homepage_impact as Partial<HomepageImpact>) ?? {}),
+      },
+      homepage_contact:
+        (result.data?.homepage_contact as HomepageContact) ??
+        HOMEPAGE_DEFAULTS.homepage_contact,
+      homepage_footer:
+        (result.data?.homepage_footer as HomepageFooter) ?? HOMEPAGE_DEFAULTS.homepage_footer,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Met à jour les paramètres de la page d'accueil
+ */
+export async function setHomepageSettings(
+  settings: Partial<HomepageSettings>
+): Promise<AppSettingResult<HomepageSettings>> {
+  const result = await setAppSettings(settings);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  return getHomepageSettings();
 }

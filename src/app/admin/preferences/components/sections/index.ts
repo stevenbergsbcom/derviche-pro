@@ -3,6 +3,7 @@
  */
 
 export { OrganizationSection } from './organization-section';
+export { HomepageSection } from './homepage-section';
 export { AppearanceSection } from './appearance-section';
 export { EmailSection } from './email-section';
 export { RemindersSection } from './reminders-section';
