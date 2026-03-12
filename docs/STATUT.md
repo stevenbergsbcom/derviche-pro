@@ -940,11 +940,58 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
-### Prochaine session : S180 — à définir
+### S180 — Monitoring Google Calendar, OAuth réautorisation, fix emails Resend ✅
+
+**Google Calendar — Health monitoring :**
+- Widget santé token dans `/admin/systeme` (statut Valide/Invalide/Inconnu, dernière vérification)
+- Cron quotidien `/api/cron/google-calendar-health` — vérifie le token, notifie l'admin si invalide
+- API manuelle `POST /api/admin/google-calendar/health` — bouton "Vérifier maintenant"
+
+**Google Calendar — Réautorisation OAuth2 :**
+- Route `/api/auth/google/authorize` — génère l'URL de consentement Google avec protection CSRF (cookie state)
+- Route `/api/auth/google/callback` — échange le code, stocke le refresh_token en DB, lance health check
+- Bouton "Réautoriser" dans le widget (visible si token invalide/inconnu)
+- Sécurité : super-admin uniquement, vérification CSRF state cookie
+
+**Fix emails Resend :**
+- Remplacé `reservation.derviche@gmail.com` par `reservation@derviche-pro.fr` (domaine vérifié Resend)
+- 6 occurrences dans `email/config.ts`, 4 dans `email-section.tsx`, 6 dans mock preview
+- Migration 091 : mise à jour des valeurs en base (`app_settings`)
+
+**Fix URLs production :**
+- Remplacé `derviche-pro.vercel.app` par `derviche-pro.fr` dans les crons GitHub Actions et le code
+- Aligné le fallback `appUrl` du callback OAuth avec `getGoogleRedirectUri()` (même logique dev/prod)
+
+**Fichiers créés :**
+| Fichier | Description |
+|---------|-------------|
+| `src/app/admin/systeme/components/google-calendar-health-widget.tsx` | Widget santé Google Calendar |
+| `src/app/api/admin/google-calendar/health/route.ts` | API health check manuel |
+| `src/app/api/auth/google/authorize/route.ts` | Démarrage flux OAuth2 |
+| `src/app/api/auth/google/callback/route.ts` | Callback OAuth2 Google |
+| `src/app/api/cron/google-calendar-health/route.ts` | Cron health check |
+| `src/lib/services/google-calendar/health.ts` | Service health check |
+| `supabase/migrations/089_add_google_calendar_health_settings.sql` | Clés app_settings health |
+| `supabase/migrations/090_add_google_calendar_refresh_token_setting.sql` | Clé refresh_token |
+| `supabase/migrations/091_fix_email_from_address.sql` | Fix adresses email |
+
+---
+
+## Backlog / TODO
+
+### 🔜 Réservation : autoriser les doublons email+créneau (avec alerte)
+- **Contrainte actuelle** : `idx_unique_reservation_guest_slot` empêche un même guest_email de réserver deux fois le même créneau (erreur 409)
+- **Comportement souhaité** : afficher un message d'alerte/confirmation si une réservation existe déjà pour ce couple email+créneau, mais autoriser la création quand même
+- **Impact** : modifier la contrainte unique en DB + adapter le formulaire de réservation (public + admin) pour gérer l'alerte
+
+---
+
+### Prochaine session : S181 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
-| 2 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
-| 3 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |
+| 1 | Autoriser doublons réservation email+créneau (avec alerte) | Moyenne | UX terrain |
+| 2 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
+| 3 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 4 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |
