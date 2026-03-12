@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S178 — Magic Link sécurisé — 12 mars 2026
+> Dernière mise à jour : Session S181 — Fix user_id réservation pro + health check — 13 mars 2026
 
 ---
 
@@ -932,6 +932,32 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S181 — Fix user_id réservation pro + fix writeHealthStatus ✅
+
+**Bug critique — Réservation pro sans user_id (migration 092) :**
+- **Symptôme** : un professionnel connecté fait une réservation → elle apparaît comme "guest" → prompt de rapatriement affiché alors qu'il est connecté
+- **Cause racine** : la migration 074 (verrou atomique FOR UPDATE) a réécrit le RPC `create_public_reservation` en oubliant d'inclure `user_id` dans l'INSERT (régression de la migration 042)
+- **Correction** : migration 092 — ajout de `user_id = v_current_user_id` (= `auth.uid()`) dans l'INSERT
+  - Pro connecté : `user_id = UUID` → réservation visible directement dans le dashboard
+  - Anonyme : `auth.uid() = NULL` → réservation guest classique, rapatriement possible
+
+**Fix writeHealthStatus (health.ts) :**
+- `writeHealthStatus` n'écrivait pas correctement dans `app_settings` — les valeurs n'étaient pas wrappées dans `JSON.stringify()` pour la colonne JSONB
+- Le client Supabase ne throw pas les erreurs, il les retourne dans `{ error }` — ajout de la vérification explicite et du logging des erreurs
+- Résultat : le widget santé Google Calendar dans `/admin/systeme` affiche maintenant correctement le statut après un health check
+
+**Fix fallback URL callback OAuth :**
+- Aligné le `appUrl` dans `/api/auth/google/callback/route.ts` avec la logique de `getGoogleRedirectUri()` (dev → localhost, prod → derviche-pro.fr)
+
+**Fichiers créés/modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `supabase/migrations/092_fix_reservation_user_id_in_rpc.sql` | **Créé** — Restaure `user_id` dans le RPC `create_public_reservation` |
+| `src/lib/services/google-calendar/health.ts` | Fix `writeHealthStatus` — `JSON.stringify()` + vérification erreurs Supabase |
+| `src/app/api/auth/google/callback/route.ts` | Fix fallback URL — alignement dev/prod avec `getGoogleRedirectUri()` |
+
+---
+
 ## Backlog / TODO
 
 ### 🔜 Réservation : autoriser les doublons email+créneau (avec alerte)
@@ -941,7 +967,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
-### Prochaine session : S181 — à définir
+### Prochaine session : S182 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
