@@ -326,7 +326,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       reservation_id: payload.reservationId,
       professional_name: payload.guestFullName,
       show_title: payload.showTitle,
-      slot_date: null,
+      slot_date: payload.slotDateFormatted,
       message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
     }).catch((err) => {
       logger.error('[API /emails/send-confirmation] Erreur createAdminNotification (non-bloquant)', { err });

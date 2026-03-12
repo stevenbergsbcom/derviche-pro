@@ -19,6 +19,7 @@ import {
   buildSignatureBlock,
   buildCtaBlock,
   buildFooterRow,
+  orgContactFromConfig,
 } from '../html-helpers';
 
 export function buildCancellationHtml(
@@ -128,7 +129,7 @@ export function buildCancellationHtml(
         ${buildInfoBlock(resolvedInfo, '#7f1d1d', '#fef2f2', '#fecaca')}
         ${buildContactBlock(template, data.managerName, data.managerEmail, data.managerPhone)}
         ${buildSignatureBlock(safeSalutation, safeSignature)}
-        ${buildFooterRow(safeFooterText)}
+        ${buildFooterRow(safeFooterText, orgContactFromConfig(config))}
 
       </table>
     </td></tr>
