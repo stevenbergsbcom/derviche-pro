@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S172 (✅ mergé main) — FAB walk-in company + fix doublon nom compagnie PWA — 11 mars 2026
+> Dernière mise à jour : Session S173 (✅ mergé main) — QR Code dashboard + Bannière installation PWA — 11 mars 2026
 
 ---
 
@@ -751,13 +751,51 @@ Point corrigé : `verifiedSlotId` initialisé à `undefined` pour `company` quan
 
 ---
 
-### Prochaine session : S173 — à définir
+---
+
+## S173 — QR Code dashboard + Bannière installation PWA ✅ mergé main
+
+### Objectif
+Ajouter un QR code d'accès rapide à la PWA sur le dashboard admin, et une bannière d'invitation à installer la PWA sur `/accueil`.
+
+### Fichiers modifiés
+| Fichier | Action |
+|---------|--------|
+| `src/app/admin/_dashboard/components/QrCodeModal.tsx` | Nouveau — Dialog avec QRCodeCanvas, téléchargement PNG, bouton ouvrir PWA |
+| `src/app/admin/_dashboard/components/index.ts` | Export QrCodeModal |
+| `src/app/admin/page.tsx` | QrCodeModal intégré dans la grille accès rapides |
+| `src/app/accueil/components/PwaInstallBanner.tsx` | Nouveau — bannière bleue dismissable |
+| `src/app/accueil/components/index.ts` | Export PwaInstallBanner |
+| `src/app/accueil/page.tsx` | PwaInstallBanner intégrée sous HeaderSection |
+
+### Décisions techniques
+- **QR Code** : `QRCodeCanvas` (qrcode.react déjà en dépendance) avec `ref` pour export PNG via `canvas.toDataURL`. URL = `NEXT_PUBLIC_APP_URL/accueil`
+- **Bannière** : visible uniquement si `display-mode` ≠ standalone/fullscreen/minimal-ui ET mobile ET sessionStorage pas dismissé
+- **Plateformes** : `ios-safari` (Share + écran d'accueil), `ios-chrome` (bouton copier URL — seul Safari peut installer sur iOS), `android` (menu ⋮ Chrome), `unknown` (instructions génériques)
+- **Dismiss** : `sessionStorage.setItem('pwa-banner-dismissed', '1')` → persiste jusqu'à fermeture de l'onglet
+- **Clipboard** : `navigator.clipboard.writeText` avec fallback `execCommand('copy')` — retour vérifié avant feedback
+- **iOS Chrome** : `CriOS|FxiOS|OPiOS|Mercury` dans le user-agent → détecté comme `ios-chrome`
+
+### Points techniques retenus
+- `pwaUrl` initialisé via `useState('')` + `setPwaUrl(window.location.href)` dans `useEffect` → évite tout accès à `window` au SSR
+- `execCommand('copy')` retourne un boolean → vérifier avant `setCopied(true)` (sinon feedback faux positif)
+- Sur iOS, seul Safari peut installer une PWA — tous les autres navigateurs (Chrome, Firefox, Opera) utilisent WebKit mais ne peuvent pas installer
+- Page de debug `/accueil/debug` créée puis supprimée après diagnostic (pattern à retenir : créer via MCP Filesystem, pas bash)
+
+### Migrations
+Aucune.
+
+### Audit S173 : 8.5/10 → 10/10 après corrections
+Corrections appliquées : sessionStorage persist dismiss (priorité 1), isInstalledAsPwa() étendu fullscreen+minimal-ui (priorité 2), execCommand retour vérifié (suggestion Cursor).
+
+---
+
+### Prochaine session : S174 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
 | 1 | Magic Link | Moyenne | CDC + UX pros |
 | 2 | Refacto `EmailTemplateForm.tsx` (27 KB 🚨) | Moyenne | Maintenabilité |
-| 3 | Champs manquants formulaires (venues PMR, shows période) | Faible | Données terrain |
+| 3 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
 | 4 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
-| 5 | QR Code à la publication | Faible | Util terrain |

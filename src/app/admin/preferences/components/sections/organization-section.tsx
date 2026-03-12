@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Building2 } from 'lucide-react';
+import { Building2, CalendarDays } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
@@ -211,7 +211,7 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
   }
 
   return (
-    <>
+    <div className="space-y-6">
     <SettingsCard
       icon={Building2}
       title="Organisation"
@@ -222,104 +222,108 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
       hasChanges={hasChanges}
       onSubmit={handleSubmit(onSubmit)}
     >
-      {/* Nom de l'organisation */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_name">
-          Nom de l&apos;organisation <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="organization_name"
-          placeholder="Derviche Diffusion"
-          disabled={!canEdit}
-          {...register('organization_name')}
-        />
-        {errors.organization_name && (
-          <p className="text-sm text-destructive">{errors.organization_name.message}</p>
-        )}
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {/* Nom de l'organisation */}
+        <div className="space-y-2">
+          <Label htmlFor="organization_name">
+            Nom de l&apos;organisation <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="organization_name"
+            placeholder="Derviche Diffusion"
+            disabled={!canEdit}
+            {...register('organization_name')}
+          />
+          {errors.organization_name && (
+            <p className="text-sm text-destructive">{errors.organization_name.message}</p>
+          )}
+        </div>
 
-      {/* URL du logo */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_logo_url">URL du logo</Label>
-        <Input
-          id="organization_logo_url"
-          type="url"
-          placeholder="https://example.com/logo.png"
-          disabled={!canEdit}
-          {...register('organization_logo_url')}
-        />
-        {errors.organization_logo_url && (
-          <p className="text-sm text-destructive">{errors.organization_logo_url.message}</p>
-        )}
-      </div>
+        {/* Email de contact */}
+        <div className="space-y-2">
+          <Label htmlFor="organization_contact_email">Email de contact</Label>
+          <Input
+            id="organization_contact_email"
+            type="email"
+            placeholder="contact@derviche-diffusion.fr"
+            disabled={!canEdit}
+            {...register('organization_contact_email')}
+          />
+          {errors.organization_contact_email && (
+            <p className="text-sm text-destructive">
+              {errors.organization_contact_email.message}
+            </p>
+          )}
+        </div>
 
-      {/* Email de contact */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_contact_email">Email de contact</Label>
-        <Input
-          id="organization_contact_email"
-          type="email"
-          placeholder="contact@derviche-diffusion.fr"
-          disabled={!canEdit}
-          {...register('organization_contact_email')}
-        />
-        {errors.organization_contact_email && (
-          <p className="text-sm text-destructive">{errors.organization_contact_email.message}</p>
-        )}
-      </div>
+        {/* Téléphone de contact */}
+        <div className="space-y-2">
+          <Label htmlFor="organization_contact_phone">Téléphone de contact</Label>
+          <Input
+            id="organization_contact_phone"
+            type="tel"
+            placeholder="+33 1 23 45 67 89"
+            disabled={!canEdit}
+            {...register('organization_contact_phone')}
+          />
+          {errors.organization_contact_phone && (
+            <p className="text-sm text-destructive">
+              {errors.organization_contact_phone.message}
+            </p>
+          )}
+        </div>
 
-      {/* Téléphone de contact */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_contact_phone">Téléphone de contact</Label>
-        <Input
-          id="organization_contact_phone"
-          type="tel"
-          placeholder="+33 1 23 45 67 89"
-          disabled={!canEdit}
-          {...register('organization_contact_phone')}
-        />
-        {errors.organization_contact_phone && (
-          <p className="text-sm text-destructive">{errors.organization_contact_phone.message}</p>
-        )}
-      </div>
+        {/* Site web */}
+        <div className="space-y-2">
+          <Label htmlFor="organization_website">Site web</Label>
+          <Input
+            id="organization_website"
+            type="url"
+            placeholder="https://derviche-diffusion.fr"
+            disabled={!canEdit}
+            {...register('organization_website')}
+          />
+          {errors.organization_website && (
+            <p className="text-sm text-destructive">{errors.organization_website.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">URL complète incluant https://</p>
+        </div>
 
-      {/* Adresse postale */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_address">Adresse postale</Label>
-        <Textarea
-          id="organization_address"
-          placeholder="123 rue du Théâtre&#10;75001 Paris"
-          rows={3}
-          disabled={!canEdit}
-          {...register('organization_address')}
-        />
-        {errors.organization_address && (
-          <p className="text-sm text-destructive">{errors.organization_address.message}</p>
-        )}
-      </div>
+        {/* URL du logo */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="organization_logo_url">URL du logo</Label>
+          <Input
+            id="organization_logo_url"
+            type="url"
+            placeholder="https://example.com/logo.png"
+            disabled={!canEdit}
+            {...register('organization_logo_url')}
+          />
+          {errors.organization_logo_url && (
+            <p className="text-sm text-destructive">{errors.organization_logo_url.message}</p>
+          )}
+        </div>
 
-      {/* Site web */}
-      <div className="space-y-2">
-        <Label htmlFor="organization_website">Site web</Label>
-        <Input
-          id="organization_website"
-          type="url"
-          placeholder="https://derviche-diffusion.fr"
-          disabled={!canEdit}
-          {...register('organization_website')}
-        />
-        {errors.organization_website && (
-          <p className="text-sm text-destructive">{errors.organization_website.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          URL complète incluant https://
-        </p>
+        {/* Adresse postale */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="organization_address">Adresse postale</Label>
+          <Textarea
+            id="organization_address"
+            placeholder="123 rue du Théâtre&#10;75001 Paris"
+            rows={3}
+            disabled={!canEdit}
+            {...register('organization_address')}
+          />
+          {errors.organization_address && (
+            <p className="text-sm text-destructive">{errors.organization_address.message}</p>
+          )}
+        </div>
       </div>
     </SettingsCard>
 
     {/* Saison du dashboard */}
     <SettingsCard
-      icon={Building2}
+      icon={CalendarDays}
       title="Saison du dashboard"
       description="Période utilisée pour le filtre ‘Saison’ du tableau de bord"
       isLoading={isSeasonLoading}
@@ -357,6 +361,6 @@ export function OrganizationSection({ canEdit, onDirtyChange }: OrganizationSect
         </div>
       </div>
     </SettingsCard>
-    </>
+    </div>
   );
 }

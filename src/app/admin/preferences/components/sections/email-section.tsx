@@ -6,10 +6,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail } from 'lucide-react';
+import { Mail, Send, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Input } from '@/components/ui/input';
@@ -94,11 +94,16 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isDirty },
   } = useForm<EmailFormData>({
     resolver: zodResolver(emailSchema),
     defaultValues: DEFAULT_VALUES,
   });
+
+  // Valeurs surveillées pour l'aperçu en temps réel
+  const watchedSignature = useWatch({ control, name: 'email_signature' });
+  const watchedFooter = useWatch({ control, name: 'email_footer_text' });
 
   // Initialiser le formulaire quand les données arrivent (une seule fois)
   useEffect(() => {
@@ -161,7 +166,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
     <SettingsCard
       icon={Mail}
       title="Email"
-      description="Configuration de l'expéditeur et du contenu des emails transactionnels"
+      description="Personnalisez l'expéditeur, la signature et le pied de page des emails envoyés par la plateforme"
       isLoading={isLoading}
       isSaving={isSaving}
       canEdit={canEdit}
@@ -169,76 +174,82 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
       onSubmit={handleSubmit(onSubmit)}
     >
       {/* ── Expéditeur ─────────────────────────────── */}
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Expéditeur
-      </p>
-
-      {/* Nom de l'expéditeur */}
-      <div className="space-y-2">
-        <Label htmlFor="email_from_name">
-          Nom <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="email_from_name"
-          placeholder="Derviche Diffusion"
-          disabled={!canEdit}
-          {...register('email_from_name')}
-        />
-        {errors.email_from_name && (
-          <p className="text-sm text-destructive">{errors.email_from_name.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Le nom affiché dans la boîte de réception du destinataire
+      <div className="flex items-center gap-2">
+        <Send className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Expéditeur
         </p>
       </div>
 
-      {/* Adresse email de l'expéditeur */}
-      <div className="space-y-2">
-        <Label htmlFor="email_from_address">
-          Adresse d&apos;envoi <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="email_from_address"
-          type="email"
-          placeholder="reservations@derviche-pro.fr"
-          disabled={!canEdit}
-          {...register('email_from_address')}
-        />
-        {errors.email_from_address && (
-          <p className="text-sm text-destructive">{errors.email_from_address.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Doit être une adresse vérifiée dans Resend
-        </p>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {/* Nom de l'expéditeur */}
+        <div className="space-y-2">
+          <Label htmlFor="email_from_name">
+            Nom <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="email_from_name"
+            placeholder="Derviche Diffusion"
+            disabled={!canEdit}
+            {...register('email_from_name')}
+          />
+          {errors.email_from_name && (
+            <p className="text-sm text-destructive">{errors.email_from_name.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Nom affiché dans la boîte de réception
+          </p>
+        </div>
 
-      {/* Adresse de réponse */}
-      <div className="space-y-2">
-        <Label htmlFor="email_reply_to">Adresse de réponse (Reply-To)</Label>
-        <Input
-          id="email_reply_to"
-          type="email"
-          placeholder="contact@derviche-pro.fr"
-          disabled={!canEdit}
-          {...register('email_reply_to')}
-        />
-        {errors.email_reply_to && (
-          <p className="text-sm text-destructive">{errors.email_reply_to.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Adresse utilisée quand le destinataire clique sur &quot;Répondre&quot;. Si vide,
-          l&apos;adresse d&apos;envoi est utilisée.
-        </p>
+        {/* Adresse email de l'expéditeur */}
+        <div className="space-y-2">
+          <Label htmlFor="email_from_address">
+            Adresse d&apos;envoi <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="email_from_address"
+            type="email"
+            placeholder="reservations@derviche-pro.fr"
+            disabled={!canEdit}
+            {...register('email_from_address')}
+          />
+          {errors.email_from_address && (
+            <p className="text-sm text-destructive">{errors.email_from_address.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Doit être une adresse vérifiée dans Resend
+          </p>
+        </div>
+
+        {/* Adresse de réponse */}
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="email_reply_to">Adresse de réponse (Reply-To)</Label>
+          <Input
+            id="email_reply_to"
+            type="email"
+            placeholder="contact@derviche-pro.fr"
+            disabled={!canEdit}
+            {...register('email_reply_to')}
+          />
+          {errors.email_reply_to && (
+            <p className="text-sm text-destructive">{errors.email_reply_to.message}</p>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Adresse utilisée quand le destinataire clique sur &quot;Répondre&quot;. Si vide,
+            l&apos;adresse d&apos;envoi est utilisée.
+          </p>
+        </div>
       </div>
 
       <Separator />
 
       {/* ── Contenu commun ─────────────────────────── */}
-      {/* Note : les objets des emails sont désormais éditables
-          dans l'onglet "Templates" (migration 051 — S134B) */}
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Contenu commun
-      </p>
+      <div className="flex items-center gap-2">
+        <FileText className="h-4 w-4 text-muted-foreground" />
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Contenu commun
+        </p>
+      </div>
 
       {/* Signature */}
       <div className="space-y-2">
@@ -273,6 +284,25 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         <p className="text-xs text-muted-foreground">
           Texte affiché dans la zone grise en bas de tous les emails
         </p>
+      </div>
+
+      {/* ── Aperçu ─────────────────────────────────── */}
+      <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Aperçu
+        </p>
+        <div className="rounded-md border bg-background p-4 text-sm space-y-2">
+          <p className="text-muted-foreground italic">[Contenu de l&apos;email...]</p>
+          <Separator />
+          <p className="text-foreground">
+            {watchedSignature || 'Signature'}
+          </p>
+          <div className="border-t pt-2 mt-2">
+            <p className="text-xs text-muted-foreground whitespace-pre-line">
+              {watchedFooter || 'Pied de page'}
+            </p>
+          </div>
+        </div>
       </div>
     </SettingsCard>
   );

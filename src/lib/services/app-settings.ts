@@ -59,7 +59,11 @@ export type ReminderSettingKey =
 export type RgpdSettingKey = 'rgpd_data_retention_months' | 'rgpd_inactive_account_months';
 
 /** Clés de paramètres thème et apparence */
-export type ThemeSettingKey = 'theme_preset' | 'logo_white_url' | 'logo_dark_url';
+export type ThemeSettingKey =
+  | 'theme_preset'
+  | 'logo_white_url'
+  | 'logo_dark_url'
+  | 'custom_theme_colors';
 
 /** Clés de paramètres saison (dashboard) */
 export type SeasonSettingKey = 'season_start' | 'season_end';
@@ -139,11 +143,19 @@ export interface RgpdSettings {
   rgpd_inactive_account_months: number;
 }
 
+/** Couleurs personnalisées du thème custom (hex) */
+export interface CustomThemeColors {
+  primary: string;
+  accent: string;
+  sidebar: string;
+}
+
 /** Paramètres thème et apparence groupés */
 export interface ThemeSettings {
   theme_preset: string;
   logo_white_url: string | null;
   logo_dark_url: string | null;
+  custom_theme_colors: CustomThemeColors | null;
 }
 
 /**
@@ -212,6 +224,7 @@ export const THEME_SETTING_KEYS: ThemeSettingKey[] = [
   'theme_preset',
   'logo_white_url',
   'logo_dark_url',
+  'custom_theme_colors',
 ];
 
 /** Clés des paramètres saison */
@@ -596,11 +609,26 @@ export async function getThemeSettings(): Promise<AppSettingResult<ThemeSettings
   const logoWhite = result.data?.logo_white_url as string | undefined;
   const logoDark = result.data?.logo_dark_url as string | undefined;
 
+  // Récupérer les couleurs custom (objet JSON ou null)
+  const rawCustomColors = result.data?.custom_theme_colors;
+  let customColors: CustomThemeColors | null = null;
+  if (rawCustomColors && typeof rawCustomColors === 'object' && !Array.isArray(rawCustomColors)) {
+    const obj = rawCustomColors as Record<string, unknown>;
+    const HEX_REGEX = /^#[0-9a-fA-F]{6}$/;
+    const p = String(obj.primary);
+    const a = String(obj.accent);
+    const s = String(obj.sidebar);
+    if (HEX_REGEX.test(p) && HEX_REGEX.test(a) && HEX_REGEX.test(s)) {
+      customColors = { primary: p, accent: a, sidebar: s };
+    }
+  }
+
   return {
     data: {
       theme_preset: (result.data?.theme_preset as string) ?? 'classic',
       logo_white_url: logoWhite && logoWhite.trim() !== '' ? logoWhite : null,
       logo_dark_url: logoDark && logoDark.trim() !== '' ? logoDark : null,
+      custom_theme_colors: customColors,
     },
     error: null,
   };
@@ -614,6 +642,7 @@ export async function setThemeSettings(
   settings: Partial<ThemeSettings>
 ): Promise<AppSettingResult<ThemeSettings>> {
   // Convertir les null en chaînes vides pour les URLs (contrainte NOT NULL sur value)
+  // et les objets en JSON pour custom_theme_colors
   const sanitizedSettings: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(settings)) {

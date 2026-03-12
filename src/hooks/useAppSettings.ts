@@ -31,7 +31,14 @@ import {
   type ThemeSettings,
   type SeasonSettings,
 } from '@/lib/services/app-settings';
-import { applyThemeAuto } from '@/lib/theme';
+import {
+  applyThemeAuto,
+  applyThemeColors,
+  generateCustomTheme,
+  isDarkModeActive,
+  DEFAULT_CUSTOM_SEEDS,
+  type CustomThemeSeeds,
+} from '@/lib/theme';
 
 // ============================================
 // TYPES
@@ -558,6 +565,23 @@ export function useRgpdSettings(): UseAppSettingsReturn<RgpdSettings> {
 // ============================================
 
 /**
+ * Applique le thème custom (depuis les seeds) ou un preset standard
+ */
+function applyCustomOrPresetTheme(
+  presetId: string,
+  seeds: { primary: string; accent: string; sidebar: string } | null | undefined
+): void {
+  if (presetId === 'custom') {
+    const effectiveSeeds = seeds ?? DEFAULT_CUSTOM_SEEDS;
+    const palette = generateCustomTheme(effectiveSeeds as CustomThemeSeeds);
+    const colors = isDarkModeActive() ? palette.dark : palette.light;
+    applyThemeColors(colors, 'custom');
+  } else {
+    applyThemeAuto(presetId);
+  }
+}
+
+/**
  * Hook pour gérer les paramètres de thème
  * Applique automatiquement le thème au chargement et à la mise à jour
  */
@@ -585,7 +609,7 @@ export function useThemeSettings(): UseAppSettingsReturn<ThemeSettings> {
       setData(result.data);
       // Appliquer le thème au chargement
       if (result.data?.theme_preset) {
-        applyThemeAuto(result.data.theme_preset);
+        applyCustomOrPresetTheme(result.data.theme_preset, result.data.custom_theme_colors);
       }
     }
 
@@ -606,7 +630,8 @@ export function useThemeSettings(): UseAppSettingsReturn<ThemeSettings> {
 
       // Appliquer le thème immédiatement (optimiste)
       if (newValue.theme_preset) {
-        applyThemeAuto(newValue.theme_preset);
+        const seeds = newValue.custom_theme_colors ?? previousValue?.custom_theme_colors ?? null;
+        applyCustomOrPresetTheme(newValue.theme_preset, seeds);
       }
 
       setIsSaving(true);
@@ -617,7 +642,10 @@ export function useThemeSettings(): UseAppSettingsReturn<ThemeSettings> {
         // Rollback en cas d'erreur
         setData(previousValue);
         if (previousValue?.theme_preset) {
-          applyThemeAuto(previousValue.theme_preset);
+          applyCustomOrPresetTheme(
+            previousValue.theme_preset,
+            previousValue.custom_theme_colors
+          );
         }
         return { success: false, error: result.error };
       }

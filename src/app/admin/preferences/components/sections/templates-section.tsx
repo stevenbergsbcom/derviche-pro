@@ -92,8 +92,28 @@ function TemplatesSkeleton() {
 // SOUS-COMPOSANT : Item d'accordéon réutilisable
 // ============================================
 
+/** Groupe de template — doit correspondre aux 3 listes de clés (TRANSACTIONAL_KEYS, REMINDER_KEYS, CHECKIN_FOLLOWUP_KEYS) */
+type TemplateGroup = 'transactional' | 'reminder' | 'checkin';
+
+/** Badge coloré par groupe — maintenir aligné avec TemplateGroup et les listes de clés ci-dessus */
+const GROUP_BADGE_CONFIG: Record<TemplateGroup, { label: string; className: string }> = {
+  transactional: {
+    label: 'Transactionnel',
+    className: 'border-blue-200 text-blue-600 bg-blue-50',
+  },
+  reminder: {
+    label: 'Rappel',
+    className: 'border-amber-200 text-amber-600 bg-amber-50',
+  },
+  checkin: {
+    label: 'Post-accueil',
+    className: 'border-violet-200 text-violet-600 bg-violet-50',
+  },
+};
+
 interface TemplateAccordionItemProps {
   template: EmailTemplate;
+  group: TemplateGroup;
   isDirty: boolean;
   canEdit: boolean;
   onDirtyChange: (key: string, isDirty: boolean) => void;
@@ -102,24 +122,41 @@ interface TemplateAccordionItemProps {
 
 function TemplateAccordionItem({
   template,
+  group,
   isDirty,
   canEdit,
   onDirtyChange,
   onSaved,
 }: TemplateAccordionItemProps) {
   const templateName = EMAIL_TEMPLATE_NAMES[template.template_key] ?? template.name;
+  const groupConfig = GROUP_BADGE_CONFIG[group];
 
   return (
     <AccordionItem
       value={template.template_key}
       // last:!border-b : force la bordure basse sur le dernier item
       // (écrase le last:border-b-0 de shadcn qui est prévu pour accordion groupé)
-      className="border rounded-lg px-1 last:!border-b [&[data-state=open]]:bg-muted/30"
+      className="border rounded-lg px-1 last:!border-b transition-all [&[data-state=open]]:bg-muted/40 [&[data-state=open]]:border-primary/30 [&[data-state=open]]:shadow-sm [&[data-state=open]]:ring-1 [&[data-state=open]]:ring-primary/10"
     >
       <AccordionTrigger className="px-4 py-3 hover:no-underline">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="font-medium text-sm truncate">{templateName}</span>
+          <div className="flex flex-col items-start gap-0.5 min-w-0 flex-1">
+            <div className="flex items-center gap-2 w-full">
+              <span className="font-medium text-sm truncate">{templateName}</span>
+              <Badge
+                variant="outline"
+                className={`text-[10px] px-1.5 py-0 shrink-0 ${groupConfig.className}`}
+              >
+                {groupConfig.label}
+              </Badge>
+            </div>
+            {template.subject && (
+              <span className="text-xs text-muted-foreground italic truncate max-w-full">
+                {template.subject}
+              </span>
+            )}
+          </div>
           {isDirty && (
             <Badge
               variant="outline"
@@ -276,6 +313,7 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
             <TemplateAccordionItem
               key={template.template_key}
               template={template}
+              group="transactional"
               isDirty={dirtyMap[template.template_key] ?? false}
               canEdit={canEdit}
               onDirtyChange={handleDirtyChange}
@@ -293,6 +331,7 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
             <TemplateAccordionItem
               key={template.template_key}
               template={template}
+              group="reminder"
               isDirty={dirtyMap[template.template_key] ?? false}
               canEdit={canEdit}
               onDirtyChange={handleDirtyChange}
@@ -310,6 +349,7 @@ export function EmailTemplatesSection({ canEdit, onDirtyChange }: EmailTemplates
             <TemplateAccordionItem
               key={template.template_key}
               template={template}
+              group="checkin"
               isDirty={dirtyMap[template.template_key] ?? false}
               canEdit={canEdit}
               onDirtyChange={handleDirtyChange}

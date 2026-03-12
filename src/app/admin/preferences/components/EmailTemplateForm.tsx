@@ -9,10 +9,11 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
+import type { UseFormRegister } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, Save, Loader2, AlertCircle, Info } from 'lucide-react';
+import { Eye, Save, Loader2, AlertCircle, Info, Type, Settings2, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -162,6 +163,65 @@ function VariableBadges({ onInsert, disabled }: VariableBadgesProps) {
 }
 
 // ============================================
+// SOUS-COMPOSANT — Toggle lien optionnel (DRY)
+// ============================================
+
+interface OptionalLinkToggleProps {
+  templateKey: string;
+  label: string;
+  description: string;
+  showFieldName: keyof TemplateFormValues;
+  textFieldName: keyof TemplateFormValues;
+  placeholder: string;
+  isVisible: boolean;
+  onToggle: (checked: boolean) => void;
+  canEdit: boolean;
+  registerFn: UseFormRegister<TemplateFormValues>;
+}
+
+function OptionalLinkToggle({
+  templateKey,
+  label,
+  description,
+  showFieldName,
+  textFieldName,
+  placeholder,
+  isVisible,
+  onToggle,
+  canEdit,
+  registerFn,
+}: OptionalLinkToggleProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor={`${showFieldName}-${templateKey}`} className="text-sm font-medium">
+            {label}
+          </Label>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        <Switch
+          id={`${showFieldName}-${templateKey}`}
+          checked={isVisible}
+          onCheckedChange={onToggle}
+          disabled={!canEdit}
+        />
+      </div>
+      {isVisible && (
+        <Input
+          id={`${textFieldName}-${templateKey}`}
+          aria-label={placeholder}
+          {...registerFn(textFieldName)}
+          disabled={!canEdit}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // COMPOSANT PRINCIPAL
 // ============================================
 
@@ -188,7 +248,7 @@ export function EmailTemplateForm({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     getValues,
     reset,
@@ -228,9 +288,15 @@ export function EmailTemplateForm({
   const { ref: bodyRhfRef,    ...bodyRegisterProps    } = register('body_text');
   const { ref: infoRhfRef,    ...infoRegisterProps    } = register('info_text');
 
-  const showContactBlock = watch('show_contact_block');
-  const isConfirmation   = template.template_key === 'reservation_confirmation';
-  const isSimpleStyle    = template.is_simple_style === true;
+  const showContactBlock    = useWatch({ control, name: 'show_contact_block' });
+  const showFolderLink      = useWatch({ control, name: 'show_folder_link' });
+  const showTeaserLink      = useWatch({ control, name: 'show_teaser_link' });
+  const showCaptationLink   = useWatch({ control, name: 'show_captation_link' });
+  const showBookingLink     = useWatch({ control, name: 'show_booking_link' });
+  const showPhotoFolderLink = useWatch({ control, name: 'show_photo_folder_link' });
+  const showReservationCode = useWatch({ control, name: 'show_reservation_code' });
+  const isConfirmation      = template.template_key === 'reservation_confirmation';
+  const isSimpleStyle       = template.is_simple_style === true;
 
   // Notifier le parent quand isDirty change
   useEffect(() => {
@@ -356,12 +422,27 @@ export function EmailTemplateForm({
           </div>
         )}
 
+        {/* ── Variables (instance unique) ─────────────── */}
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-1">
+          <p className="text-xs text-muted-foreground">
+            Cliquez sur une variable pour l&apos;insérer dans le dernier champ sélectionné.
+          </p>
+          <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
+        </div>
+
+        {/* ── Contenu ─────────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <Type className="h-4 w-4 text-muted-foreground" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Contenu
+          </p>
+        </div>
+
         {/* Objet */}
         <div className="space-y-1.5">
           <Label htmlFor={`subject-${template.template_key}`}>
             Objet de l&apos;email <span className="text-destructive">*</span>
           </Label>
-          <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Input
             id={`subject-${template.template_key}`}
             {...subjectRegisterProps}
@@ -396,7 +477,6 @@ export function EmailTemplateForm({
           <Label htmlFor={`intro_text-${template.template_key}`}>
             Texte d&apos;introduction
           </Label>
-          <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Textarea
             id={`intro_text-${template.template_key}`}
             {...introRegisterProps}
@@ -417,7 +497,6 @@ export function EmailTemplateForm({
           <Label htmlFor={`body_text-${template.template_key}`}>
             Corps du message
           </Label>
-          <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
           <Textarea
             id={`body_text-${template.template_key}`}
             {...bodyRegisterProps}
@@ -439,7 +518,6 @@ export function EmailTemplateForm({
             <Label htmlFor={`info_text-${template.template_key}`}>
               Bloc informatif
             </Label>
-            <VariableBadges onInsert={handleInsertVariable} disabled={!canEdit} />
             <Textarea
               id={`info_text-${template.template_key}`}
               {...infoRegisterProps}
@@ -471,144 +549,103 @@ export function EmailTemplateForm({
           </div>
         )}
 
+        {/* Formule de salutation */}
+        <div className="space-y-1.5">
+          <Label htmlFor={`salutation-${template.template_key}`}>
+            Formule de salutation
+          </Label>
+          <Input
+            id={`salutation-${template.template_key}`}
+            {...register('salutation')}
+            disabled={!canEdit}
+            placeholder="Ex: À très bientôt,"
+          />
+          <p className="text-xs text-muted-foreground">
+            Affiché juste avant la signature. Laisser vide pour ne pas afficher.
+          </p>
+        </div>
+
         {/* Liens optionnels — uniquement pour les templates style sobre (post-checkin) */}
         {isSimpleStyle && (
-          <div className="space-y-3 rounded-lg border p-4">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Liens optionnels
-            </p>
-
-            {/* Dossier de presse */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`show_folder_link-${template.template_key}`} className="text-sm font-medium">
-                    Lien dossier de presse
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
-                </div>
-                <Switch
-                  id={`show_folder_link-${template.template_key}`}
-                  checked={watch('show_folder_link')}
-                  onCheckedChange={(checked) => setValue('show_folder_link', checked, { shouldDirty: true })}
-                  disabled={!canEdit}
-                />
-              </div>
-              {watch('show_folder_link') && (
-                <Input
-                  {...register('folder_link_text')}
-                  disabled={!canEdit}
-                  placeholder="Ex: Consulter le dossier de presse"
-                  className="text-sm"
-                />
-              )}
+          <>
+            <div className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Liens optionnels
+              </p>
             </div>
-
-            {/* Teaser vidéo */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`show_teaser_link-${template.template_key}`} className="text-sm font-medium">
-                    Lien teaser vidéo
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
-                </div>
-                <Switch
-                  id={`show_teaser_link-${template.template_key}`}
-                  checked={watch('show_teaser_link')}
-                  onCheckedChange={(checked) => setValue('show_teaser_link', checked, { shouldDirty: true })}
-                  disabled={!canEdit}
-                />
-              </div>
-              {watch('show_teaser_link') && (
-                <Input
-                  {...register('teaser_link_text')}
-                  disabled={!canEdit}
-                  placeholder="Ex: Voir le teaser vidéo"
-                  className="text-sm"
-                />
-              )}
+            <div className="space-y-3 rounded-lg border p-4">
+              <OptionalLinkToggle
+                templateKey={template.template_key}
+                label="Lien dossier de presse"
+                description="Affiché uniquement si l'URL est renseignée sur le spectacle"
+                showFieldName="show_folder_link"
+                textFieldName="folder_link_text"
+                placeholder="Ex: Consulter le dossier de presse"
+                isVisible={showFolderLink}
+                onToggle={(checked) => setValue('show_folder_link', checked, { shouldDirty: true })}
+                canEdit={canEdit}
+                registerFn={register}
+              />
+              <OptionalLinkToggle
+                templateKey={template.template_key}
+                label="Lien teaser vidéo"
+                description="Affiché uniquement si l'URL est renseignée sur le spectacle"
+                showFieldName="show_teaser_link"
+                textFieldName="teaser_link_text"
+                placeholder="Ex: Voir le teaser vidéo"
+                isVisible={showTeaserLink}
+                onToggle={(checked) => setValue('show_teaser_link', checked, { shouldDirty: true })}
+                canEdit={canEdit}
+                registerFn={register}
+              />
+              <OptionalLinkToggle
+                templateKey={template.template_key}
+                label="Lien captation vidéo"
+                description="Affiché uniquement si l'URL est renseignée sur le spectacle"
+                showFieldName="show_captation_link"
+                textFieldName="captation_link_text"
+                placeholder="Ex: Voir la captation vidéo"
+                isVisible={showCaptationLink}
+                onToggle={(checked) => setValue('show_captation_link', checked, { shouldDirty: true })}
+                canEdit={canEdit}
+                registerFn={register}
+              />
+              <OptionalLinkToggle
+                templateKey={template.template_key}
+                label="Lien de réservation"
+                description="Lien vers la page publique du spectacle (toujours disponible)"
+                showFieldName="show_booking_link"
+                textFieldName="booking_link_text"
+                placeholder="Ex: Réserver une place pour ce spectacle"
+                isVisible={showBookingLink}
+                onToggle={(checked) => setValue('show_booking_link', checked, { shouldDirty: true })}
+                canEdit={canEdit}
+                registerFn={register}
+              />
+              <OptionalLinkToggle
+                templateKey={template.template_key}
+                label="Lien dossier photo"
+                description="Affiché uniquement si l'URL est renseignée sur le spectacle"
+                showFieldName="show_photo_folder_link"
+                textFieldName="photo_folder_link_text"
+                placeholder="Ex: Consulter le dossier photo"
+                isVisible={showPhotoFolderLink}
+                onToggle={(checked) => setValue('show_photo_folder_link', checked, { shouldDirty: true })}
+                canEdit={canEdit}
+                registerFn={register}
+              />
             </div>
-
-            {/* Captation vidéo */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`show_captation_link-${template.template_key}`} className="text-sm font-medium">
-                    Lien captation vidéo
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
-                </div>
-                <Switch
-                  id={`show_captation_link-${template.template_key}`}
-                  checked={watch('show_captation_link')}
-                  onCheckedChange={(checked) => setValue('show_captation_link', checked, { shouldDirty: true })}
-                  disabled={!canEdit}
-                />
-              </div>
-              {watch('show_captation_link') && (
-                <Input
-                  {...register('captation_link_text')}
-                  disabled={!canEdit}
-                  placeholder="Ex: Voir la captation vidéo"
-                  className="text-sm"
-                />
-              )}
-            </div>
-
-            {/* Lien de réservation */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`show_booking_link-${template.template_key}`} className="text-sm font-medium">
-                    Lien de réservation
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Lien vers la page publique du spectacle (toujours disponible)</p>
-                </div>
-                <Switch
-                  id={`show_booking_link-${template.template_key}`}
-                  checked={watch('show_booking_link')}
-                  onCheckedChange={(checked) => setValue('show_booking_link', checked, { shouldDirty: true })}
-                  disabled={!canEdit}
-                />
-              </div>
-              {watch('show_booking_link') && (
-                <Input
-                  {...register('booking_link_text')}
-                  disabled={!canEdit}
-                  placeholder="Ex: Réserver une place pour ce spectacle"
-                  className="text-sm"
-                />
-              )}
-            </div>
-
-            {/* Dossier photo — S170 */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor={`show_photo_folder_link-${template.template_key}`} className="text-sm font-medium">
-                    Lien dossier photo
-                  </Label>
-                  <p className="text-xs text-muted-foreground">Affiché uniquement si l&apos;URL est renseignée sur le spectacle</p>
-                </div>
-                <Switch
-                  id={`show_photo_folder_link-${template.template_key}`}
-                  checked={watch('show_photo_folder_link')}
-                  onCheckedChange={(checked) => setValue('show_photo_folder_link', checked, { shouldDirty: true })}
-                  disabled={!canEdit}
-                />
-              </div>
-              {watch('show_photo_folder_link') && (
-                <Input
-                  {...register('photo_folder_link_text')}
-                  disabled={!canEdit}
-                  placeholder="Ex: Consulter le dossier photo"
-                  className="text-sm"
-                />
-              )}
-            </div>
-          </div>
+          </>
         )}
+
+        {/* ── Options ──────────────────────────────── */}
+        <div className="flex items-center gap-2">
+          <Settings2 className="h-4 w-4 text-muted-foreground" />
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Options
+          </p>
+        </div>
 
         {/* Bloc de contact */}
         <div className="space-y-2 rounded-lg border p-4">
@@ -654,7 +691,7 @@ export function EmailTemplateForm({
             </div>
             <Switch
               id={`show_reservation_code-${template.template_key}`}
-              checked={watch('show_reservation_code')}
+              checked={showReservationCode}
               onCheckedChange={(checked) =>
                 setValue('show_reservation_code', checked, { shouldDirty: true })
               }
@@ -662,22 +699,6 @@ export function EmailTemplateForm({
             />
           </div>
         )}
-
-        {/* Formule de salutation */}
-        <div className="space-y-1.5">
-          <Label htmlFor={`salutation-${template.template_key}`}>
-            Formule de salutation
-          </Label>
-          <Input
-            id={`salutation-${template.template_key}`}
-            {...register('salutation')}
-            disabled={!canEdit}
-            placeholder="Ex: À très bientôt,"
-          />
-          <p className="text-xs text-muted-foreground">
-            Affiché juste avant la signature. Laisser vide pour ne pas afficher.
-          </p>
-        </div>
 
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2 border-t">

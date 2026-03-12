@@ -5,17 +5,29 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Palette, Check, ImageIcon } from 'lucide-react';
+import { HexColorPicker } from 'react-colorful';
 import { toast } from 'sonner';
 
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { SettingsCard } from '../shared';
 import { LogoUploader } from './logo-uploader';
 
 import { useThemeSettings } from '@/hooks/useAppSettings';
-import { THEME_OPTIONS, getThemePreset, dispatchLogoChange } from '@/lib/theme';
+import type { ThemeSettings } from '@/lib/services/app-settings';
+import {
+  THEME_OPTIONS,
+  getThemePreset,
+  dispatchLogoChange,
+  generateCustomTheme,
+  applyThemeColors,
+  isDarkModeActive,
+  DEFAULT_CUSTOM_SEEDS,
+  type CustomThemeSeeds,
+} from '@/lib/theme';
 import { uploadLogo, replaceLogo, deleteLogo } from '@/lib/services/storage/logoStorage';
 import { cn } from '@/lib/utils';
 
@@ -55,6 +67,10 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
   // Ref pour stocker la valeur initiale du thème (pour comparaison)
   const initialThemeRef = useRef<string | null>(null);
 
+  // État local pour les couleurs custom
+  const [customSeeds, setCustomSeeds] = useState<CustomThemeSeeds>({ ...DEFAULT_CUSTOM_SEEDS });
+  const initialCustomSeedsRef = useRef<CustomThemeSeeds | null>(null);
+
   // État local pour les logos (fichiers à uploader)
   const [logoWhiteFile, setLogoWhiteFile] = useState<File | null>(null);
   const [logoDarkFile, setLogoDarkFile] = useState<File | null>(null);
@@ -78,6 +94,15 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
       initialThemeRef.current = data.theme_preset;
       originalLogoWhiteUrl.current = data.logo_white_url;
       originalLogoDarkUrl.current = data.logo_dark_url;
+
+      // Charger les couleurs custom si elles existent
+      if (data.custom_theme_colors) {
+        setCustomSeeds(data.custom_theme_colors);
+        initialCustomSeedsRef.current = { ...data.custom_theme_colors };
+      } else {
+        initialCustomSeedsRef.current = { ...DEFAULT_CUSTOM_SEEDS };
+      }
+
       setIsInitialized(true);
     }
   }, [data, isInitialized]);
@@ -90,17 +115,40 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
     const themeChanged = selectedTheme !== initialThemeRef.current;
     const logoWhiteChanged = logoWhiteFile !== null || logoWhiteDeleted;
     const logoDarkChanged = logoDarkFile !== null || logoDarkDeleted;
-    const changed = themeChanged || logoWhiteChanged || logoDarkChanged;
+
+    // Vérifier si les couleurs custom ont changé
+    const seedsChanged =
+      selectedTheme === 'custom' &&
+      initialCustomSeedsRef.current !== null &&
+      (customSeeds.primary !== initialCustomSeedsRef.current.primary ||
+        customSeeds.accent !== initialCustomSeedsRef.current.accent ||
+        customSeeds.sidebar !== initialCustomSeedsRef.current.sidebar);
+
+    const changed = themeChanged || logoWhiteChanged || logoDarkChanged || seedsChanged;
 
     setHasChanges(changed);
     onDirtyChangeRef.current?.(changed);
-  }, [isInitialized, selectedTheme, logoWhiteFile, logoDarkFile, logoWhiteDeleted, logoDarkDeleted]);
+  }, [isInitialized, selectedTheme, logoWhiteFile, logoDarkFile, logoWhiteDeleted, logoDarkDeleted, customSeeds]);
 
   // Changement de thème
   const handleThemeChange = (themeId: string) => {
     if (!canEdit) return;
     setSelectedTheme(themeId);
   };
+
+  // Mise à jour live d'une couleur custom (preview en temps réel)
+  const handleCustomColorChange = useCallback(
+    (key: keyof CustomThemeSeeds, color: string) => {
+      const newSeeds = { ...customSeeds, [key]: color };
+      setCustomSeeds(newSeeds);
+
+      // Appliquer le thème en temps réel
+      const palette = generateCustomTheme(newSeeds);
+      const colors = isDarkModeActive() ? palette.dark : palette.light;
+      applyThemeColors(colors, 'custom');
+    },
+    [customSeeds]
+  );
 
   // Changement du logo blanc
   const handleLogoWhiteChange = (file: File | null) => {
@@ -134,15 +182,18 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
 
   // Soumission
   const onSubmit = async () => {
-    const updates: {
-      theme_preset?: string;
-      logo_white_url?: string | null;
-      logo_dark_url?: string | null;
-    } = {};
+    const updates: Partial<ThemeSettings> = {};
 
     // 1. Mettre à jour le thème si changé
     if (selectedTheme !== initialThemeRef.current) {
       updates.theme_preset = selectedTheme;
+    }
+
+    // 1b. Sauvegarder les couleurs custom si le thème est "custom"
+    if (selectedTheme === 'custom') {
+      updates.custom_theme_colors = customSeeds;
+      // Toujours inclure le preset pour s'assurer qu'il est bien sauvegardé
+      updates.theme_preset = 'custom';
     }
 
     // 2. Gérer le logo blanc
@@ -194,6 +245,9 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
         // Mettre à jour les valeurs initiales
         if (updates.theme_preset) {
           initialThemeRef.current = updates.theme_preset;
+        }
+        if (updates.custom_theme_colors) {
+          initialCustomSeedsRef.current = { ...customSeeds };
         }
         // Réinitialiser les états locaux
         setLogoWhiteFile(null);
@@ -375,6 +429,36 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
           <p className="text-xs text-muted-foreground">
             Le thème sera appliqué à l&apos;ensemble de la plateforme pour tous les utilisateurs.
           </p>
+
+          {/* Color pickers pour le thème personnalisé */}
+          {selectedTheme === 'custom' && (
+            <div className="space-y-4 rounded-lg border border-dashed border-primary/30 bg-muted/30 p-4">
+              <p className="text-sm font-medium">Personnaliser les couleurs</p>
+              <div className="grid gap-6 sm:grid-cols-3">
+                <ColorPickerField
+                  label="Couleur principale"
+                  description="Boutons, liens, accents"
+                  value={customSeeds.primary}
+                  onChange={(c) => handleCustomColorChange('primary', c)}
+                  disabled={!canEdit}
+                />
+                <ColorPickerField
+                  label="Couleur d'accent"
+                  description="Accent secondaire, badges"
+                  value={customSeeds.accent}
+                  onChange={(c) => handleCustomColorChange('accent', c)}
+                  disabled={!canEdit}
+                />
+                <ColorPickerField
+                  label="Fond de la sidebar"
+                  description="Barre latérale de navigation"
+                  value={customSeeds.sidebar}
+                  onChange={(c) => handleCustomColorChange('sidebar', c)}
+                  disabled={!canEdit}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -418,5 +502,75 @@ export function AppearanceSection({ canEdit, onDirtyChange }: AppearanceSectionP
         </div>
       </div>
     </SettingsCard>
+  );
+}
+
+// ============================================
+// COLOR PICKER FIELD
+// ============================================
+
+interface ColorPickerFieldProps {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (color: string) => void;
+  disabled?: boolean;
+}
+
+/** Valide un hex (avec ou sans #) */
+function isValidHex(hex: string): boolean {
+  return /^#?[0-9a-fA-F]{6}$/.test(hex);
+}
+
+function ColorPickerField({ label, description, value, onChange, disabled }: ColorPickerFieldProps) {
+  const [inputValue, setInputValue] = useState(value);
+
+  // Synchroniser quand la valeur externe change
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let hex = e.target.value;
+    setInputValue(hex);
+
+    // Ajouter le # si absent
+    if (!hex.startsWith('#')) hex = '#' + hex;
+    if (isValidHex(hex)) {
+      onChange(hex);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Restaurer la dernière valeur valide si invalide
+    if (!isValidHex(inputValue)) {
+      setInputValue(value);
+    }
+  };
+
+  return (
+    <div className={cn('space-y-2', disabled && 'pointer-events-none opacity-60')}>
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <div className="[&_.react-colorful]:w-full [&_.react-colorful]:rounded-md">
+        <HexColorPicker color={value} onChange={onChange} />
+      </div>
+      <div className="flex items-center gap-2">
+        <div
+          className="h-8 w-8 shrink-0 rounded border border-black/10"
+          style={{ backgroundColor: value }}
+        />
+        <Input
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          maxLength={7}
+          className="h-8 font-mono text-xs"
+          placeholder="#000000"
+        />
+      </div>
+    </div>
   );
 }

@@ -6,7 +6,7 @@
 
 'use client';
 
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useReducer, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { SidebarHeader, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
@@ -36,6 +36,7 @@ function SidebarLogoComponent({ baseHref, subtitle }: SidebarLogoProps) {
   const [logoDarkUrl, setLogoDarkUrl] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [, forceRender] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -64,6 +65,7 @@ function SidebarLogoComponent({ baseHref, subtitle }: SidebarLogoProps) {
 
     // Écouter les changements de logo depuis les préférences admin
     const unsubscribe = onLogoChange(() => {
+      forceRender(); // Force re-render pour relire --sidebar
       void loadSettings();
     });
 
