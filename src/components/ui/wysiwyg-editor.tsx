@@ -40,26 +40,36 @@ export function WysiwygEditor({
         // Sanitizer la valeur entrante pour comparaison cohérente
         const sanitizedValue = sanitizeHtml(value);
 
+        // Convertir les \n en <br> pour que le texte brut s'affiche correctement
+        const displayValue = sanitizedValue.replace(/\n/g, '<br>');
+
         // Ne mettre à jour que si la valeur sanitizée a réellement changé
         if (editorRef.current && sanitizedValue !== lastValueRef.current) {
-            editorRef.current.innerHTML = sanitizedValue;
+            editorRef.current.innerHTML = displayValue;
             lastValueRef.current = sanitizedValue;
-            setIsEmpty(!sanitizedValue || sanitizedValue === '<br>');
+            setIsEmpty(!displayValue || displayValue === '<br>');
         }
     }, [value]);
 
     // Gérer le changement de contenu avec sanitization
     const handleInput = useCallback(() => {
         if (editorRef.current) {
-            const html = editorRef.current.innerHTML;
+            let html = editorRef.current.innerHTML;
+
+            // Normaliser les <div> créés par le navigateur (Enter) en <br>
+            html = html.replace(/<\/div><div>/gi, '<br>');
+            html = html.replace(/<div><br\s*\/?><\/div>/gi, '<br>');
+            html = html.replace(/<div>/gi, '<br>');
+            html = html.replace(/<\/div>/gi, '');
+
             const cleanHtml = html === '<br>' ? '' : html;
             // Sanitizer le HTML avant de le passer au parent
             const sanitizedHtml = sanitizeHtml(cleanHtml);
-            
+
             // Marquer comme mise à jour interne pour éviter la boucle
             isInternalUpdate.current = true;
             lastValueRef.current = sanitizedHtml;
-            
+
             onChange(sanitizedHtml);
             setIsEmpty(!sanitizedHtml);
         }
@@ -132,8 +142,13 @@ export function WysiwygEditor({
     const handlePaste = useCallback((e: React.ClipboardEvent) => {
         e.preventDefault();
         const text = e.clipboardData.getData('text/plain');
-        // Insérer uniquement le texte brut pour éviter le HTML malveillant
-        document.execCommand('insertText', false, text);
+        // Échapper le HTML et convertir les \n en <br> pour préserver les retours à la ligne
+        const safeHtml = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\n/g, '<br>');
+        document.execCommand('insertHTML', false, safeHtml);
         handleInput();
     }, [handleInput]);
 

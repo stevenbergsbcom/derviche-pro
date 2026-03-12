@@ -76,6 +76,9 @@ export type HomepageSettingKey =
   | 'homepage_contact'
   | 'homepage_footer';
 
+/** Clés de paramètres pages légales */
+export type LegalSettingKey = 'legal_mentions' | 'legal_privacy' | 'legal_cgu';
+
 /** Toutes les clés de paramètres */
 export type AppSettingKey =
   | OrganizationSettingKey
@@ -86,6 +89,7 @@ export type AppSettingKey =
   | RgpdSettingKey
   | ThemeSettingKey
   | HomepageSettingKey
+  | LegalSettingKey
   | string;
 
 /** Ligne de paramètre depuis la base */
@@ -257,6 +261,13 @@ export interface HomepageSettings {
   homepage_footer: HomepageFooter;
 }
 
+/** Paramètres des pages légales (texte brut, éditable depuis admin) */
+export interface LegalSettings {
+  legal_mentions: string;
+  legal_privacy: string;
+  legal_cgu: string;
+}
+
 // ============================================
 // CONSTANTES
 // ============================================
@@ -328,6 +339,13 @@ export const HOMEPAGE_SETTING_KEYS: HomepageSettingKey[] = [
   'homepage_impact',
   'homepage_contact',
   'homepage_footer',
+];
+
+/** Clés des paramètres pages légales */
+export const LEGAL_SETTING_KEYS: LegalSettingKey[] = [
+  'legal_mentions',
+  'legal_privacy',
+  'legal_cgu',
 ];
 
 /** Valeurs par défaut — contenu actuel hardcodé de la homepage */
@@ -957,4 +975,161 @@ export async function setHomepageSettings(
   }
 
   return getHomepageSettings();
+}
+
+// ============================================
+// PAGES LÉGALES
+// ============================================
+
+/** Contenu par défaut des pages légales */
+export const LEGAL_DEFAULTS: LegalSettings = {
+  legal_mentions: `MENTIONS LÉGALES
+
+Éditeur du site
+Derviche Diffusion
+13, rue de Cotte - 75012 Paris
+SIRET : [À compléter]
+RCS Paris : [À compléter]
+Directeur de la publication : [À compléter]
+Email : derviche@dervichediffusion.com
+
+Hébergement
+Ce site est hébergé par Vercel Inc.
+440 N Barranca Ave #4133, Covina, CA 91723, États-Unis
+https://vercel.com
+
+Propriété intellectuelle
+L'ensemble du contenu de ce site (textes, images, vidéos, logos, éléments graphiques) est protégé par le droit d'auteur et le droit des marques. Toute reproduction, même partielle, est interdite sans autorisation écrite préalable de Derviche Diffusion.
+
+Responsabilité
+Derviche Diffusion s'efforce d'assurer l'exactitude des informations diffusées sur ce site mais ne saurait être tenue responsable des erreurs, omissions ou résultats qui pourraient être obtenus par un mauvais usage de ces informations.
+
+Crédits photographiques
+Les photographies et visuels utilisés sur ce site sont la propriété de leurs auteurs respectifs et de Derviche Diffusion. Toute utilisation non autorisée est interdite.`,
+
+  legal_privacy: `POLITIQUE DE CONFIDENTIALITÉ
+
+Dernière mise à jour : mars 2026
+
+Responsable du traitement
+Derviche Diffusion
+13, rue de Cotte - 75012 Paris
+Email : derviche@dervichediffusion.com
+
+Données collectées
+Dans le cadre de l'utilisation de notre plateforme, nous collectons les données suivantes :
+- Données d'identification : nom, prénom, adresse email, téléphone
+- Données professionnelles : structure, fonction, adresse postale
+- Données de réservation : spectacles réservés, historique des réservations
+- Données de connexion : logs de connexion, adresse IP
+
+Finalités du traitement
+Vos données sont collectées pour les finalités suivantes :
+- Gestion de votre compte utilisateur
+- Traitement de vos réservations de spectacles
+- Communication relative à vos réservations (confirmations, rappels)
+- Amélioration de nos services et statistiques anonymisées
+
+Base légale
+Le traitement de vos données repose sur :
+- L'exécution du contrat (gestion des réservations)
+- Votre consentement (newsletter, communications commerciales)
+- Notre intérêt légitime (amélioration du service, sécurité)
+
+Durée de conservation
+Vos données personnelles sont conservées pendant la durée de votre inscription, puis archivées conformément aux obligations légales. Les comptes inactifs sont supprimés après 24 mois d'inactivité.
+
+Vos droits (RGPD)
+Conformément au Règlement Général sur la Protection des Données, vous disposez des droits suivants :
+- Droit d'accès à vos données
+- Droit de rectification
+- Droit à l'effacement (droit à l'oubli)
+- Droit à la limitation du traitement
+- Droit à la portabilité
+- Droit d'opposition
+
+Pour exercer ces droits, contactez-nous à : derviche@dervichediffusion.com
+
+Cookies
+Ce site utilise des cookies techniques nécessaires au bon fonctionnement de la plateforme. Aucun cookie publicitaire ou de suivi n'est utilisé.
+
+Réclamation
+Vous pouvez introduire une réclamation auprès de la CNIL (Commission Nationale de l'Informatique et des Libertés) : www.cnil.fr`,
+
+  legal_cgu: `CONDITIONS GÉNÉRALES D'UTILISATION
+
+Dernière mise à jour : mars 2026
+
+Article 1 — Objet
+Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme Derviche Diffusion, accessible à l'adresse derviche-pro.com. Cette plateforme permet aux professionnels du spectacle vivant (programmateurs, directeurs de salles) de consulter le catalogue de spectacles et d'effectuer des réservations.
+
+Article 2 — Inscription
+L'accès à la plateforme de réservation nécessite la création d'un compte. L'utilisateur s'engage à fournir des informations exactes et à jour. Chaque compte est personnel et ne peut être partagé.
+
+Article 3 — Réservations
+Les réservations effectuées via la plateforme sont soumises à la disponibilité des créneaux. Une confirmation par email est envoyée pour chaque réservation validée. L'annulation d'une réservation est possible selon les conditions communiquées lors de la réservation.
+
+Article 4 — Responsabilités de l'utilisateur
+L'utilisateur s'engage à :
+- Utiliser la plateforme conformément à sa destination
+- Ne pas diffuser de contenu illicite ou inapproprié
+- Maintenir la confidentialité de ses identifiants de connexion
+- Signaler toute utilisation non autorisée de son compte
+
+Article 5 — Propriété intellectuelle
+L'ensemble des éléments de la plateforme (design, textes, images, logos) sont protégés par le droit de la propriété intellectuelle. Toute reproduction non autorisée est interdite.
+
+Article 6 — Limitation de responsabilité
+Derviche Diffusion met tout en œuvre pour assurer la disponibilité et le bon fonctionnement de la plateforme. Toutefois, Derviche Diffusion ne saurait être tenue responsable des interruptions temporaires de service, des erreurs techniques ou des dommages indirects liés à l'utilisation de la plateforme.
+
+Article 7 — Modification des CGU
+Derviche Diffusion se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés de toute modification substantielle. L'utilisation continue de la plateforme après modification vaut acceptation des nouvelles conditions.
+
+Article 8 — Droit applicable
+Les présentes CGU sont soumises au droit français. Tout litige relatif à leur interprétation ou exécution relève de la compétence exclusive des tribunaux de Paris.
+
+Contact
+Pour toute question relative aux présentes CGU :
+Derviche Diffusion
+13, rue de Cotte - 75012 Paris
+Email : derviche@dervichediffusion.com`,
+};
+
+/**
+ * Récupère les paramètres des pages légales
+ * Chaque clé est un texte brut, avec fallback sur LEGAL_DEFAULTS
+ */
+export async function getLegalSettings(): Promise<AppSettingResult<LegalSettings>> {
+  const result = await getAppSettings(LEGAL_SETTING_KEYS);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  return {
+    data: {
+      legal_mentions:
+        (result.data?.legal_mentions as string) || LEGAL_DEFAULTS.legal_mentions,
+      legal_privacy:
+        (result.data?.legal_privacy as string) || LEGAL_DEFAULTS.legal_privacy,
+      legal_cgu:
+        (result.data?.legal_cgu as string) || LEGAL_DEFAULTS.legal_cgu,
+    },
+    error: null,
+  };
+}
+
+/**
+ * Met à jour les paramètres des pages légales
+ */
+export async function setLegalSettings(
+  settings: Partial<LegalSettings>
+): Promise<AppSettingResult<LegalSettings>> {
+  const result = await setAppSettings(settings);
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  return getLegalSettings();
 }

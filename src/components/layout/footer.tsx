@@ -164,17 +164,17 @@ export function Footer({ settings, organization }: FooterProps = {}) {
             <h4 className="font-semibold mb-4 text-gold">Légal</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="#" className="text-white/70 hover:text-white transition">
+                <Link href="/mentions-legales" className="text-white/70 hover:text-white transition">
                   Mentions légales
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-white/70 hover:text-white transition">
+                <Link href="/politique-confidentialite" className="text-white/70 hover:text-white transition">
                   Politique de confidentialité
                 </Link>
               </li>
               <li>
-                <Link href="#" className="text-white/70 hover:text-white transition">
+                <Link href="/cgu" className="text-white/70 hover:text-white transition">
                   CGU
                 </Link>
               </li>
