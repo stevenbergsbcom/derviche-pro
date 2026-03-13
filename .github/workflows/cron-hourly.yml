@@ -13,9 +13,9 @@ jobs:
     steps:
       - name: Déclencher le cron hourly (H-12)
         run: |
-          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+          response=$(curl -s -L -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            https://derviche-pro.fr/api/cron/reminders/hourly)
+            https://www.derviche-pro.fr/api/cron/reminders/hourly)
 
           echo "HTTP Status: $response"
           echo "Response body:"
