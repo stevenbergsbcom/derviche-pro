@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { SettingsCard } from '../shared';
 
-import { useEmailSettings } from '@/hooks/useAppSettings';
+import { useEmailSettings, useOrganizationSettings } from '@/hooks/useAppSettings';
 import type { EmailSettings } from '@/lib/services/app-settings';
 
 // ============================================
@@ -110,9 +110,30 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
     defaultValues: DEFAULT_VALUES,
   });
 
+  // Données organisation (pour l'aperçu du footer)
+  const { data: orgData } = useOrganizationSettings();
+
   // Valeurs surveillées pour l'aperçu en temps réel
   const watchedSignature = useWatch({ control, name: 'email_signature' });
   const watchedFooter = useWatch({ control, name: 'email_footer_text' });
+  const watchedShowEmail = useWatch({ control, name: 'email_footer_show_email' });
+  const watchedShowPhone = useWatch({ control, name: 'email_footer_show_phone' });
+  const watchedShowAddress = useWatch({ control, name: 'email_footer_show_address' });
+  const watchedShowWebsite = useWatch({ control, name: 'email_footer_show_website' });
+
+  // Ligne contact dynamique pour l'aperçu
+  const previewContactLine = (() => {
+    const parts: string[] = [];
+    if (watchedShowEmail && orgData?.organization_contact_email)
+      parts.push(orgData.organization_contact_email);
+    if (watchedShowPhone && orgData?.organization_contact_phone)
+      parts.push(orgData.organization_contact_phone);
+    if (watchedShowAddress && orgData?.organization_address)
+      parts.push(orgData.organization_address);
+    if (watchedShowWebsite && orgData?.organization_website)
+      parts.push(orgData.organization_website);
+    return parts.join(' — ');
+  })();
 
   // Initialiser le formulaire quand les données arrivent (une seule fois)
   useEffect(() => {
@@ -396,6 +417,11 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
             <p className="text-xs text-muted-foreground whitespace-pre-line">
               {watchedFooter || 'Pied de page'}
             </p>
+            {previewContactLine && (
+              <p className="text-[11px] text-muted-foreground/70 mt-1">
+                {previewContactLine}
+              </p>
+            )}
           </div>
         </div>
       </div>
