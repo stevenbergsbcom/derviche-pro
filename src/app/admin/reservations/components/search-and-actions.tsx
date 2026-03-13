@@ -35,6 +35,11 @@ export interface ShowOption {
   title: string;
 }
 
+export interface VenueOption {
+  id: string;
+  name: string;
+}
+
 export interface SearchAndActionsProps {
   // Recherche
   searchInput: string;
@@ -51,6 +56,11 @@ export interface SearchAndActionsProps {
   showsOptions: ShowOption[];
   isExterne: boolean;
   onShowFilter: (showId: string) => void;
+
+  // Filtre lieu
+  venueId?: string;
+  venuesOptions: VenueOption[];
+  onVenueFilter: (venueId: string) => void;
 
   // Panneau avancé
   filtersExpanded: boolean;
@@ -82,6 +92,9 @@ export function SearchAndActions({
   showsOptions,
   isExterne,
   onShowFilter,
+  venueId,
+  venuesOptions,
+  onVenueFilter,
   filtersExpanded,
   activeFiltersCount,
   onToggleExpanded,
@@ -97,7 +110,7 @@ export function SearchAndActions({
   // Math.max(0, ...) garantit que le badge ne peut pas être négatif en cas d'état incohérent
   const advancedFiltersCount = Math.max(
     0,
-    activeFiltersCount - (showId ? 1 : 0) - (appliedSearch ? 1 : 0)
+    activeFiltersCount - (showId ? 1 : 0) - (venueId ? 1 : 0) - (appliedSearch ? 1 : 0)
   );
 
   return (
@@ -147,6 +160,26 @@ export function SearchAndActions({
               {showsOptions.map((show) => (
                 <SelectItem key={show.id} value={show.id}>
                   {show.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Filtre lieu */}
+        <div className="w-[180px] shrink-0">
+          <Select
+            value={venueId || 'all'}
+            onValueChange={onVenueFilter}
+          >
+            <SelectTrigger aria-label="Filtrer par lieu">
+              <SelectValue placeholder="Tous les lieux" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les lieux</SelectItem>
+              {venuesOptions.map((venue) => (
+                <SelectItem key={venue.id} value={venue.id}>
+                  {venue.name}
                 </SelectItem>
               ))}
             </SelectContent>

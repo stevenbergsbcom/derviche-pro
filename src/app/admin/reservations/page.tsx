@@ -26,7 +26,7 @@ import {
   CreateReservationDialog,
 } from '@/components/admin/reservations';
 import type { AdminReservation, UpdateReservationData, CreateAdminReservationData } from '@/lib/services/admin-reservations';
-import { createAdminReservation, getAdminReservationById } from '@/lib/services/admin-reservations';
+import { createAdminReservation, getAdminReservationById, getVenuesWithReservations } from '@/lib/services/admin-reservations';
 import { useSearchParams } from 'next/navigation';
 import type { CheckinStatus } from '@/types/database';
 import { toast } from 'sonner';
@@ -106,10 +106,6 @@ function AdminReservationsContent() {
   const pageSizeRef = useRef(pageSize);
   const loadReservationsRef = useRef(loadReservations);
 
-  // Ref pour ignorer le premier rendu de l'effet showId
-  // (le chargement initial est déjà géré par l'effet de montage)
-  const showIdInitializedRef = useRef(false);
-
   // États dialogs
   const [selectedReservation, setSelectedReservation] = useState<AdminReservation | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -117,6 +113,9 @@ function AdminReservationsContent() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [columnsDialogOpen, setColumnsDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+
+  // Lieux avec réservations (pour le dropdown filtre)
+  const [venuesOptions, setVenuesOptions] = useState<{ id: string; name: string }[]>([]);
 
   // États de traitement
   const [isProcessing, setIsProcessing] = useState(false);
@@ -131,21 +130,18 @@ function AdminReservationsContent() {
     void loadReservations({ period: 'upcoming', sortBy: 'slot_date_asc' });
     void loadStats();
     void refreshShows();
+    void getVenuesWithReservations().then(r => { if (r.data) setVenuesOptions(r.data); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recharger les stats ET les réservations quand le filtre spectacle change
+  // Recharger les stats quand le filtre spectacle ou lieu change
+  // (les réservations sont déjà rechargées par setFilters → loadReservations)
   useEffect(() => {
-    void loadStats(filters.showId ? { showId: filters.showId } : {});
-    // Ignorer le premier rendu — le chargement initial est géré par l'effet de montage
-    if (!showIdInitializedRef.current) {
-      showIdInitializedRef.current = true;
-      return;
-    }
-    // Recharger les réservations avec les filtres courants, en revenant à la page 1
-    void loadReservationsRef.current(filtersRef.current, { page: 1, pageSize: pageSizeRef.current });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.showId]);
+    const statFilters: { showId?: string; venueId?: string } = {};
+    if (filters.showId) statFilters.showId = filters.showId;
+    if (filters.venueId) statFilters.venueId = filters.venueId;
+    void loadStats(Object.keys(statFilters).length > 0 ? statFilters : {});
+  }, [filters.showId, filters.venueId, loadStats]);
 
   // Mise à jour des refs
   useEffect(() => { filtersRef.current = filters; }, [filters]);
@@ -417,6 +413,9 @@ function AdminReservationsContent() {
           showsOptions={showsOptions}
           isExterne={isExterne}
           onShowFilter={filtersHook.handleShowFilter}
+          venueId={filters.venueId}
+          venuesOptions={venuesOptions}
+          onVenueFilter={filtersHook.handleVenueFilter}
           filtersExpanded={filtersHook.filtersExpanded}
           activeFiltersCount={filtersHook.activeFiltersCount}
           onToggleExpanded={filtersHook.toggleFiltersExpanded}

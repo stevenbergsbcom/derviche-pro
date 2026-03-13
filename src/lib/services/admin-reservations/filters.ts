@@ -87,6 +87,11 @@ export function applyFilters(query: any, filters: AdminReservationFilters): any 
     filteredQuery = filteredQuery.eq('slots.show_id', filters.showId);
   }
 
+  // Filtre par lieu
+  if (filters.venueId) {
+    filteredQuery = filteredQuery.eq('slots.venue_id', filters.venueId);
+  }
+
   // Filtre par slot
   if (filters.slotId) {
     filteredQuery = filteredQuery.eq('slot_id', filters.slotId);

@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S186 — Split des gros fichiers (>400 lignes) — 13 mars 2026
+> Dernière mise à jour : Session S187 — Fix boucle infinie filtre spectacle + filtre lieu — 13 mars 2026
 
 ---
 
@@ -72,7 +72,7 @@
 | Module | État |
 |--------|------|
 | Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison |
-| Réservations | ✅ Liste, filtres, pagination, détail, CRUD, check-in, export |
+| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories, publics cibles, médias |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
 | Lieux | ✅ CRUD salles (venues) |
@@ -1174,11 +1174,28 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/app/(public)/spectacle/[slug]/utils/` | `calendar.ts` | ~95 |
 | `src/app/(public)/spectacle/[slug]/types.ts` | Types + constantes | ~60 |
 
+### S187 — Fix boucle infinie filtre spectacle + filtre lieu ✅
+
+**Bug fix** : boucle infinie dans `/admin/reservations` quand on filtre par spectacle. L'effet `filters.showId` dans `page.tsx` utilisait des refs stales (`loadReservationsRef`, `filtersRef`) car il s'exécutait avant les effets de synchronisation des refs. Le `loadReservations` stale écrivait des filtres obsolètes dans le state, provoquant une oscillation infinie de `filters.showId`. Fix : suppression de l'appel redondant `loadReservationsRef.current(...)`, ne garde que `loadStats`.
+
+**Feature** : ajout d'un dropdown "Tous les lieux" à côté de "Tous les spectacles" dans la page admin des réservations. Filtre les réservations ET met à jour les statistiques (cards). Le dropdown n'affiche que les lieux ayant au moins une réservation non annulée.
+
+**Fichiers modifiés (7) :**
+| Fichier | Modification |
+|---------|-------------|
+| `src/lib/services/admin-reservations/types.ts` | Ajout `venueId?: string` dans `AdminReservationFilters` |
+| `src/lib/services/admin-reservations/filters.ts` | Ajout filtre `.eq('slots.venue_id', ...)` dans `applyFilters()` |
+| `src/lib/services/admin-reservations/stats.ts` | Extension `getReservationStats` pour `venueId` + nouvelle fonction `getVenuesWithReservations()` |
+| `src/lib/services/admin-reservations/index.ts` | Export `getVenuesWithReservations` |
+| `src/app/admin/reservations/hooks/use-reservation-filters.ts` | Ajout `handleVenueFilter`, `venueId` dans state/count/return |
+| `src/app/admin/reservations/components/search-and-actions.tsx` | Type `VenueOption`, props, Select dropdown, `advancedFiltersCount` |
+| `src/app/admin/reservations/page.tsx` | Fix effet stale refs + wiring filtre lieu (state + `getVenuesWithReservations` au mount + effet stats étendu) |
+
 ---
 
 ## Backlog / TODO
 
-### Prochaine session : S187 — à définir
+### Prochaine session : S188 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |

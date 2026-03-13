@@ -96,6 +96,8 @@ export interface AdminReservation {
 export interface AdminReservationFilters {
   /** Filtrer par spectacle (show_id) */
   showId?: string;
+  /** Filtrer par lieu (venue_id) */
+  venueId?: string;
   /** Filtrer par slot (slot_id) */
   slotId?: string;
   /** Filtrer par statut */
