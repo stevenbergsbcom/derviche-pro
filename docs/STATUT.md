@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S181 — Fix user_id réservation pro + health check — 13 mars 2026
+> Dernière mise à jour : Session S181 — Fix user_id réservation pro + crons GitHub Actions — 13 mars 2026
 
 ---
 
@@ -955,6 +955,18 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `supabase/migrations/092_fix_reservation_user_id_in_rpc.sql` | **Créé** — Restaure `user_id` dans le RPC `create_public_reservation` |
 | `src/lib/services/google-calendar/health.ts` | Fix `writeHealthStatus` — `JSON.stringify()` + vérification erreurs Supabase |
 | `src/app/api/auth/google/callback/route.ts` | Fix fallback URL — alignement dev/prod avec `getGoogleRedirectUri()` |
+
+**Fix crons GitHub Actions (redirect 307) :**
+- **Symptôme** : les workflows `cron-daily` et `cron-hourly` échouaient avec HTTP 307
+- **Cause racine** : Vercel redirige `derviche-pro.fr` → `www.derviche-pro.fr` (307), et `curl` ne suit pas les redirects par défaut
+- **Correction** : URLs corrigées vers `https://www.derviche-pro.fr` + ajout flag `-L` (follow redirects) en défense
+- 4 URLs mises à jour dans 2 fichiers workflow
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `.github/workflows/cron-hourly.yml` | URL → `www.derviche-pro.fr` + `-L` |
+| `.github/workflows/cron-daily.yml` | 3 URLs → `www.derviche-pro.fr` + `-L` |
 
 ---
 
