@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S181 — Fix user_id réservation pro + crons GitHub Actions — 13 mars 2026
+> Dernière mise à jour : Session S183 — Purge logs système (super-admin) — 13 mars 2026
 
 ---
 
@@ -79,7 +79,7 @@
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
 | Préférences | ✅ Organisation, Apparence (thème custom S174), Email, Notifications, Rappels, Templates (11, UX DRY S175), Google Calendar, RGPD, **Page d'accueil (S176)** |
-| Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137 |
+| Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137, **fix résa publique S182** |
 | **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
 | **Utilisateurs** | ✅ CRUD comptes internes + vue assignations spectacles pour externes — S153 |
 
@@ -864,7 +864,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 ### S177 — Solder la dette technique ✅
 
 **Corrections :**
-- Fix `slot_date: null` dans `send-confirmation` (notification admin recevait date null)
+- Fix `slot_date: null` dans `send-confirmation` (notification admin recevait date null) — *fix partiel, corrigé complètement en S182 (format ISO)*
 - Suppression 4× `as any` dans `user-preferences.ts` (types Supabase existants depuis S155)
 - Ajout champs organisation (`contact_email`, `phone`, `address`, `website`) dans `EmailConfig` + footer emails (7 builders)
 - Refactoring `homepage-section.tsx` (1015 lignes → 8 fichiers dans `homepage/`)
@@ -1015,6 +1015,45 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S182 — Fix notifications admin réservation publique ✅
+
+**Bug — Notifications admin absentes après réservation publique :**
+- **Symptôme** : une réservation via le formulaire public ne crée pas de notification admin (cloche). Les annulations et modifications fonctionnent.
+- **Cause racine 1** : `slot_date` recevait la date française formatée (`"Jeudi 12 mars 2026"`) au lieu d'un format ISO — la colonne `TIMESTAMPTZ` rejetait silencieusement l'INSERT
+- **Cause racine 2** : `void createAdminNotification(...).catch()` (fire-and-forget) au lieu de `await` — contrairement aux routes annulation/modification qui utilisent `await`
+- **Correction** : format ISO (`2026-07-18T20:00:00`) extrait depuis `slots.date` + `slots.time`, et `await` aligné sur les autres routes
+
+**Amélioration — Notification admin pour les réservations créées depuis l'admin :**
+- Ajout du flag `skipEmail` dans `send-confirmation-by-id` — permet de créer la notification admin sans envoyer d'email
+- La page admin réservations appelle désormais `send-confirmation-by-id` systématiquement (avec `skipEmail: true` si email décoché)
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `src/app/api/emails/send-confirmation/route.ts` | `slot_date` ISO au lieu de date française, `await` au lieu de `void`, notification avant email |
+| `src/app/api/emails/send-confirmation-by-id/route.ts` | Ajout `skipEmail` (Zod + logique conditionnelle email/calendar) |
+| `src/app/admin/reservations/page.tsx` | Appel systématique `send-confirmation-by-id` avec `skipEmail: !sendEmail` |
+
+---
+
+### S183 — Purge logs système (super-admin) ✅
+
+**Fonctionnalité — Bouton "Vider" le journal des événements :**
+- Bouton "Vider" dans Admin > Système > Journal, réservé au super-admin
+- AlertDialog de confirmation avec compteur d'événements avant suppression
+- Toast de feedback (succès/erreur) + rafraîchissement automatique
+- RPC PostgreSQL `purge_all_app_logs()` (SECURITY DEFINER, vérifie super-admin)
+- Fix `pg_safeupdate` : `DELETE ... WHERE true` requis par Supabase
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `supabase/migrations/093_purge_all_app_logs.sql` | RPC `purge_all_app_logs()` (SECURITY DEFINER, super-admin) |
+| `src/lib/services/maintenance.ts` | Fonction `purgeAllAppLogs()` appelant la RPC |
+| `src/app/admin/systeme/components/logs-table.tsx` | Bouton "Vider" + AlertDialog + toast feedback |
+
+---
+
 ## Backlog / TODO
 
 ### 🔜 Réservation : autoriser les doublons email+créneau (avec alerte)
@@ -1024,7 +1063,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
-### Prochaine session : S182 — à définir
+### Prochaine session : S184 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |

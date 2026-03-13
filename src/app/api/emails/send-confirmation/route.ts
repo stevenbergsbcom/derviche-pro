@@ -99,7 +99,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const { data: reservation, error: reservationError } = await adminClient
       .from('reservations')
-      .select('id, guest_email, user_id, profiles:user_id(email)')
+      .select('id, guest_email, user_id, profiles:user_id(email), slots!inner(date, time)')
       .eq('id', payload.reservationId)
       .maybeSingle();
 
@@ -126,7 +126,26 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'Email invalide' }, { status: 200 });
     }
 
-    // 3. Envoyer l'email de confirmation
+    // 3. Créer la notification admin en base (badge sidebar) — non bloquant
+    // Placé AVANT l'envoi email pour garantir la notification même si Resend échoue
+    // slot_date doit être au format ISO (TIMESTAMPTZ) — pas la date formatée française
+    const reservationSlot = (reservation as unknown as {
+      slots: { date: string; time: string };
+    }).slots;
+    const slotDateIso = reservationSlot
+      ? `${reservationSlot.date}T${reservationSlot.time}`
+      : null;
+
+    await createAdminNotification({
+      type: 'new_reservation',
+      reservation_id: payload.reservationId,
+      professional_name: payload.guestFullName,
+      show_title: payload.showTitle,
+      slot_date: slotDateIso,
+      message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
+    });
+
+    // 4. Récupérer le manager + Envoyer l'email de confirmation
     let confirmManagerName: string | null = null;
     let confirmManagerEmail: string | null = null;
     let confirmManagerPhone: string | null = null;
@@ -177,7 +196,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
 
-    // 4. Notifier le manager Derviche (si préférence activée)
+    // 5. Notifier le manager Derviche (si préférence activée)
     try {
       const { data: notifPrefData } = await adminClient
         .from('app_settings')
@@ -262,7 +281,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
     }
 
-    // 5. Créer l'événement Google Calendar (non-bloquant)
+    // 6. Créer l'événement Google Calendar (non-bloquant)
     try {
       const { data: calPref } = await adminClient
         .from('app_settings')
@@ -319,18 +338,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     } catch (calErr) {
       logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', { calErr });
     }
-
-    // 6. Créer la notification admin en base (badge sidebar) — non bloquant
-    void createAdminNotification({
-      type: 'new_reservation',
-      reservation_id: payload.reservationId,
-      professional_name: payload.guestFullName,
-      show_title: payload.showTitle,
-      slot_date: payload.slotDateFormatted,
-      message: `${payload.guestFullName} a réservé ${payload.numPlaces} place(s) pour « ${payload.showTitle} »`,
-    }).catch((err) => {
-      logger.error('[API /emails/send-confirmation] Erreur createAdminNotification (non-bloquant)', { err });
-    });
 
     return NextResponse.json({ success: true, messageId: result.messageId });
   } catch (err) {

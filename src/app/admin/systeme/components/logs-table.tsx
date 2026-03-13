@@ -9,6 +9,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   Mail,
   Calendar,
@@ -20,6 +21,8 @@ import {
   ChevronRight,
   RefreshCw,
   AlertCircle,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import {
   Card,
@@ -37,6 +40,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { purgeAllAppLogs } from '@/lib/services/maintenance';
 import { cn } from '@/lib/utils';
 import type { AppLog } from '@/app/api/admin/logs/route';
 import type { LogCategory, LogLevel, LogStatus } from './systeme-content';
@@ -237,6 +252,23 @@ export function LogsTable({
   onStatusChange,
   onRefresh,
 }: LogsTableProps) {
+  const [isPurging, setIsPurging] = useState(false);
+
+  const handlePurge = async () => {
+    setIsPurging(true);
+    try {
+      const result = await purgeAllAppLogs();
+      if (!result.success) {
+        toast.error(result.error ?? 'Erreur lors de la purge');
+        return;
+      }
+      toast.success(`${result.deleted} événement(s) supprimé(s)`);
+      onRefresh();
+    } finally {
+      setIsPurging(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -251,17 +283,57 @@ export function LogsTable({
             )}
           </CardTitle>
 
-          {/* Bouton refresh */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="gap-1.5 text-xs"
-          >
-            <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} />
-            Actualiser
-          </Button>
+          <div className="flex items-center gap-1">
+            {/* Bouton refresh */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onRefresh}
+              disabled={isLoading}
+              className="gap-1.5 text-xs"
+            >
+              <RefreshCw className={cn('size-3.5', isLoading && 'animate-spin')} />
+              Actualiser
+            </Button>
+
+            {/* Bouton vider le journal */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={isLoading || isPurging || total === 0}
+                  className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                >
+                  {isPurging ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-3.5" />
+                  )}
+                  Vider
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Vider le journal des événements</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action supprimera définitivement les{' '}
+                    <strong>{total.toLocaleString('fr-FR')}</strong> événement(s) du journal.
+                    Cette action est irréversible.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handlePurge}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Supprimer tout
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
         {/* Filtres */}

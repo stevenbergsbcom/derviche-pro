@@ -34,6 +34,7 @@ import type { UserRole } from '@/types/database';
 const schema = z.object({
   reservationId: z.string().uuid('ID de réservation invalide'),
   syncCalendar: z.boolean().optional().default(true),
+  skipEmail: z.boolean().optional().default(false),
 });
 
 // ============================================
@@ -77,7 +78,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: 'Données invalides' }, { status: 400 });
     }
 
-    const { reservationId, syncCalendar } = parseResult.data;
+    const { reservationId, syncCalendar, skipEmail } = parseResult.data;
 
     // 2. Vérifier l'authentification
     const userClient = await createServerClient();
@@ -220,65 +221,69 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // 8. Envoyer l'email de confirmation au professionnel
-    const emailResult = await sendReservationConfirmationEmail({
-      to: recipientEmail,
-      guestFullName: recipientFullName,
-      reservationCode: reservation.id.slice(0, 8).toUpperCase(),
-      reservationId: reservation.id,
-      showTitle: show.title,
-      showSlug: show.slug,
-      companyName: company?.name ?? '',
-      slotDateFormatted: formatDateFr(slots.date),
-      slotTimeFormatted: formatTimeFr(slots.time),
-      venueName: venue?.name ?? '',
-      venueCity: venue?.city ?? '',
-      numPlaces: reservation.num_places,
-      managerName,
-      managerEmail,
-      managerPhone,
-    });
+    // 8. Envoyer l'email de confirmation au professionnel (sauf si skipEmail)
+    let emailResult: { success: boolean; messageId?: string; error?: string } = { success: true };
 
-    if (!emailResult.success) {
-      logger.error('[API /emails/send-confirmation-by-id] Échec envoi', { reservationId, error: emailResult.error });
-    }
+    if (!skipEmail) {
+      emailResult = await sendReservationConfirmationEmail({
+        to: recipientEmail,
+        guestFullName: recipientFullName,
+        reservationCode: reservation.id.slice(0, 8).toUpperCase(),
+        reservationId: reservation.id,
+        showTitle: show.title,
+        showSlug: show.slug,
+        companyName: company?.name ?? '',
+        slotDateFormatted: formatDateFr(slots.date),
+        slotTimeFormatted: formatTimeFr(slots.time),
+        venueName: venue?.name ?? '',
+        venueCity: venue?.city ?? '',
+        numPlaces: reservation.num_places,
+        managerName,
+        managerEmail,
+        managerPhone,
+      });
 
-    // 9. Notifier le manager DD si préférence activée
-    try {
-      const { data: notifPrefData } = await adminClient
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'email_notification_new_reservation')
-        .maybeSingle();
-
-      const isBoolTrue = (v: unknown) => v === true || v === 'true' || String(v) === 'true';
-
-      if (isBoolTrue(notifPrefData?.value) && managerEmail) {
-        const notifData: AdminNotificationEmailData = {
-          to: managerEmail,
-          adminName: managerName ?? managerEmail,
-          eventType: 'new_reservation',
-          guestFullName: recipientFullName,
-          guestEmail: recipientEmail,
-          guestStructure: reservation.guest_structure,
-          showTitle: show.title,
-          slotDateFormatted: formatDateFr(slots.date),
-          slotTimeFormatted: formatTimeFr(slots.time),
-          venueName: venue?.name ?? '',
-          numPlaces: reservation.num_places,
-          reservationId: reservation.id,
-        };
-
-        await sendAdminNotificationEmail(notifData).catch((err) => {
-          logger.error('[API /emails/send-confirmation-by-id] Erreur notif manager', { err });
-        });
+      if (!emailResult.success) {
+        logger.error('[API /emails/send-confirmation-by-id] Échec envoi', { reservationId, error: emailResult.error });
       }
-    } catch (notifErr) {
-      logger.error('[API /emails/send-confirmation-by-id] Exception notif manager (non-bloquant)', { notifErr });
+
+      // 9. Notifier le manager DD si préférence activée
+      try {
+        const { data: notifPrefData } = await adminClient
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'email_notification_new_reservation')
+          .maybeSingle();
+
+        const isBoolTrue = (v: unknown) => v === true || v === 'true' || String(v) === 'true';
+
+        if (isBoolTrue(notifPrefData?.value) && managerEmail) {
+          const notifData: AdminNotificationEmailData = {
+            to: managerEmail,
+            adminName: managerName ?? managerEmail,
+            eventType: 'new_reservation',
+            guestFullName: recipientFullName,
+            guestEmail: recipientEmail,
+            guestStructure: reservation.guest_structure,
+            showTitle: show.title,
+            slotDateFormatted: formatDateFr(slots.date),
+            slotTimeFormatted: formatTimeFr(slots.time),
+            venueName: venue?.name ?? '',
+            numPlaces: reservation.num_places,
+            reservationId: reservation.id,
+          };
+
+          await sendAdminNotificationEmail(notifData).catch((err) => {
+            logger.error('[API /emails/send-confirmation-by-id] Erreur notif manager', { err });
+          });
+        }
+      } catch (notifErr) {
+        logger.error('[API /emails/send-confirmation-by-id] Exception notif manager (non-bloquant)', { notifErr });
+      }
     }
 
     // 10. Créer l'événement Google Calendar (non-bloquant)
-    if (syncCalendar) {
+    if (syncCalendar && !skipEmail) {
       try {
         const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
