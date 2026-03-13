@@ -332,17 +332,21 @@ function AdminReservationsContent() {
       setFilters(resetFilters);
       void loadReservations(resetFilters);
       void loadStats();
-      // Déclencher l'email de confirmation si demandé et réservation créée (non-bloquant)
-      if (notifOptions?.sendEmail && result.reservationId) {
+      // Déclencher l'email + notification admin (non-bloquant)
+      // Toujours appelé pour garantir la notification admin (badge cloche),
+      // même si l'email n'est pas envoyé (skipEmail)
+      if (result.reservationId) {
+        const sendEmail = notifOptions?.sendEmail ?? false;
         void fetch('/api/emails/send-confirmation-by-id', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             reservationId: result.reservationId,
-            syncCalendar: notifOptions.syncCalendar,
+            syncCalendar: sendEmail ? (notifOptions?.syncCalendar ?? true) : false,
+            skipEmail: !sendEmail,
           }),
         }).catch((err) =>
-          logger.warn('[admin/reservations] Email confirmation création non envoyé', { err })
+          logger.warn('[admin/reservations] Notification/email création non envoyé', { err })
         );
       }
     }
