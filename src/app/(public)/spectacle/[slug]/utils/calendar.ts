@@ -29,24 +29,6 @@ export function convertToTimeSlot(slot: PublicSlot): TimeSlot {
   };
 }
 
-/**
- * Construire la periode a partir des slots
- */
-export function buildPeriod(slots: TimeSlot[]): string {
-  if (slots.length === 0) return 'Dates à venir';
-
-  const firstSlot = slots[0];
-  const lastSlot = slots[slots.length - 1];
-
-  const formatDate = (d: Date) =>
-    d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
-
-  if (slots.length === 1) {
-    return `Le ${formatDate(firstSlot.date)}`;
-  }
-
-  return `Du ${formatDate(firstSlot.date)} au ${formatDate(lastSlot.date)}`;
-}
 
 /** Premier jour du mois */
 export function getFirstDayOfMonth(year: number, month: number): Date {

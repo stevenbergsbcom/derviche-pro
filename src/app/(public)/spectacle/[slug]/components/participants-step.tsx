@@ -15,6 +15,15 @@ interface ParticipantsStepProps {
   maxReservations: number;
   onParticipantChange: (delta: number) => void;
   onContinue: () => void;
+  /** Politique d'invitation (texte libre depuis la fiche spectacle) */
+  invitationPolicy: string | null;
+  /** Responsable Derviche pour le contact */
+  dervisheManager: {
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    email: string;
+  } | null;
 }
 
 // ============================================
@@ -26,22 +35,33 @@ export function ParticipantsStep({
   maxReservations,
   onParticipantChange,
   onContinue,
+  invitationPolicy,
+  dervisheManager,
 }: ParticipantsStepProps) {
   return (
     <>
-      {/* Encart info warning */}
-      <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4">
-        <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-          <div className="text-sm text-foreground">
-            <p className="font-medium mb-1">Pour les professionnels :</p>
-            <p>
-              1 invitation + détaxe, sur réservation - Contact pour toute précision sur votre
-              réservation : Alexandra - 06 62 41 95 51 - reservation.derviche@gmail.com
-            </p>
+      {/* Encart info professionnel — affiché si invitation_policy OU manager existe */}
+      {(invitationPolicy || dervisheManager) && (
+        <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+            <div className="text-sm text-foreground">
+              <p className="font-medium mb-1">Pour les professionnels :</p>
+              {invitationPolicy && <p>{invitationPolicy}</p>}
+              {dervisheManager && (
+                <p className={invitationPolicy ? 'mt-1' : ''}>
+                  Contact pour toute précision sur votre réservation
+                  {' : '}
+                  {dervisheManager.firstName} {dervisheManager.lastName}
+                  {dervisheManager.phone && ` - ${dervisheManager.phone}`}
+                  {' - '}
+                  {dervisheManager.email}
+                </p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Encart info success */}
       <div className="bg-success/10 border border-success/20 rounded-lg p-4 mb-6">
