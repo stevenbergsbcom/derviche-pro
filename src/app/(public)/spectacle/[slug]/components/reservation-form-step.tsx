@@ -44,7 +44,7 @@ export function ReservationFormStep({
       {/* Recapitulatif */}
       {selectedSlot && (
         <Card className="bg-muted mb-6">
-          <CardContent className="p-4">
+          <CardContent className="px-4 py-1.5">
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-derviche" />

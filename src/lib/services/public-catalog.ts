@@ -80,6 +80,19 @@ export interface PublicShow {
   nextDate: string | null;
   /** Lieu de la prochaine représentation */
   nextVenue: string | null;
+  /** Période du spectacle (texte libre, ex: "Janvier - Mars 2026") */
+  period: string | null;
+  /** Dates de relâche */
+  closureDates: string | null;
+  /** Politique d'invitation (ex: "1 invitation + détaxe, sur réservation") */
+  invitationPolicy: string | null;
+  /** Responsable Derviche — prénom + nom + tél + email */
+  dervisheManager: {
+    firstName: string;
+    lastName: string;
+    phone: string | null;
+    email: string;
+  } | null;
 }
 
 /** Résultat de la récupération du catalogue */
@@ -336,6 +349,11 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         availableSlotsCount: availableSlots.length,
         nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
         nextVenue: nextSlot ? nextSlot.venueName : null,
+        // Champs détail — non chargés en mode catalogue
+        period: null,
+        closureDates: null,
+        invitationPolicy: null,
+        dervisheManager: null,
       };
     });
 
@@ -370,7 +388,11 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         status,
         price_type,
         max_reservations_per_booking,
-        companies!inner(name)
+        period,
+        closure_dates,
+        invitation_policy,
+        companies!inner(name),
+        profiles!derviche_manager_id(first_name, last_name, phone, email)
       `)
       .eq('slug', slug)
       .is('deleted_at', null)
@@ -453,6 +475,20 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
 
     const nextSlot = availableSlots[0];
     const companyData = show.companies as { name: string } | null;
+    const managerData = show.profiles as {
+      first_name: string | null;
+      last_name: string | null;
+      phone: string | null;
+      email: string;
+    } | null;
+    const dervisheManager: PublicShow['dervisheManager'] = managerData
+      ? {
+          firstName: managerData.first_name || '',
+          lastName: managerData.last_name || '',
+          phone: managerData.phone,
+          email: managerData.email,
+        }
+      : null;
 
     const categories = (categoryMappings || [])
       .map(m => (m.show_categories as { name: string } | null)?.name)
@@ -482,6 +518,10 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       availableSlotsCount: availableSlots.length,
       nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
       nextVenue: nextSlot ? nextSlot.venueName : null,
+      period: show.period,
+      closureDates: show.closure_dates,
+      invitationPolicy: show.invitation_policy,
+      dervisheManager,
     };
 
     return { data: publicShow, error: null };

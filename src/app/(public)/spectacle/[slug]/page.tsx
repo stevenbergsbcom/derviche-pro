@@ -22,7 +22,6 @@ import type { TimeSlot, Step, ReservationFormData } from './types';
 import { DEFAULT_MAX_RESERVATIONS, INITIAL_FORM_DATA } from './types';
 import {
   convertToTimeSlot,
-  buildPeriod,
   getFirstDayOfMonth,
   getLastDayOfMonth,
   isSameDay,
@@ -284,7 +283,6 @@ export default function SpectacleDetailPage() {
   // ============================================
 
   const duration = formatDuration(show.durationMinutes);
-  const period = buildPeriod(timeSlots);
   const description = show.longDescription || show.shortDescription || 'Description du spectacle.';
   const hasImage = show.imageUrl && !imageError;
 
@@ -544,7 +542,6 @@ export default function SpectacleDetailPage() {
                   hasImage={!!hasImage}
                   onImageError={() => setImageError(true)}
                   duration={duration}
-                  period={period}
                   description={description}
                   showFullDescription={showFullDescription}
                   onToggleDescription={() => setShowFullDescription(!showFullDescription)}
@@ -600,6 +597,8 @@ export default function SpectacleDetailPage() {
                         onContinue={() => {
                           void handleContinueToForm();
                         }}
+                        invitationPolicy={show.invitationPolicy}
+                        dervisheManager={show.dervisheManager}
                       />
                     )}
                     {currentStep === 'form' && (

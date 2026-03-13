@@ -19,7 +19,6 @@ interface ShowDetailSidebarProps {
   hasImage: boolean;
   onImageError: () => void;
   duration: string;
-  period: string;
   description: string;
   showFullDescription: boolean;
   onToggleDescription: () => void;
@@ -34,7 +33,6 @@ export function ShowDetailSidebar({
   hasImage,
   onImageError,
   duration,
-  period,
   description,
   showFullDescription,
   onToggleDescription,
@@ -55,6 +53,35 @@ export function ShowDetailSidebar({
         ) : (
           <ImagePlaceholder title={show.title} />
         )}
+
+        {/* Badges catégories — haut gauche (style catalogue : bg-gold) */}
+        {show.categories.length > 0 && (
+          <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-1">
+            {show.categories.map((cat) => (
+              <span
+                key={cat}
+                className="bg-gold text-white text-xs font-semibold px-2 py-1 rounded"
+              >
+                {cat}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Badges publics cible — haut droite */}
+        {show.targetAudiences.length > 0 && (
+          <div className="absolute top-2 right-2 z-10 flex flex-wrap gap-1 justify-end">
+            {show.targetAudiences.map((aud) => (
+              <span
+                key={aud}
+                className="bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded"
+              >
+                {aud}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-4 left-4 right-4">
           <p className="text-white/80 text-sm mb-1">{show.companyName}</p>
@@ -104,11 +131,21 @@ export function ShowDetailSidebar({
           <p className="text-sm text-foreground">{show.companyName}</p>
         </div>
 
-        {/* Periode */}
-        <div>
-          <p className="text-sm font-medium text-derviche">Période</p>
-          <p className="text-sm text-foreground">{period}</p>
-        </div>
+        {/* Période */}
+        {show.period && (
+          <div>
+            <p className="text-sm font-medium text-derviche">Période</p>
+            <p className="text-sm text-foreground">{show.period}</p>
+          </div>
+        )}
+
+        {/* Dates de relâche */}
+        {show.closureDates && (
+          <div>
+            <p className="text-sm font-medium text-derviche">Relâche</p>
+            <p className="text-sm text-foreground">{show.closureDates}</p>
+          </div>
+        )}
 
         {/* Description avec "Lire la suite" */}
         <div className="pt-4 border-t border-border">
