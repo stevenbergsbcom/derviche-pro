@@ -166,7 +166,7 @@ export function useAdminReservations(
   );
 
   const loadStats = useCallback(
-    async (statFilters?: { showId?: string; slotId?: string }): Promise<{ success: boolean; error?: string }> => {
+    async (statFilters?: { showId?: string; slotId?: string; venueId?: string }): Promise<{ success: boolean; error?: string }> => {
       const result = await getReservationStats(statFilters || {});
 
       if (result.error || !result.data) {

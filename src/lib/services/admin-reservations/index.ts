@@ -95,8 +95,9 @@ export {
 // FONCTIONS - STATS
 // ============================================
 
-export { 
+export {
   getReservationStats,
   getReservationsBySlot,
   getAvailableSlotsForShow,
+  getVenuesWithReservations,
 } from './stats';

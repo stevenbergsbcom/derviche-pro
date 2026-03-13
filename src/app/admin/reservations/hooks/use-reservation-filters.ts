@@ -19,6 +19,7 @@ import type { ReservationStatus } from '@/types/database';
 
 export interface ReservationFiltersState {
   showId?: string;
+  venueId?: string;
   status?: ReservationStatus;
   search?: string;
   period?: PeriodPreset;
@@ -41,6 +42,7 @@ export interface UseReservationFiltersReturn {
   
   // Handlers
   handleShowFilter: (showId: string) => void;
+  handleVenueFilter: (venueId: string) => void;
   handleStatusFilter: (status: string) => void;
   handlePeriodFilter: (period: string) => void;
   handleDatePreset: (preset: DatePreset) => void;
@@ -78,6 +80,10 @@ export function useReservationFilters({
 
   const handleShowFilter = useCallback((showId: string) => {
     setFilters({ ...filtersRef.current, showId: showId === 'all' ? undefined : showId });
+  }, [setFilters]);
+
+  const handleVenueFilter = useCallback((venueId: string) => {
+    setFilters({ ...filtersRef.current, venueId: venueId === 'all' ? undefined : venueId });
   }, [setFilters]);
 
   const handleStatusFilter = useCallback((status: string) => {
@@ -161,6 +167,7 @@ export function useReservationFilters({
   const activeFiltersCount = useMemo(() => {
     return [
       filters.showId,
+      filters.venueId,
       filters.status,
       filters.search,
       filters.dateFrom,
@@ -179,6 +186,7 @@ export function useReservationFilters({
     
     // Handlers
     handleShowFilter,
+    handleVenueFilter,
     handleStatusFilter,
     handlePeriodFilter,
     handleDatePreset,

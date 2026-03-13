@@ -43,7 +43,7 @@ import { getTodayDate } from './filters';
  * ```
  */
 export async function getReservationStats(
-  filters: { showId?: string; slotId?: string } = {}
+  filters: { showId?: string; slotId?: string; venueId?: string } = {}
 ): Promise<ReservationStatsResult> {
   try {
     const supabase = createClient();
@@ -59,6 +59,10 @@ export async function getReservationStats(
 
     if (filters.showId) {
       query = query.eq('slots.show_id', filters.showId);
+    }
+
+    if (filters.venueId) {
+      query = query.eq('slots.venue_id', filters.venueId);
     }
 
     const { data, error } = await query;
@@ -105,6 +109,54 @@ export async function getReservationStats(
     const message = err instanceof Error ? err.message : ERROR_MESSAGES.EXCEPTION;
     logger.error('Exception getReservationStats', { message });
     return { data: null, error: message };
+  }
+}
+
+// ============================================
+// LIEUX AVEC RÉSERVATIONS
+// ============================================
+
+/**
+ * Récupère la liste des lieux ayant au moins une réservation
+ * Utilisé pour le dropdown filtre lieu dans la page admin
+ *
+ * @returns Liste dédupliquée de { id, name } triée par nom
+ */
+export async function getVenuesWithReservations(): Promise<{
+  data: { id: string; name: string }[];
+  error: string | null;
+}> {
+  try {
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('slots!inner(venues!inner(id, name))')
+      .neq('status', 'cancelled');
+
+    if (error) {
+      logger.error('Erreur getVenuesWithReservations', error);
+      return { data: [], error: error.message };
+    }
+
+    // Dédupliquer les lieux
+    const venueMap = new Map<string, string>();
+    for (const row of (data || []) as { slots: { venues: { id: string; name: string } } }[]) {
+      const venue = row.slots?.venues;
+      if (venue && !venueMap.has(venue.id)) {
+        venueMap.set(venue.id, venue.name);
+      }
+    }
+
+    const venues = Array.from(venueMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+
+    return { data: venues, error: null };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : ERROR_MESSAGES.EXCEPTION;
+    logger.error('Exception getVenuesWithReservations', { message });
+    return { data: [], error: message };
   }
 }
 
