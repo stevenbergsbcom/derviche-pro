@@ -5,6 +5,7 @@
  * Fonctions réservées au super-admin :
  * - getPurgeCount()          : nombre de notifications purgables (> 90j)
  * - purgeOldNotifications()  : hard delete des notifications > 90j
+ * - purgeAllAppLogs()        : hard delete de tous les logs système
  * - resetData(options)       : remise à zéro des données transactionnelles
  *
  * Les vérifications de rôle sont faites côté SQL (SECURITY DEFINER).
@@ -95,6 +96,34 @@ export async function purgeOldNotifications(): Promise<PurgeResult> {
   }
 
   logger.info('[maintenance] Notifications purgées', { deleted: result.deleted });
+  return { success: true, deleted: result.deleted ?? 0 };
+}
+
+// ============================================
+// PURGE DES LOGS SYSTÈME
+// ============================================
+
+/**
+ * Hard delete de tous les logs système (app_logs).
+ */
+export async function purgeAllAppLogs(): Promise<PurgeResult> {
+  const supabase = createClient();
+
+  const { data, error } = await (supabase as AnySupabaseClient).rpc('purge_all_app_logs');
+
+  if (error) {
+    logger.error('[maintenance] Erreur purge_all_app_logs', { error });
+    return { success: false, error: error.message };
+  }
+
+  const result = data as { success: boolean; deleted?: number; error?: string };
+
+  if (!result.success) {
+    logger.warn('[maintenance] purge_all_app_logs refusé', { result });
+    return { success: false, error: result.error ?? 'Erreur inconnue' };
+  }
+
+  logger.info('[maintenance] Logs système purgés', { deleted: result.deleted });
   return { success: true, deleted: result.deleted ?? 0 };
 }
 
