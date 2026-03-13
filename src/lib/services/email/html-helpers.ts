@@ -186,10 +186,10 @@ export function buildFooterRow(safeFooterText: string, orgContact?: OrgContact):
  */
 export function orgContactFromConfig(config: EmailConfig): OrgContact | undefined {
   const contact: OrgContact = {
-    email: config.organizationContactEmail || undefined,
-    phone: config.organizationContactPhone || undefined,
-    address: config.organizationAddress || undefined,
-    website: config.organizationWebsite || undefined,
+    email:   config.footerShowEmail   ? (config.organizationContactEmail || undefined) : undefined,
+    phone:   config.footerShowPhone   ? (config.organizationContactPhone || undefined) : undefined,
+    address: config.footerShowAddress ? (config.organizationAddress || undefined)      : undefined,
+    website: config.footerShowWebsite ? (config.organizationWebsite || undefined)      : undefined,
   };
   return Object.values(contact).some(Boolean) ? contact : undefined;
 }

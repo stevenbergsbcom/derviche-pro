@@ -6,12 +6,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Mail, Send, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -46,6 +47,10 @@ const emailSchema = z.object({
     .optional()
     .nullable()
     .or(z.literal('')),
+  email_footer_show_email: z.boolean(),
+  email_footer_show_phone: z.boolean(),
+  email_footer_show_address: z.boolean(),
+  email_footer_show_website: z.boolean(),
 });
 
 type EmailFormData = z.infer<typeof emailSchema>;
@@ -60,6 +65,10 @@ const DEFAULT_VALUES: EmailFormData = {
   email_reply_to: '',
   email_signature: "L'équipe Derviche Diffusion",
   email_footer_text: 'Derviche Diffusion — reservation.derviche@gmail.com',
+  email_footer_show_email: true,
+  email_footer_show_phone: true,
+  email_footer_show_address: true,
+  email_footer_show_website: true,
 };
 
 // ============================================
@@ -114,6 +123,10 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         email_reply_to: data.email_reply_to || '',
         email_signature: data.email_signature || DEFAULT_VALUES.email_signature,
         email_footer_text: data.email_footer_text || DEFAULT_VALUES.email_footer_text,
+        email_footer_show_email: data.email_footer_show_email ?? true,
+        email_footer_show_phone: data.email_footer_show_phone ?? true,
+        email_footer_show_address: data.email_footer_show_address ?? true,
+        email_footer_show_website: data.email_footer_show_website ?? true,
       });
       setIsInitialized(true);
     }
@@ -135,6 +148,10 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
       email_reply_to: formData.email_reply_to || null,
       email_signature: formData.email_signature || null,
       email_footer_text: formData.email_footer_text || null,
+      email_footer_show_email: formData.email_footer_show_email,
+      email_footer_show_phone: formData.email_footer_show_phone,
+      email_footer_show_address: formData.email_footer_show_address,
+      email_footer_show_website: formData.email_footer_show_website,
     };
 
     const result = await update(cleanedData);
@@ -284,6 +301,84 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         <p className="text-xs text-muted-foreground">
           Texte affiché dans la zone grise en bas de tous les emails
         </p>
+      </div>
+
+      {/* Informations de contact dans le footer */}
+      <div className="space-y-3">
+        <Label>Informations de contact dans le footer</Label>
+        <p className="text-xs text-muted-foreground">
+          Cochez les informations de l&apos;organisation à afficher sous le pied de page
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Controller
+            control={control}
+            name="email_footer_show_email"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="email_footer_show_email"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={!canEdit}
+                />
+                <Label htmlFor="email_footer_show_email" className="text-sm font-normal">
+                  Email de contact
+                </Label>
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="email_footer_show_phone"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="email_footer_show_phone"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={!canEdit}
+                />
+                <Label htmlFor="email_footer_show_phone" className="text-sm font-normal">
+                  Téléphone
+                </Label>
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="email_footer_show_address"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="email_footer_show_address"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={!canEdit}
+                />
+                <Label htmlFor="email_footer_show_address" className="text-sm font-normal">
+                  Adresse
+                </Label>
+              </div>
+            )}
+          />
+          <Controller
+            control={control}
+            name="email_footer_show_website"
+            render={({ field }) => (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="email_footer_show_website"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={!canEdit}
+                />
+                <Label htmlFor="email_footer_show_website" className="text-sm font-normal">
+                  Site web
+                </Label>
+              </div>
+            )}
+          />
+        </div>
       </div>
 
       {/* ── Aperçu ─────────────────────────────────── */}
