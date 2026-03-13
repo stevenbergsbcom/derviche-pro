@@ -5,7 +5,7 @@
 
 import type { UseFormReturn } from 'react-hook-form';
 import type { CheckinStatus } from '@/types/database';
-import type { DuplicateCheckResult } from '@/lib/services/checkin';
+import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
 import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
 import type { NotificationOptions } from '@/components/admin/reservations/notification-switches';
 import type { ReservationRowData } from '@/components/accueil/ReservationRow';
@@ -157,11 +157,5 @@ export interface FormFooterProps {
   formId: string;
 }
 
-export interface DuplicateDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  duplicateInfo: DuplicateCheckResult | null;
-  pendingEmail: string | null;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
+// Note S184 : DuplicateDialogProps supprimé — on utilise désormais
+// DuplicateReservationDialogProps du composant partagé @/components/shared/.

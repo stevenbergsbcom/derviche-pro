@@ -165,19 +165,6 @@ export const ERROR_MESSAGES = {
   EXCEPTION: 'Erreur inconnue',
 } as const;
 
-/**
- * Messages utilisateur pour les erreurs de doublon
- */
-export const USER_ERROR_MESSAGES = {
-  DUPLICATE_EMAIL_SLOT: (email: string) => 
-    `Une réservation existe déjà pour ce créneau avec l'adresse ${email}. Annulez d'abord l'existante si nécessaire.`,
-} as const;
-
-// ============================================
-// MARKERS RPC
-// ============================================
-
-/**
- * Préfixe d'erreur RPC pour doublon email/slot (R-RESA-04)
- */
-export const RPC_ERROR_DUPLICATE_PREFIX = 'DUPLICATE_EMAIL_SLOT:' as const;
+// Note S184 : les constantes DUPLICATE_EMAIL_SLOT et RPC_ERROR_DUPLICATE_PREFIX
+// ont été supprimées. Les doublons sont désormais autorisés avec avertissement
+// côté client (voir reservations-duplicate.ts + DuplicateReservationDialog).

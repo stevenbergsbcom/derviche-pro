@@ -1,6 +1,11 @@
 /**
- * DuplicateDialog - Modale de confirmation pour doublon détecté
- * Derviche Diffusion - Session 82
+ * DuplicateReservationDialog — Modale de confirmation pour doublon de réservation
+ * Derviche Diffusion — Session S184
+ *
+ * Composant partagé réutilisé par les 3 formulaires :
+ * - Formulaire public (spectacle/[slug])
+ * - Dialog admin (create-reservation-dialog)
+ * - Drawer PWA (add-reservation-drawer)
  */
 
 'use client';
@@ -16,42 +21,56 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import type { DuplicateDialogProps } from './types';
+import type { DuplicateExistingReservation } from '@/lib/services/reservations-duplicate';
 
-export function DuplicateDialog({
+// ============================================
+// TYPES
+// ============================================
+
+export interface DuplicateReservationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  email: string;
+  existingReservation?: DuplicateExistingReservation | null;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+// ============================================
+// COMPOSANT
+// ============================================
+
+export function DuplicateReservationDialog({
   open,
   onOpenChange,
-  duplicateInfo,
-  pendingEmail,
+  email,
+  existingReservation,
   onConfirm,
   onCancel,
-}: DuplicateDialogProps) {
+}: DuplicateReservationDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" aria-hidden="true" />
+            <AlertTriangle className="size-5 text-amber-500" aria-hidden="true" />
             Réservation existante détectée
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2">
               <p>
-                L&apos;email <strong>{pendingEmail}</strong> a déjà une réservation
-                pour ce créneau :
+                L&apos;email <strong>{email}</strong> a déjà une réservation pour ce créneau
+                {'\u00A0'}:
               </p>
-              {duplicateInfo?.existingReservation && (
+              {existingReservation && (
                 <div className="bg-muted p-3 rounded-md text-sm">
                   <p className="font-medium">
-                    {[
-                      duplicateInfo.existingReservation.guestFirstName,
-                      duplicateInfo.existingReservation.guestLastName,
-                    ]
+                    {[existingReservation.firstName, existingReservation.lastName]
                       .filter(Boolean)
                       .join(' ') || 'Sans nom'}
                   </p>
                   <p className="text-muted-foreground">
-                    {duplicateInfo.existingReservation.numPlaces} place(s) réservée(s)
+                    {existingReservation.numPlaces} place(s) réservée(s)
                   </p>
                 </div>
               )}

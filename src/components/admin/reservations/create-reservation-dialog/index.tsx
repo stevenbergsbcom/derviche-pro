@@ -26,6 +26,7 @@ import type { CreateReservationDialogProps } from './types';
 // Hook principal
 import { useCreateReservationForm } from './hooks';
 import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
+import { DuplicateReservationDialog } from '@/components/shared';
 
 // Composants de section
 import {
@@ -69,7 +70,13 @@ export function CreateReservationDialog({
     // Notifications
     notifOptions,
     setNotifOptions,
-    
+
+    // S184 : Doublons
+    duplicateInfo,
+    showDuplicateDialog,
+    handleConfirmDuplicate,
+    handleCancelDuplicate,
+
     // Handlers
     handleShowChange,
     handleFieldChange,
@@ -84,6 +91,7 @@ export function CreateReservationDialog({
   });
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -197,6 +205,17 @@ export function CreateReservationDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* S184 : Modale de confirmation doublon */}
+    <DuplicateReservationDialog
+      open={showDuplicateDialog}
+      onOpenChange={(open) => { if (!open) handleCancelDuplicate(); }}
+      email={formData.email}
+      existingReservation={duplicateInfo?.existingReservation}
+      onConfirm={handleConfirmDuplicate}
+      onCancel={handleCancelDuplicate}
+    />
+    </>
   );
 }
 

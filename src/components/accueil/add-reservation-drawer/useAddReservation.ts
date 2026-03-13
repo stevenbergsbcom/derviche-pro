@@ -23,11 +23,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
   createReservationFromCheckin,
-  checkDuplicateEmail,
   checkSlotCapacity,
   type CreateCheckinReservationData,
-  type DuplicateCheckResult,
 } from '@/lib/services/checkin';
+import {
+  checkDuplicateReservation,
+  type DuplicateCheckResult,
+} from '@/lib/services/reservations-duplicate';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import { logger } from '@/lib/logger';
 // CheckinStatus est inféré par Zod, pas besoin d'import explicite
@@ -166,7 +168,7 @@ export function useAddReservation({
 
       // Vérifier les doublons si pas déjà fait
       if (!skipDuplicateCheck) {
-        const duplicate = await checkDuplicateEmail(activeSlotId, formData.email);
+        const duplicate = await checkDuplicateReservation(activeSlotId, formData.email);
         if (duplicate.hasDuplicate) {
           setDuplicateInfo(duplicate);
           pendingFormDataRef.current = formData;
@@ -210,11 +212,6 @@ export function useAddReservation({
           setIsSubmitting(false);
           toast.error(result.error || 'Erreur lors de la création');
           return;
-        }
-
-        // Afficher le warning si doublon (mais création réussie)
-        if (result.warning) {
-          toast.warning(result.warning);
         }
 
         toast.success(`Réservation créée pour ${formData.firstName} ${formData.lastName}`);

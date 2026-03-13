@@ -243,8 +243,6 @@ export interface CreateCheckinReservationData {
 export interface CreateCheckinReservationResult {
   success: boolean;
   reservationId?: string;
-  /** Avertissement (ex: doublon email) - ne bloque pas la création */
-  warning?: string;
   error?: string;
 }
 

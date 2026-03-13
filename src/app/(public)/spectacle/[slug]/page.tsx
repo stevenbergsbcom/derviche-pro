@@ -36,6 +36,9 @@ import { usePublicShow } from '@/hooks/usePublicShow';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import type { PublicSlot } from '@/lib/services/public-catalog';
 import { createReservation, enrichUserProfile } from '@/lib/services/reservations';
+import { checkDuplicateReservation } from '@/lib/services/reservations-duplicate';
+import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import { DuplicateReservationDialog } from '@/components/shared';
 import { createClient } from '@/lib/supabase/client';
 
 // ============================================
@@ -244,6 +247,10 @@ export default function SpectacleDetailPage() {
     // États de soumission
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
+
+    // S184 : Détection de doublons (avertissement, ne bloque pas)
+    const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
+    const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
     // Fix d'hydratation
     useEffect(() => {
@@ -522,14 +529,9 @@ export default function SpectacleDetailPage() {
         }
     };
 
-    // Gérer la soumission du formulaire
-    const handleFormSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    // S184 : Créer la réservation (appelé directement ou après confirmation doublon)
+    const submitReservation = async () => {
         if (!selectedSlot || !selectedDate) return;
-
-        // Éviter les doubles soumissions
-        if (isSubmitting) return;
 
         setIsSubmitting(true);
         setSubmitError(null);
@@ -629,6 +631,46 @@ export default function SpectacleDetailPage() {
             setSubmitError(message);
             setIsSubmitting(false);
         }
+    };
+
+    // S184 : Gérer la soumission du formulaire avec détection de doublons
+    const handleFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!selectedSlot || !selectedDate) return;
+        if (isSubmitting) return;
+
+        setSubmitError(null);
+
+        // Vérifier les doublons avant de créer
+        const email = formData.email.trim();
+        if (email) {
+            setIsSubmitting(true);
+            const dupResult = await checkDuplicateReservation(selectedSlot.id, email);
+            setIsSubmitting(false);
+
+            if (dupResult.hasDuplicate) {
+                setDuplicateInfo(dupResult);
+                setShowDuplicateDialog(true);
+                return; // Attendre la confirmation utilisateur
+            }
+        }
+
+        // Pas de doublon → créer directement
+        await submitReservation();
+    };
+
+    // S184 : Confirmer la création malgré le doublon
+    const handleConfirmDuplicate = async () => {
+        setShowDuplicateDialog(false);
+        setDuplicateInfo(null);
+        await submitReservation();
+    };
+
+    // S184 : Annuler la création (doublon détecté)
+    const handleCancelDuplicate = () => {
+        setShowDuplicateDialog(false);
+        setDuplicateInfo(null);
     };
 
     // Déterminer l'étape active pour le fil d'Ariane
@@ -1291,6 +1333,16 @@ export default function SpectacleDetailPage() {
                     </Card>
                 </div>
             </div>
+
+            {/* S184 : Modale de confirmation doublon */}
+            <DuplicateReservationDialog
+                open={showDuplicateDialog}
+                onOpenChange={(open) => { if (!open) handleCancelDuplicate(); }}
+                email={formData.email}
+                existingReservation={duplicateInfo?.existingReservation}
+                onConfirm={handleConfirmDuplicate}
+                onCancel={handleCancelDuplicate}
+            />
 
             {/* Modale d'authentification */}
             <AuthDialog

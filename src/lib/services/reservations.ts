@@ -42,7 +42,7 @@ export interface CreateReservationData {
 }
 
 /** Codes d'erreur structurés pour une gestion fine côté UI */
-export type CreateReservationErrorCode = 'CAPACITY_FULL' | 'DUPLICATE' | 'GENERIC';
+export type CreateReservationErrorCode = 'CAPACITY_FULL' | 'GENERIC';
 
 /** Résultat de la création de réservation */
 export interface CreateReservationResult {
@@ -144,16 +144,9 @@ export async function createReservation(
         };
       }
 
-      // Détecter l'erreur de doublon email/slot (R-RESA-04)
-      if (rpcError.message?.includes('DUPLICATE_EMAIL_SLOT:')) {
-        const email = rpcError.message.split('DUPLICATE_EMAIL_SLOT:')[1]?.trim() || formData.email;
-        logger.warn('[reservations] Doublon email/slot détecté', { slotId, email });
-        return {
-          success: false,
-          errorCode: 'DUPLICATE',
-          error: `Vous avez déjà une réservation pour ce créneau avec l'adresse ${email}. Si vous souhaitez modifier votre réservation, veuillez nous contacter.`,
-        };
-      }
+      // Note S184 : le check DUPLICATE_EMAIL_SLOT a été supprimé.
+      // Les doublons sont détectés côté client avant la soumission
+      // via checkDuplicateReservation() + DuplicateReservationDialog.
 
       logger.error('[reservations] Erreur création réservation via RPC', {
         error: rpcError,
