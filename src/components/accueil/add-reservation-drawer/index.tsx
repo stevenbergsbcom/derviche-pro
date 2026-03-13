@@ -15,7 +15,7 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer';
 import { Separator } from '@/components/ui/separator';
 import { useAddReservation } from './useAddReservation';
 import { DrawerHeader } from './DrawerHeader';
-import { DuplicateDialog } from './DuplicateDialog';
+import { DuplicateReservationDialog } from '@/components/shared';
 import { SearchStep } from './SearchStep';
 import { SelectSlotStep } from './SelectSlotStep';
 import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
@@ -245,11 +245,11 @@ export function AddReservationDrawer({
         </DrawerContent>
       </Drawer>
 
-      <DuplicateDialog
+      <DuplicateReservationDialog
         open={state.showDuplicateDialog}
         onOpenChange={(open) => { if (!open) handleCancelDuplicate(); }}
-        duplicateInfo={state.duplicateInfo}
-        pendingEmail={form.getValues('email')}
+        email={form.getValues('email')}
+        existingReservation={state.duplicateInfo?.existingReservation}
         onConfirm={handleConfirmDuplicate}
         onCancel={handleCancelDuplicate}
       />

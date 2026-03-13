@@ -98,19 +98,10 @@ export async function createReservationFromCheckin(
       return { success: false, error: 'Accès non autorisé à cette représentation' };
     }
 
-    // 2. Vérifier les doublons email
-    let warning: string | undefined;
-    const duplicateCheck = await checkDuplicateEmail(data.slotId, data.email);
-    if (duplicateCheck.hasDuplicate && duplicateCheck.existingReservation) {
-      const existing = duplicateCheck.existingReservation;
-      const existingName = [existing.guestFirstName, existing.guestLastName]
-        .filter(Boolean)
-        .join(' ') || 'Sans nom';
-      warning = `Attention : ${data.email} a déjà une réservation (${existingName}, ${existing.numPlaces} place(s))`;
-      logger.info('checkin.createReservationFromCheckin - Doublon détecté', { warning });
-    }
+    // Note S184 : la vérification des doublons est désormais faite côté client
+    // (checkDuplicateReservation + DuplicateReservationDialog) avant d'appeler cette fonction.
 
-    // 3. Appeler la RPC create_admin_reservation
+    // 2. Appeler la RPC create_admin_reservation
     const supabase = createClient();
     
     // Note: La RPC ne supporte pas encore checkin_status directement
@@ -184,15 +175,11 @@ export async function createReservationFromCheckin(
       }
     }
 
-    logger.info('checkin.createReservationFromCheckin - Succès', { 
-      reservationId, 
-      hasWarning: !!warning 
-    });
+    logger.info('checkin.createReservationFromCheckin - Succès', { reservationId });
 
     return {
       success: true,
       reservationId,
-      warning,
     };
 
   } catch (err) {

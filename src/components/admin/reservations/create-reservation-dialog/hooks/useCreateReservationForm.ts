@@ -6,10 +6,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import type { CreateAdminReservationData } from '@/lib/services/admin-reservations';
-import type { 
-  AvailableSlot, 
-  ShowOption, 
-  SlotsResult, 
+import { checkDuplicateReservation } from '@/lib/services/reservations-duplicate';
+import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import type {
+  AvailableSlot,
+  ShowOption,
+  SlotsResult,
   CreateResult,
   NotificationOptions,
 } from '../types';
@@ -38,23 +40,29 @@ interface UseCreateReservationFormReturn {
   formData: CreateAdminReservationData;
   selectedShowId: string;
   maxPlaces: number;
-  
+
   // État des créneaux
   availableSlots: AvailableSlot[];
   loadingSlots: boolean;
   slotsError: string | null;
-  
+
   // État de validation et soumission
   validationErrors: string[];
   isSaving: boolean;
-  
+
   // Spectacles filtrés
   publishedShows: ShowOption[];
 
   // Notifications
   notifOptions: NotificationOptions;
   setNotifOptions: (options: NotificationOptions) => void;
-  
+
+  // S184 : Doublons
+  duplicateInfo: DuplicateCheckResult | null;
+  showDuplicateDialog: boolean;
+  handleConfirmDuplicate: () => void;
+  handleCancelDuplicate: () => void;
+
   // Handlers
   handleShowChange: (showId: string) => void;
   handleFieldChange: <K extends keyof CreateAdminReservationData>(
@@ -90,6 +98,10 @@ export function useCreateReservationForm({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [notifOptions, setNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
+
+  // S184 : Doublons
+  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
   // Spectacles publiés uniquement
   const publishedShows = shows.filter(s => s.status === 'published');
@@ -178,25 +190,12 @@ export function useCreateReservationForm({
     setValidationErrors(prev => prev.length > 0 ? [] : prev);
   }, []); // Pas de dépendances externes
 
-  // Handler soumission
-  const handleSubmit = useCallback(async () => {
-    const errors = validateReservationForm(
-      formData,
-      selectedShowId,
-      maxPlaces,
-      availableSlots
-    );
-    
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      toast.error(TOAST_MESSAGES.validationError);
-      return;
-    }
-
+  // S184 : Création effective (appelée directement ou après confirmation doublon)
+  const performCreate = useCallback(async () => {
     setIsSaving(true);
     try {
       const result = await onCreateRef.current({ ...formData, _notifOptions: notifOptions });
-      
+
       if (result.success) {
         toast.success(TOAST_MESSAGES.createSuccess);
         onOpenChangeRef.current(false);
@@ -208,7 +207,53 @@ export function useCreateReservationForm({
     } finally {
       setIsSaving(false);
     }
-  }, [formData, selectedShowId, maxPlaces, availableSlots, notifOptions]);
+  }, [formData, notifOptions]);
+
+  // Handler soumission (avec détection doublons S184)
+  const handleSubmit = useCallback(async () => {
+    const errors = validateReservationForm(
+      formData,
+      selectedShowId,
+      maxPlaces,
+      availableSlots
+    );
+
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      toast.error(TOAST_MESSAGES.validationError);
+      return;
+    }
+
+    // S184 : Vérifier les doublons avant de créer
+    const email = formData.email?.trim();
+    if (email && formData.slotId) {
+      setIsSaving(true);
+      const dupResult = await checkDuplicateReservation(formData.slotId, email);
+      setIsSaving(false);
+
+      if (dupResult.hasDuplicate) {
+        setDuplicateInfo(dupResult);
+        setShowDuplicateDialog(true);
+        return; // Attendre la confirmation
+      }
+    }
+
+    // Pas de doublon → créer directement
+    await performCreate();
+  }, [formData, selectedShowId, maxPlaces, availableSlots, performCreate]);
+
+  // S184 : Confirmer la création malgré doublon
+  const handleConfirmDuplicate = useCallback(() => {
+    setShowDuplicateDialog(false);
+    setDuplicateInfo(null);
+    void performCreate();
+  }, [performCreate]);
+
+  // S184 : Annuler (doublon détecté)
+  const handleCancelDuplicate = useCallback(() => {
+    setShowDuplicateDialog(false);
+    setDuplicateInfo(null);
+  }, []);
 
   // Handler fermeture
   const handleClose = useCallback(() => {
@@ -238,6 +283,12 @@ export function useCreateReservationForm({
     // Notifications
     notifOptions,
     setNotifOptions,
+
+    // S184 : Doublons
+    duplicateInfo,
+    showDuplicateDialog,
+    handleConfirmDuplicate,
+    handleCancelDuplicate,
 
     // Handlers
     handleShowChange,

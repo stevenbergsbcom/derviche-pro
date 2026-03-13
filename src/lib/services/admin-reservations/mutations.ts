@@ -15,11 +15,7 @@ import type {
   CreateAdminReservationResult,
   RpcResult,
 } from './types';
-import { 
-  ERROR_MESSAGES, 
-  USER_ERROR_MESSAGES,
-  RPC_ERROR_DUPLICATE_PREFIX,
-} from './constants';
+import { ERROR_MESSAGES } from './constants';
 import { getAdminReservationById } from './detail';
 
 // ============================================
@@ -287,19 +283,6 @@ export async function createAdminReservation(
     const rpcResult = result as RpcResult;
     
     if (!rpcResult.success) {
-      // Détecter l'erreur de doublon email/slot (R-RESA-04)
-      if (rpcResult.error?.includes(RPC_ERROR_DUPLICATE_PREFIX)) {
-        const email = rpcResult.error.split(RPC_ERROR_DUPLICATE_PREFIX)[1]?.trim() || data.email;
-        logger.warn('[admin-reservations] Doublon email/slot détecté', { 
-          slotId: data.slotId, 
-          email,
-        });
-        return {
-          success: false,
-          error: USER_ERROR_MESSAGES.DUPLICATE_EMAIL_SLOT(email),
-        };
-      }
-
       logger.error(ERROR_MESSAGES.CREATE_RPC_FAIL, { error: rpcResult.error });
       return { success: false, error: rpcResult.error || 'Erreur lors de la création' };
     }

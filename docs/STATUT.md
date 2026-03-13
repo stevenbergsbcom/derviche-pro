@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S183 — Purge logs système (super-admin) — 13 mars 2026
+> Dernière mise à jour : Session S184 — Autoriser doublons réservation email+créneau — 13 mars 2026
 
 ---
 
@@ -1052,23 +1052,65 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/lib/services/maintenance.ts` | Fonction `purgeAllAppLogs()` appelant la RPC |
 | `src/app/admin/systeme/components/logs-table.tsx` | Bouton "Vider" + AlertDialog + toast feedback |
 
+### S184 — Autoriser doublons réservation email+créneau (avec alerte) ✅
+
+**Règle R-RESA-04 modifiée** : un même email peut désormais avoir plusieurs réservations sur un même créneau. Le système affiche un avertissement (AlertDialog) si un doublon est détecté, mais autorise la création si l'utilisateur confirme.
+
+**Migration SQL `094_allow_duplicate_reservations.sql` :**
+- Index uniques `idx_unique_reservation_guest_slot` et `idx_unique_reservation_user_slot` → remplacés par des index réguliers (performances conservées)
+- RPC `create_admin_reservation` : suppression du check doublon (section 3)
+- Nouvelle RPC `check_reservation_duplicate(p_slot_id, p_email)` (SECURITY DEFINER, anon + authenticated)
+
+**Service partagé `reservations-duplicate.ts` :**
+- `checkDuplicateReservation(slotId, email)` → appelle la RPC, retourne `{ hasDuplicate, existingReservation? }`
+- Types `DuplicateCheckResult` et `DuplicateExistingReservation` exportés
+
+**Composant partagé `DuplicateReservationDialog` :**
+- AlertDialog amber avec détails de la réservation existante
+- Props : `{ open, onOpenChange, email, existingReservation?, onConfirm, onCancel }`
+- Réutilisé par les 3 formulaires (public, admin, PWA)
+
+**Nettoyage code :**
+- `admin-reservations/constants.ts` : suppression constantes DUPLICATE
+- `admin-reservations/mutations.ts` : suppression gestion DUPLICATE dans `createAdminReservation`
+- `reservations.ts` : suppression errorCode `DUPLICATE` et gestion associée
+- `checkin/create.ts` : suppression check doublon redondant et champ `warning`
+- `checkin/types.ts` : suppression `warning` de `CreateCheckinReservationResult`
+
+**UI modifiées (3 formulaires) :**
+- **Public** (`spectacle/[slug]/page.tsx`) : pre-check + DuplicateReservationDialog avant `createReservation()`
+- **Admin** (`create-reservation-dialog/`) : pre-check dans `useCreateReservationForm` + DuplicateReservationDialog
+- **PWA** (`add-reservation-drawer/`) : utilise `checkDuplicateReservation` (partagé) + DuplicateReservationDialog (partagé), ancien `DuplicateDialog.tsx` supprimé
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `supabase/migrations/094_allow_duplicate_reservations.sql` | **NOUVEAU** — migration SQL |
+| `src/lib/services/reservations-duplicate.ts` | **NOUVEAU** — service partagé |
+| `src/components/shared/DuplicateReservationDialog.tsx` | **NOUVEAU** — composant partagé |
+| `src/components/shared/index.ts` | Export du composant partagé |
+| `src/lib/services/admin-reservations/constants.ts` | Suppression constantes DUPLICATE |
+| `src/lib/services/admin-reservations/mutations.ts` | Suppression gestion DUPLICATE |
+| `src/lib/services/reservations.ts` | Suppression errorCode DUPLICATE |
+| `src/lib/services/checkin/create.ts` | Suppression check doublon redondant |
+| `src/lib/services/checkin/types.ts` | Suppression champ `warning` |
+| `src/app/(public)/spectacle/[slug]/page.tsx` | Pre-check + DuplicateReservationDialog |
+| `src/components/admin/reservations/create-reservation-dialog/hooks/useCreateReservationForm.ts` | Pre-check doublons |
+| `src/components/admin/reservations/create-reservation-dialog/index.tsx` | Rendu DuplicateReservationDialog |
+| `src/components/accueil/add-reservation-drawer/useAddReservation.ts` | Import service partagé |
+| `src/components/accueil/add-reservation-drawer/types.ts` | Import DuplicateCheckResult partagé |
+| `src/components/accueil/add-reservation-drawer/index.tsx` | Import composant partagé |
+| `src/components/accueil/add-reservation-drawer/DuplicateDialog.tsx` | **SUPPRIMÉ** |
+
 ---
 
 ## Backlog / TODO
 
-### 🔜 Réservation : autoriser les doublons email+créneau (avec alerte)
-- **Contrainte actuelle** : `idx_unique_reservation_guest_slot` empêche un même guest_email de réserver deux fois le même créneau (erreur 409)
-- **Comportement souhaité** : afficher un message d'alerte/confirmation si une réservation existe déjà pour ce couple email+créneau, mais autoriser la création quand même
-- **Impact** : modifier la contrainte unique en DB + adapter le formulaire de réservation (public + admin) pour gérer l'alerte
-
----
-
-### Prochaine session : S184 — à définir
+### Prochaine session : S185 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Autoriser doublons réservation email+créneau (avec alerte) | Moyenne | UX terrain |
-| 2 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
-| 3 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
-| 4 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |
+| 1 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
+| 2 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
+| 3 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |
