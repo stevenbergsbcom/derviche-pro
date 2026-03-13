@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
+import { SpectacleCard } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,55 +27,7 @@ import { usePublicShow } from '@/hooks/usePublicShow';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
 import { createClient } from '@/lib/supabase/client';
 import type { UserRole } from '@/types/database';
-import type { PublicShow } from '@/lib/services/public-catalog';
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Transformer un PublicShow en Spectacle pour le composant SpectacleCard
- */
-function transformShowToSpectacle(show: PublicShow): Spectacle {
-  // Déterminer le statut
-  let status: SpectacleStatus = 'available';
-
-  if (show.status === 'draft') {
-    status = 'coming_soon';
-  } else if (show.status === 'archived') {
-    status = 'closed';
-  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
-    status = 'closed';
-  } else if (show.slots.length === 0) {
-    status = 'coming_soon';
-  }
-
-  return {
-    id: 0, // Legacy - on utilise slug comme identifiant unique
-    title: show.title,
-    company: show.companyName,
-    venues: show.venues.map((v) => v.name),
-    image: show.imageUrl || '',
-    slug: show.slug,
-    genre: show.categories[0] || 'Spectacle',
-    nextDate: status === 'available' ? (show.nextDate || '') : '',
-    remainingSlots: show.availableSlotsCount,
-    status,
-  };
-}
-
-/**
- * Formater la durée en minutes
- */
-function formatDuration(minutes: number | null | undefined): string {
-  if (minutes === null || minutes === undefined) return 'Durée non précisée';
-  if (minutes === 0) return '0 min';
-  if (minutes < 60) return `${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h${mins.toString().padStart(2, '0')}`;
-}
+import { transformShowToSpectacle, formatDuration } from '@/lib/utils/shows';
 
 // ============================================
 // COMPOSANT INTERNE (avec useSearchParams)

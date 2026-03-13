@@ -41,6 +41,10 @@ import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { Professional } from '@/lib/services/professionals';
 import type { ProfessionalReservationHistoryEntry } from '@/app/api/admin/professionals/[professionalId]/history/route';
+import {
+  RESERVATION_STATUS_CONFIG,
+  CHECKIN_STATUS_CONFIG,
+} from '@/lib/constants/reservation-statuses';
 
 // ============================================
 // TYPES
@@ -49,30 +53,6 @@ import type { ProfessionalReservationHistoryEntry } from '@/app/api/admin/profes
 interface PageProps {
   params: Promise<{ id: string }>;
 }
-
-// ============================================
-// CONFIGURATION STATUTS RÉSERVATION
-// ============================================
-
-const RESERVATION_STATUS_CONFIG = {
-  confirmed: { label: 'Confirmée',   className: 'bg-green-100 text-green-800 border-green-200' },
-  cancelled:  { label: 'Annulée',    className: 'bg-red-100 text-red-800 border-red-200'       },
-  no_show:    { label: 'No show',    className: 'bg-gray-100 text-gray-700 border-gray-200'    },
-} as const;
-
-// ============================================
-// CONFIGURATION STATUTS CHECKIN
-// ============================================
-
-const CHECKIN_STATUS_CONFIG: Record<
-  NonNullable<ProfessionalReservationHistoryEntry['checkin_status']>,
-  { label: string; className: string }
-> = {
-  present_loved:   { label: '❤️ Coup de cœur', className: 'bg-pink-100 text-pink-800 border-pink-200'     },
-  present_press:   { label: '📰 Presse',        className: 'bg-purple-100 text-purple-800 border-purple-200' },
-  present_neutral: { label: '✓ Présent',        className: 'bg-blue-100 text-blue-800 border-blue-200'    },
-  absent:          { label: 'Absent',           className: 'bg-orange-100 text-orange-800 border-orange-200' },
-};
 
 // ============================================
 // HELPERS

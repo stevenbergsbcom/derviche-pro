@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S184 — Autoriser doublons réservation email+créneau — 13 mars 2026
+> Dernière mise à jour : Session S185 — Refactoring / Code Review (quick wins) — 13 mars 2026
 
 ---
 
@@ -1102,15 +1102,59 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/components/accueil/add-reservation-drawer/index.tsx` | Import composant partagé |
 | `src/components/accueil/add-reservation-drawer/DuplicateDialog.tsx` | **SUPPRIMÉ** |
 
+### S185 — Refactoring / Code Review (quick wins) ✅
+
+**4 chantiers de déduplication** ciblant les quick wins à fort impact identifiés lors d'un audit codebase.
+
+**Chantier 1 — Utilitaires shows partagés (`src/lib/utils/shows.ts`) :**
+- `transformShowToSpectacle()` : 3 copies identiques → 1 source + 3 imports (catalogue, home-page-client, confirmation)
+- `formatDuration()` : 2 copies identiques → 1 source + 2 imports (spectacle/[slug], confirmation)
+- Image fallback standardisé sur `/images/spectacles/placeholder.jpg`
+
+**Chantier 2 — Constantes status partagées (`src/lib/constants/reservation-statuses.ts`) :**
+- `RESERVATION_STATUS_CONFIG` et `CHECKIN_STATUS_CONFIG` : 2 copies inline → 1 source + 2 imports
+- Typé sur `ReservationStatus` et `CheckinStatus` de `database.ts` (plus robuste)
+
+**Chantier 3 — Wrapper RPC typé (`src/lib/supabase/rpc.ts`) :**
+- `callRpc<TParams, TResult>()` : centralise le cast `as any` nécessaire pour les RPC custom
+- 3 `as any` éliminés dans mutations.ts (×2) et reservations-duplicate.ts (×1)
+- 2 `as any` éliminés dans categories.ts et target-audiences.ts (remplacés par cast typé `{ deleted_at: string | null }`)
+- **Résultat : 0 `as any` dans `src/lib/services/`**
+
+**Chantier 4 — Nettoyage orphelins partagé (`src/lib/utils/orphan-cleanup.ts`) :**
+- `cleanupOrphanMappings()` : logique identique dans categories.ts et target-audiences.ts → 1 source + 2 imports
+- Paramétré par table de mapping et colonne FK
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `src/lib/utils/shows.ts` | **NOUVEAU** — utilitaires shows partagés |
+| `src/lib/constants/reservation-statuses.ts` | **NOUVEAU** — constantes status |
+| `src/lib/supabase/rpc.ts` | **NOUVEAU** — wrapper RPC typé |
+| `src/lib/utils/orphan-cleanup.ts` | **NOUVEAU** — nettoyage orphelins |
+| `src/app/(public)/catalogue/page.tsx` | Import `transformShowToSpectacle` partagé |
+| `src/app/(public)/components/home-page-client.tsx` | Import `transformShowToSpectacle` partagé |
+| `src/app/(public)/spectacle/[slug]/confirmation/page.tsx` | Import `transformShowToSpectacle` + `formatDuration` partagés |
+| `src/app/(public)/spectacle/[slug]/page.tsx` | Import `formatDuration` partagé |
+| `src/app/admin/professionnels/[id]/page.tsx` | Import constantes status partagées |
+| `src/components/accueil/checkin-drawer/sections/RecentReservationsSection.tsx` | Import constantes status partagées |
+| `src/lib/services/admin-reservations/mutations.ts` | `callRpc` (2 casts `as any` éliminés) |
+| `src/lib/services/reservations-duplicate.ts` | `callRpc` (1 cast `as any` éliminé) |
+| `src/lib/services/categories.ts` | `cleanupOrphanMappings` + cast typé |
+| `src/lib/services/target-audiences.ts` | `cleanupOrphanMappings` + cast typé |
+
 ---
 
 ## Backlog / TODO
 
-### Prochaine session : S185 — à définir
+### Prochaine session : S186 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Champs manquants formulaires (venues PMR, parking, shows période) | Faible | Données terrain |
-| 2 | Upload logos compagnies + photos salles | Moyenne | Richesse UI |
-| 3 | Template email Supabase personnalisé (magic link branding) | Faible | UX cohérente |
+| 1 | Split des gros fichiers (spectacle/[slug], mon-compte, app-settings) | Moyenne | Maintenabilité |
+| 2 | Barrel exports manquants (21 dossiers) | Faible | DX |
+| 3 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
+| 4 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
+| 5 | Split useAppSettings.ts en sous-hooks par domaine | Moyenne | Maintenabilité |
+

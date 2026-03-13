@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
+import { SpectacleCard, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +18,7 @@ import {
 import { Search, ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
-import type { PublicShow } from '@/lib/services/public-catalog';
+import { transformShowToSpectacle } from '@/lib/utils/shows';
 
 // ============================================
 // HELPERS
@@ -46,39 +46,6 @@ function getMonthFromDateFr(dateStr: string): string {
   const parts = dateStr.split(' ');
   const monthKey = parts[1];
   return monthMap[monthKey] || '';
-}
-
-/**
- * Transformer un PublicShow en Spectacle pour le composant SpectacleCard
- */
-function transformShowToSpectacle(show: PublicShow): Spectacle {
-  // Déterminer le statut
-  let status: SpectacleStatus = 'available';
-
-  if (show.status === 'draft') {
-    status = 'coming_soon';
-  } else if (show.status === 'archived') {
-    status = 'closed';
-  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
-    // Tous les créneaux sont complets
-    status = 'closed';
-  } else if (show.slots.length === 0) {
-    // Pas de créneaux futurs
-    status = 'coming_soon';
-  }
-
-  return {
-    id: 0, // Legacy - on utilise slug comme identifiant unique
-    title: show.title,
-    company: show.companyName,
-    venues: show.venues.map((v) => v.name),
-    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
-    slug: show.slug,
-    genre: show.categories[0] || 'Spectacle',
-    nextDate: status === 'available' ? (show.nextDate || '') : '',
-    remainingSlots: show.availableSlotsCount,
-    status,
-  };
 }
 
 // ============================================

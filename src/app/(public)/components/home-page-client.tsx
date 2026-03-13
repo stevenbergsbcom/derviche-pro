@@ -14,7 +14,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Header, Footer } from '@/components/layout';
-import { SpectacleCard, type Spectacle, type SpectacleStatus } from '@/components/spectacles';
+import { SpectacleCard, type SpectacleStatus } from '@/components/spectacles';
 import {
   ChevronLeft,
   ChevronRight,
@@ -26,8 +26,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
-import type { PublicShow } from '@/lib/services/public-catalog';
 import type { HomepageSettings, OrganizationSettings } from '@/lib/services/app-settings';
+import { transformShowToSpectacle } from '@/lib/utils/shows';
 import { getIcon } from './icon-map';
 
 // ============================================
@@ -37,37 +37,6 @@ import { getIcon } from './icon-map';
 interface HomePageClientProps {
   settings: HomepageSettings;
   organization: OrganizationSettings;
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-function transformShowToSpectacle(show: PublicShow): Spectacle {
-  let status: SpectacleStatus = 'available';
-
-  if (show.status === 'draft') {
-    status = 'coming_soon';
-  } else if (show.status === 'archived') {
-    status = 'closed';
-  } else if (show.availableSlotsCount === 0 && show.slots.length > 0) {
-    status = 'closed';
-  } else if (show.slots.length === 0) {
-    status = 'coming_soon';
-  }
-
-  return {
-    id: 0,
-    title: show.title,
-    company: show.companyName,
-    venues: show.venues.map((v) => v.name),
-    image: show.imageUrl || '/images/spectacles/placeholder.jpg',
-    slug: show.slug,
-    genre: show.categories[0] || 'Spectacle',
-    nextDate: status === 'available' ? (show.nextDate || '') : '',
-    remainingSlots: show.availableSlotsCount,
-    status,
-  };
 }
 
 // ============================================
