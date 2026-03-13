@@ -27,6 +27,11 @@ export interface EmailConfig {
   organizationContactPhone: string;
   organizationAddress: string;
   organizationWebsite: string;
+  /** Toggles — quels champs organisation afficher dans le footer */
+  footerShowEmail: boolean;
+  footerShowPhone: boolean;
+  footerShowAddress: boolean;
+  footerShowWebsite: boolean;
 }
 
 // ============================================
@@ -48,6 +53,10 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       'organization_contact_phone',
       'organization_address',
       'organization_website',
+      'email_footer_show_email',
+      'email_footer_show_phone',
+      'email_footer_show_address',
+      'email_footer_show_website',
     ];
 
     const { data, error } = await supabase
@@ -60,8 +69,12 @@ export async function getEmailConfig(): Promise<EmailConfig> {
     }
 
     const settings: Record<string, string> = {};
+    const boolSettings: Record<string, boolean> = {};
     (data ?? []).forEach((row: { key: string; value: unknown }) => {
       if (typeof row.value === 'string') settings[row.key] = row.value;
+      if (typeof row.value === 'boolean') boolSettings[row.key] = row.value;
+      if (row.value === 'true') boolSettings[row.key] = true;
+      if (row.value === 'false') boolSettings[row.key] = false;
     });
 
     const catalogueUrl = settings['email_catalogue_url'] ?? 'https://derviche-pro.fr/catalogue';
@@ -80,6 +93,10 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       organizationContactPhone: settings['organization_contact_phone']  ?? '',
       organizationAddress:      settings['organization_address']        ?? '',
       organizationWebsite:      settings['organization_website']        ?? '',
+      footerShowEmail:          boolSettings['email_footer_show_email']   ?? true,
+      footerShowPhone:          boolSettings['email_footer_show_phone']   ?? true,
+      footerShowAddress:        boolSettings['email_footer_show_address'] ?? true,
+      footerShowWebsite:        boolSettings['email_footer_show_website'] ?? true,
     };
   } catch (err) {
     logger.error('[email] Exception getEmailConfig', { err });
@@ -96,6 +113,10 @@ export async function getEmailConfig(): Promise<EmailConfig> {
       organizationContactPhone: '',
       organizationAddress:      '',
       organizationWebsite:      '',
+      footerShowEmail:          true,
+      footerShowPhone:          true,
+      footerShowAddress:        true,
+      footerShowWebsite:        true,
     };
   }
 }

@@ -32,7 +32,11 @@ export type EmailSettingKey =
   | 'email_from_address'
   | 'email_reply_to'
   | 'email_signature'
-  | 'email_footer_text';
+  | 'email_footer_text'
+  | 'email_footer_show_email'
+  | 'email_footer_show_phone'
+  | 'email_footer_show_address'
+  | 'email_footer_show_website';
 // Note: email_confirmation_subject et email_cancellation_subject
 // ont été migrés vers la table email_templates (migration 051)
 
@@ -123,6 +127,10 @@ export interface EmailSettings {
   email_reply_to: string | null;
   email_signature: string | null;
   email_footer_text: string | null;
+  email_footer_show_email: boolean;
+  email_footer_show_phone: boolean;
+  email_footer_show_address: boolean;
+  email_footer_show_website: boolean;
 }
 
 /** Paramètres notifications email admin groupés */
@@ -288,6 +296,10 @@ export const EMAIL_SETTING_KEYS: EmailSettingKey[] = [
   'email_reply_to',
   'email_signature',
   'email_footer_text',
+  'email_footer_show_email',
+  'email_footer_show_phone',
+  'email_footer_show_address',
+  'email_footer_show_website',
 ];
 
 /** Clés des paramètres notifications email admin */
@@ -430,6 +442,10 @@ export const SETTING_LABELS: Record<string, string> = {
   email_reply_to: 'Adresse de réponse',
   email_signature: 'Signature',
   email_footer_text: 'Pied de page',
+  email_footer_show_email: 'Afficher email dans le footer',
+  email_footer_show_phone: 'Afficher téléphone dans le footer',
+  email_footer_show_address: 'Afficher adresse dans le footer',
+  email_footer_show_website: 'Afficher site web dans le footer',
   email_catalogue_url: 'URL du catalogue (emails)',
 
   google_calendar_enabled: 'Activer Google Calendar',
@@ -661,6 +677,13 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
     return { data: null, error: result.error };
   }
 
+  const parseBool = (val: unknown, fallback: boolean): boolean => {
+    if (typeof val === 'boolean') return val;
+    if (val === 'true') return true;
+    if (val === 'false') return false;
+    return fallback;
+  };
+
   return {
     data: {
       email_from_name: (result.data?.email_from_name as string) || null,
@@ -668,6 +691,10 @@ export async function getEmailSettings(): Promise<AppSettingResult<EmailSettings
       email_reply_to: (result.data?.email_reply_to as string) || null,
       email_signature: (result.data?.email_signature as string) || null,
       email_footer_text: (result.data?.email_footer_text as string) || null,
+      email_footer_show_email: parseBool(result.data?.email_footer_show_email, true),
+      email_footer_show_phone: parseBool(result.data?.email_footer_show_phone, true),
+      email_footer_show_address: parseBool(result.data?.email_footer_show_address, true),
+      email_footer_show_website: parseBool(result.data?.email_footer_show_website, true),
     },
     error: null,
   };
