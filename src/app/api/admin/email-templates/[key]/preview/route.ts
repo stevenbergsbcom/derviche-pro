@@ -58,7 +58,7 @@ const MOCK_CONFIRMATION: ReservationConfirmationEmailData = {
   venueCity: 'Bordeaux',
   numPlaces: 2,
   managerName: 'Sophie Lefèvre',
-  managerEmail: 'reservation@derviche-pro.fr',
+  managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
 };
 
@@ -76,7 +76,7 @@ const MOCK_CANCELLATION: ReservationCancellationEmailData = {
   numPlaces: 2,
   cancellationReason: 'Indisponibilité imprévue',
   managerName: 'Sophie Lefèvre',
-  managerEmail: 'reservation@derviche-pro.fr',
+  managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
 };
 
@@ -95,12 +95,12 @@ const MOCK_MODIFICATION: ReservationModificationEmailData = {
   venueCity: 'Bordeaux',
   numPlaces: 2,
   managerName: 'Sophie Lefèvre',
-  managerEmail: 'reservation@derviche-pro.fr',
+  managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
 };
 
 const MOCK_ADMIN_NOTIFICATION: AdminNotificationEmailData = {
-  to: 'reservation@derviche-pro.fr',
+  to: 'reservation.derviche@gmail.com',
   adminName: 'Sophie Lefèvre',
   eventType: 'new_reservation',
   guestFullName: 'Marie Dupont',
@@ -155,7 +155,7 @@ const MOCK_CHECKIN_FOLLOWUP: CheckinFollowupEmailData = {
   venueName: 'Théâtre de la Ville',
   venueCity: 'Bordeaux',
   managerName: 'Sophie Lefèvre',
-  managerEmail: 'reservation@derviche-pro.fr',
+  managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
 };
 
@@ -174,7 +174,7 @@ const MOCK_REMINDER: ReminderEmailData = {
   venueCity: 'Bordeaux',
   numPlaces: 2,
   managerName: 'Sophie Lefèvre',
-  managerEmail: 'reservation@derviche-pro.fr',
+  managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
 };
 
