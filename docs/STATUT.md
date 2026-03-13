@@ -1056,7 +1056,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 **Règle R-RESA-04 modifiée** : un même email peut désormais avoir plusieurs réservations sur un même créneau. Le système affiche un avertissement (AlertDialog) si un doublon est détecté, mais autorise la création si l'utilisateur confirme.
 
-**Migration SQL `094_allow_duplicate_reservations.sql` :**
+**Migration SQL `095_allow_duplicate_reservations.sql` :**
 - Index uniques `idx_unique_reservation_guest_slot` et `idx_unique_reservation_user_slot` → remplacés par des index réguliers (performances conservées)
 - RPC `create_admin_reservation` : suppression du check doublon (section 3)
 - Nouvelle RPC `check_reservation_duplicate(p_slot_id, p_email)` (SECURITY DEFINER, anon + authenticated)
@@ -1085,7 +1085,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 **Fichiers modifiés :**
 | Fichier | Changement |
 |---------|------------|
-| `supabase/migrations/094_allow_duplicate_reservations.sql` | **NOUVEAU** — migration SQL |
+| `supabase/migrations/095_allow_duplicate_reservations.sql` | **NOUVEAU** — migration SQL |
 | `src/lib/services/reservations-duplicate.ts` | **NOUVEAU** — service partagé |
 | `src/components/shared/DuplicateReservationDialog.tsx` | **NOUVEAU** — composant partagé |
 | `src/components/shared/index.ts` | Export du composant partagé |

@@ -1,5 +1,5 @@
 -- ============================================
--- Migration 094 : Autoriser les doublons de réservation email+créneau
+-- Migration 095 : Autoriser les doublons de réservation email+créneau
 -- Derviche Diffusion — Derviche Pro
 -- Date: 2026-03-13
 -- Session: S184
@@ -58,6 +58,7 @@ CREATE OR REPLACE FUNCTION public.create_admin_reservation(
   p_address TEXT DEFAULT NULL,
   p_postal_code TEXT DEFAULT NULL,
   p_city TEXT DEFAULT NULL,
+  p_country TEXT DEFAULT NULL,
   p_organization TEXT DEFAULT NULL,
   p_function TEXT DEFAULT NULL,
   p_afc_number TEXT DEFAULT NULL,
@@ -145,6 +146,7 @@ BEGIN
     guest_address,
     guest_postal_code,
     guest_city,
+    guest_country,
     -- Commentaire
     special_requests,
     -- Notes checkin (admin)
@@ -170,6 +172,7 @@ BEGIN
     NULLIF(p_address, ''),
     NULLIF(p_postal_code, ''),
     NULLIF(p_city, ''),
+    NULLIF(p_country, ''),
     -- Commentaire
     NULLIF(p_comment, ''),
     -- Notes checkin (admin)
