@@ -69,12 +69,12 @@ export async function getEmailConfig(): Promise<EmailConfig> {
 
     return {
       fromName:                 settings['email_from_name']              ?? 'Derviche Diffusion',
-      fromAddress:              settings['email_from_address']           ?? 'reservation@derviche-pro.fr',
-      replyTo:                  settings['email_reply_to']              ?? 'reservation@derviche-pro.fr',
+      fromAddress:              settings['email_from_address']           ?? 'no-reply@derviche-pro.fr',
+      replyTo:                  settings['email_reply_to']              ?? 'reservation.derviche@gmail.com',
       catalogueUrl,
       appUrl,
       signature:                settings['email_signature']             ?? "L'équipe Derviche Diffusion",
-      footerText:               settings['email_footer_text']           ?? 'Derviche Diffusion — reservation@derviche-pro.fr',
+      footerText:               settings['email_footer_text']           ?? 'Derviche Diffusion — reservation.derviche@gmail.com',
       organizationName:         settings['organization_name']           ?? 'Derviche Diffusion',
       organizationContactEmail: settings['organization_contact_email']  ?? '',
       organizationContactPhone: settings['organization_contact_phone']  ?? '',
@@ -85,12 +85,12 @@ export async function getEmailConfig(): Promise<EmailConfig> {
     logger.error('[email] Exception getEmailConfig', { err });
     return {
       fromName:                 'Derviche Diffusion',
-      fromAddress:              'reservation@derviche-pro.fr',
-      replyTo:                  'reservation@derviche-pro.fr',
+      fromAddress:              'no-reply@derviche-pro.fr',
+      replyTo:                  'reservation.derviche@gmail.com',
       catalogueUrl:             'https://derviche-pro.fr/catalogue',
       appUrl:                   'https://derviche-pro.fr',
       signature:                "L'équipe Derviche Diffusion",
-      footerText:               'Derviche Diffusion — reservation@derviche-pro.fr',
+      footerText:               'Derviche Diffusion — reservation.derviche@gmail.com',
       organizationName:         'Derviche Diffusion',
       organizationContactEmail: '',
       organizationContactPhone: '',
