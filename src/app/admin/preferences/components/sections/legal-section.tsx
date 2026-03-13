@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { WysiwygEditor } from '@/components/ui/wysiwyg-editor';
 import { SettingsCard } from '../shared';
 
-import { useLegalSettings } from '@/hooks/useAppSettings';
+import { useLegalSettings } from '@/hooks/app-settings';
 
 // ============================================
 // CONSTANTS

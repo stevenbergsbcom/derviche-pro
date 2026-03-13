@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SettingsCard } from '../shared';
 
-import { useReminderSettings } from '@/hooks/useAppSettings';
+import { useReminderSettings } from '@/hooks/app-settings';
 import type { ReminderSettings } from '@/lib/services/app-settings';
 
 // ============================================

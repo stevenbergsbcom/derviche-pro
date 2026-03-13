@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SettingsCard } from '../shared';
 
-import { useGoogleCalendarSettings } from '@/hooks/useAppSettings';
+import { useGoogleCalendarSettings } from '@/hooks/app-settings';
 import type { GoogleCalendarSettings } from '@/lib/services/app-settings';
 
 // ============================================

@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S185 — Refactoring / Code Review (quick wins) — 13 mars 2026
+> Dernière mise à jour : Session S186 — Split des gros fichiers (>400 lignes) — 13 mars 2026
 
 ---
 
@@ -1143,18 +1143,47 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/lib/services/categories.ts` | `cleanupOrphanMappings` + cast typé |
 | `src/lib/services/target-audiences.ts` | `cleanupOrphanMappings` + cast typé |
 
+### S186 — Split des gros fichiers (>400 lignes) ✅
+
+**3 chantiers de restructuration** ciblant les fichiers les plus volumineux du codebase pour améliorer la maintenabilité. Refactoring structurel pur, aucun changement fonctionnel.
+
+**Chantier 1 — `useAppSettings.ts` (842 → 12 fichiers dans `hooks/app-settings/`) :**
+- 10 hooks indépendants extraits : `useOrganizationSettings`, `useSeasonSettings`, `useEmailSettings`, `useReminderSettings`, `useGoogleCalendarSettings`, `useNotificationSettings`, `useRgpdSettings`, `useThemeSettings`, `useHomepageSettings`, `useLegalSettings`
+- Type partagé `UseAppSettingsReturn<T>` dans `types.ts`
+- Barrel export + mise à jour des 9 consommateurs dans `admin/preferences/components/sections/`
+- Ancien `useAppSettings.ts` supprimé
+
+**Chantier 2 — `mon-compte/page.tsx` (1124 → 500 lignes orchestrateur + 8 composants) :**
+- Types extraits : `ProProfile`, `ProfileFormData`, `PasswordData`, `EditingSection`, `DeleteStep`, `SectionCardProps`
+- Utilitaire `validatePassword` dans `utils.ts`
+- 8 composants colocalisés : `ReadField`, `MonCompteSkeleton`, `PersonalSection`, `ProfessionalSection`, `AddressSection`, `SecuritySection`, `PasswordDialog`, `DeleteAccountDialog`
+- Interface `SectionCardProps` partagée entre les 3 sections éditables
+
+**Chantier 3 — `spectacle/[slug]/page.tsx` (1361 → 662 lignes orchestrateur + 8 composants) :**
+- Types extraits : `TimeSlot`, `Step`, `ReservationFormData`, `INITIAL_FORM_DATA`, `DEFAULT_MAX_RESERVATIONS`
+- 7 fonctions pures de calendrier dans `utils/calendar.ts`
+- 8 composants colocalisés : `ImagePlaceholder`, `AdminBlockBanner`, `StepsIndicator`, `CalendarStep`, `TimeStep`, `ParticipantsStep`, `ReservationFormStep`, `ShowDetailSidebar`
+- Props explicites (pas de Context) pour testabilité indépendante
+
+**Fichiers créés :**
+| Répertoire | Fichiers | Lignes totales |
+|-----------|---------|---------------|
+| `src/hooks/app-settings/` | 12 fichiers (types + 10 hooks + barrel) | ~500 |
+| `src/app/professional/mon-compte/components/` | 8 composants + barrel + types + utils | ~750 |
+| `src/app/(public)/spectacle/[slug]/components/` | 8 composants + barrel | ~850 |
+| `src/app/(public)/spectacle/[slug]/utils/` | `calendar.ts` | ~95 |
+| `src/app/(public)/spectacle/[slug]/types.ts` | Types + constantes | ~60 |
+
 ---
 
 ## Backlog / TODO
 
-### Prochaine session : S186 — à définir
+### Prochaine session : S187 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Split des gros fichiers (spectacle/[slug], mon-compte, app-settings) | Moyenne | Maintenabilité |
-| 2 | Barrel exports manquants (21 dossiers) | Faible | DX |
-| 3 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
-| 4 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
-| 5 | Split useAppSettings.ts en sous-hooks par domaine | Moyenne | Maintenabilité |
+| 1 | Barrel exports manquants (21 dossiers) | Faible | DX |
+| 2 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
+| 3 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
 

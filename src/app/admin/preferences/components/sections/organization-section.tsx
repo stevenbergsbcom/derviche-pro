@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { SettingsCard } from '../shared';
 
-import { useOrganizationSettings, useSeasonSettings } from '@/hooks/useAppSettings';
+import { useOrganizationSettings, useSeasonSettings } from '@/hooks/app-settings';
 import type { OrganizationSettings, SeasonSettings } from '@/lib/services/app-settings';
 
 // ============================================
