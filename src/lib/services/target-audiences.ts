@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { TargetAudienceRow, TargetAudienceInsert, TargetAudienceUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { cleanupOrphanMappings } from '@/lib/utils/orphan-cleanup';
 
 // ============================================
 // TYPES
@@ -116,25 +117,8 @@ export async function deleteTargetAudience(id: string): Promise<TargetAudienceRe
   try {
     const supabase = createClient();
     
-    // D'abord, nettoyer les mappings orphelins (spectacles soft-deleted)
-    // Récupérer les show_ids des spectacles supprimés
-    const { data: deletedShows } = await supabase
-      .from('shows')
-      .select('id')
-      .not('deleted_at', 'is', null);
-    
-    if (deletedShows && deletedShows.length > 0) {
-      const deletedShowIds = deletedShows.map(s => s.id);
-      
-      // Supprimer les mappings orphelins pour ce public cible
-      await supabase
-        .from('show_target_audience_mapping')
-        .delete()
-        .eq('target_audience_id', id)
-        .in('show_id', deletedShowIds);
-      
-      logger.info('Mappings orphelins nettoyés pour target_audience', { targetAudienceId: id, deletedShowIds });
-    }
+    // Nettoyer les mappings orphelins (spectacles soft-deleted)
+    await cleanupOrphanMappings(supabase, 'show_target_audience_mapping', 'target_audience_id', id);
     
     // Maintenant supprimer le public cible
     const { data, error } = await supabase
@@ -178,8 +162,7 @@ export async function isTargetAudienceUsed(id: string): Promise<{ used: boolean;
 
     // Filtrer pour ne garder que les spectacles actifs (deleted_at === null)
     const activeCount = data?.filter(row => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const show = row.shows as any;
+      const show = row.shows as { deleted_at: string | null } | null;
       return show && show.deleted_at === null;
     }).length || 0;
 

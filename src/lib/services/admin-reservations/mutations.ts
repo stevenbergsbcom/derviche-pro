@@ -6,6 +6,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
+import { callRpc } from '@/lib/supabase/rpc';
 import { logger } from '@/lib/logger';
 import type { 
   AdminReservationResult,
@@ -107,30 +108,32 @@ export async function updateReservation(
     const supabase = createClient();
 
     // Appel à la fonction RPC sécurisée
-    // Note: Cast nécessaire car les types Supabase auto-générés ne contiennent pas cette RPC
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: result, error: rpcError } = await (supabase.rpc as any)('update_reservation_safe', {
-      p_reservation_id: id,
-      p_first_name: data.firstName,
-      p_last_name: data.lastName,
-      p_email: data.email,
-      p_phone: data.phone,
-      p_email_secondary: data.emailSecondary,
-      p_phone_secondary: data.phoneSecondary,
-      p_address: data.address,
-      p_postal_code: data.postalCode,
-      p_city: data.city,
-      p_country: data.country ?? null,
-      p_organization: data.organization,
-      p_function: data.function,
-      p_afc_number: data.afcNumber,
-      p_num_places: data.numPlaces,
-      p_slot_id: data.slotId,
-      p_special_requests: data.specialRequests,
-      p_checkin_comment: data.checkinComment,
-      p_checkin_venue_notes: data.checkinVenueNotes,
-      p_checkin_internal_notes: data.checkinInternalNotes,
-    });
+    const { data: result, error: rpcError } = await callRpc<Record<string, unknown>, RpcResult>(
+      supabase,
+      'update_reservation_safe',
+      {
+        p_reservation_id: id,
+        p_first_name: data.firstName,
+        p_last_name: data.lastName,
+        p_email: data.email,
+        p_phone: data.phone,
+        p_email_secondary: data.emailSecondary,
+        p_phone_secondary: data.phoneSecondary,
+        p_address: data.address,
+        p_postal_code: data.postalCode,
+        p_city: data.city,
+        p_country: data.country ?? null,
+        p_organization: data.organization,
+        p_function: data.function,
+        p_afc_number: data.afcNumber,
+        p_num_places: data.numPlaces,
+        p_slot_id: data.slotId,
+        p_special_requests: data.specialRequests,
+        p_checkin_comment: data.checkinComment,
+        p_checkin_venue_notes: data.checkinVenueNotes,
+        p_checkin_internal_notes: data.checkinInternalNotes,
+      },
+    );
 
     if (rpcError) {
       logger.error('Erreur RPC update_reservation_safe', { id, error: rpcError.message });
@@ -138,10 +141,10 @@ export async function updateReservation(
     }
 
     // Vérifier le résultat de la RPC
-    const rpcResult = result as RpcResult;
-    if (!rpcResult.success) {
-      logger.error(ERROR_MESSAGES.UPDATE_RPC_FAIL, { id, error: rpcResult.error });
-      return { data: null, error: rpcResult.error || ERROR_MESSAGES.UPDATE_RESERVATION };
+    if (!result || !result.success) {
+      const errMsg = result?.error || ERROR_MESSAGES.UPDATE_RESERVATION;
+      logger.error(ERROR_MESSAGES.UPDATE_RPC_FAIL, { id, error: errMsg });
+      return { data: null, error: errMsg };
     }
 
     // Récupérer la réservation mise à jour
@@ -251,44 +254,45 @@ export async function createAdminReservation(
     const supabase = createClient();
 
     // Appel à la fonction RPC sécurisée
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: result, error: rpcError } = await (supabase.rpc as any)('create_admin_reservation', {
-      p_slot_id: data.slotId,
-      p_num_places: data.numPlaces,
-      p_first_name: data.firstName.trim(),
-      p_last_name: data.lastName.trim(),
-      p_email: data.email.trim().toLowerCase(),
-      p_phone: data.phone?.trim() || null,
-      p_email_secondary: data.emailSecondary?.trim() || null,
-      p_phone_secondary: data.phoneSecondary?.trim() || null,
-      p_address: data.address?.trim() || null,
-      p_postal_code: data.postalCode?.trim() || null,
-      p_city: data.city?.trim() || null,
-      p_country: data.country?.trim() || null,
-      p_organization: data.organization?.trim() || null,
-      p_function: data.function?.trim() || null,
-      p_afc_number: data.afcNumber?.trim() || null,
-      p_comment: data.comment?.trim() || null,
-      p_checkin_comment: data.checkinComment?.trim() || null,
-      p_checkin_venue_notes: data.checkinVenueNotes?.trim() || null,
-      p_checkin_internal_notes: data.checkinInternalNotes?.trim() || null,
-    });
+    const { data: result, error: rpcError } = await callRpc<Record<string, unknown>, RpcResult>(
+      supabase,
+      'create_admin_reservation',
+      {
+        p_slot_id: data.slotId,
+        p_num_places: data.numPlaces,
+        p_first_name: data.firstName.trim(),
+        p_last_name: data.lastName.trim(),
+        p_email: data.email.trim().toLowerCase(),
+        p_phone: data.phone?.trim() || null,
+        p_email_secondary: data.emailSecondary?.trim() || null,
+        p_phone_secondary: data.phoneSecondary?.trim() || null,
+        p_address: data.address?.trim() || null,
+        p_postal_code: data.postalCode?.trim() || null,
+        p_city: data.city?.trim() || null,
+        p_country: data.country?.trim() || null,
+        p_organization: data.organization?.trim() || null,
+        p_function: data.function?.trim() || null,
+        p_afc_number: data.afcNumber?.trim() || null,
+        p_comment: data.comment?.trim() || null,
+        p_checkin_comment: data.checkinComment?.trim() || null,
+        p_checkin_venue_notes: data.checkinVenueNotes?.trim() || null,
+        p_checkin_internal_notes: data.checkinInternalNotes?.trim() || null,
+      },
+    );
 
     if (rpcError) {
       logger.error('Erreur RPC create_admin_reservation', { error: rpcError.message });
       return { success: false, error: rpcError.message };
     }
 
-    // Vérifier le résultat de la RPC
-    const rpcResult = result as RpcResult;
-    
-    if (!rpcResult.success) {
-      logger.error(ERROR_MESSAGES.CREATE_RPC_FAIL, { error: rpcResult.error });
-      return { success: false, error: rpcResult.error || 'Erreur lors de la création' };
+    if (!result || !result.success) {
+      const errMsg = result?.error || 'Erreur lors de la création';
+      logger.error(ERROR_MESSAGES.CREATE_RPC_FAIL, { error: errMsg });
+      return { success: false, error: errMsg };
     }
 
-    logger.info('Réservation admin créée', { reservationId: rpcResult.reservation_id });
-    return { success: true, reservationId: rpcResult.reservation_id };
+    logger.info('Réservation admin créée', { reservationId: result.reservation_id });
+    return { success: true, reservationId: result.reservation_id };
 
   } catch (err) {
     const message = err instanceof Error ? err.message : ERROR_MESSAGES.EXCEPTION;

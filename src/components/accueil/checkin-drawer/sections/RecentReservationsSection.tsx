@@ -19,26 +19,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PwaRecentReservationEntry } from '@/app/api/pwa/professional/[userId]/recent/route';
-
-// ============================================
-// CONFIGURATION STATUTS
-// ============================================
-
-const RESERVATION_STATUS_CONFIG = {
-  confirmed: { label: 'Confirmée', className: 'bg-green-100 text-green-800 border-green-200' },
-  cancelled:  { label: 'Annulée',  className: 'bg-red-100 text-red-800 border-red-200'      },
-  no_show:    { label: 'No show',  className: 'bg-gray-100 text-gray-700 border-gray-200'   },
-} as const;
-
-const CHECKIN_STATUS_CONFIG: Record<
-  NonNullable<PwaRecentReservationEntry['checkin_status']>,
-  { label: string; className: string }
-> = {
-  present_loved:   { label: '❤️ Coup de cœur', className: 'bg-pink-100 text-pink-800 border-pink-200'     },
-  present_press:   { label: '📰 Presse',        className: 'bg-purple-100 text-purple-800 border-purple-200' },
-  present_neutral: { label: '✓ Présent',        className: 'bg-blue-100 text-blue-800 border-blue-200'    },
-  absent:          { label: 'Absent',           className: 'bg-orange-100 text-orange-800 border-orange-200' },
-};
+import {
+  RESERVATION_STATUS_CONFIG,
+  CHECKIN_STATUS_CONFIG,
+} from '@/lib/constants/reservation-statuses';
 
 // ============================================
 // HELPERS

@@ -10,6 +10,7 @@
  */
 
 import { createClient } from '@/lib/supabase/client';
+import { callRpc } from '@/lib/supabase/rpc';
 import { logger } from '@/lib/logger';
 
 // ============================================
@@ -53,18 +54,21 @@ export async function checkDuplicateReservation(
   try {
     const supabase = createClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.rpc as any)('check_reservation_duplicate', {
-      p_slot_id: slotId,
-      p_email: email.trim(),
-    });
+    const { data, error } = await callRpc<Record<string, unknown>, RpcDuplicateResult>(
+      supabase,
+      'check_reservation_duplicate',
+      {
+        p_slot_id: slotId,
+        p_email: email.trim(),
+      },
+    );
 
     if (error) {
       logger.warn('[reservations-duplicate] Erreur RPC check_reservation_duplicate', { error });
       return { hasDuplicate: false };
     }
 
-    const result = data as RpcDuplicateResult;
+    const result = data;
 
     if (result?.hasDuplicate) {
       return {
