@@ -19,7 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { SettingsCard } from '../shared';
 
-import { useEmailSettings, useOrganizationSettings } from '@/hooks/useAppSettings';
+import { useEmailSettings, useOrganizationSettings } from '@/hooks/app-settings';
 import type { EmailSettings } from '@/lib/services/app-settings';
 
 // ============================================

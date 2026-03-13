@@ -78,8 +78,8 @@ export {
   useReminderSettings,
   useRgpdSettings,
   useThemeSettings,
-} from './useAppSettings';
-export type { UseAppSettingsReturn } from './useAppSettings';
+} from './app-settings';
+export type { UseAppSettingsReturn } from './app-settings';
 
 // Hooks UX
 export { useUnsavedChangesWarning } from './useUnsavedChangesWarning';

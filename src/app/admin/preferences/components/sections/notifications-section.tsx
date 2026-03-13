@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SettingsCard } from '../shared';
 
-import { useNotificationSettings } from '@/hooks/useAppSettings';
+import { useNotificationSettings } from '@/hooks/app-settings';
 import type { NotificationSettings } from '@/lib/services/app-settings';
 
 // ============================================

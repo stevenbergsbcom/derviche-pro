@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SettingsCard, InactiveSectionBanner } from '../shared';
 
-import { useRgpdSettings } from '@/hooks/useAppSettings';
+import { useRgpdSettings } from '@/hooks/app-settings';
 import type { RgpdSettings } from '@/lib/services/app-settings';
 
 // ============================================

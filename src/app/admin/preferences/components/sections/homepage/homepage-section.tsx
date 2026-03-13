@@ -12,7 +12,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Megaphone } from 'lucide-react';
 
 import { SettingsCard } from '../../shared';
-import { useHomepageSettings } from '@/hooks/useAppSettings';
+import { useHomepageSettings } from '@/hooks/app-settings';
 
 import { HeroCard } from './hero-card';
 import { AvantagesCard } from './advantages-card';

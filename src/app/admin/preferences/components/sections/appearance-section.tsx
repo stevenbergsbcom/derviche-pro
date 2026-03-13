@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { SettingsCard } from '../shared';
 import { LogoUploader } from './logo-uploader';
 
-import { useThemeSettings } from '@/hooks/useAppSettings';
+import { useThemeSettings } from '@/hooks/app-settings';
 import type { ThemeSettings } from '@/lib/services/app-settings';
 import {
   THEME_OPTIONS,
