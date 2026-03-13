@@ -22,6 +22,14 @@
 - Contact : email, téléphone, site web (données Organisation)
 - Footer : réseaux sociaux, copyright avec `{year}` dynamique
 
+### ✅ Public - Pages légales (100%) — S179
+- 3 pages : `/mentions-legales`, `/politique-confidentialite`, `/cgu`
+- Contenu éditable depuis Admin > Préférences > onglet Légal (WysiwygEditor)
+- Stockage `app_settings` (JSONB) avec RLS lecture publique (anon + authenticated)
+- Rendu HTML sanitisé (DOMPurify) avec `whitespace-pre-line` pour compatibilité texte brut
+- Footer : liens légaux fonctionnels (remplacent les anciens `href="#"`)
+- WysiwygEditor amélioré : normalisation div→br, gestion \n au chargement/collage
+
 ### ✅ Public - Catalogue & Réservation (100%)
 - Liste des spectacles (public)
 - Détail spectacle par slug
@@ -892,6 +900,43 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 |---------|------------|
 | `src/app/(auth)/login/page.tsx` | `shouldCreateUser: false`, anti-énumération, état `magicLinkSentEmail` |
 | `src/app/auth/callback/route.ts` | Vérification statut compte (deleted/disabled) après échange code |
+
+---
+
+### S179 — Pages légales éditables ✅
+
+**Fonctionnalités :**
+- 3 pages publiques : Mentions légales, Politique de confidentialité, CGU
+- Contenu éditable via Admin > Préférences > onglet « Légal » (WysiwygEditor : gras, italique, liens)
+- Migration 088 : 3 clés `app_settings` + politique RLS lecture publique
+- Contenu par défaut complet (texte français, placeholders `[À compléter]`)
+- Footer : liens `#` remplacés par les vraies routes
+
+**Corrections WysiwygEditor (globales, bénéficient à toutes les pages WYSIWYG) :**
+- Normalisation `<div>` → `<br>` dans `handleInput` (les navigateurs créent des `<div>` pour Enter)
+- Conversion `\n` → `<br>` au chargement de contenu texte brut
+- Collage : échappement HTML + préservation des retours à la ligne (`insertHTML`)
+- Fix `isEmpty` : comparaison sur `displayValue` (avec `<br>`) et non `sanitizedValue` (avec `\n`)
+
+**Fichiers créés :**
+| Fichier | Description |
+|---------|-------------|
+| `supabase/migrations/088_add_legal_settings.sql` | 3 clés + RLS publique |
+| `src/app/(public)/mentions-legales/page.tsx` | Page Mentions légales |
+| `src/app/(public)/politique-confidentialite/page.tsx` | Page Politique de confidentialité |
+| `src/app/(public)/cgu/page.tsx` | Page CGU |
+| `src/app/admin/preferences/components/sections/legal-section.tsx` | Section admin Légal (3 cards WYSIWYG) |
+
+**Fichiers modifiés :**
+| Fichier | Changement |
+|---------|------------|
+| `src/lib/services/app-settings.ts` | +`LegalSettingKey`, `LegalSettings`, `LEGAL_DEFAULTS`, `getLegalSettings`, `setLegalSettings` |
+| `src/hooks/useAppSettings.ts` | +`useLegalSettings()` hook |
+| `src/app/admin/preferences/components/preferences-tabs.tsx` | +onglet Légal (icône Scale), grille 10 colonnes |
+| `src/app/admin/preferences/components/preferences-content.tsx` | +`LegalSection` import, dirty handler, rendu conditionnel |
+| `src/app/admin/preferences/components/sections/index.ts` | +export `LegalSection` |
+| `src/components/layout/footer.tsx` | `href="#"` → `/mentions-legales`, `/politique-confidentialite`, `/cgu` |
+| `src/components/ui/wysiwyg-editor.tsx` | Normalisation div→br, \n→br, fix isEmpty, paste amélioré |
 
 ---
 
