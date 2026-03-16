@@ -16,6 +16,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isValidManagedRole } from '@/lib/services/internal-users';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
+import { requireAuth, errorResponse, serverErrorResponse } from '@/lib/api';
 import type { ManagedRole } from '@/lib/services/internal-users';
 
 // ============================================
@@ -128,31 +129,8 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
     // 1. Vérifier que l'appelant est authentifié et a les droits admin
     const supabase = await createClient();
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      logger.warn('API /admin/users - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    // Vérifier que l'utilisateur a un rôle admin
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .single();
-
-    if (!roleData) {
-      logger.warn('API /admin/users - Droits insuffisants', { userId: currentUser.id });
-      return NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAuth(supabase, undefined, 'API /admin/users');
+    if (!auth.ok) return auth.response;
 
     // 2. Parser et valider la requête
     const body = await request.json();
@@ -160,10 +138,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
     if (!validation.valid) {
       logger.warn('API /admin/users - Validation échouée', { error: validation.error });
-      return NextResponse.json(
-        { success: false, error: validation.error },
-        { status: 400 }
-      );
+      return errorResponse(validation.error);
     }
 
     const { email, password, first_name, last_name, phone, role, company_id, must_change_password } = validation.data;
@@ -182,10 +157,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
       if (companyError || !companyData) {
         logger.warn('API /admin/users - Compagnie non trouvée', { company_id });
-        return NextResponse.json(
-          { success: false, error: 'Compagnie non trouvée' },
-          { status: 400 }
-        );
+        return errorResponse('Compagnie non trouvée');
       }
 
       // Vérifier qu'aucun utilisateur avec rôle 'company' n'est déjà associé à cette compagnie
@@ -216,14 +188,11 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       }
 
       if (existingCompanyUser) {
-        logger.warn('API /admin/users - Compagnie a déjà un utilisateur', { 
-          company_id, 
-          existingUserId: existingCompanyUser.id 
+        logger.warn('API /admin/users - Compagnie a déjà un utilisateur', {
+          company_id,
+          existingUserId: existingCompanyUser.id
         });
-        return NextResponse.json(
-          { success: false, error: `Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})` },
-          { status: 400 }
-        );
+        return errorResponse(`Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})`);
       }
 
       logger.info('API /admin/users - Compagnie validée', { company_id, companyName: companyData.name });
@@ -238,10 +207,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
     if (profileError) {
       logger.error('API /admin/users - Erreur vérification profil existant', { error: profileError.message });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la vérification de l\'email' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la vérification de l\'email');
     }
 
     // Si un profil existe avec deleted_at, on réactive le compte
@@ -260,10 +226,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
       if (passwordError) {
         logger.error('API /admin/users - Erreur mise à jour mot de passe', { error: passwordError.message });
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de la mise à jour du mot de passe' },
-          { status: 500 }
-        );
+        return serverErrorResponse('Erreur lors de la mise à jour du mot de passe');
       }
 
       // 2. Ensuite réactiver le profil (seulement si le mot de passe a été mis à jour)
@@ -283,10 +246,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
       if (reactivateError) {
         logger.error('API /admin/users - Erreur réactivation profil', { error: reactivateError.message });
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de la réactivation du compte' },
-          { status: 500 }
-        );
+        return serverErrorResponse('Erreur lors de la réactivation du compte');
       }
 
       // 3. Mettre à jour le rôle
@@ -306,14 +266,11 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
           });
 
         if (insertRoleError) {
-          logger.error('API /admin/users - Erreur création rôle lors réactivation', { 
+          logger.error('API /admin/users - Erreur création rôle lors réactivation', {
             error: insertRoleError.message,
             code: insertRoleError.code
           });
-          return NextResponse.json(
-            { success: false, error: 'Erreur lors de l\'attribution du rôle' },
-            { status: 500 }
-          );
+          return serverErrorResponse('Erreur lors de l\'attribution du rôle');
         }
       }
 
@@ -324,7 +281,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         email,
         role,
         company_id: company_id ?? null,
-      }, currentUser.id, roleData.role);
+      }, auth.userId, auth.role);
 
       return NextResponse.json({
         success: true,
@@ -339,10 +296,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     // Si un profil actif existe déjà, erreur
     if (existingProfile && !existingProfile.deleted_at) {
       logger.warn('API /admin/users - Email déjà utilisé par un compte actif', { email });
-      return NextResponse.json(
-        { success: false, error: 'Cet email est déjà utilisé' },
-        { status: 400 }
-      );
+      return errorResponse('Cet email est déjà utilisé');
     }
 
     // 5. Créer l'utilisateur avec le client admin
@@ -373,10 +327,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       }
       // Note: On ne renvoie plus createError.message au client pour des raisons de sécurité
       
-      return NextResponse.json(
-        { success: false, error: errorMessage },
-        { status: 400 }
-      );
+      return errorResponse(errorMessage);
     }
 
     const userId = newUser.user.id;
@@ -409,10 +360,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       });
       // Rollback : supprimer l'utilisateur auth créé pour éviter un état incohérent
       await supabaseAdmin.auth.admin.deleteUser(userId);
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la création du profil utilisateur' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la création du profil utilisateur');
     }
     
     logger.info('API /admin/users - Profil créé/mis à jour', { userId, company_id });
@@ -442,10 +390,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
         });
         // Rollback : supprimer l'utilisateur auth et profil créés pour éviter un état incohérent
         await supabaseAdmin.auth.admin.deleteUser(userId);
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de l\'attribution du rôle' },
-          { status: 500 }
-        );
+        return serverErrorResponse('Erreur lors de l\'attribution du rôle');
       }
     }
 
@@ -457,7 +402,7 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
       email,
       role,
       company_id: company_id ?? null,
-    }, currentUser.id, roleData.role);
+    }, auth.userId, auth.role);
 
     return NextResponse.json({
       success: true,
@@ -469,9 +414,6 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
   } catch (error) {
     logger.error('API /admin/users - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

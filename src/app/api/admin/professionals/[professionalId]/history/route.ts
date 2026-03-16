@@ -9,10 +9,15 @@
  * Accessible uniquement aux super-admin et admin.
  */
 
-import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import {
+  requireAuth,
+  errorResponse,
+  serverErrorResponse,
+  successResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -29,12 +34,6 @@ export interface ProfessionalReservationHistoryEntry {
   created_at: string;
 }
 
-interface ApiResponse {
-  success: boolean;
-  data?: ProfessionalReservationHistoryEntry[];
-  error?: string;
-}
-
 interface RouteContext {
   params: Promise<{ professionalId: string }>;
 }
@@ -43,10 +42,7 @@ interface RouteContext {
 // GET - Historique complet
 // ============================================
 
-export async function GET(
-  _request: Request,
-  context: RouteContext
-): Promise<NextResponse<ApiResponse>> {
+export async function GET(_request: Request, context: RouteContext) {
   try {
     const { professionalId } = await context.params;
     logger.info('API /admin/professionals/[id]/history GET - Début', { professionalId });
@@ -54,38 +50,13 @@ export async function GET(
     // Vérification UUID basique
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_REGEX.test(professionalId)) {
-      return NextResponse.json(
-        { success: false, error: 'Identifiant invalide' },
-        { status: 400 }
-      );
+      return errorResponse('Identifiant invalide', 400);
     }
 
     // Vérification authentification + rôle admin
     const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .single();
-
-    if (!roleData) {
-      return NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAuth(supabase);
+    if (!auth.ok) return auth.response;
 
     // Appel RPC via service_role (bypasse RLS)
     const supabaseAdmin = createAdminClient();
@@ -100,10 +71,7 @@ export async function GET(
         professionalId,
         error: rpcError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la récupération de l\'historique' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la récupération de l\'historique');
     }
 
     logger.info('API /admin/professionals/[id]/history - Succès', {
@@ -111,15 +79,9 @@ export async function GET(
       count: (data as ProfessionalReservationHistoryEntry[]).length,
     });
 
-    return NextResponse.json({
-      success: true,
-      data: (data ?? []) as ProfessionalReservationHistoryEntry[],
-    });
+    return successResponse((data ?? []) as ProfessionalReservationHistoryEntry[]);
   } catch (error) {
     logger.error('API /admin/professionals/[id]/history - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

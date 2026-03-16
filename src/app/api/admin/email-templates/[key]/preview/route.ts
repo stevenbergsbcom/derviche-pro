@@ -12,6 +12,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { requireAuth, getErrorMessage } from '@/lib/api';
 import { getEmailConfig } from '@/lib/services/email/config';
 import { buildConfirmationHtml }    from '@/lib/services/email/builders/confirmation';
 import { buildCancellationHtml }    from '@/lib/services/email/builders/cancellation';
@@ -295,22 +296,8 @@ export async function GET(
     }
 
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return new Response('Non authentifié', { status: 401 });
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    const role = roleData?.role;
-    if (role !== 'super-admin' && role !== 'admin') {
-      return new Response('Droits insuffisants', { status: 403 });
-    }
+    const auth = await requireAuth(supabase, undefined, '[email-templates preview API]');
+    if (!auth.ok) return auth.response;
 
     const url    = new URL(request.url);
     const q      = url.searchParams;
@@ -384,7 +371,7 @@ export async function GET(
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    const message = getErrorMessage(err);
     logger.error('[preview] Exception', { message });
     return new Response('Erreur serveur', { status: 500 });
   }

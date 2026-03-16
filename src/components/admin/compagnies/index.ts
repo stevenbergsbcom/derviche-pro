@@ -1,8 +1,8 @@
 // Composants de gestion des compagnies
 // S160 — CompanyDialog remplace CompanyFormDialog + CompanyViewDialog
 
-export { CompanyDialog } from './company-dialog';
-export type { CompanyDialogProps, CompanyFormData } from './company-dialog';
+export { CompanyDialog } from './company-dialog/index';
+export type { CompanyDialogProps, CompanyFormData } from './company-dialog/index';
 
 // Conservés pour rétrocompatibilité éventuelle — non utilisés dans la page principale
 export { CompanyFormDialog } from './company-form-dialog';

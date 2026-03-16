@@ -8,20 +8,20 @@
  * étendus du profil professionnel (structure, fonction, AFC, adresse, etc.)
  */
 
-import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
+import {
+  requireAuth,
+  notFoundResponse,
+  serverErrorResponse,
+  successResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
 // ============================================
-
-interface ApiResponse {
-  success: boolean;
-  error?: string;
-}
 
 interface RouteContext {
   params: Promise<{ professionalId: string }>;
@@ -44,65 +44,17 @@ interface UpdateProfessionalBody {
 }
 
 // ============================================
-// HELPER - Vérification accès admin
-// ============================================
-
-/**
- * Vérifie que l'appelant est authentifié et possède un rôle admin.
- * Retourne l'ID de l'utilisateur courant si autorisé, null sinon.
- */
-async function checkAdminAccess(
-  supabase: Awaited<ReturnType<typeof createClient>>
-): Promise<{ authorized: true; userId: string } | { authorized: false; response: NextResponse<ApiResponse> }> {
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
-
-  if (!currentUser) {
-    return {
-      authorized: false,
-      response: NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      ),
-    };
-  }
-
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', currentUser.id)
-    .in('role', ['super-admin', 'admin'])
-    .single();
-
-  if (!roleData) {
-    return {
-      authorized: false,
-      response: NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      ),
-    };
-  }
-
-  return { authorized: true, userId: currentUser.id };
-}
-
-// ============================================
 // PATCH - Mise à jour profil complet
 // ============================================
 
-export async function PATCH(
-  request: Request,
-  context: RouteContext
-): Promise<NextResponse<ApiResponse>> {
+export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { professionalId } = await context.params;
     logger.info('API /admin/professionals/[id] PATCH - Début', { professionalId });
 
     const supabase = await createClient();
-    const access = await checkAdminAccess(supabase);
-    if (!access.authorized) return access.response;
+    const auth = await requireAuth(supabase);
+    if (!auth.ok) return auth.response;
 
     // Parser le body
     const body = (await request.json()) as UpdateProfessionalBody;
@@ -127,10 +79,7 @@ export async function PATCH(
         professionalId,
         error: fetchError?.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Professionnel non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Professionnel non trouvé');
     }
 
     // Construire les champs à mettre à jour (ignorer les undefined)
@@ -171,10 +120,7 @@ export async function PATCH(
         professionalId,
         error: updateError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la mise à jour du profil' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la mise à jour du profil');
     }
 
     logger.info('API /admin/professionals/[id] PATCH - Succès', {
@@ -185,15 +131,12 @@ export async function PATCH(
     void logSystem('professional_update', 'info', {
       user_id: professionalId,
       email: targetProfile.email,
-    }, access.userId);
+    }, auth.userId);
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (error) {
     logger.error('API /admin/professionals/[id] PATCH - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }
 
@@ -201,17 +144,14 @@ export async function PATCH(
 // DELETE - Suppression (soft delete)
 // ============================================
 
-export async function DELETE(
-  _request: Request,
-  context: RouteContext
-): Promise<NextResponse<ApiResponse>> {
+export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const { professionalId } = await context.params;
     logger.info('API /admin/professionals/[id] DELETE - Début', { professionalId });
 
     const supabase = await createClient();
-    const access = await checkAdminAccess(supabase);
-    if (!access.authorized) return access.response;
+    const auth = await requireAuth(supabase);
+    if (!auth.ok) return auth.response;
 
     const supabaseAdmin = createAdminClient();
 
@@ -233,10 +173,7 @@ export async function DELETE(
         professionalId,
         error: fetchError?.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Professionnel non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Professionnel non trouvé');
     }
 
     // Soft delete
@@ -253,10 +190,7 @@ export async function DELETE(
         professionalId,
         error: deleteError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la suppression' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la suppression');
     }
 
     logger.info('API /admin/professionals/[id] DELETE - Succès', {
@@ -267,14 +201,11 @@ export async function DELETE(
     void logSystem('professional_delete', 'info', {
       user_id: professionalId,
       email: targetProfile.email,
-    }, access.userId);
+    }, auth.userId);
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (error) {
     logger.error('API /admin/professionals/[id] DELETE - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

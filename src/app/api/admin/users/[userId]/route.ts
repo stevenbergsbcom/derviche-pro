@@ -4,11 +4,18 @@
  * PATCH /api/admin/users/[userId] - Mise à jour profil et/ou rôle
  */
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
+import {
+  requireAuth,
+  errorResponse,
+  notFoundResponse,
+  serverErrorResponse,
+  successResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -50,41 +57,15 @@ export async function DELETE(
     
     logger.info('API /admin/users/[userId] DELETE - Début suppression', { userId });
 
-    // 1. Vérifier que l'appelant est authentifié
+    // 1. Vérifier que l'appelant est authentifié et a les droits admin
     const supabase = await createClient();
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      logger.warn('API /admin/users/[userId] DELETE - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAuth(supabase, undefined, 'API /admin/users/[userId] DELETE');
+    if (!auth.ok) return auth.response;
 
     // 2. Empêcher l'auto-suppression
-    if (currentUser.id === userId) {
+    if (auth.userId === userId) {
       logger.warn('API /admin/users/[userId] DELETE - Tentative auto-suppression', { userId });
-      return NextResponse.json(
-        { success: false, error: 'Vous ne pouvez pas supprimer votre propre compte' },
-        { status: 400 }
-      );
-    }
-
-    // 3. Vérifier que l'utilisateur a un rôle admin
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .single();
-
-    if (!roleData) {
-      logger.warn('API /admin/users/[userId] DELETE - Droits insuffisants', { userId: currentUser.id });
-      return NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      );
+      return errorResponse('Vous ne pouvez pas supprimer votre propre compte');
     }
 
     // 4. Vérifier que l'utilisateur cible existe et est un utilisateur géré
@@ -104,10 +85,7 @@ export async function DELETE(
 
     if (fetchError || !targetUser) {
       logger.warn('API /admin/users/[userId] DELETE - Utilisateur non trouvé', { userId, error: fetchError?.message });
-      return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Utilisateur non trouvé');
     }
 
     // 5. Soft delete : mettre à jour deleted_at
@@ -120,14 +98,11 @@ export async function DELETE(
       .eq('id', userId);
 
     if (deleteError) {
-      logger.error('API /admin/users/[userId] DELETE - Erreur suppression', { 
-        userId, 
-        error: deleteError.message 
+      logger.error('API /admin/users/[userId] DELETE - Erreur suppression', {
+        userId,
+        error: deleteError.message
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la suppression' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la suppression');
     }
 
     logger.info('API /admin/users/[userId] DELETE - Succès', { userId, email: targetUser.email });
@@ -135,16 +110,13 @@ export async function DELETE(
     void logSystem('user_delete', 'info', {
       user_id: userId,
       email: targetUser.email,
-    }, currentUser.id, roleData.role);
+    }, auth.userId, auth.role);
 
-    return NextResponse.json({ success: true });
+    return successResponse();
 
   } catch (error) {
     logger.error('API /admin/users/[userId] DELETE - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }
 
@@ -162,33 +134,10 @@ export async function PATCH(
     
     logger.info('API /admin/users/[userId] PATCH - Début mise à jour', { userId, body });
 
-    // 1. Vérifier que l'appelant est authentifié
+    // 1. Vérifier que l'appelant est authentifié et a les droits admin
     const supabase = await createClient();
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      logger.warn('API /admin/users/[userId] PATCH - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    // 2. Vérifier que l'utilisateur a un rôle admin
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .single();
-
-    if (!roleData) {
-      logger.warn('API /admin/users/[userId] PATCH - Droits insuffisants', { userId: currentUser.id });
-      return NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAuth(supabase, undefined, 'API /admin/users/[userId] PATCH');
+    if (!auth.ok) return auth.response;
 
     // 3. Vérifier que l'utilisateur cible existe
     const supabaseAdmin = createAdminClient();
@@ -207,10 +156,7 @@ export async function PATCH(
 
     if (fetchError || !targetUser) {
       logger.warn('API /admin/users/[userId] PATCH - Utilisateur non trouvé', { userId, error: fetchError?.message });
-      return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Utilisateur non trouvé');
     }
 
     // Extraire le rôle actuel
@@ -241,14 +187,11 @@ export async function PATCH(
       .eq('id', userId);
 
     if (profileError) {
-      logger.error('API /admin/users/[userId] PATCH - Erreur profil', { 
-        userId, 
-        error: profileError.message 
+      logger.error('API /admin/users/[userId] PATCH - Erreur profil', {
+        userId,
+        error: profileError.message
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la mise à jour du profil' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la mise à jour du profil');
     }
 
     // 5. Gérer le changement de rôle et/ou company_id
@@ -257,10 +200,7 @@ export async function PATCH(
     // Interdire le changement de rôle si l'utilisateur est déjà 'company'
     if (newRole && newRole !== currentRole && currentRole === 'company') {
       logger.warn('API /admin/users/[userId] PATCH - Changement rôle company interdit', { userId });
-      return NextResponse.json(
-        { success: false, error: 'Le rôle d\'un utilisateur compagnie ne peut pas être changé' },
-        { status: 400 }
-      );
+      return errorResponse('Le rôle d\'un utilisateur compagnie ne peut pas être changé');
     }
 
     // 5.1 Dissociation : company_id explicitement à null sur un utilisateur 'company'
@@ -287,24 +227,18 @@ export async function PATCH(
           errorDetails: unlinkError.details,
           errorHint: unlinkError.hint,
         });
-        return NextResponse.json(
-          { success: false, error: `Erreur lors de la dissociation: ${unlinkError.message}` },
-          { status: 500 }
-        );
+        return serverErrorResponse(`Erreur lors de la dissociation: ${unlinkError.message}`);
       }
 
       logger.info('API /admin/users/[userId] PATCH - Utilisateur dissocié de sa compagnie', { userId });
-      return NextResponse.json({ success: true });
+      return successResponse();
     }
 
     // Si le nouveau rôle est 'company', vérifier company_id
     if (newRole === 'company') {
       if (!newCompanyId) {
         logger.warn('API /admin/users/[userId] PATCH - company_id manquant', { userId });
-        return NextResponse.json(
-          { success: false, error: 'company_id est requis pour le rôle compagnie' },
-          { status: 400 }
-        );
+        return errorResponse('company_id est requis pour le rôle compagnie');
       }
 
       // Vérifier que la compagnie existe
@@ -317,10 +251,7 @@ export async function PATCH(
 
       if (companyError || !companyData) {
         logger.warn('API /admin/users/[userId] PATCH - Compagnie non trouvée', { userId, newCompanyId });
-        return NextResponse.json(
-          { success: false, error: 'Compagnie non trouvée' },
-          { status: 400 }
-        );
+        return errorResponse('Compagnie non trouvée');
       }
 
       // Vérifier qu'aucun autre utilisateur 'company' n'est déjà associé à cette compagnie
@@ -349,10 +280,7 @@ export async function PATCH(
             newCompanyId,
             existingUserId: existingCompanyUser.id 
           });
-          return NextResponse.json(
-            { success: false, error: `Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})` },
-            { status: 400 }
-          );
+          return errorResponse(`Cette compagnie a déjà un accès utilisateur (${existingCompanyUser.email})`);
         }
       }
 
@@ -366,14 +294,11 @@ export async function PATCH(
         .eq('id', userId);
 
       if (companyUpdateError) {
-        logger.error('API /admin/users/[userId] PATCH - Erreur mise à jour company_id', { 
-          userId, 
-          error: companyUpdateError.message 
+        logger.error('API /admin/users/[userId] PATCH - Erreur mise à jour company_id', {
+          userId,
+          error: companyUpdateError.message
         });
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de l\'association à la compagnie' },
-          { status: 500 }
-        );
+        return serverErrorResponse('Erreur lors de l\'association à la compagnie');
       }
 
       logger.info('API /admin/users/[userId] PATCH - company_id mis à jour', { userId, newCompanyId, companyName: companyData.name });
@@ -407,10 +332,7 @@ export async function PATCH(
       // Valider le nouveau rôle
       if (!MANAGED_ROLES.includes(newRole)) {
         logger.warn('API /admin/users/[userId] PATCH - Rôle invalide', { userId, newRole });
-        return NextResponse.json(
-          { success: false, error: 'Rôle invalide' },
-          { status: 400 }
-        );
+        return errorResponse('Rôle invalide');
       }
 
       // Mettre à jour le rôle
@@ -420,14 +342,11 @@ export async function PATCH(
         .eq('user_id', userId);
 
       if (roleError) {
-        logger.error('API /admin/users/[userId] PATCH - Erreur rôle', { 
-          userId, 
-          error: roleError.message 
+        logger.error('API /admin/users/[userId] PATCH - Erreur rôle', {
+          userId,
+          error: roleError.message
         });
-        return NextResponse.json(
-          { success: false, error: 'Erreur lors de la mise à jour du rôle' },
-          { status: 500 }
-        );
+        return serverErrorResponse('Erreur lors de la mise à jour du rôle');
       }
 
       logger.info('API /admin/users/[userId] PATCH - Rôle mis à jour', { userId, oldRole: currentRole, newRole });
@@ -439,15 +358,12 @@ export async function PATCH(
       user_id: userId,
       email: targetUser.email,
       new_role: newRole ?? undefined,
-    }, currentUser.id, roleData.role);
+    }, auth.userId, auth.role);
 
-    return NextResponse.json({ success: true });
+    return successResponse();
 
   } catch (error) {
     logger.error('API /admin/users/[userId] PATCH - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

@@ -11,10 +11,11 @@
  * Accès : super-admin uniquement.
  */
 
-import { NextResponse }       from 'next/server';
+import { NextResponse } from 'next/server';
 import { createAdminClient }  from '@/lib/supabase/server-admin';
 import { createClient }       from '@/lib/supabase/server';
 import { logger }             from '@/lib/logger';
+import { requireAuth, serverErrorResponse } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -35,31 +36,9 @@ export async function POST(): Promise<NextResponse<ResetAuthUsersResponse>> {
     logger.info('API /admin/reset-auth-users - Début suppression comptes Auth');
 
     // ── 1. Vérifier que l'appelant est authentifié et super-admin ────────────
-    const supabase     = await createClient();
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      logger.warn('API /admin/reset-auth-users - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 },
-      );
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .eq('role', 'super-admin')
-      .single();
-
-    if (!roleData) {
-      logger.warn('API /admin/reset-auth-users - Droits insuffisants', { userId: currentUser.id });
-      return NextResponse.json(
-        { success: false, error: 'Accès refusé — super-admin requis' },
-        { status: 403 },
-      );
-    }
+    const supabase = await createClient();
+    const auth = await requireAuth(supabase, ['super-admin'], 'API /admin/reset-auth-users');
+    if (!auth.ok) return auth.response as NextResponse<ResetAuthUsersResponse>;
 
     const supabaseAdmin = createAdminClient();
 
@@ -137,9 +116,6 @@ export async function POST(): Promise<NextResponse<ResetAuthUsersResponse>> {
 
   } catch (error) {
     logger.error('API /admin/reset-auth-users - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 },
-    );
+    return serverErrorResponse() as NextResponse<ResetAuthUsersResponse>;
   }
 }

@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-import { EmailTemplateForm } from '../EmailTemplateForm';
+import { EmailTemplateForm } from '../email-template-form';
 import { EMAIL_TEMPLATE_NAMES } from '@/types/email-templates';
 import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 

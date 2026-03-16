@@ -12,11 +12,17 @@
  * Cible : uniquement les utilisateurs avec rôle 'externe'
  */
 
-import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import type { ShowStatus } from '@/types/database';
+import {
+  requireAuth,
+  errorResponse,
+  notFoundResponse,
+  successResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -29,12 +35,6 @@ export interface AssignedShow {
   slot_count: number;
   /** Prochaine date dans le futur, format ISO "YYYY-MM-DD" ou null */
   next_slot_date: string | null;
-}
-
-interface AssignmentsResponse {
-  success: boolean;
-  data?: AssignedShow[];
-  error?: string;
 }
 
 interface RouteContext {
@@ -50,46 +50,25 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 export async function GET(
   _request: Request,
   context: RouteContext
-): Promise<NextResponse<AssignmentsResponse>> {
+): Promise<Response> {
   try {
     const { userId } = await context.params;
 
     logger.info('API /admin/users/[userId]/assignments GET', { userId });
 
-    // 1. Authentification
+    // 1. Authentification + autorisation
     const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
+    const auth = await requireAuth(supabase, undefined, 'API assignments GET');
+    if (!auth.ok) return auth.response;
 
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // 2. Autorisation : super-admin ou admin uniquement
-    const { data: callerRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .maybeSingle();
-
-    if (!callerRole) {
-      logger.warn('API assignments GET - Droits insuffisants', { callerId: currentUser.id });
-      return NextResponse.json({ success: false, error: 'Droits insuffisants' }, { status: 403 });
-    }
-
-    // 3. Validation UUID
+    // 2. Validation UUID
     if (!UUID_REGEX.test(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Identifiant utilisateur invalide' },
-        { status: 400 }
-      );
+      return errorResponse('Identifiant utilisateur invalide', 400);
     }
 
     const supabaseAdmin = createAdminClient();
 
-    // 4. Vérifier que la cible est bien un externe actif
+    // 3. Vérifier que la cible est bien un externe actif
     const { data: targetUser, error: targetError } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -106,17 +85,14 @@ export async function GET(
         userId,
         error: targetError.message,
       });
-      return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+      return serverErrorResponse();
     }
 
     if (!targetUser) {
-      return NextResponse.json(
-        { success: false, error: 'Utilisateur externe non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Utilisateur externe non trouvé');
     }
 
-    // 5. Récupérer tous les slots où cet externe est hosted_by_id
+    // 4. Récupérer tous les slots où cet externe est hosted_by_id
     //    On récupère date + time séparément (structure réelle de la table)
     const { data: slots, error: slotsError } = await supabaseAdmin
       .from('slots')
@@ -130,14 +106,14 @@ export async function GET(
         userId,
         error: slotsError.message,
       });
-      return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+      return serverErrorResponse();
     }
 
     if (!slots || slots.length === 0) {
-      return NextResponse.json({ success: true, data: [] });
+      return successResponse([]);
     }
 
-    // 6. Récupérer les spectacles concernés (dédupliqués)
+    // 5. Récupérer les spectacles concernés (dédupliqués)
     const showIds = [...new Set(slots.map((s) => s.show_id).filter(Boolean))] as string[];
 
     const { data: shows, error: showsError } = await supabaseAdmin
@@ -151,10 +127,10 @@ export async function GET(
         userId,
         error: showsError.message,
       });
-      return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+      return serverErrorResponse();
     }
 
-    // 7. Agréger par spectacle : compter les slots et trouver la prochaine date
+    // 6. Agréger par spectacle : compter les slots et trouver la prochaine date
     const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const showMap = new Map<string, AssignedShow>();
 
@@ -183,7 +159,7 @@ export async function GET(
       }
     }
 
-    // 8. Trier alphabétiquement par titre
+    // 7. Trier alphabétiquement par titre
     const assignedShows: AssignedShow[] = Array.from(showMap.values()).sort((a, b) =>
       a.show_title.localeCompare(b.show_title, 'fr')
     );
@@ -193,9 +169,9 @@ export async function GET(
       showCount: assignedShows.length,
     });
 
-    return NextResponse.json({ success: true, data: assignedShows });
+    return successResponse(assignedShows);
   } catch (error) {
     logger.error('API assignments GET - Exception', { error });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
