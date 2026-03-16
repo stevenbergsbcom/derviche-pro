@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S187 — Fix boucle infinie filtre spectacle + filtre lieu — 13 mars 2026
+> Dernière mise à jour : Session S188 — Enrichir fiche spectacle publique — 13 mars 2026
 
 ---
 
@@ -33,6 +33,9 @@
 ### ✅ Public - Catalogue & Réservation (100%)
 - Liste des spectacles (public)
 - Détail spectacle par slug
+- **S188** : Badges catégories (bg-gold) et publics cible sur l'image
+- **S188** : Période et dates de relâche depuis la DB (au lieu de calculé)
+- **S188** : Bloc "Pour les professionnels" dynamique (invitation_policy + contact manager)
 - Formulaire réservation (guest ou connecté)
 - Confirmation de réservation
 
@@ -1193,9 +1196,45 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S188 — Enrichir fiche spectacle publique ✅
+
+**Feature** : enrichissement de la page publique `spectacle/[slug]` avec les données DB existantes mais non affichées.
+
+**Ajouts UI :**
+- Badges catégories (bg-gold, haut gauche image) et publics cible (bg-black/60, haut droite) — style cohérent avec les cards du catalogue
+- Période depuis `show.period` (DB) au lieu de calculée depuis les slots — affichée uniquement si renseignée
+- Dates de relâche (`show.closure_dates`) — affichées uniquement si renseignées
+- Bloc "Pour les professionnels" dynamique : `invitation_policy` + contact du `derviche_manager_id` (prénom, nom, tél, email) — masqué si aucune donnée
+
+**Service layer :**
+- `PublicShow` étendu : `period`, `closureDates`, `invitationPolicy`, `dervisheManager`
+- FK join `profiles!derviche_manager_id(first_name, last_name, phone, email)` dans la query show
+- Suppression `buildPeriod` (code mort dans `utils/calendar.ts`)
+
+**RLS (migrations 096-097) :**
+- Policy `"Public can read show manager profiles"` sur `profiles` pour lecture publique des managers
+- Fix récursion infinie : fonction `is_published_show_manager()` en `SECURITY DEFINER` (bypass RLS dans le subquery)
+- Index `idx_shows_derviche_manager` déjà existant (migration 010)
+
+**Style** : padding récap réservation réduit (`px-4 py-1.5`) + textes d'aide email expéditeur améliorés
+
+**Fichiers modifiés (8) :**
+| Fichier | Modification |
+|---------|-------------|
+| `src/lib/services/public-catalog.ts` | Interface `PublicShow` +4 champs, FK join manager, extraction données |
+| `src/app/(public)/spectacle/[slug]/components/show-detail-sidebar.tsx` | Badges image, période DB, dates de relâche |
+| `src/app/(public)/spectacle/[slug]/components/participants-step.tsx` | Bloc pro dynamique (invitationPolicy + dervisheManager) |
+| `src/app/(public)/spectacle/[slug]/page.tsx` | Suppression buildPeriod, passage nouvelles props |
+| `src/app/(public)/spectacle/[slug]/utils/calendar.ts` | Suppression buildPeriod (code mort) |
+| `src/app/(public)/spectacle/[slug]/components/reservation-form-step.tsx` | Padding récap réduit |
+| `supabase/migrations/096_allow_public_read_show_manager_profile.sql` | Policy RLS lecture publique profils managers |
+| `supabase/migrations/097_fix_profiles_rls_recursion.sql` | Fix récursion : fonction SECURITY DEFINER |
+
+---
+
 ## Backlog / TODO
 
-### Prochaine session : S188 — à définir
+### Prochaine session : S189 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |

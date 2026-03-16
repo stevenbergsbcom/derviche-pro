@@ -4,3 +4,4 @@
  */
 
 export { useCreateReservationForm } from './useCreateReservationForm';
+export { useProfessionalSearch } from './useProfessionalSearch';
