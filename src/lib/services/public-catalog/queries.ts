@@ -1,12 +1,12 @@
 /**
- * Service Public Catalog - Données pour les pages publiques
+ * Service Public Catalog - Requêtes principales
  * Derviche Diffusion
- * 
+ *
  * Ce service fournit les données optimisées pour :
  * - La page d'accueil (spectacles en carousel)
  * - Le catalogue public (liste filtrable)
  * - La page détail spectacle
- * 
+ *
  * Convention capacité :
  * - Supabase : capacity = 999999 signifie "illimité"
  * - Frontend : capacity = null signifie "illimité"
@@ -15,170 +15,13 @@
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
 import type { ShowStatus, ShowPriceType, SlotHostedBy } from '@/types/database';
-
-// ============================================
-// CONSTANTES
-// ============================================
-
-/** Valeur utilisée en BDD pour représenter une capacité illimitée */
-const UNLIMITED_CAPACITY = 999999;
-
-// ============================================
-// TYPES
-// ============================================
-
-/** Lieu public simplifié */
-export interface PublicVenue {
-  id: string;
-  name: string;
-  city: string;
-}
-
-/** Représentation publique (slot) avec infos lieu */
-export interface PublicSlot {
-  id: string;
-  date: string; // Format YYYY-MM-DD
-  time: string; // Format HH:MM
-  venueId: string;
-  venueName: string;
-  venueCity: string;
-  /** null = illimité */
-  capacity: number | null;
-  /** Places restantes (null si illimité) */
-  remainingCapacity: number | null;
-  /** Places réservées */
-  booked: number;
-  hostedBy: SlotHostedBy;
-}
-
-/** Spectacle public avec ses représentations */
-export interface PublicShow {
-  id: string;
-  slug: string;
-  title: string;
-  companyId: string;
-  companyName: string;
-  shortDescription: string | null;
-  longDescription: string | null;
-  imageUrl: string | null;
-  durationMinutes: number | null;
-  status: ShowStatus;
-  priceType: ShowPriceType;
-  /** Nombre max de participants par réservation (défaut: 3) */
-  maxReservationsPerBooking: number;
-  /** Catégories du spectacle */
-  categories: string[];
-  /** Publics cibles */
-  targetAudiences: string[];
-  /** Lieux distincts où se joue le spectacle */
-  venues: PublicVenue[];
-  /** Représentations futures */
-  slots: PublicSlot[];
-  /** Nombre total de créneaux avec places disponibles */
-  availableSlotsCount: number;
-  /** Prochaine date disponible (format français) */
-  nextDate: string | null;
-  /** Lieu de la prochaine représentation */
-  nextVenue: string | null;
-  /** Période du spectacle (texte libre, ex: "Janvier - Mars 2026") */
-  period: string | null;
-  /** Dates de relâche */
-  closureDates: string | null;
-  /** Politique d'invitation (ex: "1 invitation + détaxe, sur réservation") */
-  invitationPolicy: string | null;
-  /** Responsable Derviche — prénom + nom + tél + email */
-  dervisheManager: {
-    firstName: string;
-    lastName: string;
-    phone: string | null;
-    email: string;
-  } | null;
-}
-
-/** Résultat de la récupération du catalogue */
-export interface PublicCatalogResult {
-  data: PublicShow[];
-  error: string | null;
-}
-
-/** Résultat de la récupération d'un spectacle */
-export interface PublicShowResult {
-  data: PublicShow | null;
-  error: string | null;
-}
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Convertit une capacité BDD en capacité frontend
- * @param capacity Capacité depuis Supabase (999999 = illimité)
- * @returns null si illimité, sinon la valeur
- */
-function convertCapacity(capacity: number): number | null {
-  return capacity >= UNLIMITED_CAPACITY ? null : capacity;
-}
-
-/**
- * Calcule le nombre de places réservées pour un slot
- * 
- * Fonctionne pour tous les types de slots (limités et illimités) car:
- * - Le trigger SQL initialise toujours remaining_capacity = capacity à la création
- * - Pour un slot illimité: capacity=999999, remaining_capacity=999999
- * - Après N réservations: remaining_capacity = 999999 - N
- * - Donc booked = 999999 - (999999 - N) = N ✓
- * 
- * @param capacity Capacité totale du slot (brute, depuis la BDD)
- * @param remainingCapacity Places restantes (brute, depuis la BDD)
- * @returns Nombre de places réservées (toujours >= 0)
- */
-function calculateBooked(capacity: number, remainingCapacity: number): number {
-  return Math.max(0, capacity - remainingCapacity);
-}
-
-/**
- * Formate une date ISO en format français lisible
- * @param dateStr Date au format YYYY-MM-DD
- * @returns Date formatée (ex: "15 jan. 2026")
- */
-function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  const day = date.getDate();
-  const months = [
-    'jan.', 'fév.', 'mars', 'avr.', 'mai', 'juin',
-    'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.',
-  ];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-}
-
-/**
- * Extrait les lieux distincts d'une liste de slots
- * @param slots Liste des slots publics
- * @returns Liste des lieux uniques triés par nom
- */
-function extractDistinctVenues(slots: PublicSlot[]): PublicVenue[] {
-  const venueMap = new Map<string, PublicVenue>();
-  
-  slots.forEach(slot => {
-    if (slot.venueId && !venueMap.has(slot.venueId)) {
-      venueMap.set(slot.venueId, {
-        id: slot.venueId,
-        name: slot.venueName,
-        city: slot.venueCity,
-      });
-    }
-  });
-  
-  // Trier par nom de lieu
-  return Array.from(venueMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-}
-
-// ============================================
-// FONCTIONS PRINCIPALES
-// ============================================
+import type {
+  PublicSlot,
+  PublicShow,
+  PublicCatalogResult,
+  PublicShowResult,
+} from './types';
+import { convertCapacity, calculateBooked, formatDateFr, extractDistinctVenues } from './transformers';
 
 /**
  * Récupère tous les spectacles publiés avec leurs représentations futures
@@ -317,7 +160,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
     const publicShows: PublicShow[] = shows.map(show => {
       const companyData = show.companies as { name: string } | null;
       const showSlots = slotsByShow[show.id] || [];
-      
+
       // Filtrer les créneaux avec places disponibles
       const availableSlots = showSlots.filter(slot => {
         // Illimité = toujours disponible
@@ -409,7 +252,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
 
     // 2. Récupérer TOUS les slots (futurs uniquement pour les spectacles publiés)
     const todayISO = new Date().toISOString().split('T')[0];
-    
+
     // Pour les spectacles non publiés (draft), on ne montre pas les slots
     // Pour les spectacles publiés, on montre les slots futurs
     const { data: slots, error: slotsError } = await supabase

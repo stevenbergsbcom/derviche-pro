@@ -250,32 +250,8 @@ export function generateReservationCode(reservationId: string): ReservationCode 
   return `DD-${shortCode}`;
 }
 
-/**
- * Formate une date ISO en date française lisible.
- * @param isoDate - Date au format ISO (YYYY-MM-DD)
- * @returns Date formatée (ex: "Samedi 5 juillet 2025")
- */
-export function formatDateFR(isoDate: string): string {
-  // Ajouter T12:00:00 pour éviter les problèmes de timezone
-  // (minuit UTC peut devenir la veille en heure locale)
-  const date = new Date(`${isoDate}T12:00:00`);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-/**
- * Formate une heure au format français.
- * @param time - Heure au format HH:MM:SS ou HH:MM
- * @returns Heure formatée (ex: "11h00")
- */
-export function formatTimeFR(time: string): string {
-  const [hours, minutes] = time.split(':');
-  return `${hours}h${minutes}`;
-}
+// Re-exports centralisés depuis format-date.ts (source de vérité)
+export { formatDateFr as formatDateFR, formatTimeFr as formatTimeFR } from '@/lib/utils/format-date';
 
 /**
  * Calcule le statut de disponibilité d'un spectacle.

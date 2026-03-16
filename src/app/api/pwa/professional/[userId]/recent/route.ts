@@ -15,6 +15,14 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import {
+  requireAuth,
+  STAFF_ROLES,
+  errorResponse,
+  successResponse,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -30,12 +38,6 @@ export interface PwaRecentReservationEntry {
   num_places: number;
 }
 
-interface ApiResponse {
-  success: boolean;
-  data?: PwaRecentReservationEntry[];
-  error?: string;
-}
-
 interface RouteContext {
   params: Promise<{ userId: string }>;
 }
@@ -47,46 +49,30 @@ interface RouteContext {
 export async function GET(
   _request: Request,
   context: RouteContext
-): Promise<NextResponse<ApiResponse>> {
+): Promise<NextResponse> {
   try {
     const { userId } = await context.params;
 
     // Validation UUID
     const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!UUID_REGEX.test(userId)) {
-      return NextResponse.json(
-        { success: false, error: 'Identifiant invalide' },
-        { status: 400 }
-      );
+      return errorResponse('Identifiant invalide', 400);
     }
 
-    // Vérification authentification (tout rôle connecté)
+    // Vérification authentification + rôle staff
     const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireAuth(
+      supabase,
+      [...STAFF_ROLES, 'professional'],
+      '[pwa/professional/recent]'
+    );
+    if (!auth.ok) return auth.response;
 
     // Autorisation : soi-même OU staff DD (super-admin, admin, externe)
-    if (currentUser.id !== userId) {
-      const { data: roleRow } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', currentUser.id)
-        .in('role', ['super-admin', 'admin', 'externe'])
-        .maybeSingle();
-
-      if (!roleRow) {
-        return NextResponse.json(
-          { success: false, error: 'Non autorisé' },
-          { status: 403 }
-        );
+    if (auth.userId !== userId) {
+      const staffRoles = ['super-admin', 'admin', 'externe'];
+      if (!staffRoles.includes(auth.role)) {
+        return errorResponse('Non autorisé', 403);
       }
     }
 
@@ -102,21 +88,14 @@ export async function GET(
         userId,
         error: rpcError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la récupération' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la récupération');
     }
 
-    return NextResponse.json({
-      success: true,
-      data: (data ?? []) as PwaRecentReservationEntry[],
+    return successResponse((data ?? []) as PwaRecentReservationEntry[]);
+  } catch (err) {
+    logger.error('API /pwa/professional/[userId]/recent - Exception', {
+      error: getErrorMessage(err),
     });
-  } catch (error) {
-    logger.error('API /pwa/professional/[userId]/recent - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse('Erreur serveur');
   }
 }

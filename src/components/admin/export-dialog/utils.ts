@@ -11,30 +11,21 @@ import {
   CHECKIN_STATUS_LABELS,
   TRUNCATE_LENGTHS,
 } from './constants';
+import {
+  truncate,
+  hasActiveFilters as hasActiveFiltersBase,
+  getInitialPeriod as getInitialPeriodBase,
+} from '@/lib/utils/export-helpers';
 
 // ============================================
 // FORMATAGE
 // ============================================
 
-/**
- * Formate une date pour l'aperçu (format court JJ/MM)
- */
-export function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
-}
+// formatDateShort importé depuis @/lib/utils/format-date (source de vérité)
+import { formatDateShortExport as formatDateShort } from '@/lib/utils/format-date';
+export { formatDateShort };
 
-/**
- * Tronque une chaîne à une longueur maximale
- */
-function truncate(str: string | null | undefined, maxLength: number): string {
-  if (!str) return '-';
-  if (str.length <= maxLength) return str;
-  return str.substring(0, maxLength) + '...';
-}
+// truncate importé depuis @/lib/utils/export-helpers
 
 // ============================================
 // GÉNÉRATION NOM DE FICHIER
@@ -171,24 +162,16 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
 
 /**
  * Détermine si des filtres de la page sont actifs
- * (period 'upcoming' est le défaut, on l'exclut)
+ * Délègue à la version générique de @/lib/utils/export-helpers
  */
 export function hasActiveFilters(filters: AdminReservationFilters): boolean {
-  return !!(
-    filters.showId ||
-    filters.status ||
-    filters.search ||
-    filters.dateFrom ||
-    filters.dateTo ||
-    (filters.period && filters.period !== 'upcoming')
-  );
+  return hasActiveFiltersBase(filters);
 }
 
 /**
  * Détermine la période initiale basée sur les filtres de la page
+ * Délègue à la version générique de @/lib/utils/export-helpers
  */
 export function getInitialPeriod(filters: AdminReservationFilters): ExportPeriod {
-  if (filters.period === 'upcoming') return 'upcoming';
-  if (filters.period === 'past') return 'past';
-  return 'all';
+  return getInitialPeriodBase(filters);
 }

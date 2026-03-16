@@ -6,22 +6,9 @@
 import type { AdminReservation } from '@/lib/services/admin-reservations';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import { translateStatus, translateCheckin } from './translations';
+import { formatDateExport } from '@/lib/utils/format-date';
 
-/**
- * Formate une date pour l'export (format français JJ/MM/AAAA)
- * @param dateStr - Date au format ISO ou null
- * @returns Date formatée ou '-' si null
- */
-export function formatDateExport(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  // Ajouter T12:00:00 pour éviter les problèmes de timezone
-  const date = new Date(dateStr + 'T12:00:00');
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+export { formatDateExport };
 
 /**
  * Obtient la valeur d'une colonne pour l'export

@@ -23,6 +23,7 @@ import {
   RESERVATION_STATUS_CONFIG,
   CHECKIN_STATUS_CONFIG,
 } from '@/lib/constants/reservation-statuses';
+import { formatTimeShort as formatTime } from '@/lib/utils/format-date';
 
 // ============================================
 // HELPERS
@@ -34,10 +35,6 @@ function formatDate(dateStr: string): string {
     month: 'short',
     year: 'numeric',
   });
-}
-
-function formatTime(timeStr: string): string {
-  return timeStr.slice(0, 5);
 }
 
 // ============================================

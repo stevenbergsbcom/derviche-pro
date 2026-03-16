@@ -19,7 +19,11 @@ import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
-import type { UserRole } from '@/types/database';
+import {
+  requireAuth,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // VALIDATION
@@ -91,41 +95,27 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     const { q } = parseResult.data;
 
-    // 2. Auth
+    // 2. Auth + rôle
     const userClient = await createServerClient();
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ found: false, error: 'Non authentifié' }, { status: 401 });
-    }
+    const auth = await requireAuth(
+      userClient,
+      ['super-admin', 'admin', 'externe'],
+      '[pwa/search-professional]'
+    );
+    if (!auth.ok) return auth.response;
 
     // 3. Service role client
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API search-professional] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json({ found: false, error: 'Configuration serveur manquante' }, { status: 500 });
+      return serverErrorResponse('Configuration serveur manquante');
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 4. Vérification du rôle
-    const { data: userRoleData } = await adminClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = userRoleData?.role as UserRole | undefined;
-    const isAuthorized =
-      userRole === 'super-admin' || userRole === 'admin' || userRole === 'externe';
-
-    if (!isAuthorized) {
-      return NextResponse.json({ found: false, error: 'Accès refusé' }, { status: 403 });
-    }
-
-    // 5. Requête selon le mode (email ou nom)
+    // 4. Requête selon le mode (email ou nom)
     const SELECT = `
       id, email, first_name, last_name, structure,
       phone, phone2, email2, afc_number, function,
@@ -151,14 +141,14 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     if (profileError) {
       logger.error('[API search-professional] Erreur requête', { error: profileError.message });
-      return NextResponse.json({ found: false, error: 'Erreur serveur' }, { status: 500 });
+      return serverErrorResponse('Erreur serveur');
     }
 
     if (!profiles || profiles.length === 0) {
       return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
     }
 
-    // 6. Filtrer uniquement les professionnels
+    // 5. Filtrer uniquement les professionnels
     // On récupère les rôles en une seule requête (IN)
     const profileIds = profiles.map((p: { id: string }) => p.id);
     const { data: roles } = await adminClient
@@ -180,7 +170,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
     }
 
-    // 7. Transformation
+    // 6. Transformation
     const result: SearchProfessionalResult = {
       found: true,
       profiles: filteredProfiles.map((p: {
@@ -224,7 +214,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     return NextResponse.json(result);
 
   } catch (err) {
-    logger.error('[API search-professional] Exception', { err: String(err) });
-    return NextResponse.json({ found: false, error: 'Erreur serveur' }, { status: 500 });
+    logger.error('[API search-professional] Exception', { err: getErrorMessage(err) });
+    return serverErrorResponse('Erreur serveur');
   }
 }

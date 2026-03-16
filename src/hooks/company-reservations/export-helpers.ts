@@ -12,6 +12,7 @@ import type {
   CompanyExportColumn,
 } from '@/lib/services/company-reservations';
 import type { ExportFormat, ExportPeriod } from './types';
+import { formatDateExport } from '@/lib/utils/format-date';
 
 // ============================================
 // LABELS
@@ -67,16 +68,7 @@ function translateCheckin(status: string | null): string {
   return map[status] || status;
 }
 
-/** Formate une date courte pour l'export */
-function formatDateExport(dateStr: string | null): string {
-  if (!dateStr) return '-';
-  const date = new Date(dateStr + 'T12:00:00');
-  return date.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
+// formatDateExport importé depuis @/lib/utils/format-date
 
 // ============================================
 // CELL VALUE
@@ -235,41 +227,7 @@ export function reservationsToExcel(
 }
 
 // ============================================
-// DOWNLOAD
+// DOWNLOAD (partagé depuis @/lib/utils/export-helpers)
 // ============================================
 
-/**
- * Télécharge un fichier CSV
- */
-export function downloadCSV(content: string, filename: string): void {
-  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Télécharge un fichier Excel
- */
-export function downloadExcel(content: Uint8Array, filename: string): void {
-  const blob = new Blob([Uint8Array.from(content) as BlobPart], {
-    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
+export { downloadCSV, downloadExcel } from '@/lib/utils/export-helpers';

@@ -17,41 +17,11 @@ import { Button } from '@/components/ui/button';
 import { ProCancelDialog } from './ProCancelDialog';
 import { ProChangeSlotDialog } from './ProChangeSlotDialog';
 import type { ProReservation } from '@/lib/services/pro-reservations';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDate(dateStr: string): string {
-  // T12:00:00 évite les décalages de fuseau horaire sur une date YYYY-MM-DD pure
-  const date = new Date(`${dateStr}T12:00:00`);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function formatDateLong(dateStr: string): string {
-  // T12:00:00 évite les décalages de fuseau horaire sur une date YYYY-MM-DD pure
-  const date = new Date(`${dateStr}T12:00:00`);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function formatTime(timeStr: string): string {
-  // Format aligné avec ProChangeSlotDialog : "11h00" au lieu de "11:00"
-  // timeStr attendu : HH:MM ou HH:MM:SS (format Supabase time)
-  const parts = timeStr.slice(0, 5).split(':');
-  const hours   = parts[0] ?? '00';
-  const minutes = parts[1] ?? '00';
-  return `${hours}h${minutes}`;
-}
+import {
+  formatDateShortWithYear as formatDate,
+  formatDateFr as formatDateLong,
+  formatTimeFr as formatTime,
+} from '@/lib/utils/format-date';
 
 /**
  * Retourne true si la réservation peut encore être annulée (date du slot > maintenant).

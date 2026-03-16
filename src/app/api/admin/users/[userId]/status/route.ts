@@ -16,6 +16,7 @@ import {
   errorResponse,
   notFoundResponse,
   serverErrorResponse,
+  successResponse,
 } from '@/lib/api';
 
 // ============================================
@@ -24,12 +25,6 @@ import {
 
 interface StatusRequest {
   disabled: boolean;
-}
-
-interface StatusResponse {
-  success: boolean;
-  disabled?: boolean;
-  error?: string;
 }
 
 interface RouteContext {
@@ -43,7 +38,7 @@ interface RouteContext {
 export async function PATCH(
   request: Request,
   context: RouteContext
-): Promise<NextResponse<StatusResponse>> {
+): Promise<NextResponse> {
   try {
     const { userId } = await context.params;
     
@@ -146,10 +141,7 @@ export async function PATCH(
       email: targetUser.email,
     }, auth.userId, auth.role);
 
-    return NextResponse.json({
-      success: true,
-      disabled: shouldDisable,
-    });
+    return successResponse({ disabled: shouldDisable });
 
   } catch (error) {
     logger.error('API /admin/users/[userId]/status - Exception', { error });

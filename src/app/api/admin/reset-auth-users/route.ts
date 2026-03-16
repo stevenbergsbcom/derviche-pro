@@ -50,10 +50,7 @@ export async function POST(): Promise<NextResponse<ResetAuthUsersResponse>> {
 
     if (rolesError) {
       logger.error('API /admin/reset-auth-users - Erreur lecture user_roles', { error: rolesError.message });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lecture des rôles' },
-        { status: 500 },
-      );
+      return serverErrorResponse('Erreur lecture des rôles') as NextResponse<ResetAuthUsersResponse>;
     }
 
     if (!targetRoles || targetRoles.length === 0) {

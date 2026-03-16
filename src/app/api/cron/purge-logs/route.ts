@@ -12,6 +12,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { logger } from '@/lib/logger';
+import { requireCronAuth, getErrorMessage, serverErrorResponse } from '@/lib/api';
 
 // Force le mode dynamique — désactive le cache Next.js
 export const dynamic = 'force-dynamic';
@@ -20,43 +21,14 @@ export const dynamic = 'force-dynamic';
 const RETENTION_DAYS = 90;
 
 // ============================================
-// VÉRIFICATION DU SECRET CRON
-// ============================================
-
-function verifyCronSecret(request: Request): { ok: boolean; status: number; message: string } {
-  const cronSecret = process.env.CRON_SECRET;
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (isDev && !cronSecret) {
-    logger.warn('[cron/purge-logs] CRON_SECRET non configuré — accès libre en développement');
-    return { ok: true, status: 200, message: 'ok' };
-  }
-
-  if (!cronSecret) {
-    logger.error('[cron/purge-logs] CRON_SECRET manquant en production');
-    return { ok: false, status: 500, message: 'Configuration manquante : CRON_SECRET' };
-  }
-
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('[cron/purge-logs] Tentative d\'accès avec un secret invalide');
-    return { ok: false, status: 401, message: 'Non autorisé' };
-  }
-
-  return { ok: true, status: 200, message: 'ok' };
-}
-
-// ============================================
 // HANDLER
 // ============================================
 
 export async function GET(request: Request): Promise<NextResponse> {
   const start = Date.now();
 
-  const auth = verifyCronSecret(request);
-  if (!auth.ok) {
-    return NextResponse.json({ ok: false, error: auth.message }, { status: auth.status });
-  }
+  const auth = requireCronAuth(request, '[cron/purge-logs]');
+  if (!auth.ok) return auth.response;
 
   logger.info(`[cron/purge-logs] Démarrage purge — rétention ${RETENTION_DAYS}j`);
 
@@ -75,7 +47,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     if (error) {
       logger.error('[cron/purge-logs] Erreur BDD lors de la purge', { error: error.message });
-      return NextResponse.json({ ok: false, error: 'Erreur base de données' }, { status: 500 });
+      return serverErrorResponse('Erreur base de données');
     }
 
     const deleted    = count ?? 0;
@@ -90,8 +62,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       durationMs,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('[cron/purge-logs] Exception non gérée', { message });
-    return NextResponse.json({ ok: false, error: 'Erreur serveur' }, { status: 500 });
+    logger.error('[cron/purge-logs] Exception non gérée', { message: getErrorMessage(err) });
+    return serverErrorResponse();
   }
 }

@@ -21,27 +21,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useGuestReservationsClaim } from '@/hooks/useGuestReservationsClaim';
 import type { GuestReservation } from '@/lib/services/pro-reservations';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function formatTime(timeStr: string): string {
-  // timeStr format : "14:00:00" ou "14:00" (issu de sl.time::TEXT côté RPC)
-  if (!timeStr || !timeStr.includes(':')) return '—';
-  const [hours, minutes] = timeStr.split(':');
-  return `${hours ?? '—'}h${minutes ?? '00'}`;
-}
+import {
+  formatDateShortWithYear as formatDate,
+  formatTimeFr as formatTime,
+} from '@/lib/utils/format-date';
 
 // ============================================
 // LIGNE DE RÉSERVATION GUEST

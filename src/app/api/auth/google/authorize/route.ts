@@ -17,6 +17,11 @@ import { google } from 'googleapis';
 import { createClient } from '@/lib/supabase/server';
 import { getGoogleRedirectUri, CALENDAR_SCOPE } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
+import {
+  requireAuth,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,35 +29,15 @@ export async function GET(): Promise<NextResponse> {
   try {
     // 1. Vérification auth + rôle super-admin
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (roleData?.role !== 'super-admin') {
-      logger.warn('[auth/google/authorize] Accès refusé', {
-        userId: user.id,
-        role: roleData?.role,
-      });
-      return NextResponse.json({ error: 'Accès réservé au super-admin' }, { status: 403 });
-    }
+    const auth = await requireAuth(supabase, ['super-admin'], '[auth/google/authorize]');
+    if (!auth.ok) return auth.response;
 
     // 2. Vérifier que les env vars OAuth sont configurées
     const clientId     = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
-      return NextResponse.json(
-        { error: 'GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET requis' },
-        { status: 500 },
-      );
+      return serverErrorResponse('GOOGLE_OAUTH_CLIENT_ID et GOOGLE_OAUTH_CLIENT_SECRET requis');
     }
 
     // 3. Générer le state CSRF
@@ -71,7 +56,7 @@ export async function GET(): Promise<NextResponse> {
     });
 
     logger.info('[auth/google/authorize] Redirection vers Google OAuth', {
-      userId: user.id,
+      userId: auth.userId,
       redirectUri,
     });
 
@@ -87,8 +72,7 @@ export async function GET(): Promise<NextResponse> {
 
     return response;
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('[auth/google/authorize] Exception', { message });
-    return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    logger.error('[auth/google/authorize] Exception', { message: getErrorMessage(err) });
+    return serverErrorResponse('Erreur serveur');
   }
 }

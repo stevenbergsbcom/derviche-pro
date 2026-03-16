@@ -30,6 +30,14 @@ import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
 import type { UserRole } from '@/types/database';
 import type { CheckinFollowupTemplateKey } from '@/types/email-templates';
+import {
+  errorResponse,
+  successResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  notFoundResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 
 // ============================================
 // VALIDATION
@@ -112,10 +120,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parseResult = schema.safeParse(rawBody);
 
     if (!parseResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Données invalides', details: parseResult.error.flatten() },
-        { status: 400 }
-      );
+      return errorResponse('Données invalides');
     }
 
     const { reservationId, templateKey } = parseResult.data;
@@ -125,17 +130,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     // 3. Client service role
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API /emails/send-checkin-followup] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json(
-        { success: false, error: 'Configuration serveur manquante' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Configuration serveur manquante');
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
@@ -157,7 +159,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       userRole === 'company';
 
     if (!isAuthorized) {
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      return forbiddenResponse('Accès refusé');
     }
 
     // 5. Récupérer la réservation complète avec données enrichies
@@ -203,7 +205,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (reservationError || !raw) {
       logger.warn('[API /emails/send-checkin-followup] Réservation introuvable', { reservationId });
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 404 });
+      return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = raw as unknown as ReservationForFollowup;
@@ -217,7 +219,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         userId: user.id,
         reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      return forbiddenResponse('Accès refusé');
     }
 
     // 6b. Sécurité company : vérifier que le show appartient à leur compagnie
@@ -237,7 +239,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           showCompanyId: show.company_id,
           reservationId,
         });
-        return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+        return forbiddenResponse('Accès refusé');
       }
     }
 
@@ -254,10 +256,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (!recipientEmail) {
       logger.warn('[API /emails/send-checkin-followup] Aucun email destinataire', { reservationId });
-      return NextResponse.json(
-        { success: false, error: 'Email destinataire introuvable' },
-        { status: 422 }
-      );
+      return errorResponse('Email destinataire introuvable', 422);
     }
 
     // 8. Récupérer le manager Derviche
@@ -327,10 +326,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         templateKey,
         error: emailResult.error,
       });
-      return NextResponse.json(
-        { success: false, error: emailResult.error ?? 'Erreur envoi email' },
-        { status: 500 }
-      );
+      return serverErrorResponse(emailResult.error ?? 'Erreur envoi email');
     }
 
     // 11. Enregistrer l'envoi dans checkin_followup_emails
@@ -355,10 +351,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         templateKey,
         error: upsertError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Email envoyé mais erreur d\u2019enregistrement du suivi' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Email envoyé mais erreur d\u2019enregistrement du suivi');
     }
 
     logger.info('[API /emails/send-checkin-followup] Succès', {
@@ -367,13 +360,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       messageId: emailResult.messageId,
     });
 
-    return NextResponse.json({
-      success: true,
-      messageId: emailResult.messageId,
-    });
+    return successResponse({ messageId: emailResult.messageId });
 
   } catch (err) {
     logger.error('[API /emails/send-checkin-followup] Exception', { err });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
