@@ -11,6 +11,12 @@ import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
+import {
+  requireAuth,
+  errorResponse,
+  notFoundResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -43,43 +49,15 @@ export async function PATCH(
     
     logger.info('API /admin/users/[userId]/status - Début', { userId });
 
-    // 1. Vérifier que l'appelant est authentifié
+    // 1. Vérifier que l'appelant est authentifié et est Super Admin
     const supabase = await createClient();
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const auth = await requireAuth(supabase, ['super-admin'], 'API /admin/users/[userId]/status');
+    if (!auth.ok) return auth.response;
 
-    if (!currentUser) {
-      logger.warn('API /admin/users/[userId]/status - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    // 2. Vérifier que l'utilisateur est Super Admin (seul autorisé)
-    const { data: currentUserRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .eq('role', 'super-admin')
-      .single();
-
-    if (!currentUserRole) {
-      logger.warn('API /admin/users/[userId]/status - Droits insuffisants (Super Admin requis)', { 
-        userId: currentUser.id 
-      });
-      return NextResponse.json(
-        { success: false, error: 'Seuls les Super Admins peuvent modifier le statut des utilisateurs' },
-        { status: 403 }
-      );
-    }
-
-    // 3. Empêcher l'auto-désactivation
-    if (currentUser.id === userId) {
+    // 2. Empêcher l'auto-désactivation
+    if (auth.userId === userId) {
       logger.warn('API /admin/users/[userId]/status - Tentative auto-désactivation', { userId });
-      return NextResponse.json(
-        { success: false, error: 'Vous ne pouvez pas modifier votre propre statut' },
-        { status: 400 }
-      );
+      return errorResponse('Vous ne pouvez pas modifier votre propre statut');
     }
 
     // 4. Parser la requête
@@ -103,14 +81,11 @@ export async function PATCH(
       .single();
 
     if (fetchError || !targetUser) {
-      logger.warn('API /admin/users/[userId]/status - Utilisateur non trouvé ou non interne', { 
-        userId, 
-        error: fetchError?.message 
+      logger.warn('API /admin/users/[userId]/status - Utilisateur non trouvé ou non interne', {
+        userId,
+        error: fetchError?.message
       });
-      return NextResponse.json(
-        { success: false, error: 'Utilisateur non trouvé ou non autorisé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Utilisateur non trouvé ou non autorisé');
     }
 
     // 6. Empêcher la DÉSACTIVATION d'un Super Admin (mais permettre la réactivation)
@@ -130,21 +105,15 @@ export async function PATCH(
         userId,
         userRoles: JSON.stringify(userRoles)
       });
-      return NextResponse.json(
-        { success: false, error: 'Impossible de vérifier le rôle de l\'utilisateur' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Impossible de vérifier le rôle de l\'utilisateur');
     }
-    
+
     if (targetRoleValue === 'super-admin' && shouldDisable) {
-      logger.warn('API /admin/users/[userId]/status - Tentative désactivation Super Admin', { 
+      logger.warn('API /admin/users/[userId]/status - Tentative désactivation Super Admin', {
         userId,
-        email: targetUser.email 
+        email: targetUser.email
       });
-      return NextResponse.json(
-        { success: false, error: 'Les Super Admins ne peuvent pas être désactivés' },
-        { status: 400 }
-      );
+      return errorResponse('Les Super Admins ne peuvent pas être désactivés');
     }
     
     // Note: La réactivation d'un Super Admin est autorisée (cas exceptionnel si désactivé par erreur en BDD)
@@ -159,14 +128,11 @@ export async function PATCH(
       .eq('id', userId);
 
     if (updateError) {
-      logger.error('API /admin/users/[userId]/status - Erreur mise à jour', { 
-        userId, 
-        error: updateError.message 
+      logger.error('API /admin/users/[userId]/status - Erreur mise à jour', {
+        userId,
+        error: updateError.message
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la mise à jour du statut' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la mise à jour du statut');
     }
 
     const action = shouldDisable ? 'désactivé' : 'réactivé';
@@ -178,7 +144,7 @@ export async function PATCH(
     void logSystem(shouldDisable ? 'user_disable' : 'user_enable', 'info', {
       user_id: userId,
       email: targetUser.email,
-    }, currentUser.id, currentUserRole.role);
+    }, auth.userId, auth.role);
 
     return NextResponse.json({
       success: true,
@@ -187,9 +153,6 @@ export async function PATCH(
 
   } catch (error) {
     logger.error('API /admin/users/[userId]/status - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

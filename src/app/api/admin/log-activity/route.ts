@@ -12,44 +12,35 @@
  *   - Catégorie et action validées
  */
 
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { logger } from '@/lib/logger';
+import {
+  requireAuth,
+  STAFF_ROLES,
+  errorResponse,
+  successResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // CONSTANTES DE VALIDATION
 // ============================================
 
 const VALID_CATEGORIES = ['email', 'calendar', 'reservation', 'system', 'show'] as const;
-const ALLOWED_ROLES = ['super-admin', 'admin', 'externe', 'company'];
 
 // ============================================
 // POST
 // ============================================
 
-export async function POST(request: Request): Promise<NextResponse> {
+export async function POST(request: Request): Promise<Response> {
   try {
-    // 1. Vérification auth
+    // 1. Vérification auth + rôle
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const auth = await requireAuth(supabase, STAFF_ROLES);
+    if (!auth.ok) return auth.response;
 
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // 2. Vérification rôle
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || !ALLOWED_ROLES.includes(roleData.role)) {
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
-    }
-
-    // 3. Parsing du body
+    // 2. Parsing du body
     const body = await request.json() as Record<string, unknown>;
 
     const category = body.category as string;
@@ -58,28 +49,22 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // Validation basique
     if (!category || !action || typeof success !== 'boolean') {
-      return NextResponse.json(
-        { success: false, error: 'Paramètres manquants: category, action, success' },
-        { status: 400 },
-      );
+      return errorResponse('Paramètres manquants: category, action, success', 400);
     }
 
     if (!(VALID_CATEGORIES as readonly string[]).includes(category)) {
-      return NextResponse.json(
-        { success: false, error: `Catégorie invalide: ${category}` },
-        { status: 400 },
-      );
+      return errorResponse(`Catégorie invalide: ${category}`, 400);
     }
 
-    // 4. Insertion via admin client (service_role)
+    // 3. Insertion via admin client (service_role)
     const adminClient = createAdminClient();
     const { error: insertError } = await adminClient.from('app_logs').insert({
       category,
       level: success ? 'info' : 'error',
       action,
       status: success ? 'success' : 'error',
-      actor_id: (body.actor_id as string) ?? user.id,
-      actor_role: (body.actor_role as string) ?? roleData.role,
+      actor_id: (body.actor_id as string) ?? auth.userId,
+      actor_role: (body.actor_role as string) ?? auth.role,
       reservation_id: (body.reservation_id as string) ?? null,
       details: (body.details as Record<string, unknown>) ?? {},
     });
@@ -89,12 +74,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       // On retourne quand même 200 — le log n'est pas critique
     }
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (err) {
     logger.warn('[log-activity API] Exception', {
-      error: err instanceof Error ? err.message : String(err),
+      error: getErrorMessage(err),
     });
     // Retourner 200 même en cas d'erreur — le logging ne doit jamais bloquer
-    return NextResponse.json({ success: true });
+    return successResponse();
   }
 }

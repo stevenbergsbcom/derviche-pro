@@ -8,13 +8,7 @@
 
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
-import type { UseFormRegister } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, Save, Loader2, AlertCircle, Info, Type, Settings2, Link2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Eye, Save, Loader2, AlertCircle, Type, Settings2, Link2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,47 +22,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 
-import { EmailPreviewModal } from './EmailPreviewModal';
-import { logger } from '@/lib/logger';
-import { EMAIL_TEMPLATE_VARIABLES } from '@/types/email-templates';
+import { EmailPreviewModal } from '../EmailPreviewModal';
 import type { EmailTemplate } from '@/types/email-templates';
 
-// ============================================
-// SCHÉMA ZOD
-// ============================================
-
-const templateFormSchema = z.object({
-  subject:               z.string().min(1, "L'objet est requis").max(200),
-  header_title:          z.string().max(100),
-  salutation:            z.string().max(100),
-  intro_text:            z.string().max(1000),
-  body_text:             z.string().max(2000),
-  info_text:             z.string().max(1000),
-  cta_text:              z.string().max(100),
-  contact_block_title:   z.string().max(100),
-  show_contact_block:    z.boolean(),
-  show_reservation_code: z.boolean(),
-  // Liens optionnels post-checkin (S149)
-  show_folder_link:      z.boolean(),
-  folder_link_text:      z.string().max(200),
-  show_teaser_link:      z.boolean(),
-  teaser_link_text:      z.string().max(200),
-  show_captation_link:   z.boolean(),
-  captation_link_text:   z.string().max(200),
-  show_booking_link:     z.boolean(),
-  booking_link_text:     z.string().max(200),
-  // Dossier photo (S170)
-  show_photo_folder_link: z.boolean(),
-  photo_folder_link_text: z.string().max(200),
-});
-
-type TemplateFormValues = z.infer<typeof templateFormSchema>;
+import { useEmailTemplateForm } from './useEmailTemplateForm';
+import { VariableBadges } from './VariableBadges';
+import { OptionalLinkToggle } from './OptionalLinkToggle';
 
 // ============================================
 // PROPS
@@ -82,146 +42,6 @@ interface EmailTemplateFormProps {
 }
 
 // ============================================
-// SOUS-COMPOSANT — Badges variables cliquables
-// ============================================
-
-interface VariableBadgesProps {
-  onInsert: (variable: string) => void;
-  disabled: boolean;
-}
-
-function VariableBadges({ onInsert, disabled }: VariableBadgesProps) {
-  return (
-    <TooltipProvider delayDuration={300}>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        <span className="text-xs text-muted-foreground self-center mr-1">Variables :</span>
-        {EMAIL_TEMPLATE_VARIABLES.map((v) => (
-          <Tooltip key={v.key}>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => !disabled && onInsert(v.key)}
-                disabled={disabled}
-                className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-mono
-                           bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground
-                           disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
-              >
-                {v.key}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p className="text-xs">{v.description}</p>
-            </TooltipContent>
-          </Tooltip>
-        ))}
-
-        {/* Icône ⓘ — popover avec toutes les variables */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex items-center self-center ml-1 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Aide sur les variables disponibles"
-            >
-              <Info className="h-3.5 w-3.5" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="bottom" align="start" className="w-80 p-0">
-            <div className="px-4 py-3 border-b">
-              <p className="text-sm font-semibold">Variables disponibles</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Cliquez sur un badge pour l&apos;insérer dans le champ actif.
-              </p>
-            </div>
-            <div className="p-2 max-h-72 overflow-y-auto">
-              <table className="w-full text-xs">
-                <tbody>
-                  {EMAIL_TEMPLATE_VARIABLES.map((v) => (
-                    <tr key={v.key} className="border-b last:border-0">
-                      <td className="py-1.5 pr-3 font-mono text-primary whitespace-nowrap">
-                        {v.key}
-                      </td>
-                      <td className="py-1.5 text-muted-foreground">
-                        {v.description}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="px-4 py-2.5 border-t bg-muted/30">
-              <p className="text-[11px] text-muted-foreground">
-                Certaines variables ne sont disponibles que sur certains types de templates.
-              </p>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-      </div>
-    </TooltipProvider>
-  );
-}
-
-// ============================================
-// SOUS-COMPOSANT — Toggle lien optionnel (DRY)
-// ============================================
-
-interface OptionalLinkToggleProps {
-  templateKey: string;
-  label: string;
-  description: string;
-  showFieldName: keyof TemplateFormValues;
-  textFieldName: keyof TemplateFormValues;
-  placeholder: string;
-  isVisible: boolean;
-  onToggle: (checked: boolean) => void;
-  canEdit: boolean;
-  registerFn: UseFormRegister<TemplateFormValues>;
-}
-
-function OptionalLinkToggle({
-  templateKey,
-  label,
-  description,
-  showFieldName,
-  textFieldName,
-  placeholder,
-  isVisible,
-  onToggle,
-  canEdit,
-  registerFn,
-}: OptionalLinkToggleProps) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label htmlFor={`${showFieldName}-${templateKey}`} className="text-sm font-medium">
-            {label}
-          </Label>
-          <p className="text-xs text-muted-foreground">{description}</p>
-        </div>
-        <Switch
-          id={`${showFieldName}-${templateKey}`}
-          checked={isVisible}
-          onCheckedChange={onToggle}
-          disabled={!canEdit}
-        />
-      </div>
-      {isVisible && (
-        <Input
-          id={`${textFieldName}-${templateKey}`}
-          aria-label={placeholder}
-          {...registerFn(textFieldName)}
-          disabled={!canEdit}
-          placeholder={placeholder}
-          className="text-sm"
-        />
-      )}
-    </div>
-  );
-}
-
-// ============================================
 // COMPOSANT PRINCIPAL
 // ============================================
 
@@ -231,174 +51,48 @@ export function EmailTemplateForm({
   onDirtyChange,
   onSaved,
 }: EmailTemplateFormProps) {
-  const [isSaving, setIsSaving]       = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-
-  // Refs DOM pour insérer les variables dans le champ focalisé
-  const introRef       = useRef<HTMLTextAreaElement>(null);
-  const bodyRef        = useRef<HTMLTextAreaElement>(null);
-  const infoRef        = useRef<HTMLTextAreaElement>(null);
-  const subjectRef     = useRef<HTMLInputElement>(null);
-  const lastFocusedRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
-
-  // Ref pour la callback dirty (évite les boucles infinies)
-  const onDirtyChangeRef = useRef(onDirtyChange);
-  useEffect(() => { onDirtyChangeRef.current = onDirtyChange; });
-
   const {
+    // Form state
     register,
     handleSubmit,
-    control,
     setValue,
-    getValues,
-    reset,
-    formState: { errors, isDirty },
-  } = useForm<TemplateFormValues>({
-    resolver: zodResolver(templateFormSchema),
-    defaultValues: {
-      subject:               template.subject               ?? '',
-      header_title:          template.header_title          ?? '',
-      salutation:            template.salutation            ?? '',
-      intro_text:            template.intro_text            ?? '',
-      body_text:             template.body_text             ?? '',
-      info_text:             template.info_text             ?? '',
-      cta_text:              template.cta_text              ?? '',
-      contact_block_title:   template.contact_block_title   ?? '',
-      show_contact_block:    template.show_contact_block    ?? false,
-      show_reservation_code: template.show_reservation_code ?? false,
-      // Liens optionnels post-checkin (S149)
-      show_folder_link:      template.show_folder_link    ?? false,
-      folder_link_text:      template.folder_link_text    ?? 'Consulter le dossier de presse',
-      show_teaser_link:      template.show_teaser_link    ?? false,
-      teaser_link_text:      template.teaser_link_text    ?? 'Voir le teaser vidéo',
-      show_captation_link:   template.show_captation_link ?? false,
-      captation_link_text:   template.captation_link_text ?? 'Voir la captation vidéo',
-      show_booking_link:     template.show_booking_link   ?? false,
-      booking_link_text:     template.booking_link_text   ?? 'Réserver une place pour ce spectacle',
-      // Dossier photo (S170)
-      show_photo_folder_link: template.show_photo_folder_link ?? false,
-      photo_folder_link_text: template.photo_folder_link_text ?? 'Consulter le dossier photo',
-    },
-  });
-
-  // Destructuration des refs RHF — une seule fois, avant le return.
-  // Évite le double register() qui corromprait l'état interne de RHF.
-  const { ref: subjectRhfRef, ...subjectRegisterProps } = register('subject');
-  const { ref: introRhfRef,   ...introRegisterProps   } = register('intro_text');
-  const { ref: bodyRhfRef,    ...bodyRegisterProps    } = register('body_text');
-  const { ref: infoRhfRef,    ...infoRegisterProps    } = register('info_text');
-
-  const showContactBlock    = useWatch({ control, name: 'show_contact_block' });
-  const showFolderLink      = useWatch({ control, name: 'show_folder_link' });
-  const showTeaserLink      = useWatch({ control, name: 'show_teaser_link' });
-  const showCaptationLink   = useWatch({ control, name: 'show_captation_link' });
-  const showBookingLink     = useWatch({ control, name: 'show_booking_link' });
-  const showPhotoFolderLink = useWatch({ control, name: 'show_photo_folder_link' });
-  const showReservationCode = useWatch({ control, name: 'show_reservation_code' });
-  const isConfirmation      = template.template_key === 'reservation_confirmation';
-  const isSimpleStyle       = template.is_simple_style === true;
-
-  // Notifier le parent quand isDirty change
-  useEffect(() => {
-    onDirtyChangeRef.current?.(isDirty);
-  }, [isDirty]);
-
-  // Insérer une variable dans le dernier textarea/input focalisé
-  const handleInsertVariable = useCallback((variable: string) => {
-    const el = lastFocusedRef.current;
-    if (!el) {
-      const current = getValues('intro_text');
-      setValue('intro_text', current + variable, { shouldDirty: true });
-      return;
-    }
-
-    const start  = el.selectionStart ?? el.value.length;
-    const end    = el.selectionEnd   ?? el.value.length;
-    const before = el.value.slice(0, start);
-    const after  = el.value.slice(end);
-    const newVal = before + variable + after;
-
-    const fieldName = el.getAttribute('data-field') as keyof TemplateFormValues | null;
-    if (fieldName) {
-      setValue(fieldName, newVal, { shouldDirty: true });
-      requestAnimationFrame(() => {
-        const pos = start + variable.length;
-        el.focus();
-        el.setSelectionRange(pos, pos);
-      });
-    }
-  }, [getValues, setValue]);
-
-  // Soumission
-  const onSubmit = async (values: TemplateFormValues) => {
-    setIsSaving(true);
-    try {
-      const res = await fetch(
-        `/api/admin/email-templates/${template.template_key}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
-        }
-      );
-      const json = await res.json() as { success: boolean; error?: string };
-
-      if (!res.ok || !json.success) {
-        toast.error(json.error ?? 'Erreur lors de la sauvegarde');
-        return;
-      }
-
-      toast.success('Template sauvegardé');
-      reset(values);
-      onSaved?.();
-    } catch (error) {
-      logger.error('EmailTemplateForm submit error', { error });
-      toast.error('Erreur réseau — veuillez réessayer');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Valeurs actuelles pour la preview
-  const currentFormValues = (): Record<string, string | boolean> => {
-    const v = getValues();
-    return {
-      subject:               v.subject               ?? '',
-      header_title:          v.header_title          ?? '',
-      salutation:            v.salutation            ?? '',
-      intro_text:            v.intro_text            ?? '',
-      body_text:             v.body_text             ?? '',
-      info_text:             v.info_text             ?? '',
-      cta_text:              v.cta_text              ?? '',
-      contact_block_title:   v.contact_block_title   ?? '',
-      show_contact_block:    v.show_contact_block    ?? false,
-      show_reservation_code: v.show_reservation_code ?? false,
-      is_simple_style:       template.is_simple_style ?? false,
-      // Liens optionnels post-checkin (S149)
-      // On utilise ?? (pas ||) pour rester cohérent avec defaultValues :
-      // si l'utilisateur vide un champ, la preview doit refléter ce vide.
-      show_folder_link:      v.show_folder_link    ?? false,
-      folder_link_text:      v.folder_link_text    ?? '',
-      show_teaser_link:      v.show_teaser_link    ?? false,
-      teaser_link_text:      v.teaser_link_text    ?? '',
-      show_captation_link:   v.show_captation_link ?? false,
-      captation_link_text:   v.captation_link_text ?? '',
-      show_booking_link:     v.show_booking_link   ?? false,
-      booking_link_text:     v.booking_link_text   ?? '',
-      // Dossier photo (S170)
-      show_photo_folder_link: v.show_photo_folder_link ?? false,
-      photo_folder_link_text: v.photo_folder_link_text ?? '',
-    };
-  };
-
-  // Props communes pour les champs avec insertion de variables
-  const focusProps = (
-    ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>,
-    fieldName: keyof TemplateFormValues
-  ) => ({
-    onFocus: () => { lastFocusedRef.current = ref.current; },
-    'data-field': fieldName,
-  });
+    errors,
+    isDirty,
+    isSaving,
+    // Refs
+    introRef,
+    bodyRef,
+    infoRef,
+    subjectRef,
+    // Register destructured props
+    subjectRhfRef,
+    subjectRegisterProps,
+    introRhfRef,
+    introRegisterProps,
+    bodyRhfRef,
+    bodyRegisterProps,
+    infoRhfRef,
+    infoRegisterProps,
+    // Watched values
+    showContactBlock,
+    showFolderLink,
+    showTeaserLink,
+    showCaptationLink,
+    showBookingLink,
+    showPhotoFolderLink,
+    showReservationCode,
+    // Derived
+    isConfirmation,
+    isSimpleStyle,
+    // Preview
+    previewOpen,
+    setPreviewOpen,
+    currentFormValues,
+    // Handlers
+    handleInsertVariable,
+    onSubmit,
+    focusProps,
+  } = useEmailTemplateForm({ template, onDirtyChange, onSaved });
 
   return (
     <>

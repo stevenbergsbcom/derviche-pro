@@ -11,10 +11,10 @@
  * - Chaque admin ne marque que ses propres lignes (RLS : user_id = auth.uid())
  */
 
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { markNotificationAsRead } from '@/lib/services/notifications';
 import { logger } from '@/lib/logger';
+import { requireAuth, errorResponse, successResponse, serverErrorResponse } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -24,36 +24,6 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-interface ApiSuccess {
-  success: true;
-}
-
-interface ApiError {
-  success: false;
-  error: string;
-}
-
-type ApiResponse = ApiSuccess | ApiError;
-
-// ============================================
-// HELPERS
-// ============================================
-
-async function getCurrentUserRole(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { user: null, role: null };
-
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  return { user, role: roleData?.role ?? null };
-}
-
 // ============================================
 // POST — Marquer une notification lue
 // ============================================
@@ -61,7 +31,7 @@ async function getCurrentUserRole(supabase: Awaited<ReturnType<typeof createClie
 export async function POST(
   _request: Request,
   context: RouteContext
-): Promise<NextResponse<ApiResponse>> {
+): Promise<Response> {
   try {
     const { id } = await context.params;
 
@@ -69,29 +39,18 @@ export async function POST(
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(id)) {
-      return NextResponse.json(
-        { success: false, error: 'ID de notification invalide' },
-        { status: 400 }
-      );
+      return errorResponse('ID de notification invalide', 400);
     }
 
     const supabase = await createClient();
-    const { user, role } = await getCurrentUserRole(supabase);
+    const auth = await requireAuth(supabase, undefined, '[notifications/read API]');
+    if (!auth.ok) return auth.response;
 
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
+    await markNotificationAsRead(id, auth.userId);
 
-    if (role !== 'super-admin' && role !== 'admin') {
-      logger.warn('[notifications/read API] Accès refusé', { userId: user.id, role });
-      return NextResponse.json({ success: false, error: 'Droits insuffisants' }, { status: 403 });
-    }
-
-    await markNotificationAsRead(id, user.id);
-
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (err) {
     logger.error('[notifications/read API] Exception POST', { err });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }

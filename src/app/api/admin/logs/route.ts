@@ -18,10 +18,10 @@
  *   - Rôle super-admin uniquement
  */
 
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { logger } from '@/lib/logger';
+import { requireAuth, successResponse, serverErrorResponse, errorResponse } from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -49,18 +49,6 @@ export interface LogsApiResult {
   totalPages: number;
 }
 
-interface ApiSuccess {
-  success: true;
-  data: LogsApiResult;
-}
-
-interface ApiError {
-  success: false;
-  error: string;
-}
-
-type ApiResponse = ApiSuccess | ApiError;
-
 // ============================================
 // CONSTANTES DE VALIDATION
 // ============================================
@@ -75,26 +63,12 @@ const MAX_LIMIT        = 100;
 // GET
 // ============================================
 
-export async function GET(request: Request): Promise<NextResponse<ApiResponse>> {
+export async function GET(request: Request): Promise<Response> {
   try {
     // 1. Vérification auth + rôle super-admin
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
-
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (roleData?.role !== 'super-admin') {
-      logger.warn('[logs API] Accès refusé', { userId: user.id, role: roleData?.role });
-      return NextResponse.json({ success: false, error: 'Accès réservé au super-admin' }, { status: 403 });
-    }
+    const auth = await requireAuth(supabase, ['super-admin'], '[logs API]');
+    if (!auth.ok) return auth.response;
 
     // 2. Parsing et validation des query params
     const { searchParams } = new URL(request.url);
@@ -147,7 +121,7 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse>> 
 
     if (error) {
       logger.error('[logs API] Erreur BDD', { error: error.message });
-      return NextResponse.json({ success: false, error: 'Erreur base de données' }, { status: 500 });
+      return errorResponse('Erreur base de données', 500);
     }
 
     const total = count ?? 0;
@@ -174,18 +148,15 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse>> 
       actor_name: log.actor_id ? (actorNames[log.actor_id] ?? null) : null,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        logs:       logsWithActors,
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+    return successResponse({
+      logs:       logsWithActors,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (err) {
     logger.error('[logs API] Exception GET', { err });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }

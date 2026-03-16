@@ -12,6 +12,11 @@ import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
+import {
+  requireAuth,
+  notFoundResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -43,44 +48,18 @@ export async function PATCH(
     const { professionalId } = await context.params;
     logger.info('API /admin/professionals/[id]/status - Début', { professionalId });
 
-    // 1. Vérifier authentification
+    // 1. Vérifier authentification + rôle admin
     const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
+    const auth = await requireAuth(supabase);
+    if (!auth.ok) return auth.response;
 
-    if (!currentUser) {
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
-    }
-
-    // 2. Vérifier rôle admin ou super-admin (les deux peuvent gérer les pros)
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', currentUser.id)
-      .in('role', ['super-admin', 'admin'])
-      .single();
-
-    if (!roleData) {
-      logger.warn('API /admin/professionals/[id]/status - Droits insuffisants', {
-        userId: currentUser.id,
-      });
-      return NextResponse.json(
-        { success: false, error: 'Droits insuffisants' },
-        { status: 403 }
-      );
-    }
-
-    // 3. Parser la requête
+    // 2. Parser la requête
     const body = (await request.json()) as StatusRequest;
     const shouldDisable = body.disabled === true;
 
     const supabaseAdmin = createAdminClient();
 
-    // 4. Vérifier que la cible existe et a bien le rôle 'professional'
+    // 3. Vérifier que la cible existe et a bien le rôle 'professional'
     const { data: targetProfile, error: fetchError } = await supabaseAdmin
       .from('profiles')
       .select(`
@@ -99,13 +78,10 @@ export async function PATCH(
         professionalId,
         error: fetchError?.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Professionnel non trouvé' },
-        { status: 404 }
-      );
+      return notFoundResponse('Professionnel non trouvé');
     }
 
-    // 5. Mettre à jour le statut
+    // 4. Mettre à jour le statut
     const { error: updateError } = await supabaseAdmin
       .from('profiles')
       .update({
@@ -119,10 +95,7 @@ export async function PATCH(
         professionalId,
         error: updateError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la mise à jour du statut' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la mise à jour du statut');
     }
 
     const action = shouldDisable ? 'désactivé' : 'réactivé';
@@ -134,14 +107,11 @@ export async function PATCH(
     void logSystem(shouldDisable ? 'professional_disable' : 'professional_enable', 'info', {
       user_id: professionalId,
       email: targetProfile.email,
-    }, currentUser.id, roleData.role);
+    }, auth.userId, auth.role);
 
     return NextResponse.json({ success: true, disabled: shouldDisable });
   } catch (error) {
     logger.error('API /admin/professionals/[id]/status - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

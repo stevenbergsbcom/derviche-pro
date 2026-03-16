@@ -11,68 +11,26 @@
  * - Chaque admin ne marque que ses propres lignes (RLS : user_id = auth.uid())
  */
 
-import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { markAllNotificationsAsRead } from '@/lib/services/notifications';
 import { logger } from '@/lib/logger';
-
-// ============================================
-// TYPES
-// ============================================
-
-interface ApiSuccess {
-  success: true;
-}
-
-interface ApiError {
-  success: false;
-  error: string;
-}
-
-type ApiResponse = ApiSuccess | ApiError;
-
-// ============================================
-// HELPERS
-// ============================================
-
-async function getCurrentUserRole(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { user: null, role: null };
-
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  return { user, role: roleData?.role ?? null };
-}
+import { requireAuth, successResponse, serverErrorResponse } from '@/lib/api';
 
 // ============================================
 // POST — Marquer toutes les notifications lues
 // ============================================
 
-export async function POST(): Promise<NextResponse<ApiResponse>> {
+export async function POST(): Promise<Response> {
   try {
     const supabase = await createClient();
-    const { user, role } = await getCurrentUserRole(supabase);
+    const auth = await requireAuth(supabase, undefined, '[notifications/read-all API]');
+    if (!auth.ok) return auth.response;
 
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
+    await markAllNotificationsAsRead(auth.userId);
 
-    if (role !== 'super-admin' && role !== 'admin') {
-      logger.warn('[notifications/read-all API] Accès refusé', { userId: user.id, role });
-      return NextResponse.json({ success: false, error: 'Droits insuffisants' }, { status: 403 });
-    }
-
-    await markAllNotificationsAsRead(user.id);
-
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (err) {
     logger.error('[notifications/read-all API] Exception POST', { err });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }

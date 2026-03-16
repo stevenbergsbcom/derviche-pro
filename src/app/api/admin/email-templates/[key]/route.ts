@@ -4,11 +4,18 @@
  * PATCH  /api/admin/email-templates/[key]  → Modifier un template (super-admin uniquement)
  */
 
-import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
+import {
+  requireAuth,
+  errorResponse,
+  notFoundResponse,
+  successResponse,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
@@ -17,18 +24,6 @@ import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
 interface RouteContext {
   params: Promise<{ key: string }>;
 }
-
-interface ApiSuccess<T> {
-  success: true;
-  data: T;
-}
-
-interface ApiError {
-  success: false;
-  error: string;
-}
-
-type ApiResponse<T> = ApiSuccess<T> | ApiError;
 
 // ============================================
 // VALIDATION
@@ -79,51 +74,23 @@ const updatePayloadSchema = z.object({
 });
 
 // ============================================
-// HELPER — Récupère le rôle de l'utilisateur courant
-// ============================================
-
-async function getCurrentUserRole(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { user: null, role: null };
-
-  const { data: roleData } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', user.id)
-    .single();
-
-  return { user, role: roleData?.role ?? null };
-}
-
-// ============================================
 // GET — Lire un template (admin + super-admin)
 // ============================================
 
 export async function GET(
   _request: Request,
   context: RouteContext
-): Promise<NextResponse<ApiResponse<EmailTemplate>>> {
+): Promise<Response> {
   try {
     const { key } = await context.params;
 
     if (!isValidTemplateKey(key)) {
-      return NextResponse.json(
-        { success: false, error: `Clé de template invalide : ${key}` },
-        { status: 400 }
-      );
+      return errorResponse(`Clé de template invalide : ${key}`, 400);
     }
 
     const supabase = await createClient();
-    const { user, role } = await getCurrentUserRole(supabase);
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
-
-    if (role !== 'super-admin' && role !== 'admin') {
-      logger.warn('[email-templates API] Accès refusé GET', { userId: user.id, role });
-      return NextResponse.json({ success: false, error: 'Droits insuffisants' }, { status: 403 });
-    }
+    const auth = await requireAuth(supabase, undefined, '[email-templates API]');
+    if (!auth.ok) return auth.response;
 
     const { data, error } = await supabase
       .from('email_templates')
@@ -133,21 +100,18 @@ export async function GET(
 
     if (error) {
       logger.error('[email-templates API] Erreur lecture', { key, error: error.message });
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return errorResponse(error.message, 500);
     }
 
     if (!data) {
-      return NextResponse.json(
-        { success: false, error: `Template introuvable : ${key}` },
-        { status: 404 }
-      );
+      return notFoundResponse(`Template introuvable : ${key}`);
     }
 
-    return NextResponse.json({ success: true, data: data as EmailTemplate });
+    return successResponse(data as EmailTemplate);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    const message = getErrorMessage(err);
     logger.error('[email-templates API] Exception GET', { message });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
 
@@ -158,38 +122,24 @@ export async function GET(
 export async function PATCH(
   request: Request,
   context: RouteContext
-): Promise<NextResponse<ApiResponse<EmailTemplate>>> {
+): Promise<Response> {
   try {
     const { key } = await context.params;
 
     if (!isValidTemplateKey(key)) {
-      return NextResponse.json(
-        { success: false, error: `Clé de template invalide : ${key}` },
-        { status: 400 }
-      );
+      return errorResponse(`Clé de template invalide : ${key}`, 400);
     }
 
     const supabase = await createClient();
-    const { user, role } = await getCurrentUserRole(supabase);
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
-
-    if (role !== 'super-admin') {
-      logger.warn('[email-templates API] Accès refusé PATCH', { userId: user.id, role });
-      return NextResponse.json(
-        { success: false, error: 'Réservé au super-admin' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireAuth(supabase, ['super-admin'], '[email-templates API]');
+    if (!auth.ok) return auth.response;
 
     // Parser et valider le body
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return NextResponse.json({ success: false, error: 'Body JSON invalide' }, { status: 400 });
+      return errorResponse('Body JSON invalide', 400);
     }
 
     const validation = updatePayloadSchema.safeParse(body);
@@ -199,7 +149,7 @@ export async function PATCH(
       const message = firstIssue
         ? `${firstIssue.path.join('.')}: ${firstIssue.message}`
         : 'Données invalides';
-      return NextResponse.json({ success: false, error: message }, { status: 422 });
+      return errorResponse(message, 422);
     }
 
     const { data, error } = await supabase
@@ -211,21 +161,18 @@ export async function PATCH(
 
     if (error) {
       logger.error('[email-templates API] Erreur mise à jour', { key, error: error.message });
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return errorResponse(error.message, 500);
     }
 
     if (!data) {
-      return NextResponse.json(
-        { success: false, error: `Template introuvable : ${key}` },
-        { status: 404 }
-      );
+      return notFoundResponse(`Template introuvable : ${key}`);
     }
 
-    logger.info('[email-templates API] Template mis à jour', { key, userId: user.id });
-    return NextResponse.json({ success: true, data: data as EmailTemplate });
+    logger.info('[email-templates API] Template mis à jour', { key, userId: auth.userId });
+    return successResponse(data as EmailTemplate);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    const message = getErrorMessage(err);
     logger.error('[email-templates API] Exception PATCH', { message });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
