@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { isValidManagedRole } from '@/lib/services/internal-users';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 import type { ManagedRole } from '@/lib/services/internal-users';
 
 // ============================================
@@ -318,6 +319,13 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
       logger.info('API /admin/users - Compte réactivé avec succès', { userId, email, role, company_id });
 
+      void logSystem('user_reactivate', 'info', {
+        user_id: userId,
+        email,
+        role,
+        company_id: company_id ?? null,
+      }, currentUser.id, roleData.role);
+
       return NextResponse.json({
         success: true,
         reactivated: true,
@@ -443,6 +451,13 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
 
     logger.info('API /admin/users - Rôle créé', { userId, role });
     logger.info('API /admin/users - Succès complet', { userId, email, role, company_id });
+
+    void logSystem('user_create', 'info', {
+      user_id: userId,
+      email,
+      role,
+      company_id: company_id ?? null,
+    }, currentUser.id, roleData.role);
 
     return NextResponse.json({
       success: true,

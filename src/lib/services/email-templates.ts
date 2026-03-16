@@ -16,6 +16,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 import type {
   EmailTemplate,
   EmailTemplateKey,
@@ -180,6 +181,7 @@ export async function updateEmailTemplate(
     }
 
     logger.info('[email-templates] Template mis à jour', { key });
+    void logSystem('email_template_update', 'info', { template_key: key });
     return { data: data as EmailTemplate, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

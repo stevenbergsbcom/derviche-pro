@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 
 // ============================================
 // TYPES
@@ -129,6 +130,11 @@ export async function PATCH(
       professionalId,
       email: targetProfile.email,
     });
+
+    void logSystem(shouldDisable ? 'professional_disable' : 'professional_enable', 'info', {
+      user_id: professionalId,
+      email: targetProfile.email,
+    }, currentUser.id, roleData.role);
 
     return NextResponse.json({ success: true, disabled: shouldDisable });
   } catch (error) {

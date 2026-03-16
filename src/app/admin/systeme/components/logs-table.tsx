@@ -15,6 +15,8 @@ import {
   Calendar,
   BookOpen,
   Server,
+  Film,
+  User,
   CheckCircle,
   XCircle,
   ChevronDown,
@@ -67,6 +69,7 @@ const CATEGORY_CONFIG: Record<
   email:       { label: 'Email',        icon: Mail,     className: 'text-blue-600    bg-blue-50    dark:bg-blue-950/30'    },
   calendar:    { label: 'Calendar',     icon: Calendar, className: 'text-purple-600  bg-purple-50  dark:bg-purple-950/30'  },
   reservation: { label: 'Réservation',  icon: BookOpen, className: 'text-amber-600   bg-amber-50   dark:bg-amber-950/30'   },
+  show:        { label: 'Spectacle',    icon: Film,     className: 'text-pink-600    bg-pink-50    dark:bg-pink-950/30'    },
   system:      { label: 'Système',      icon: Server,   className: 'text-slate-600   bg-slate-100  dark:bg-slate-800/50'   },
 };
 
@@ -92,6 +95,14 @@ function formatActionLabel(action: string): string {
     .replace(/_/g, ' ')
     .replace(/\b\w/g, c => c.toUpperCase());
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  'super-admin': 'Super-admin',
+  'admin': 'Admin',
+  'externe': 'Externe',
+  'company': 'Compagnie',
+  'professional': 'Pro',
+};
 
 // ============================================
 // SOUS-COMPOSANT — Détails expandable
@@ -168,15 +179,44 @@ function LogRow({ log }: { log: AppLog }) {
           )}
         </td>
 
+        {/* Acteur */}
+        <td className="px-3 py-2 text-xs max-w-[160px]">
+          {log.actor_name ? (
+            <div className="flex items-center gap-1.5">
+              <User className="size-3 text-muted-foreground shrink-0" aria-hidden />
+              <div className="min-w-0">
+                <span className="block truncate font-medium text-foreground">
+                  {log.actor_name}
+                </span>
+                {log.actor_role && (
+                  <span className="block text-[10px] text-muted-foreground">
+                    {ROLE_LABELS[log.actor_role] ?? log.actor_role}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : log.actor_role ? (
+            <span className="text-muted-foreground italic">
+              {ROLE_LABELS[log.actor_role] ?? log.actor_role}
+            </span>
+          ) : (
+            <span className="text-muted-foreground/50 italic">Système</span>
+          )}
+        </td>
+
         {/* Destinataire / contexte (extrait de details) */}
         <td className="px-3 py-2 text-xs text-muted-foreground max-w-[200px] truncate">
           {typeof log.details?.to === 'string'
             ? log.details.to
-            : typeof log.details?.event_id === 'string'
-              ? log.details.event_id
-              : typeof log.details?.error_message === 'string'
-                ? <span className="text-red-600">{log.details.error_message}</span>
-                : null
+            : typeof log.details?.guest_name === 'string'
+              ? log.details.guest_name
+              : typeof log.details?.title === 'string'
+                ? log.details.title
+                : typeof log.details?.event_id === 'string'
+                  ? log.details.event_id
+                  : typeof log.details?.error_message === 'string'
+                    ? <span className="text-red-600">{log.details.error_message}</span>
+                    : null
           }
         </td>
 
@@ -202,7 +242,7 @@ function LogRow({ log }: { log: AppLog }) {
       {/* Détails expandables */}
       {expanded && (
         <tr className="border-b bg-muted/30">
-          <td colSpan={6} className="px-6 py-3">
+          <td colSpan={7} className="px-6 py-3">
             <LogDetails details={log.details ?? {}} />
           </td>
         </tr>
@@ -347,6 +387,7 @@ export function LogsTable({
               <SelectItem value="email">Email</SelectItem>
               <SelectItem value="calendar">Calendar</SelectItem>
               <SelectItem value="reservation">Réservation</SelectItem>
+              <SelectItem value="show">Spectacle</SelectItem>
               <SelectItem value="system">Système</SelectItem>
             </SelectContent>
           </Select>
@@ -394,6 +435,7 @@ export function LogsTable({
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Catégorie</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Action</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Statut</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Acteur</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Contexte</th>
                 <th className="px-3 py-2 w-8" />
               </tr>
@@ -402,7 +444,7 @@ export function LogsTable({
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b">
-                    {Array.from({ length: 6 }).map((__, j) => (
+                    {Array.from({ length: 7 }).map((__, j) => (
                       <td key={j} className="px-3 py-2">
                         <Skeleton className="h-4 w-full" />
                       </td>
@@ -411,7 +453,7 @@ export function LogsTable({
                 ))
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-muted-foreground">
                     Aucun log pour ces filtres.
                   </td>
                 </tr>

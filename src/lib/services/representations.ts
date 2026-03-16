@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { SlotRow, SlotInsert, SlotUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // TYPES
@@ -163,6 +164,12 @@ export async function createRepresentation(slot: SlotInsert): Promise<SlotResult
     
     if (result.data) {
       logger.info(`Representation créée: ${newSlot.date} ${newSlot.time} (${newSlot.id})`);
+      logActivityClient({
+        category: 'show',
+        action: 'slot_create',
+        success: true,
+        details: { slot_id: newSlot.id, date: newSlot.date, time: newSlot.time, show_id: newSlot.show_id },
+      });
     }
     
     return result;
@@ -193,7 +200,13 @@ export async function createMultipleRepresentations(slots: SlotInsert[]): Promis
     // Cast explicite car Supabase retourne hosted_by comme string
     const createdSlots = (data || []) as SlotRow[];
     logger.info(`${createdSlots.length} representations créées en batch`);
-    
+    logActivityClient({
+      category: 'show',
+      action: 'slot_create_batch',
+      success: true,
+      details: { count: createdSlots.length, show_id: slots[0]?.show_id },
+    });
+
     return { data: createdSlots, error: null, count: createdSlots.length };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -226,6 +239,12 @@ export async function updateRepresentation(id: string, slot: SlotUpdate): Promis
     
     if (result.data) {
       logger.info(`Representation mise à jour: ${updatedSlot.date} ${updatedSlot.time} (${updatedSlot.id})`);
+      logActivityClient({
+        category: 'show',
+        action: 'slot_update',
+        success: true,
+        details: { slot_id: updatedSlot.id, date: updatedSlot.date, time: updatedSlot.time },
+      });
     }
     
     return result;
@@ -255,6 +274,12 @@ export async function deleteRepresentation(id: string): Promise<{ success: boole
     }
 
     logger.info(`Representation supprimée: ${id}`);
+    logActivityClient({
+      category: 'show',
+      action: 'slot_delete',
+      success: true,
+      details: { slot_id: id },
+    });
     return { success: true, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

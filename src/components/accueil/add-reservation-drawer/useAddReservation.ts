@@ -242,7 +242,7 @@ export function useAddReservation({
             guestStructure: formData.organization ?? null,
             numPlaces: formData.numPlaces,
             checkinStatus: formData.checkinStatus,
-            status: 'confirmed',
+            status: 'confirmed' as const,
             checkinFollowupEmails: [],
           });
           setStep('success');

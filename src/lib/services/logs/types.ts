@@ -7,7 +7,7 @@
 
 // ── Catégories ──────────────────────────────────────────────────────────────
 
-export type LogCategory = 'email' | 'calendar' | 'reservation' | 'system';
+export type LogCategory = 'email' | 'calendar' | 'reservation' | 'system' | 'show';
 export type LogLevel    = 'info' | 'warning' | 'error';
 export type LogStatus   = 'success' | 'error';
 
@@ -32,7 +32,14 @@ export type CalendarAction =
 export type ReservationAction =
   | 'reservation_create'
   | 'reservation_cancel'
-  | 'reservation_modify';
+  | 'reservation_modify'
+  | 'reservation_checkin'
+  | 'reservation_modify_guest';
+
+export type ShowAction =
+  | 'show_create'
+  | 'show_update'
+  | 'show_delete';
 
 export type SystemAction = string; // extensible librement
 

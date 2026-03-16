@@ -9,6 +9,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { ReservationRow } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // TYPES
@@ -180,6 +181,19 @@ export async function createReservation(
     logger.info('[reservations] Réservation créée avec succès', {
       reservationId: reservation.id,
       code,
+    });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_create',
+      success: true,
+      details: {
+        reservation_id: reservation.id,
+        guest_name: `${formData.firstName} ${formData.lastName}`,
+        guest_email: formData.email,
+        slot_id: slotId,
+        num_places: numPlaces,
+        source: 'public',
+      },
     });
 
     return {

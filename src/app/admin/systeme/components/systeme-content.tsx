@@ -22,7 +22,7 @@ import type { AppLog } from '@/app/api/admin/logs/route';
 // TYPES
 // ============================================
 
-export type LogCategory = 'all' | 'email' | 'calendar' | 'reservation' | 'system';
+export type LogCategory = 'all' | 'email' | 'calendar' | 'reservation' | 'system' | 'show';
 export type LogLevel    = 'all' | 'info' | 'warning' | 'error';
 export type LogStatus   = 'all' | 'success' | 'error';
 

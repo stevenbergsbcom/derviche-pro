@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 
 // ============================================
 // TYPES
@@ -169,12 +170,17 @@ export async function PATCH(
     }
 
     const action = shouldDisable ? 'désactivé' : 'réactivé';
-    logger.info(`API /admin/users/[userId]/status - Compte ${action}`, { 
-      userId, 
-      email: targetUser.email 
+    logger.info(`API /admin/users/[userId]/status - Compte ${action}`, {
+      userId,
+      email: targetUser.email
     });
 
-    return NextResponse.json({ 
+    void logSystem(shouldDisable ? 'user_disable' : 'user_enable', 'info', {
+      user_id: userId,
+      email: targetUser.email,
+    }, currentUser.id, currentUserRole.role);
+
+    return NextResponse.json({
       success: true,
       disabled: shouldDisable,
     });

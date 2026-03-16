@@ -21,6 +21,7 @@ import type {
 } from './types';
 import { ADMIN_ROLES } from './constants';
 import { canAccessSlot } from './shows';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 /**
  * Récupère les réservations d'un slot
@@ -431,10 +432,27 @@ export async function updateCheckinStatus(
       })),
     };
 
-    logger.info('checkin.updateCheckinStatus - Succès', { 
-      reservationId, 
-      newStatus: status 
+    logger.info('checkin.updateCheckinStatus - Succès', {
+      reservationId,
+      newStatus: status
     });
+
+    // S190 : Log d'activité
+    if (status !== undefined) {
+      logActivityClient({
+        category: 'reservation',
+        action: 'reservation_checkin',
+        success: true,
+        actor_id: userId,
+        actor_role: role,
+        reservation_id: reservationId,
+        details: {
+          checkin_status: status,
+          guest_name: `${result.guestFirstName} ${result.guestLastName}`,
+          source: 'checkin',
+        },
+      });
+    }
 
     return { success: true, data: result, error: null };
 
@@ -660,6 +678,21 @@ export async function updateGuestInfo(
     };
 
     logger.info('checkin.updateGuestInfo - Succès', { reservationId });
+
+    // S190 : Log d'activité
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_modify_guest',
+      success: true,
+      actor_id: userId,
+      actor_role: role,
+      reservation_id: reservationId,
+      details: {
+        guest_name: `${result.guestFirstName} ${result.guestLastName}`,
+        guest_email: result.guestEmail,
+        source: 'checkin',
+      },
+    });
 
     return { success: true, data: result, error: null };
 

@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { TargetAudienceRow, TargetAudienceInsert, TargetAudienceUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 import { cleanupOrphanMappings } from '@/lib/utils/orphan-cleanup';
 
 // ============================================
@@ -73,6 +74,12 @@ export async function createTargetAudience(audience: TargetAudienceInsert): Prom
     }
 
     logger.info(`TargetAudience créé: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'audience_create',
+      success: true,
+      details: { audience_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -101,6 +108,12 @@ export async function updateTargetAudience(id: string, audience: TargetAudienceU
     }
 
     logger.info(`TargetAudience mis à jour: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'audience_update',
+      success: true,
+      details: { audience_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -134,6 +147,12 @@ export async function deleteTargetAudience(id: string): Promise<TargetAudienceRe
     }
 
     logger.info(`TargetAudience supprimé: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'audience_delete',
+      success: true,
+      details: { audience_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

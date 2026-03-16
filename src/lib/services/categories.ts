@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { ShowCategoryRow, ShowCategoryInsert, ShowCategoryUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 import { cleanupOrphanMappings } from '@/lib/utils/orphan-cleanup';
 
 // ============================================
@@ -73,6 +74,12 @@ export async function createCategory(category: ShowCategoryInsert): Promise<Cate
     }
 
     logger.info(`Category créée: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'category_create',
+      success: true,
+      details: { category_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -101,6 +108,12 @@ export async function updateCategory(id: string, category: ShowCategoryUpdate): 
     }
 
     logger.info(`Category mise à jour: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'category_update',
+      success: true,
+      details: { category_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -134,6 +147,12 @@ export async function deleteCategory(id: string): Promise<CategoryResult> {
     }
 
     logger.info(`Category supprimée: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'category_delete',
+      success: true,
+      details: { category_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

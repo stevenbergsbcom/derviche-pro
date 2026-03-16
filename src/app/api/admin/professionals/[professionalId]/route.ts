@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 
 // ============================================
 // TYPES
@@ -181,6 +182,11 @@ export async function PATCH(
       email: targetProfile.email,
     });
 
+    void logSystem('professional_update', 'info', {
+      user_id: professionalId,
+      email: targetProfile.email,
+    }, access.userId);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error('API /admin/professionals/[id] PATCH - Exception', { error });
@@ -257,6 +263,11 @@ export async function DELETE(
       professionalId,
       email: targetProfile.email,
     });
+
+    void logSystem('professional_delete', 'info', {
+      user_id: professionalId,
+      email: targetProfile.email,
+    }, access.userId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

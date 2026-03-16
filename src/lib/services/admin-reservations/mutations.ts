@@ -18,6 +18,7 @@ import type {
 } from './types';
 import { ERROR_MESSAGES } from './constants';
 import { getAdminReservationById } from './detail';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // CHECK-IN
@@ -64,6 +65,17 @@ export async function updateReservationCheckin(
     const result = await getAdminReservationById(id);
     if (result.data) {
       logger.info(`Checkin mis à jour: ${id} → ${checkinData.checkinStatus}`);
+      logActivityClient({
+        category: 'reservation',
+        action: 'reservation_checkin',
+        success: true,
+        reservation_id: id,
+        details: {
+          checkin_status: checkinData.checkinStatus,
+          guest_name: `${result.data.firstName} ${result.data.lastName}`,
+          source: 'admin',
+        },
+      });
     }
 
     return result;
@@ -151,6 +163,17 @@ export async function updateReservation(
     const updatedResult = await getAdminReservationById(id);
     if (updatedResult.data) {
       logger.info(`Réservation modifiée: ${id}`);
+      logActivityClient({
+        category: 'reservation',
+        action: 'reservation_modify',
+        success: true,
+        reservation_id: id,
+        details: {
+          guest_name: `${updatedResult.data.firstName} ${updatedResult.data.lastName}`,
+          guest_email: updatedResult.data.email,
+          source: 'admin',
+        },
+      });
     }
 
     return updatedResult;
@@ -206,6 +229,18 @@ export async function cancelReservation(
     const result = await getAdminReservationById(id);
     if (result.data) {
       logger.info(`Réservation annulée: ${id}`);
+      logActivityClient({
+        category: 'reservation',
+        action: 'reservation_cancel',
+        success: true,
+        reservation_id: id,
+        details: {
+          guest_name: `${result.data.firstName} ${result.data.lastName}`,
+          guest_email: result.data.email,
+          reason: reason || null,
+          source: 'admin',
+        },
+      });
     }
 
     return result;
@@ -292,6 +327,19 @@ export async function createAdminReservation(
     }
 
     logger.info('Réservation admin créée', { reservationId: result.reservation_id });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_create',
+      success: true,
+      reservation_id: result.reservation_id,
+      details: {
+        guest_name: `${data.firstName} ${data.lastName}`,
+        guest_email: data.email,
+        slot_id: data.slotId,
+        num_places: data.numPlaces,
+        source: 'admin',
+      },
+    });
     return { success: true, reservationId: result.reservation_id };
 
   } catch (err) {
