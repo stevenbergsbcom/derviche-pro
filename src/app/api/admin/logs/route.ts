@@ -5,7 +5,7 @@
  * Retourne les logs paginés depuis app_logs.
  *
  * Query params :
- *   - category  : 'email' | 'calendar' | 'reservation' | 'system' (optionnel)
+ *   - category  : 'email' | 'calendar' | 'reservation' | 'system' | 'show' (optionnel)
  *   - level     : 'info' | 'warning' | 'error' (optionnel)
  *   - status    : 'success' | 'error' (optionnel)
  *   - startDate : ISO date string (optionnel)
@@ -29,12 +29,13 @@ import { logger } from '@/lib/logger';
 
 export interface AppLog {
   id: string;
-  category: 'email' | 'calendar' | 'reservation' | 'system';
+  category: 'email' | 'calendar' | 'reservation' | 'system' | 'show';
   level: 'info' | 'warning' | 'error';
   action: string;
   status: 'success' | 'error';
   actor_id: string | null;
   actor_role: string | null;
+  actor_name: string | null;
   reservation_id: string | null;
   details: Record<string, unknown>;
   created_at: string;
@@ -64,7 +65,7 @@ type ApiResponse = ApiSuccess | ApiError;
 // CONSTANTES DE VALIDATION
 // ============================================
 
-const VALID_CATEGORIES = ['email', 'calendar', 'reservation', 'system'] as const;
+const VALID_CATEGORIES = ['email', 'calendar', 'reservation', 'system', 'show'] as const;
 const VALID_LEVELS     = ['info', 'warning', 'error'] as const;
 const VALID_STATUSES   = ['success', 'error'] as const;
 const DEFAULT_LIMIT    = 50;
@@ -150,11 +151,33 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse>> 
     }
 
     const total = count ?? 0;
+    const rawLogs = (data ?? []) as (Omit<AppLog, 'actor_name'> & { actor_name?: string | null })[];
+
+    // 4. Résolution des noms d'acteurs (batch)
+    const actorIds = [...new Set(rawLogs.map(l => l.actor_id).filter(Boolean))] as string[];
+    const actorNames: Record<string, string> = {};
+
+    if (actorIds.length > 0) {
+      const { data: profiles } = await adminClient
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', actorIds);
+
+      for (const p of profiles ?? []) {
+        const name = [p.first_name, p.last_name].filter(Boolean).join(' ');
+        if (name) actorNames[p.id] = name;
+      }
+    }
+
+    const logsWithActors: AppLog[] = rawLogs.map(log => ({
+      ...log,
+      actor_name: log.actor_id ? (actorNames[log.actor_id] ?? null) : null,
+    }));
 
     return NextResponse.json({
       success: true,
       data: {
-        logs:       (data ?? []) as AppLog[],
+        logs:       logsWithActors,
         total,
         page,
         limit,

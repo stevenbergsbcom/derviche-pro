@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { logSystem } from '@/lib/services/logs';
 
 // ============================================
 // TYPES
@@ -130,6 +131,11 @@ export async function DELETE(
     }
 
     logger.info('API /admin/users/[userId] DELETE - Succès', { userId, email: targetUser.email });
+
+    void logSystem('user_delete', 'info', {
+      user_id: userId,
+      email: targetUser.email,
+    }, currentUser.id, roleData.role);
 
     return NextResponse.json({ success: true });
 
@@ -428,6 +434,12 @@ export async function PATCH(
     }
 
     logger.info('API /admin/users/[userId] PATCH - Succès', { userId, email: targetUser.email });
+
+    void logSystem('user_update', 'info', {
+      user_id: userId,
+      email: targetUser.email,
+      new_role: newRole ?? undefined,
+    }, currentUser.id, roleData.role);
 
     return NextResponse.json({ success: true });
 

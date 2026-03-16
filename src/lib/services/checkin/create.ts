@@ -17,6 +17,7 @@ import type {
 import { ADMIN_ROLES } from './constants';
 import { isValidRpcResult } from './guards';
 import { canAccessSlot } from './shows';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 /**
  * Vérifie si un email a déjà une réservation sur ce créneau
@@ -176,6 +177,22 @@ export async function createReservationFromCheckin(
     }
 
     logger.info('checkin.createReservationFromCheckin - Succès', { reservationId });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_create',
+      success: true,
+      actor_id: userId,
+      actor_role: role,
+      reservation_id: reservationId,
+      details: {
+        guest_name: `${data.firstName} ${data.lastName}`,
+        guest_email: data.email,
+        slot_id: data.slotId,
+        num_places: data.numPlaces,
+        checkin_status: data.checkinStatus || null,
+        source: 'checkin',
+      },
+    });
 
     return {
       success: true,

@@ -9,13 +9,15 @@
  * une erreur de log ne fait jamais échouer l'opération métier.
  */
 
-export { logEmail, logCalendar, logSystem } from './queries';
+export { logEmail, logCalendar, logReservation, logShow, logSystem } from './queries';
 export type {
   LogCategory,
   LogLevel,
   LogStatus,
   EmailAction,
   CalendarAction,
+  ReservationAction,
+  ShowAction,
   EmailLogDetails,
   CalendarLogDetails,
   InsertLogParams,

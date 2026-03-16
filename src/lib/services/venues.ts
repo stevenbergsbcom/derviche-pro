@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { VenueRow, VenueInsert, VenueUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // TYPES
@@ -102,6 +103,12 @@ export async function createVenue(venue: VenueInsert): Promise<VenueResult> {
     }
 
     logger.info(`Venue créé: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'venue_create',
+      success: true,
+      details: { venue_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -131,6 +138,12 @@ export async function updateVenue(id: string, venue: VenueUpdate): Promise<Venue
     }
 
     logger.info(`Venue mis à jour: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'venue_update',
+      success: true,
+      details: { venue_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -161,6 +174,12 @@ export async function deleteVenue(id: string): Promise<VenueResult> {
     }
 
     logger.info(`Venue supprimé (soft): ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'venue_delete',
+      success: true,
+      details: { venue_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

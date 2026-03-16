@@ -8,6 +8,7 @@
 import { createClient } from '@/lib/supabase/client';
 import type { CompanyRow, CompanyInsert, CompanyUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // TYPES
@@ -216,6 +217,12 @@ export async function createCompany(company: CompanyInsert): Promise<CompanyResu
     }
 
     logger.info(`Company créée: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'company_create',
+      success: true,
+      details: { company_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -245,6 +252,12 @@ export async function updateCompany(id: string, company: CompanyUpdate): Promise
     }
 
     logger.info(`Company mise à jour: ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'company_update',
+      success: true,
+      details: { company_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -275,6 +288,12 @@ export async function deleteCompany(id: string): Promise<CompanyResult> {
     }
 
     logger.info(`Company supprimée (soft): ${data.name} (${data.id})`);
+    logActivityClient({
+      category: 'system',
+      action: 'company_delete',
+      success: true,
+      details: { company_id: data.id, name: data.name },
+    });
     return { data, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

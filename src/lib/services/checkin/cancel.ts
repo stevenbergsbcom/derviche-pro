@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 import type { CheckinStatus } from '@/types/database';
 
 import type { 
@@ -173,6 +174,18 @@ export async function cancelReservationFromPWA(
     };
 
     logger.info('checkin.cancelReservationFromPWA - Succès', { reservationId });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_cancel',
+      success: true,
+      actor_id: userId,
+      actor_role: role,
+      reservation_id: reservationId,
+      details: {
+        guest_name: `${result.guestFirstName ?? ''} ${result.guestLastName ?? ''}`.trim(),
+        source: 'checkin',
+      },
+    });
 
     return { success: true, data: result, error: null };
 
@@ -371,6 +384,19 @@ export async function reactivateReservation(
     logger.info('checkin.reactivateReservation - Succès', {
       reservationId,
       isOverbooking,
+    });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_reactivate',
+      success: true,
+      actor_id: userId,
+      actor_role: role,
+      reservation_id: reservationId,
+      details: {
+        guest_name: `${result.guestFirstName ?? ''} ${result.guestLastName ?? ''}`.trim(),
+        is_overbooking: isOverbooking,
+        source: 'checkin',
+      },
     });
 
     return {

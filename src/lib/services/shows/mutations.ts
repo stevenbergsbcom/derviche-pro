@@ -22,6 +22,7 @@ import type {
 import { buildShowWithRelations } from './mappers';
 import { generateUniqueSlug } from './slug';
 import { SHOW_SELECT_WITH_COMPANY } from './constants';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // HELPERS INTERNES
@@ -213,6 +214,17 @@ export async function createShow(
     });
 
     logger.info(`Show créé: ${result.title} (${result.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'show_create',
+      success: true,
+      details: {
+        show_id: result.id,
+        title: result.title,
+        status: result.status,
+        company_name: result.company_name,
+      },
+    });
     return { data: result, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -289,6 +301,16 @@ export async function updateShow(
     });
 
     logger.info(`Show mis à jour: ${result.title} (${result.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'show_update',
+      success: true,
+      details: {
+        show_id: result.id,
+        title: result.title,
+        status: result.status,
+      },
+    });
     return { data: result, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -330,6 +352,15 @@ export async function deleteShow(id: string): Promise<ShowResult> {
     };
 
     logger.info(`Show supprimé (soft): ${typedData.title} (${typedData.id})`);
+    logActivityClient({
+      category: 'show',
+      action: 'show_delete',
+      success: true,
+      details: {
+        show_id: typedData.id,
+        title: typedData.title,
+      },
+    });
     return { data: typedData, error: null };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

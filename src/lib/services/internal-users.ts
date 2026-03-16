@@ -9,6 +9,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 import type { InternalUser, InternalRole } from '@/types/database';
 
 // ============================================
@@ -454,6 +455,16 @@ export async function updateInternalUserRole(
     // Récupérer l'utilisateur mis à jour
     const updatedUser = await getInternalUserById(userId);
     logger.info('internal-users.updateInternalUserRole - Succès', { userId, newRole });
+    logActivityClient({
+      category: 'system',
+      action: 'user_role_update',
+      success: true,
+      details: {
+        user_id: userId,
+        new_role: newRole,
+        user_name: updatedUser.data ? `${updatedUser.data.first_name ?? ''} ${updatedUser.data.last_name ?? ''}`.trim() : undefined,
+      },
+    });
     return updatedUser;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -501,6 +512,15 @@ export async function updateInternalUserProfile(
     // Récupérer l'utilisateur mis à jour
     const updatedUser = await getInternalUserById(userId);
     logger.info('internal-users.updateInternalUserProfile - Succès', { userId });
+    logActivityClient({
+      category: 'system',
+      action: 'user_profile_update',
+      success: true,
+      details: {
+        user_id: userId,
+        user_name: updatedUser.data ? `${updatedUser.data.first_name ?? ''} ${updatedUser.data.last_name ?? ''}`.trim() : undefined,
+      },
+    });
     return updatedUser;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';

@@ -7,6 +7,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { logActivityClient } from '@/lib/services/logs/client';
 
 // ============================================
 // TYPES
@@ -275,6 +276,16 @@ export async function cancelMyReservation(
     }
 
     logger.info('Réservation annulée par le pro', { id, userId: user.id });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_cancel',
+      success: true,
+      reservation_id: id,
+      details: {
+        reason: reason ?? null,
+        source: 'professional',
+      },
+    });
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -465,6 +476,16 @@ export async function changeMyReservationSlot(
     }
 
     logger.info('Créneau modifié par le pro', { reservationId, newSlotId, userId: user.id });
+    logActivityClient({
+      category: 'reservation',
+      action: 'reservation_change_slot',
+      success: true,
+      reservation_id: reservationId,
+      details: {
+        new_slot_id: newSlotId,
+        source: 'professional',
+      },
+    });
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
