@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import type { CreateAdminReservationData } from '@/lib/services/admin-reservations';
 import { checkDuplicateReservation } from '@/lib/services/reservations-duplicate';
 import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
 import type {
   AvailableSlot,
   ShowOption,
@@ -69,6 +70,7 @@ interface UseCreateReservationFormReturn {
     field: K,
     value: CreateAdminReservationData[K]
   ) => void;
+  handleProfileSelect: (profile: FoundProfile) => void;
   handleSubmit: () => Promise<void>;
   handleClose: () => void;
 }
@@ -190,6 +192,27 @@ export function useCreateReservationForm({
     setValidationErrors(prev => prev.length > 0 ? [] : prev);
   }, []); // Pas de dépendances externes
 
+  // S189 : Pré-remplissage depuis un profil professionnel
+  const handleProfileSelect = useCallback((profile: FoundProfile) => {
+    setFormData((prev) => ({
+      ...prev,
+      firstName: profile.firstName ?? '',
+      lastName: profile.lastName ?? '',
+      email: profile.email,
+      phone: profile.phone ?? null,
+      emailSecondary: profile.email2 ?? null,
+      phoneSecondary: profile.phone2 ?? null,
+      organization: profile.organization ?? null,
+      function: profile.function ?? null,
+      afcNumber: profile.afcNumber ?? null,
+      address: profile.address ?? null,
+      postalCode: profile.postalCode ?? null,
+      city: profile.city ?? null,
+      country: profile.country ?? 'France',
+    }));
+    setValidationErrors([]);
+  }, []);
+
   // S184 : Création effective (appelée directement ou après confirmation doublon)
   const performCreate = useCallback(async () => {
     setIsSaving(true);
@@ -293,6 +316,7 @@ export function useCreateReservationForm({
     // Handlers
     handleShowChange,
     handleFieldChange,
+    handleProfileSelect,
     handleSubmit,
     handleClose,
   };

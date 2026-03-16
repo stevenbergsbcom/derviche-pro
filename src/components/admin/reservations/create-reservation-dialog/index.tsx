@@ -32,6 +32,7 @@ import { DuplicateReservationDialog } from '@/components/shared';
 import {
   ValidationErrors,
   ShowSlotSection,
+  ProfessionalSearchBar,
   PersonalInfoSection,
   ProfessionalInfoSection,
   AddressSection,
@@ -80,6 +81,7 @@ export function CreateReservationDialog({
     // Handlers
     handleShowChange,
     handleFieldChange,
+    handleProfileSelect,
     handleSubmit,
     handleClose,
   } = useCreateReservationForm({
@@ -121,6 +123,12 @@ export function CreateReservationDialog({
             numPlaces={formData.numPlaces}
             onNumPlacesChange={(num) => handleFieldChange('numPlaces', num)}
             maxPlaces={maxPlaces}
+            disabled={isSaving}
+          />
+
+          {/* S189 : Recherche professionnel (optionnel) */}
+          <ProfessionalSearchBar
+            onSelect={handleProfileSelect}
             disabled={isSaving}
           />
 

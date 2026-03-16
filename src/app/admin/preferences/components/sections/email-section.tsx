@@ -235,7 +235,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
             <p className="text-sm text-destructive">{errors.email_from_name.message}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Nom de l'expéditeur affiché dans la boîte de réception
+            Nom de l&apos;expéditeur affiché dans la boîte de réception
           </p>
         </div>
 
