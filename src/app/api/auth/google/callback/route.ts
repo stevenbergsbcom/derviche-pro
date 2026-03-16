@@ -19,6 +19,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin';
 import { getGoogleRedirectUri } from '@/lib/services/google-calendar';
 import { checkGoogleCalendarTokenHealth } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/api';
 import type { Json } from '@/types/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -134,7 +135,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       await checkGoogleCalendarTokenHealth();
     } catch (healthErr) {
       // Non-bloquant — le token est stocké même si le health check échoue
-      const msg = healthErr instanceof Error ? healthErr.message : String(healthErr);
+      const msg = getErrorMessage(healthErr);
       logger.warn('[auth/google/callback] Health check post-autorisation échoué', { error: msg });
     }
 
@@ -150,7 +151,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
     return response;
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
+    const message = getErrorMessage(err);
     logger.error('[auth/google/callback] Exception non gérée', { message });
     return NextResponse.redirect(`${systemUrl}?google_auth=error&reason=exception`);
   }

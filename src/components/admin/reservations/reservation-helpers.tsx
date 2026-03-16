@@ -4,6 +4,11 @@
  */
 
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
+import {
+  formatDateShortWeekday as formatDateFr,
+  formatDateTimeFr,
+  formatLocalDate,
+} from '@/lib/utils/format-date';
 
 // ============================================
 // TYPES
@@ -51,16 +56,8 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
 // HELPERS DATE
 // ============================================
 
-/**
- * Formate une date en YYYY-MM-DD en utilisant la timezone locale
- * Évite le problème de décalage UTC avec toISOString()
- */
-export function formatLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+// formatLocalDate importé depuis @/lib/utils/format-date
+export { formatLocalDate };
 
 export function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dateTo?: string } {
   const today = new Date();
@@ -102,25 +99,8 @@ export function getDatePresetRange(preset: DatePreset): { dateFrom?: string; dat
   }
 }
 
-export function formatDateFr(dateStr: string): string {
-  const date = new Date(dateStr + 'T12:00:00');
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-export function formatDateTimeFr(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+// formatDateFr (= formatDateShortWeekday) et formatDateTimeFr importés depuis @/lib/utils/format-date
+export { formatDateFr, formatDateTimeFr };
 
 // ============================================
 // HELPERS TRI COLONNES

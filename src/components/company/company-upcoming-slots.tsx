@@ -4,6 +4,7 @@ import { Calendar, MapPin, Users, Clock, Theater } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { UpcomingSlot } from '@/lib/services/company-dashboard';
+import { formatTimeShort } from '@/lib/utils/format-date';
 
 // ============================================
 // TYPES
@@ -29,9 +30,7 @@ function formatDate(dateString: string): string {
 }
 
 /** Formate une heure (HH:MM:SS → HH:MM) */
-function formatTime(timeString: string): string {
-    return timeString.slice(0, 5);
-}
+const formatTime = formatTimeShort;
 
 // ============================================
 // COMPOSANT SKELETON

@@ -18,24 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getProAvailableSlotsForShow, type ProAvailableSlot } from '@/lib/services/pro-reservations';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDateLong(dateStr: string): string {
-  const date = new Date(`${dateStr}T12:00:00`);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function formatTime(timeStr: string): string {
-  return timeStr.slice(0, 5).replace(':', 'h');
-}
+import { formatDateFr as formatDateLong, formatTimeFr as formatTime } from '@/lib/utils/format-date';
 
 // ============================================
 // TYPES

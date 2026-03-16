@@ -23,15 +23,17 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
 import { createAdminNotification } from '@/lib/services/notifications';
 import { logger } from '@/lib/logger';
+import {
+  requireAuth,
+  errorResponse,
+  successResponse,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // TYPES
 // ============================================
-
-interface DeleteAccountResponse {
-  success: boolean;
-  error?: string;
-}
 
 /** Structure retournée par la RPC anonymize_and_delete_account */
 interface AnonymizeRpcResult {
@@ -55,50 +57,19 @@ function isAnonymizeRpcResult(val: unknown): val is AnonymizeRpcResult {
 // ROUTE HANDLER
 // ============================================
 
-export async function POST(): Promise<NextResponse<DeleteAccountResponse>> {
+export async function POST(): Promise<NextResponse> {
   try {
     logger.info('[delete-account] Début suppression compte professionnel');
 
     // ----------------------------------------
-    // 1. Vérifier l'authentification
+    // 1. Vérifier l'authentification et le rôle
     // ----------------------------------------
     const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      logger.warn('[delete-account] Non authentifié');
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
-    }
+    const auth = await requireAuth(supabase, ['professional'], '[delete-account]');
+    if (!auth.ok) return auth.response;
 
     // ----------------------------------------
-    // 2. Vérifier le rôle 'professional'
-    //    (la RPC fait aussi cette vérification,
-    //    mais on échoue tôt pour économiser un aller-retour DB)
-    // ----------------------------------------
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!roleData || roleData.role !== 'professional') {
-      logger.warn('[delete-account] Rôle non autorisé', {
-        userId: user.id,
-        role: roleData?.role ?? 'inconnu',
-      });
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Seuls les comptes professionnels peuvent supprimer leur compte via cette interface.',
-        },
-        { status: 403 }
-      );
-    }
-
-    // ----------------------------------------
-    // 3. Appeler la RPC d'anonymisation
+    // 2. Appeler la RPC d'anonymisation
     //    → annule réservations futures
     //    → anonymise toutes les PII
     // ----------------------------------------
@@ -108,43 +79,37 @@ export async function POST(): Promise<NextResponse<DeleteAccountResponse>> {
 
     if (rpcError) {
       logger.error('[delete-account] Erreur RPC anonymize_and_delete_account', {
-        userId: user.id,
+        userId: auth.userId,
         error: rpcError.message,
       });
-      return NextResponse.json(
-        { success: false, error: 'Erreur lors de la préparation de la suppression.' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Erreur lors de la préparation de la suppression.');
     }
 
     if (!isAnonymizeRpcResult(rpcData)) {
-      logger.error('[delete-account] Réponse RPC inattendue', { userId: user.id, rpcData });
-      return NextResponse.json(
-        { success: false, error: 'Réponse serveur inattendue.' },
-        { status: 500 }
-      );
+      logger.error('[delete-account] Réponse RPC inattendue', { userId: auth.userId, rpcData });
+      return serverErrorResponse('Réponse serveur inattendue.');
     }
 
     if (!rpcData.success) {
       logger.error('[delete-account] RPC échouée', {
-        userId: user.id,
+        userId: auth.userId,
         error: rpcData.error,
       });
-      return NextResponse.json(
-        { success: false, error: rpcData.error ?? 'Erreur lors de la suppression du compte.' },
-        { status: 400 }
+      return errorResponse(
+        rpcData.error ?? 'Erreur lors de la suppression du compte.',
+        400
       );
     }
 
     const { cancelled_count = 0, user_email = '' } = rpcData;
 
     logger.info('[delete-account] Anonymisation réussie', {
-      userId: user.id,
+      userId: auth.userId,
       cancelledCount: cancelled_count,
     });
 
     // ----------------------------------------
-    // 4. Notification admin si des réservations
+    // 3. Notification admin si des réservations
     //    futures ont été annulées
     // ----------------------------------------
     if (cancelled_count > 0) {
@@ -159,21 +124,21 @@ export async function POST(): Promise<NextResponse<DeleteAccountResponse>> {
     }
 
     // ----------------------------------------
-    // 5. Supprimer le compte auth
+    // 4. Supprimer le compte auth
     //    → supprime auth.users
     //    → CASCADE : supprime profiles
     //    → ON DELETE SET NULL : user_id → NULL
     //       sur les réservations (stats préservées)
     // ----------------------------------------
     const supabaseAdmin = createAdminClient();
-    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+    const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(auth.userId);
 
     if (deleteAuthError) {
       // La RPC a déjà anonymisé les données.
       // Si deleteUser échoue, le compte est dans un état partiellement supprimé.
       // On loggue l'erreur mais on ne bloque pas : les PII sont déjà effacées.
       logger.error('[delete-account] Erreur deleteUser (données déjà anonymisées)', {
-        userId: user.id,
+        userId: auth.userId,
         error: deleteAuthError.message,
       });
       // On retourne quand même succès côté client car les données sont anonymisées
@@ -181,14 +146,13 @@ export async function POST(): Promise<NextResponse<DeleteAccountResponse>> {
     }
 
     logger.info('[delete-account] Compte supprimé avec succès', {
-      userId: user.id,
+      userId: auth.userId,
       cancelledCount: cancelled_count,
     });
 
-    return NextResponse.json({ success: true });
+    return successResponse();
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('[delete-account] Exception non gérée', { error: message });
-    return NextResponse.json({ success: false, error: 'Erreur serveur.' }, { status: 500 });
+    logger.error('[delete-account] Exception non gérée', { error: getErrorMessage(err) });
+    return serverErrorResponse('Erreur serveur.');
   }
 }

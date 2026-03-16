@@ -66,12 +66,65 @@ function escapeIlike(value: string): string {
 }
 
 // ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Récupère les IDs des slots autorisés pour un externe ou une company.
+ * Approche en 2 étapes pour éviter le problème de filtrage PostgREST
+ * sur les relations jointes (le filtre sur `slots.hosted_by_id` dans une
+ * relation !inner ne filtre pas les réservations parentes de manière fiable).
+ */
+async function getAuthorizedSlotIds(
+  supabase: ReturnType<typeof createClient>,
+  role: UserRole,
+  userId: string,
+  companyId: string | null
+): Promise<string[] | null> {
+  if (role === 'externe') {
+    // Externe : uniquement les slots où il est hosted_by_id
+    const { data, error } = await supabase
+      .from('slots')
+      .select('id')
+      .eq('hosted_by_id', userId);
+
+    if (error) {
+      logger.error('checkin.getAuthorizedSlotIds - Erreur externe', { error });
+      return null;
+    }
+    return (data ?? []).map((s) => s.id);
+  }
+
+  if (role === 'company' && companyId) {
+    // Company : slots de ses spectacles avec hosted_by = 'company'
+    const { data, error } = await supabase
+      .from('slots')
+      .select('id, shows!inner ( company_id )')
+      .eq('hosted_by', 'company')
+      .eq('shows.company_id', companyId);
+
+    if (error) {
+      logger.error('checkin.getAuthorizedSlotIds - Erreur company', { error });
+      return null;
+    }
+    return (data ?? []).map((s) => s.id);
+  }
+
+  return null;
+}
+
+// ============================================
 // FONCTION PRINCIPALE
 // ============================================
 
 /**
  * Recherche des réservations dans toute la base selon la query.
  * Cherche sur : prénom, nom, email, structure (insensible à la casse).
+ *
+ * Pour les rôles non-admin (externe, company), utilise une approche
+ * en 2 étapes : d'abord récupérer les slots autorisés, puis filtrer
+ * les réservations par `slot_id IN (...)`. Cela garantit un filtrage
+ * fiable, contrairement au filtre PostgREST sur relation jointe.
  */
 export async function searchReservations(
   query: string,
@@ -96,11 +149,26 @@ export async function searchReservations(
 
     const supabase = createClient();
 
-    // Échapper les wildcards ILIKE pour éviter les matchs non voulus
+    // Étape 1 : Pour externe/company, récupérer les slot IDs autorisés
+    let authorizedSlotIds: string[] | null = null;
+
+    if (!ADMIN_ROLES.includes(role)) {
+      authorizedSlotIds = await getAuthorizedSlotIds(supabase, role, userId, companyId);
+
+      if (authorizedSlotIds === null) {
+        return { data: [], error: 'Erreur de vérification des accès' };
+      }
+
+      if (authorizedSlotIds.length === 0) {
+        logger.info('checkin.searchReservations - Aucun slot autorisé', { role });
+        return { data: [], error: null };
+      }
+    }
+
+    // Étape 2 : Recherche des réservations
     const escaped = escapeIlike(trimmed);
     const searchPattern = `%${escaped}%`;
 
-    // Construction de la requête de base
     let queryBuilder = supabase
       .from('reservations')
       .select(`
@@ -134,17 +202,9 @@ export async function searchReservations(
       )
       .limit(MAX_RESULTS);
 
-    // Filtres selon le rôle (admin = pas de filtre)
-    if (!ADMIN_ROLES.includes(role)) {
-      if (role === 'externe') {
-        queryBuilder = queryBuilder.eq('slots.hosted_by_id', userId);
-      } else if (role === 'company' && companyId) {
-        queryBuilder = queryBuilder
-          .eq('slots.hosted_by', 'company')
-          .eq('slots.shows.company_id', companyId);
-      } else {
-        return { data: [], error: null };
-      }
+    // Filtre fiable par slot_id (pas par relation jointe)
+    if (authorizedSlotIds !== null) {
+      queryBuilder = queryBuilder.in('slot_id', authorizedSlotIds);
     }
 
     const { data, error } = await queryBuilder;

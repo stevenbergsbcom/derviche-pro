@@ -28,6 +28,7 @@ import { logger } from '@/lib/logger';
 import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logSystem } from '@/lib/services/logs';
+import { errorResponse, successResponse, serverErrorResponse } from '@/lib/api';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -75,10 +76,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-confirmation] Payload invalide', {
         errors: parseResult.error.flatten(),
       });
-      return NextResponse.json(
-        { success: false, error: 'Données invalides' },
-        { status: 400 }
-      );
+      return errorResponse('Données invalides');
     }
 
     const payload: SendConfirmationPayload = parseResult.data;
@@ -87,10 +85,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API /emails/send-confirmation] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json(
-        { success: false, error: 'Configuration serveur manquante' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Configuration serveur manquante');
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
@@ -107,7 +102,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-confirmation] Réservation introuvable', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 200 });
+      return errorResponse('Réservation introuvable', 200);
     }
 
     const reservationEmail = reservation.guest_email;
@@ -123,7 +118,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-confirmation] Email ne correspond pas à la réservation', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Email invalide' }, { status: 200 });
+      return errorResponse('Email invalide', 200);
     }
 
     // 3. Créer la notification admin en base (badge sidebar) — non bloquant
@@ -190,10 +185,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: payload.reservationId,
         error: result.error,
       });
-      return NextResponse.json(
-        { success: false, error: "Erreur lors de l'envoi" },
-        { status: 200 }
-      );
+      return errorResponse("Erreur lors de l'envoi", 200);
     }
 
     // 5. Notifier le manager Derviche (si préférence activée)
@@ -339,12 +331,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', { calErr });
     }
 
-    return NextResponse.json({ success: true, messageId: result.messageId });
+    return successResponse({ messageId: result.messageId });
   } catch (err) {
     logger.error('[API /emails/send-confirmation] Exception', { err });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

@@ -14,36 +14,10 @@
 import { NextResponse } from 'next/server';
 import { checkGoogleCalendarTokenHealth } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
+import { requireCronAuth, getErrorMessage, serverErrorResponse } from '@/lib/api';
 
 // Force le mode dynamique — désactive le cache Next.js
 export const dynamic = 'force-dynamic';
-
-// ============================================
-// VÉRIFICATION DU SECRET CRON
-// ============================================
-
-function verifyCronSecret(request: Request): { ok: boolean; status: number; message: string } {
-  const cronSecret = process.env.CRON_SECRET;
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (isDev && !cronSecret) {
-    logger.warn('[cron/google-calendar-health] CRON_SECRET non configuré — accès libre en développement');
-    return { ok: true, status: 200, message: 'ok' };
-  }
-
-  if (!cronSecret) {
-    logger.error('[cron/google-calendar-health] CRON_SECRET manquant en production');
-    return { ok: false, status: 500, message: 'Configuration manquante : CRON_SECRET' };
-  }
-
-  const authHeader = request.headers.get('Authorization');
-  if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-    logger.warn('[cron/google-calendar-health] Tentative d\'accès avec un secret invalide');
-    return { ok: false, status: 401, message: 'Non autorisé' };
-  }
-
-  return { ok: true, status: 200, message: 'ok' };
-}
 
 // ============================================
 // HANDLER
@@ -52,10 +26,8 @@ function verifyCronSecret(request: Request): { ok: boolean; status: number; mess
 export async function GET(request: Request): Promise<NextResponse> {
   const start = Date.now();
 
-  const auth = verifyCronSecret(request);
-  if (!auth.ok) {
-    return NextResponse.json({ ok: false, error: auth.message }, { status: auth.status });
-  }
+  const auth = requireCronAuth(request, '[cron/google-calendar-health]');
+  if (!auth.ok) return auth.response;
 
   logger.info('[cron/google-calendar-health] Démarrage vérification santé token');
 
@@ -76,8 +48,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       durationMs,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('[cron/google-calendar-health] Exception non gérée', { message });
-    return NextResponse.json({ ok: false, error: 'Erreur serveur' }, { status: 500 });
+    logger.error('[cron/google-calendar-health] Exception non gérée', {
+      message: getErrorMessage(err),
+    });
+    return serverErrorResponse();
   }
 }

@@ -6,6 +6,7 @@
  */
 
 import type { OccupancyBadgeVariant } from './types';
+import { formatDateShortWeekday, formatTimeShort } from '@/lib/utils/format-date';
 
 // ============================================
 // FORMATAGE DE DATES
@@ -29,14 +30,7 @@ export function formatTodayDate(): string {
  * Formate une date en français court
  * @example "ven. 24 janv."
  */
-export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-}
+export const formatDate = formatDateShortWeekday;
 
 // ============================================
 // FORMATAGE DU TEMPS
@@ -46,9 +40,7 @@ export function formatDate(dateStr: string): string {
  * Formate une heure (HH:mm:ss → HH:mm)
  * @example "14:30:00" → "14:30"
  */
-export function formatTime(timeStr: string): string {
-  return timeStr.slice(0, 5);
-}
+export const formatTime = formatTimeShort;
 
 /**
  * Formate une date relative (il y a X minutes/heures)

@@ -11,3 +11,4 @@ export { AddressSection } from './address-section';
 export { SecuritySection } from './security-section';
 export { PasswordDialog } from './password-dialog';
 export { DeleteAccountDialog } from './delete-account-dialog';
+export { DangerZoneSection } from './danger-zone-section';

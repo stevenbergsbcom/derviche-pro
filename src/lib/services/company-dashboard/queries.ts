@@ -1,104 +1,14 @@
 /**
- * Service Company Dashboard
+ * Queries Company Dashboard
  * Derviche Diffusion
- * 
- * Gère la récupération des données pour l'interface compagnie (lecture seule)
- * - Infos compagnie
- * - Spectacles de la compagnie
- * - Statistiques de réservations
- * - Prochains créneaux
+ *
+ * Fonctions individuelles de requêtes pour le dashboard compagnie
  */
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import type { CompanyRow, ShowRow, VenueRow, ShowStatus, SlotHostedBy } from '@/types/database';
-
-// ============================================
-// TYPES
-// ============================================
-
-/** Spectacle avec statistiques pour le dashboard compagnie */
-export interface CompanyShowWithStats {
-  id: string;
-  slug: string;
-  title: string;
-  company_id: string;
-  short_description: string | null;
-  long_description: string | null;
-  duration_minutes: number | null;
-  practical_info: string | null;
-  image_url: string | null;
-  gallery_urls: string[] | null;
-  status: ShowStatus;
-  price_type: string;
-  price_amount: number | null;
-  max_reservations_per_booking: number;
-  period: string | null;
-  derviche_manager_id: string | null;
-  invitation_policy: string | null;
-  closure_dates: string | null;
-  folder_url: string | null;
-  teaser_url: string | null;
-  captation_available: boolean;
-  captation_url: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-  // Stats additionnelles
-  total_slots: number;
-  total_reservations: number;
-  total_capacity: number;
-  occupancy_rate: number; // Pourcentage
-}
-
-/** Créneau à venir avec détails */
-export interface UpcomingSlot {
-  id: string;
-  show_id: string;
-  venue_id: string;
-  date: string;
-  time: string;
-  capacity: number;
-  remaining_capacity: number;
-  hosted_by: SlotHostedBy;
-  hosted_by_id: string | null;
-  created_at: string;
-  updated_at: string;
-  // Données jointes
-  show: Pick<ShowRow, 'id' | 'title' | 'slug' | 'image_url'>;
-  venue: Pick<VenueRow, 'id' | 'name' | 'city'>;
-  reservations_count: number;
-  /** Nombre de personnes ayant effectivement assisté = sum(num_places) où checkin_status != 'absent' && != null */
-  checkin_count: number;
-}
-
-/** Statistiques globales du dashboard */
-export interface CompanyDashboardStats {
-  total_shows: number;
-  total_slots: number;
-  total_reservations: number;
-  total_capacity: number;
-  average_occupancy_rate: number; // Pourcentage
-  upcoming_slots_count: number;
-}
-
-/** Données complètes du dashboard compagnie */
-export interface CompanyDashboardData {
-  company: CompanyRow | null;
-  stats: CompanyDashboardStats;
-  shows: CompanyShowWithStats[];
-  upcomingSlots: UpcomingSlot[];
-}
-
-/** Résultat d'une opération */
-export interface CompanyDashboardResult {
-  data: CompanyDashboardData | null;
-  error: string | null;
-}
-
-// ============================================
-// FONCTIONS
-// ============================================
+import type { CompanyRow, ShowStatus, SlotHostedBy, VenueRow } from '@/types/database';
+import type { CompanyShowWithStats, UpcomingSlot } from './types';
 
 /**
  * Récupère le company_id de l'utilisateur connecté
@@ -230,7 +140,7 @@ export async function getCompanyShowsWithStats(companyId: string): Promise<{ dat
     // 4. Construire les stats par spectacle
     const showsWithStats: CompanyShowWithStats[] = shows.map(show => {
       const showSlots = slotsByShow[show.id] || { count: 0, totalCapacity: 0, slotIds: [] };
-      
+
       let totalReservations = 0;
       showSlots.slotIds.forEach(slotId => {
         totalReservations += reservationsBySlot[slotId] || 0;
@@ -353,53 +263,5 @@ export async function getUpcomingSlots(companyId: string, limit: number = 5): Pr
     const message = err instanceof Error ? err.message : 'Erreur inconnue';
     logger.error('Exception getUpcomingSlots', { message });
     return { data: [], error: message };
-  }
-}
-
-/**
- * Récupère toutes les données du dashboard compagnie
- */
-export async function getCompanyDashboard(userId: string): Promise<CompanyDashboardResult> {
-  try {
-    // 1. Récupérer le company_id de l'utilisateur
-    const { companyId, error: companyIdError } = await getCompanyIdForUser(userId);
-
-    if (companyIdError || !companyId) {
-      return { data: null, error: companyIdError || 'Compagnie non trouvée' };
-    }
-
-    // 2. Récupérer les données en parallèle
-    const [companyResult, showsResult, upcomingSlotsResult] = await Promise.all([
-      getCompanyInfo(companyId),
-      getCompanyShowsWithStats(companyId),
-      getUpcomingSlots(companyId, 10),
-    ]);
-
-    // 3. Calculer les statistiques globales
-    const shows = showsResult.data;
-    const stats: CompanyDashboardStats = {
-      total_shows: shows.length,
-      total_slots: shows.reduce((sum, s) => sum + s.total_slots, 0),
-      total_reservations: shows.reduce((sum, s) => sum + s.total_reservations, 0),
-      total_capacity: shows.reduce((sum, s) => sum + s.total_capacity, 0),
-      average_occupancy_rate: shows.length > 0
-        ? Math.round(shows.reduce((sum, s) => sum + s.occupancy_rate, 0) / shows.length)
-        : 0,
-      upcoming_slots_count: upcomingSlotsResult.data.length,
-    };
-
-    return {
-      data: {
-        company: companyResult.data,
-        stats,
-        shows,
-        upcomingSlots: upcomingSlotsResult.data,
-      },
-      error: null,
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Erreur inconnue';
-    logger.error('Exception getCompanyDashboard', { message });
-    return { data: null, error: message };
   }
 }

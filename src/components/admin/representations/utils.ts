@@ -4,20 +4,17 @@
  */
 
 import { WEEK_DAY_LABELS_FULL, MONTH_NAMES } from './constants';
+import { formatLocalDate } from '@/lib/utils/format-date';
 
 // ============================================
 // FORMATAGE DE DATES
 // ============================================
 
 /**
- * Obtient la date locale au format YYYY-MM-DD
- * Évite les problèmes de timezone avec toISOString()
+ * Alias pour compatibilité — utilise formatLocalDate depuis @/lib/utils/format-date
  */
 export function getLocalDateString(date: Date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatLocalDate(date);
 }
 
 /**

@@ -19,6 +19,12 @@ import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import { logger } from '@/lib/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logSystem } from '@/lib/services/logs';
+import {
+  unauthorizedResponse,
+  errorResponse,
+  serverErrorResponse,
+  getErrorMessage,
+} from '@/lib/api';
 
 // ============================================
 // VALIDATION
@@ -29,20 +35,10 @@ const bodySchema = z.object({
 });
 
 // ============================================
-// TYPES
-// ============================================
-
-interface VerifyPasswordResponse {
-  success: boolean;
-  valid?: boolean;
-  error?: string;
-}
-
-// ============================================
 // ROUTE HANDLER
 // ============================================
 
-export async function POST(request: Request): Promise<NextResponse<VerifyPasswordResponse>> {
+export async function POST(request: Request): Promise<NextResponse> {
   try {
     // 0. Rate limiting (brute-force protection)
     const rl = await checkRateLimit('auth', request);
@@ -52,19 +48,16 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
         identifier: rl.identifier,
         limit: rl.limit,
       });
-      return rateLimitResponse(rl) as NextResponse<VerifyPasswordResponse>;
+      return rateLimitResponse(rl) as NextResponse;
     }
 
-    // 1. Vérifier que l'utilisateur est authentifié
+    // 1. Vérifier que l'utilisateur est authentifié (tout rôle)
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
       logger.warn('API /auth/verify-password - Non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
+      return unauthorizedResponse();
     }
 
     // 2. Valider le body avec Zod
@@ -72,18 +65,12 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
     try {
       rawBody = await request.json();
     } catch {
-      return NextResponse.json(
-        { success: false, error: 'Corps de requête invalide' },
-        { status: 400 }
-      );
+      return errorResponse('Corps de requête invalide', 400);
     }
 
     const parseResult = bodySchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return NextResponse.json(
-        { success: false, error: 'Mot de passe requis' },
-        { status: 400 }
-      );
+      return errorResponse('Mot de passe requis', 400);
     }
 
     const { password } = parseResult.data;
@@ -94,10 +81,7 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
 
     if (!supabaseUrl || !supabaseAnonKey) {
       logger.error('API /auth/verify-password - Variables env manquantes');
-      return NextResponse.json(
-        { success: false, error: 'Configuration serveur incorrecte' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Configuration serveur incorrecte');
     }
 
     // Client isolé sans persistance de session
@@ -123,11 +107,8 @@ export async function POST(request: Request): Promise<NextResponse<VerifyPasswor
     logger.info('API /auth/verify-password - Mot de passe vérifié', { userId: user.id });
     return NextResponse.json({ success: true, valid: true });
 
-  } catch (error) {
-    logger.error('API /auth/verify-password - Exception', { error });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+  } catch (err) {
+    logger.error('API /auth/verify-password - Exception', { error: getErrorMessage(err) });
+    return serverErrorResponse('Erreur serveur');
   }
 }

@@ -7,9 +7,10 @@
  * - getErrorMessage : extraction de message d'erreur
  */
 
-// Guard
+// Guards
 export { requireAuth, ADMIN_ROLES, STAFF_ROLES } from './admin-guard';
 export type { AuthResult, AuthSuccess, AuthFailure } from './admin-guard';
+export { requireCronAuth } from './cron-guard';
 
 // Réponses
 export {

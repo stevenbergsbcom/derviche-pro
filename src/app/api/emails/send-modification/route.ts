@@ -35,6 +35,14 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
 import type { UserRole } from '@/types/database';
+import {
+  errorResponse,
+  successResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  notFoundResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -110,10 +118,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Payload invalide', {
         errors: parseResult.error.flatten(),
       });
-      return NextResponse.json(
-        { success: false, error: 'Données invalides' },
-        { status: 400 }
-      );
+      return errorResponse('Données invalides');
     }
 
     const payload: SendModificationPayload = parseResult.data;
@@ -124,20 +129,14 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (authError || !user) {
       logger.warn('[API /emails/send-modification] Utilisateur non authentifié');
-      return NextResponse.json(
-        { success: false, error: 'Non authentifié' },
-        { status: 401 }
-      );
+      return unauthorizedResponse();
     }
 
     // 3. Client service role
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API /emails/send-modification] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json(
-        { success: false, error: 'Configuration serveur manquante' },
-        { status: 500 }
-      );
+      return serverErrorResponse('Configuration serveur manquante');
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
@@ -189,7 +188,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Réservation introuvable', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 404 });
+      return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = reservationRaw as unknown as ReservationWithDetails;
@@ -210,7 +209,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: payload.reservationId,
         userId: user.id,
       });
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      return forbiddenResponse('Accès refusé');
     }
 
     // 5b. Si externe : vérifier qu'il est assigné au spectacle via slots.hosted_by_id
@@ -223,7 +222,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           userId: user.id,
           reservationId: payload.reservationId,
         });
-        return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+        return forbiddenResponse('Accès refusé');
       }
     }
 
@@ -238,7 +237,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Ancien créneau introuvable', {
         oldSlotId: payload.oldSlotId,
       });
-      return NextResponse.json({ success: false, error: 'Ancien créneau introuvable' }, { status: 404 });
+      return notFoundResponse('Ancien créneau introuvable');
     }
 
     const oldSlot = oldSlotRaw as unknown as SlotDetails;
@@ -258,10 +257,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn('[API /emails/send-modification] Aucun email destinataire', {
         reservationId: payload.reservationId,
       });
-      return NextResponse.json(
-        { success: false, error: 'Email destinataire introuvable' },
-        { status: 422 }
-      );
+      return errorResponse('Email destinataire introuvable', 422);
     }
 
     // 8. Récupérer le manager Derviche
@@ -408,15 +404,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       message: `${recipientFullName} a modifié son créneau pour « ${show.title} »`,
     });
 
-    return NextResponse.json({
+    return successResponse({
       success: emailResult.success,
       messageId: emailResult.messageId,
     });
   } catch (err) {
     logger.error('[API /emails/send-modification] Exception', { err });
-    return NextResponse.json(
-      { success: false, error: 'Erreur serveur' },
-      { status: 500 }
-    );
+    return serverErrorResponse();
   }
 }

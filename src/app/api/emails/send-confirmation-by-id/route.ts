@@ -11,8 +11,16 @@
  * - Ne retourne jamais les détails techniques d'erreur au client
  */
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import { z } from 'zod';
+import {
+  errorResponse,
+  successResponse,
+  unauthorizedResponse,
+  forbiddenResponse,
+  notFoundResponse,
+  serverErrorResponse,
+} from '@/lib/api';
 import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
 import {
@@ -75,7 +83,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const parseResult = schema.safeParse(rawBody);
 
     if (!parseResult.success) {
-      return NextResponse.json({ success: false, error: 'Données invalides' }, { status: 400 });
+      return errorResponse('Données invalides');
     }
 
     const { reservationId, syncCalendar, skipEmail } = parseResult.data;
@@ -85,14 +93,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const { data: { user }, error: authError } = await userClient.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Non authentifié' }, { status: 401 });
+      return unauthorizedResponse();
     }
 
     // 3. Client service role
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceRoleKey) {
       logger.error('[API /emails/send-confirmation-by-id] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return NextResponse.json({ success: false, error: 'Configuration serveur manquante' }, { status: 500 });
+      return serverErrorResponse('Configuration serveur manquante');
     }
 
     const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
@@ -113,7 +121,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       userRole === 'externe';
 
     if (!isAuthorized) {
-      return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+      return forbiddenResponse('Accès refusé');
     }
 
     // 5a. Si externe : vérifier qu'il est bien assigné au spectacle de cette réservation
@@ -138,7 +146,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           userId: user.id,
           reservationId,
         });
-        return NextResponse.json({ success: false, error: 'Accès refusé' }, { status: 403 });
+        return forbiddenResponse('Accès refusé');
       }
     }
 
@@ -176,7 +184,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (reservationError || !raw) {
       logger.warn('[API /emails/send-confirmation-by-id] Réservation introuvable', { reservationId });
-      return NextResponse.json({ success: false, error: 'Réservation introuvable' }, { status: 404 });
+      return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = raw as unknown as ReservationFull;
@@ -194,7 +202,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     if (!recipientEmail) {
       logger.warn('[API /emails/send-confirmation-by-id] Aucun email destinataire', { reservationId });
-      return NextResponse.json({ success: false, error: 'Email destinataire introuvable' }, { status: 422 });
+      return errorResponse('Email destinataire introuvable', 422);
     }
 
     const slots = reservation.slots as ReservationFull['slots'];
@@ -331,10 +339,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       message: `${recipientFullName} a réservé ${reservation.num_places} place(s) pour « ${show.title} »`,
     });
 
-    return NextResponse.json({ success: emailResult.success, messageId: emailResult.messageId });
+    return successResponse({ success: emailResult.success, messageId: emailResult.messageId });
 
   } catch (err) {
     logger.error('[API /emails/send-confirmation-by-id] Exception', { err });
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
+    return serverErrorResponse();
   }
 }
