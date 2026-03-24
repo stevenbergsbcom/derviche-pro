@@ -18,7 +18,7 @@ import { createAdminClient } from '@/lib/supabase/server-admin';
 import { logger } from '@/lib/logger';
 import type { OAuth2Client } from 'googleapis-common';
 
-export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar';
+export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 
 // ============================================
 // HELPERS
