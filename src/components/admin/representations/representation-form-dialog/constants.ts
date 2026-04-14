@@ -68,7 +68,7 @@ export const LABELS = {
   time: 'Heure',
   venue: 'Lieu',
   capacity: 'Places max (pro)',
-  capacityHelp: 'Nombre maximum de programmateurs pouvant réserver',
+  capacityHelp: 'Nombre maximum de professionnel·le·s pouvant réserver',
   hostedBy: 'Accueil par',
   hostedById: 'Accueilli par',
 
@@ -120,6 +120,6 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   'super-admin': 'Super Admin',
   admin: 'Admin',
   externe: 'Externe',
-  professional: 'Programmateur',
+  professional: 'Professionnel·le',
   company: 'Compagnie',
 } as const;

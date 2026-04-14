@@ -19,7 +19,7 @@ export const LOGO_DIMENSIONS = {
 export const LOGO_ALT = 'Logo de l\'organisation';
 
 /** Label par défaut pour le lien externe */
-export const EXTERNAL_LINK_LABEL = 'Voir le site';
+export const EXTERNAL_LINK_LABEL = 'Voir la plateforme';
 
 /** URL par défaut pour le lien externe */
 export const EXTERNAL_LINK_HREF = '/';

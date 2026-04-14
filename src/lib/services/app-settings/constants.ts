@@ -151,10 +151,10 @@ export const HOMEPAGE_DEFAULTS: HomepageSettings = {
     label: 'Notre impact',
     title: 'Les chiffres qui parlent de notre engagement',
     description:
-      'Depuis 2016, Derviche rassemble les meilleurs spectacles vivants et les programmateurs les plus engagés. Plus de 200 000 spectateurs ont déjà applaudi nos artistes lors de leurs tournées !',
+      'Depuis 2016, Derviche rassemble les meilleurs spectacles vivants et les professionnel·le·s les plus engagé·e·s. Plus de 200 000 spectateurs ont déjà applaudi nos artistes lors de leurs tournées !',
     stats: [
       { number: '120', label: 'Spectacles représentés' },
-      { number: '850', label: 'Programmateurs actifs' },
+      { number: '850', label: 'Professionnel·le·s actif·ve·s' },
       { number: '18', label: 'Compagnies partenaires' },
     ],
   },
@@ -166,7 +166,7 @@ export const HOMEPAGE_DEFAULTS: HomepageSettings = {
   },
   homepage_footer: {
     description:
-      'Agence de production et de diffusion de spectacles vivants depuis 2016. Nous accompagnons les compagnies artistiques et les programmateurs.',
+      'Agence de production et de diffusion de spectacles vivants depuis 2016. Nous accompagnons les compagnies artistiques et les professionnel·le·s.',
     facebook_url: 'https://www.facebook.com/Derviche-Diffusion-104081770023884',
     instagram_url: 'https://www.instagram.com/dervichediffusion/',
     copyright_text: '© {year} Derviche Diffusion. Tous droits réservés.',
@@ -290,7 +290,7 @@ Vous pouvez introduire une réclamation auprès de la CNIL (Commission Nationale
 Dernière mise à jour : mars 2026
 
 Article 1 — Objet
-Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme Derviche Diffusion, accessible à l'adresse derviche-pro.com. Cette plateforme permet aux professionnels du spectacle vivant (programmateurs, directeurs de salles) de consulter le catalogue de spectacles et d'effectuer des réservations.
+Les présentes Conditions Générales d'Utilisation (CGU) régissent l'accès et l'utilisation de la plateforme Derviche Diffusion, accessible à l'adresse derviche-pro.com. Cette plateforme permet aux professionnels du spectacle vivant (professionnel·le·s du spectacle vivant) de consulter le catalogue de spectacles et d'effectuer des réservations.
 
 Article 2 — Inscription
 L'accès à la plateforme de réservation nécessite la création d'un compte. L'utilisateur s'engage à fournir des informations exactes et à jour. Chaque compte est personnel et ne peut être partagé.

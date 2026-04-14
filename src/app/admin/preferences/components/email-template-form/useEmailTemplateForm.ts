@@ -192,10 +192,11 @@ export function useEmailTemplateForm({
 
   // Props communes pour les champs avec insertion de variables
   const focusProps = (
-    ref: React.RefObject<HTMLTextAreaElement | HTMLInputElement | null>,
     fieldName: keyof TemplateFormValues
   ) => ({
-    onFocus: () => { lastFocusedRef.current = ref.current; },
+    onFocus: (e: React.FocusEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+      lastFocusedRef.current = e.currentTarget;
+    },
     'data-field': fieldName,
   });
 

@@ -40,10 +40,10 @@ export function transformShowToSpectacle(show: PublicShow): Spectacle {
     id: 0, // Legacy — on utilise slug comme identifiant unique
     title: show.title,
     company: show.companyName,
-    venues: show.venues.map((v) => v.name),
+    venues: show.venues.map((v) => (v.city ? `${v.name} - ${v.city}` : v.name)),
     image: show.imageUrl || PLACEHOLDER_IMAGE,
     slug: show.slug,
-    genre: show.categories[0] || 'Spectacle',
+    genres: show.categories,
     nextDate: status === 'available' ? (show.nextDate || '') : '',
     remainingSlots: show.availableSlotsCount,
     status,

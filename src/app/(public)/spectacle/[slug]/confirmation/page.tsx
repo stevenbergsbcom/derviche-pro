@@ -344,16 +344,6 @@ function ConfirmationContent() {
                 )}
               </div>
 
-              {/* Action : Ajouter au calendrier */}
-              <div className="border-t border-border p-6 bg-muted/30">
-                <Button variant="outline" className="w-full" disabled>
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Ajouter au calendrier
-                </Button>
-                <p className="text-xs text-muted-foreground text-center mt-3">
-                  Cette fonctionnalité sera disponible prochainement
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>

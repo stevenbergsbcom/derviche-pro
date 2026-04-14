@@ -36,7 +36,7 @@ export function CapacitySection({
         Places max (pro) <span className="text-destructive">*</span>
       </Label>
       <p id="capacity-help" className="text-xs text-muted-foreground">
-        Nombre maximum de programmateurs pouvant réserver
+        Nombre maximum de professionnel·le·s pouvant réserver
       </p>
       <div className="flex items-center gap-2">
         <Input

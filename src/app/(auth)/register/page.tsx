@@ -112,7 +112,7 @@ export default function RegisterPage() {
                     Inscription
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                    Créez votre compte de programmateur
+                    Créez votre compte professionnel
                 </p>
             </div>
 

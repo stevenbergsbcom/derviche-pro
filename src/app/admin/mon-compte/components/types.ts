@@ -28,7 +28,7 @@ export function formatRole(role: string): string {
     case 'super-admin': return 'Super Admin';
     case 'admin': return 'Admin';
     case 'externe': return 'Externe DD';
-    case 'professional': return 'Programmateur';
+    case 'professional': return 'Professionnel·le';
     case 'company': return 'Compagnie';
     default: return role;
   }

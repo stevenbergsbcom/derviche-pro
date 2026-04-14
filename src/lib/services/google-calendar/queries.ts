@@ -98,7 +98,11 @@ function buildEventBody(data: CalendarEventData) {
     data.guestStructure ? `Structure  : ${data.guestStructure}` : null,
     `Email      : ${data.guestEmail}`,
     `Places     : ${placesLabel}`,
-    `Réservation ID : ${data.reservationId}`,
+    data.guestComment ? `\nCommentaire : ${data.guestComment}` : null,
+    data.managerName ? '\n--- Contact Derviche Diffusion ---' : null,
+    data.managerName ? `Responsable : ${data.managerName}` : null,
+    data.managerPhone ? `Téléphone   : ${data.managerPhone}` : null,
+    data.managerEmail ? `Email       : ${data.managerEmail}` : null,
   ]
     .filter((line): line is string => line !== null)
     .join('\n');

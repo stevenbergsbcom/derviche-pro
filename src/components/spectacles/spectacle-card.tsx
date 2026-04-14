@@ -16,7 +16,7 @@ export interface Spectacle {
   venues: string[]; // Liste des noms de lieux
   image: string;
   slug: string;
-  genre: string;
+  genres: string[];
   nextDate: string;
   remainingSlots?: number; // Nombre de créneaux avec places disponibles
   status?: SpectacleStatus; // Statut du spectacle
@@ -29,17 +29,21 @@ interface SpectacleCardProps {
 /**
  * Composant placeholder pour les images manquantes
  */
-function ImagePlaceholder({ title, genre }: { title: string; genre: string }) {
+function ImagePlaceholder({ title, genres }: { title: string; genres: string[] }) {
   return (
     <div className="w-full h-full bg-gradient-to-br from-derviche/20 to-derviche/40 flex flex-col items-center justify-center p-4">
       <Drama className="w-12 h-12 text-muted-foreground/50 mb-2" />
       <p className="text-derviche-dark/80 text-sm font-medium text-center line-clamp-2">
         {title}
       </p>
-      {/* Badge genre intégré au placeholder */}
-      <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
-        {genre}
-      </span>
+      {/* Badges genres intégrés au placeholder */}
+      <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+        {genres.map((g) => (
+          <span key={g} className="bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
+            {g}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -66,7 +70,7 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
       {/* Image avec badge genre */}
       <div className="aspect-[4/3] overflow-hidden relative">
         {showPlaceholder ? (
-          <ImagePlaceholder title={spectacle.title} genre={spectacle.genre} />
+          <ImagePlaceholder title={spectacle.title} genres={spectacle.genres} />
         ) : (
           <>
             <Image
@@ -79,10 +83,14 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
               }`}
               onError={() => setImageError(true)}
             />
-            {/* Badge genre */}
-            <span className="absolute top-2 left-2 bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
-              {spectacle.genre}
-            </span>
+            {/* Badges genres */}
+            <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+              {spectacle.genres.map((g) => (
+                <span key={g} className="bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
+                  {g}
+                </span>
+              ))}
+            </div>
           </>
         )}
         {/* Badge Dernières représentations */}

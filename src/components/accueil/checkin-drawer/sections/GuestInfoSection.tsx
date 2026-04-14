@@ -241,7 +241,7 @@ export function GuestInfoSection({
             id="guest-function"
             value={guestForm.function}
             onChange={(e) => onFunctionChange(e.target.value)}
-            placeholder="Programmateur, Directeur..."
+            placeholder="Professionnel·le, Directeur·rice..."
             disabled={isSubmitting}
             className="h-12 text-base"
           />

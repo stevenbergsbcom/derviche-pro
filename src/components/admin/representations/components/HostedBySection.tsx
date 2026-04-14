@@ -18,7 +18,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   'super-admin': 'Super Admin',
   'admin': 'Admin',
   'externe': 'Externe',
-  'professional': 'Programmateur',
+  'professional': 'Professionnel·le',
   'company': 'Compagnie',
 };
 

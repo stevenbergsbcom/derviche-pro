@@ -35,7 +35,7 @@ interface FooterProps {
 
 const DEFAULT_LOGO = '/images/logos/logo-derviche-blanc-transparent.png';
 const DEFAULT_DESCRIPTION =
-  'Agence de production et de diffusion de spectacles vivants depuis 2016. Nous accompagnons les compagnies artistiques et les programmateurs.';
+  'Agence de production et de diffusion de spectacles vivants depuis 2016. Nous accompagnons les compagnies artistiques et les professionnel·le·s.';
 const DEFAULT_FACEBOOK = 'https://www.facebook.com/Derviche-Diffusion-104081770023884';
 const DEFAULT_INSTAGRAM = 'https://www.instagram.com/dervichediffusion/';
 const DEFAULT_EMAIL = 'derviche@dervichediffusion.com';

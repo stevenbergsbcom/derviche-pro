@@ -47,7 +47,9 @@ export function ParticipantsStep({
             <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <div className="text-sm text-foreground">
               <p className="font-medium mb-1">Pour les professionnels :</p>
-              {invitationPolicy && <p>{invitationPolicy}</p>}
+              {invitationPolicy && (
+                <p dangerouslySetInnerHTML={{ __html: invitationPolicy }} />
+              )}
               {dervisheManager && (
                 <p className={invitationPolicy ? 'mt-1' : ''}>
                   Contact pour toute précision sur votre réservation

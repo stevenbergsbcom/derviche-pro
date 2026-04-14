@@ -53,7 +53,7 @@ export function ContactSection({ contact, organization }: ContactSectionProps) {
                 <div className="w-12 h-12 md:w-14 md:h-14 bg-derviche/10 rounded-full flex items-center justify-center mb-3 md:mb-4">
                   <Phone className="w-5 h-5 md:w-6 md:h-6 text-derviche" />
                 </div>
-                <h3 className="font-semibold mb-1 md:mb-2 text-derviche-dark">Telephone</h3>
+                <h3 className="font-semibold mb-1 md:mb-2 text-derviche-dark">Téléphone</h3>
                 <a
                   href={`tel:${organization.organization_contact_phone.replace(/\s/g, '')}`}
                   className="text-muted-foreground hover:text-derviche transition text-sm"

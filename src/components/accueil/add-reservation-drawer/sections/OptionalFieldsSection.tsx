@@ -100,7 +100,7 @@ export function OptionalFieldsSection({
           <Input
             id="function"
             {...register('function')}
-            placeholder="Programmateur"
+            placeholder="Professionnel·le"
             disabled={isSubmitting}
             className="h-12 text-base"
           />
