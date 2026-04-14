@@ -188,20 +188,33 @@ export async function POST(request: Request): Promise<NextResponse> {
       return errorResponse("Erreur lors de l'envoi", 200);
     }
 
-    // 5. Notifier le manager Derviche (si préférence activée)
+    // 5. Notifier les destinataires configurés (si préférence activée)
     try {
-      const { data: notifPrefData } = await adminClient
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'email_notification_new_reservation')
-        .maybeSingle();
-
       const isBooleanSettingTrue = (val: unknown): boolean =>
         val === true || val === 'true' || String(val) === 'true';
 
-      const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
+      // Lire les 3 settings en une seule requête
+      const { data: notifSettings } = await adminClient
+        .from('app_settings')
+        .select('key, value')
+        .in('key', [
+          'email_notification_new_reservation',
+          'email_notification_send_to_manager',
+          'email_notification_custom_recipient',
+        ]);
 
-      if (notifEnabled) {
+      const settingsMap = Object.fromEntries(
+        (notifSettings ?? []).map((s) => [s.key, s.value])
+      );
+
+      const notifEnabled = isBooleanSettingTrue(settingsMap.email_notification_new_reservation);
+      const sendToManager = isBooleanSettingTrue(settingsMap.email_notification_send_to_manager ?? true);
+      const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
+        ? settingsMap.email_notification_custom_recipient.trim()
+        : '';
+
+      if (notifEnabled && (sendToManager || customRecipient)) {
+        // Récupérer les détails de la réservation pour le contenu de l'email
         const { data: reservationDetails } = await adminClient
           .from('reservations')
           .select(`
@@ -226,51 +239,65 @@ export async function POST(request: Request): Promise<NextResponse> {
           shows: { title: string; derviche_manager_id: string | null };
         } | null;
 
-        const managerId = slots?.shows?.derviche_manager_id;
+        // Construire les données communes de notification
+        const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
+          eventType: 'new_reservation',
+          guestFullName: payload.guestFullName,
+          guestEmail: payload.to,
+          guestStructure: (reservationDetails as { guest_structure?: string | null } | null)?.guest_structure ?? null,
+          showTitle: payload.showTitle,
+          slotDateFormatted: payload.slotDateFormatted,
+          slotTimeFormatted: payload.slotTimeFormatted,
+          venueName: payload.venueName,
+          numPlaces: payload.numPlaces,
+          reservationId: payload.reservationId,
+        };
 
-        if (managerId) {
-          const { data: managerProfile } = await adminClient
-            .from('profiles')
-            .select('email, first_name, last_name')
-            .eq('id', managerId)
-            .maybeSingle();
+        // Envoi au manager du spectacle
+        if (sendToManager) {
+          const managerId = slots?.shows?.derviche_manager_id;
+          if (managerId) {
+            const { data: managerProfile } = await adminClient
+              .from('profiles')
+              .select('email, first_name, last_name')
+              .eq('id', managerId)
+              .maybeSingle();
 
-          if (managerProfile?.email) {
-            const managerFullName =
-              `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() ||
-              managerProfile.email;
+            if (managerProfile?.email) {
+              const managerFullName =
+                `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() ||
+                managerProfile.email;
 
-            const notifData: AdminNotificationEmailData = {
-              to: managerProfile.email,
-              adminName: managerFullName,
-              eventType: 'new_reservation',
-              guestFullName: payload.guestFullName,
-              guestEmail: payload.to,
-              guestStructure: (reservationDetails as { guest_structure?: string | null } | null)?.guest_structure ?? null,
-              showTitle: payload.showTitle,
-              slotDateFormatted: payload.slotDateFormatted,
-              slotTimeFormatted: payload.slotTimeFormatted,
-              venueName: payload.venueName,
-              numPlaces: payload.numPlaces,
-              reservationId: payload.reservationId,
-            };
-
-            await sendAdminNotificationEmail(notifData).catch((err) => {
-              logger.error('[API /emails/send-confirmation] Erreur notif manager', {
-                managerEmail: managerProfile.email,
-                err,
+              await sendAdminNotificationEmail({
+                ...baseNotifData,
+                to: managerProfile.email,
+                adminName: managerFullName,
+              }).catch((err) => {
+                logger.error('[API /emails/send-confirmation] Erreur notif manager', {
+                  managerEmail: managerProfile.email,
+                  err,
+                });
               });
-            });
+            }
           }
-        } else {
-          logger.warn('[API /emails/send-confirmation] Notification activée mais aucun manager assigné', {
-            showTitle: payload.showTitle,
-            reservationId: payload.reservationId,
+        }
+
+        // Envoi à l'adresse personnalisée
+        if (customRecipient) {
+          await sendAdminNotificationEmail({
+            ...baseNotifData,
+            to: customRecipient,
+            adminName: 'Administrateur',
+          }).catch((err) => {
+            logger.error('[API /emails/send-confirmation] Erreur notif adresse personnalisée', {
+              customRecipient,
+              err,
+            });
           });
         }
       }
     } catch (notifErr) {
-      logger.error('[API /emails/send-confirmation] Exception notif manager (non-bloquant)', { notifErr });
+      logger.error('[API /emails/send-confirmation] Exception notif (non-bloquant)', { notifErr });
     }
 
     // 6. Créer l'événement Google Calendar (non-bloquant)

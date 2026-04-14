@@ -89,6 +89,14 @@ export async function getNotificationSettings(): Promise<AppSettingResult<Notifi
         result.data?.email_notification_modification,
         false
       ),
+      email_notification_send_to_manager: parseBool(
+        result.data?.email_notification_send_to_manager,
+        true
+      ),
+      email_notification_custom_recipient:
+        typeof result.data?.email_notification_custom_recipient === 'string'
+          ? result.data.email_notification_custom_recipient
+          : '',
     },
     error: null,
   };

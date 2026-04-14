@@ -297,25 +297,32 @@ export async function POST(request: Request): Promise<NextResponse> {
       // On continue pour tenter les notifications admin
     }
 
-    // 10. Vérifier les préférences de notification + envoyer au manager uniquement
-    const { data: notifPrefData } = await adminClient
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'email_notification_cancellation')
-      .maybeSingle();
-
+    // 10. Vérifier les préférences de notification + envoyer aux destinataires configurés
     const isBooleanSettingTrue = (val: unknown): boolean =>
       val === true || val === 'true' || String(val) === 'true';
 
-    const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
+    const { data: notifSettings } = await adminClient
+      .from('app_settings')
+      .select('key, value')
+      .in('key', [
+        'email_notification_cancellation',
+        'email_notification_send_to_manager',
+        'email_notification_custom_recipient',
+      ]);
 
-    // 11. Notifier uniquement le manager Derviche lié au spectacle
-    if (notifEnabled && managerEmail) {
-      const managerFullName = managerName ?? managerEmail;
+    const settingsMap = Object.fromEntries(
+      (notifSettings ?? []).map((s) => [s.key, s.value])
+    );
 
-      const notifData: AdminNotificationEmailData = {
-        to: managerEmail,
-        adminName: managerFullName,
+    const notifEnabled = isBooleanSettingTrue(settingsMap.email_notification_cancellation);
+    const sendToManager = isBooleanSettingTrue(settingsMap.email_notification_send_to_manager ?? true);
+    const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
+      ? settingsMap.email_notification_custom_recipient.trim()
+      : '';
+
+    // 11. Notifier les destinataires configurés
+    if (notifEnabled && (sendToManager || customRecipient)) {
+      const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
         eventType: 'cancellation',
         guestFullName: recipientFullName,
         guestEmail: recipientEmail,
@@ -329,17 +336,25 @@ export async function POST(request: Request): Promise<NextResponse> {
         cancellationReason: reservation.cancellation_reason,
       };
 
-      await sendAdminNotificationEmail(notifData).catch((err) => {
-        logger.error('[API /emails/send-cancellation] Erreur notif manager', {
-          managerEmail,
-          err,
+      if (sendToManager && managerEmail) {
+        await sendAdminNotificationEmail({
+          ...baseNotifData,
+          to: managerEmail,
+          adminName: managerName ?? managerEmail,
+        }).catch((err) => {
+          logger.error('[API /emails/send-cancellation] Erreur notif manager', { managerEmail, err });
         });
-      });
-    } else if (notifEnabled && !managerEmail) {
-      logger.warn('[API /emails/send-cancellation] Notification activée mais aucun manager assigné au spectacle', {
-        showTitle: show.title,
-        reservationId: payload.reservationId,
-      });
+      }
+
+      if (customRecipient) {
+        await sendAdminNotificationEmail({
+          ...baseNotifData,
+          to: customRecipient,
+          adminName: 'Administrateur',
+        }).catch((err) => {
+          logger.error('[API /emails/send-cancellation] Erreur notif adresse personnalisée', { customRecipient, err });
+        });
+      }
     }
 
     // 12. Supprimer l'événement Google Calendar (non-bloquant)
