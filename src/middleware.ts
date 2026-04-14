@@ -150,6 +150,8 @@ export async function middleware(request: NextRequest) {
         '/auth/callback',
         // OAuth Google Calendar (sécurité gérée dans les routes elles-mêmes)
         '/api/auth/google',
+        // Routes API emails (sécurité gérée dans chaque route : validation payload + vérification email)
+        '/api/emails',
         // Routes publiques
         '/catalogue',
         '/spectacle',
