@@ -419,10 +419,9 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
       // Enrichir le profil si l'utilisateur est connecte (non-bloquant)
       void enrichUserProfile(formData);
 
-      // Envoyer l'email de confirmation (non-bloquant)
-      void (async () => {
-        try {
-          if (!result.data) return;
+      // Envoyer l'email de confirmation (bloquant — on attend avant de naviguer)
+      try {
+        if (result.data) {
           const dateFormattedForEmail = selectedDate.toLocaleDateString('fr-FR', {
             weekday: 'long',
             day: 'numeric',
@@ -450,10 +449,11 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
               numPlaces: participantCount,
             }),
           });
-        } catch {
-          // Silencieux : un echec email ne doit jamais bloquer la reservation
         }
-      })();
+      } catch {
+        // Silencieux : un échec email ne doit jamais bloquer la réservation
+        console.warn('[Booking] Échec envoi email de confirmation');
+      }
 
       router.push(confirmationUrl);
     } catch (err) {
