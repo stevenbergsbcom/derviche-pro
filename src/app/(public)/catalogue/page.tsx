@@ -97,7 +97,7 @@ export default function CataloguePage() {
 
   const lieux = useMemo(() => {
     // Utiliser les lieux récupérés du hook (lieux avec représentations futures)
-    return ['Tous', ...venues.map((v) => v.name).sort()];
+    return ['Tous', ...venues.map((v) => (v.city ? `${v.name} - ${v.city}` : v.name)).sort()];
   }, [venues]);
 
   const mois = [
@@ -141,7 +141,7 @@ export default function CataloguePage() {
     return spectacles
       .filter((spectacle) => {
         // Filtre par genre
-        if (genreFilter !== 'Tous' && spectacle.genre !== genreFilter) {
+        if (genreFilter !== 'Tous' && !spectacle.genres.includes(genreFilter)) {
           return false;
         }
 

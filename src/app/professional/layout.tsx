@@ -96,7 +96,7 @@ export default function ProfessionalLayout({
 
   if (role !== 'professional') {
     return (
-      <AccessDenied message="Cet espace est réservé aux programmateurs professionnels. Votre compte ne dispose pas des autorisations nécessaires." />
+      <AccessDenied message="Cet espace est réservé aux professionnel·le·s. Votre compte ne dispose pas des autorisations nécessaires." />
     );
   }
 

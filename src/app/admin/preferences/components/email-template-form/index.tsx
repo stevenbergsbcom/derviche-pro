@@ -140,7 +140,7 @@ export function EmailTemplateForm({
           <Input
             id={`subject-${template.template_key}`}
             {...subjectRegisterProps}
-            {...focusProps(subjectRef, 'subject')}
+            {...focusProps('subject')}
             ref={(el) => { subjectRhfRef(el); subjectRef.current = el; }}
             disabled={!canEdit}
             placeholder="Ex: Votre réservation est confirmée — {{organisation}}"
@@ -174,7 +174,7 @@ export function EmailTemplateForm({
           <Textarea
             id={`intro_text-${template.template_key}`}
             {...introRegisterProps}
-            {...focusProps(introRef, 'intro_text')}
+            {...focusProps('intro_text')}
             ref={(el) => { introRhfRef(el); introRef.current = el; }}
             disabled={!canEdit}
             rows={3}
@@ -194,7 +194,7 @@ export function EmailTemplateForm({
           <Textarea
             id={`body_text-${template.template_key}`}
             {...bodyRegisterProps}
-            {...focusProps(bodyRef, 'body_text')}
+            {...focusProps('body_text')}
             ref={(el) => { bodyRhfRef(el); bodyRef.current = el; }}
             disabled={!canEdit}
             rows={4}
@@ -215,7 +215,7 @@ export function EmailTemplateForm({
             <Textarea
               id={`info_text-${template.template_key}`}
               {...infoRegisterProps}
-              {...focusProps(infoRef, 'info_text')}
+              {...focusProps('info_text')}
               ref={(el) => { infoRhfRef(el); infoRef.current = el; }}
               disabled={!canEdit}
               rows={3}

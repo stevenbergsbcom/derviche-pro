@@ -43,7 +43,7 @@ export const MESSAGES = {
 
 export const LABELS = {
   PAGE_TITLE: 'Professionnels',
-  PAGE_SUBTITLE: 'Gestion des comptes programmateurs',
+  PAGE_SUBTITLE: 'Gestion des comptes professionnel·le·s',
   SEARCH_PLACEHOLDER: 'Rechercher par nom, email, structure, ville…',
   FILTER_STATUS: 'Statut',
   FILTER_CITY: 'Ville',

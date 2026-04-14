@@ -20,8 +20,16 @@ export interface CalendarEventData {
   guestStructure: string | null;
   /** Email du professionnel (invité sur l'événement) */
   guestEmail: string;
-  /** Code de réservation (affiché dans la description) */
+  /** ID de la réservation */
   reservationId: string;
+  /** Commentaire laissé par le professionnel lors de la réservation */
+  guestComment: string | null;
+  /** Responsable Derviche — prénom + nom */
+  managerName: string | null;
+  /** Responsable Derviche — téléphone */
+  managerPhone: string | null;
+  /** Responsable Derviche — email */
+  managerEmail: string | null;
   /** Nombre de places réservées */
   numPlaces: number;
   /** Date du créneau au format ISO : "2025-07-10" */

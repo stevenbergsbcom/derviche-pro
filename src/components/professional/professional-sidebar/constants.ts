@@ -35,4 +35,4 @@ export const PROFESSIONAL_BASE_HREF = '/professional';
 export const PROFESSIONAL_SUBTITLE = 'Espace Professionnel';
 
 /** Label du rôle pour les professionnels */
-export const PROFESSIONAL_ROLE_LABEL = 'Professionnel';
+export const PROFESSIONAL_ROLE_LABEL = 'Professionnel·le';

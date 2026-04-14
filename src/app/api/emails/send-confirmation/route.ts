@@ -288,6 +288,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           .from('reservations')
           .select(`
             guest_structure,
+            comments,
             slots!inner (
               date,
               time,
@@ -310,6 +311,10 @@ export async function POST(request: Request): Promise<NextResponse> {
             guestStructure:        (slotRaw as { guest_structure?: string | null } | null)?.guest_structure ?? null,
             guestEmail:            payload.to,
             reservationId:         payload.reservationId,
+            guestComment:          (slotRaw as { comments?: string | null } | null)?.comments ?? null,
+            managerName:           confirmManagerName,
+            managerPhone:          confirmManagerPhone,
+            managerEmail:          confirmManagerEmail,
             numPlaces:             payload.numPlaces,
             slotDate:              slot.date,
             slotTime:              slot.time,
