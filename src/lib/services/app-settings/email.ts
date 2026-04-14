@@ -108,7 +108,7 @@ export async function getReminderSettings(): Promise<AppSettingResult<ReminderSe
     data: {
       reminder_enabled_7d:  parseBool(result.data?.reminder_enabled_7d,  true),
       reminder_enabled_2d:  parseBool(result.data?.reminder_enabled_2d,  true),
-      reminder_enabled_12h: parseBool(result.data?.reminder_enabled_12h, true),
+      reminder_enabled_4h: parseBool(result.data?.reminder_enabled_4h, true),
     },
     error: null,
   };

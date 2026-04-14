@@ -12,7 +12,7 @@ import { getEmailConfig } from '../config';
 import { getFallbackTemplate } from '../fallbacks';
 import { buildReminder7dHtml }  from '../builders/reminder-7d';
 import { buildReminder2dHtml }  from '../builders/reminder-2d';
-import { buildReminder12hHtml } from '../builders/reminder-12h';
+import { buildReminder4hHtml } from '../builders/reminder-4h';
 import { tryClaimReminder, updateReminderMessageId, releaseReminderClaim } from './queries';
 import { logger } from '@/lib/logger';
 import type { ReminderType, ReminderEmailData, ReminderResult } from './types';
@@ -40,7 +40,7 @@ function buildHtml(
   switch (type) {
     case 'reminder_7d':  return buildReminder7dHtml(data,  config, template, appUrl);
     case 'reminder_2d':  return buildReminder2dHtml(data,  config, template, appUrl);
-    case 'reminder_12h': return buildReminder12hHtml(data, config, template, appUrl);
+    case 'reminder_4h': return buildReminder4hHtml(data, config, template, appUrl);
   }
 }
 
@@ -52,7 +52,7 @@ function buildHtml(
  * Envoie un email de rappel pour une réservation donnée.
  * En cas de succès, enregistre dans sent_notifications (anti-doublon).
  *
- * @param type - Type de rappel ('reminder_7d' | 'reminder_2d' | 'reminder_12h')
+ * @param type - Type de rappel ('reminder_7d' | 'reminder_2d' | 'reminder_4h')
  * @param data - Données de la réservation et du professionnel
  * @returns ReminderResult avec success, messageId ou error
  */

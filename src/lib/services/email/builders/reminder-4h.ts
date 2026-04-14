@@ -1,9 +1,9 @@
 /**
- * Builder HTML — Rappel H-12
+ * Builder HTML — Rappel H-4
  * Derviche Diffusion
  *
- * Email envoyé 12 heures avant la représentation.
- * Ton : enthousiaste, "c'est aujourd'hui !".
+ * Email envoyé 4 heures avant la représentation.
+ * Ton : enthousiaste, "c'est bientôt !".
  * Couleur : derviche blue (#1e3a5f) — cohérence avec la confirmation.
  */
 
@@ -26,7 +26,7 @@ import {
   orgContactFromConfig,
 } from '../html-helpers';
 
-export function buildReminder12hHtml(
+export function buildReminder4hHtml(
   data: ReminderEmailData,
   config: EmailConfig,
   template: EmailTemplate,
@@ -75,7 +75,7 @@ export function buildReminder12hHtml(
   const safeSignature     = escapeHtml(config.signature);
   const safeFooterText    = escapeHtml(config.footerText);
 
-  // Couleur thème H-12 : derviche blue (cohérence avec email de confirmation)
+  // Couleur thème H-4 : derviche blue (cohérence avec email de confirmation)
   const headerBg      = '#1e3a5f';
   const accentColor   = '#1e3a5f';
   const subtitleColor = '#c9a84c'; // or derviche

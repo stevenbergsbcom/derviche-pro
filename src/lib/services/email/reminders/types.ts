@@ -3,7 +3,7 @@
  * Derviche Diffusion
  *
  * Définit les types utilisés par les cron jobs et le service d'envoi
- * de rappels automatiques (J-7, J-2, H-12).
+ * de rappels automatiques (J-7, J-2, H-4).
  *
  * Architecture :
  *   - ReminderType     : les 3 types de rappels supportés
@@ -23,7 +23,7 @@
  * Correspond aux template_key dans email_templates
  * et aux type CHECK dans sent_notifications.
  */
-export type ReminderType = 'reminder_7d' | 'reminder_2d' | 'reminder_12h';
+export type ReminderType = 'reminder_7d' | 'reminder_2d' | 'reminder_4h';
 
 /**
  * Clé de toggle dans app_settings pour chaque type de rappel.
@@ -31,7 +31,7 @@ export type ReminderType = 'reminder_7d' | 'reminder_2d' | 'reminder_12h';
 export type ReminderToggleKey =
   | 'reminder_enabled_7d'
   | 'reminder_enabled_2d'
-  | 'reminder_enabled_12h';
+  | 'reminder_enabled_4h';
 
 // ============================================
 // CONFIGURATION DES RAPPELS
@@ -57,7 +57,7 @@ export interface ReminderConfig {
   /**
    * Fin de la fenêtre de détection (en minutes à partir de maintenant).
    * Ex : J-7 → fenêtre [6j23h30, 7j0h30] = [10050, 10110] minutes
-   * Ex : H-12 → fenêtre [11h30, 12h30] = [690, 750] minutes
+   * Ex : H-4 → fenêtre [3h30, 4h30] = [210, 270] minutes
    */
   windowEndMinutes: number;
 }
@@ -89,17 +89,17 @@ export const DAILY_REMINDER_CONFIGS: Record<'reminder_7d' | 'reminder_2d', Remin
 };
 
 /**
- * Configuration pour le rappel horaire (H-12).
- * Fenêtre de ±30 min autour de 12h avant la représentation.
+ * Configuration pour le rappel horaire (H-4).
+ * Fenêtre de ±30 min autour de 4h avant la représentation.
  * Le cron horaire tourne toutes les heures.
  */
 export const HOURLY_REMINDER_CONFIG: ReminderConfig = {
-  type: 'reminder_12h',
-  toggleKey: 'reminder_enabled_12h',
-  label: 'Rappel H-12',
-  // Représentations entre 11h30 et 12h30 à partir de maintenant
-  windowStartMinutes: 11 * 60 + 30, // 690 min
-  windowEndMinutes:   12 * 60 + 30, // 750 min
+  type: 'reminder_4h',
+  toggleKey: 'reminder_enabled_4h',
+  label: 'Rappel H-4',
+  // Représentations entre 3h30 et 4h30 à partir de maintenant
+  windowStartMinutes: 3 * 60 + 30, // 210 min
+  windowEndMinutes:   4 * 60 + 30, // 270 min
 };
 
 // ============================================
@@ -151,7 +151,7 @@ export interface EligibleReservation {
 
 /**
  * Données passées aux builders HTML de rappel.
- * Interface commune aux 3 types (J-7, J-2, H-12).
+ * Interface commune aux 3 types (J-7, J-2, H-4).
  */
 export interface ReminderEmailData {
   /** Adresse email du destinataire */

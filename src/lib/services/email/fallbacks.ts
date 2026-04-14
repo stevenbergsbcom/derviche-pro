@@ -81,10 +81,10 @@ export function getFallbackTemplate(key: EmailTemplateKey): EmailTemplate {
       show_contact_block: true,
       show_reservation_code: false,
     },
-    reminder_12h: {
-      header_title: "C'est aujourd'hui ! 🎭",
-      subject: "C'est aujourd'hui — {{spectacle}} à {{heure}}",
-      intro_text: "Bonjour {{prénom}},\n\nC'est aujourd'hui ! Votre représentation de {{spectacle}} commence à {{heure}}. Nous vous attendons !",
+    reminder_4h: {
+      header_title: "C'est bientôt ! 🎭",
+      subject: "Plus que quelques heures — {{spectacle}} à {{heure}}",
+      intro_text: "Bonjour {{prénom}},\n\nPlus que quelques heures ! Votre représentation de {{spectacle}} commence à {{heure}}. Nous vous attendons !",
       body_text: '',
       info_text: '',
       salutation: 'À tout à l\'heure,',

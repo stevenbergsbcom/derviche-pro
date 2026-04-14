@@ -36,7 +36,7 @@ const VALID_TEMPLATE_KEYS: EmailTemplateKey[] = [
   'admin_notification',
   'reminder_7d',
   'reminder_2d',
-  'reminder_12h',
+  'reminder_4h',
   // Post-checkin (S144)
   'checkin_thank_you',
   'checkin_loved',

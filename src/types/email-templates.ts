@@ -22,7 +22,7 @@ export type EmailTemplateKey =
   | 'admin_notification'
   | 'reminder_7d'
   | 'reminder_2d'
-  | 'reminder_12h'
+  | 'reminder_4h'
   // Post-checkin (S144)
   | 'checkin_thank_you'
   | 'checkin_loved'
@@ -173,7 +173,7 @@ export const EMAIL_TEMPLATE_NAMES: Record<EmailTemplateKey, string> = {
   admin_notification:        'Notification admin (interne)',
   reminder_7d:               'Rappel J-7 (7 jours avant)',
   reminder_2d:               'Rappel J-2 (2 jours avant)',
-  reminder_12h:              'Rappel H-12 (12 heures avant)',
+  reminder_4h:              'Rappel H-4 (4 heures avant)',
   // Post-checkin (S144)
   checkin_thank_you:         'Remerciement présence',
   checkin_loved:             'Coup de cœur ❤️',

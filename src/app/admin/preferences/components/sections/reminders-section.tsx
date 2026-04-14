@@ -45,7 +45,7 @@ export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionPro
   const [formData, setFormData] = useState<ReminderSettings>({
     reminder_enabled_7d: true,
     reminder_enabled_2d: true,
-    reminder_enabled_12h: true,
+    reminder_enabled_4h: true,
   });
 
   // État initial pour détecter les changements
@@ -70,7 +70,7 @@ export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionPro
     const changed =
       formData.reminder_enabled_7d !== initialData.reminder_enabled_7d ||
       formData.reminder_enabled_2d !== initialData.reminder_enabled_2d ||
-      formData.reminder_enabled_12h !== initialData.reminder_enabled_12h;
+      formData.reminder_enabled_4h !== initialData.reminder_enabled_4h;
     setHasChanges(changed);
     onDirtyChangeRef.current?.(changed);
   }, [formData, initialData, hasInitialData]);
@@ -159,20 +159,20 @@ export function RemindersSection({ canEdit, onDirtyChange }: RemindersSectionPro
         />
       </div>
 
-      {/* Rappel H-12 */}
+      {/* Rappel H-4 */}
       <div className="flex items-center justify-between rounded-lg border p-4">
         <div className="space-y-0.5">
-          <Label htmlFor="reminder_12h" className="text-base">
-            Rappel H-12
+          <Label htmlFor="reminder_4h" className="text-base">
+            Rappel H-4
           </Label>
           <p className="text-sm text-muted-foreground">
-            Envoyer un rappel 12 heures avant la représentation
+            Envoyer un rappel 4 heures avant la représentation
           </p>
         </div>
         <Switch
-          id="reminder_12h"
-          checked={formData.reminder_enabled_12h}
-          onCheckedChange={() => handleToggle('reminder_enabled_12h')}
+          id="reminder_4h"
+          checked={formData.reminder_enabled_4h}
+          onCheckedChange={() => handleToggle('reminder_enabled_4h')}
           disabled={!canEdit}
         />
       </div>

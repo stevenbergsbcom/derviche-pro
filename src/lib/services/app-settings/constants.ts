@@ -63,7 +63,7 @@ export const GOOGLE_CALENDAR_SETTING_KEYS: GoogleCalendarSettingKey[] = [
 export const REMINDER_SETTING_KEYS: ReminderSettingKey[] = [
   'reminder_enabled_7d',
   'reminder_enabled_2d',
-  'reminder_enabled_12h',
+  'reminder_enabled_4h',
 ];
 
 /** Clés des paramètres RGPD */
@@ -196,7 +196,7 @@ export const SETTING_LABELS: Record<string, string> = {
   google_calendar_notify_on_modification: 'Email Google à la modification',
   reminder_enabled_7d: 'Rappel J-7',
   reminder_enabled_2d: 'Rappel J-2',
-  reminder_enabled_12h: 'Rappel H-12',
+  reminder_enabled_4h: 'Rappel H-4',
   rgpd_data_retention_months: 'Durée de conservation des données (mois)',
   rgpd_inactive_account_months: 'Durée avant suppression compte inactif (mois)',
   theme_preset: 'Thème de couleurs',
