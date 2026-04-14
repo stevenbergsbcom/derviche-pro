@@ -50,6 +50,8 @@ export const NOTIFICATION_SETTING_KEYS: NotificationSettingKey[] = [
   'email_notification_new_reservation',
   'email_notification_cancellation',
   'email_notification_modification',
+  'email_notification_send_to_manager',
+  'email_notification_custom_recipient',
 ];
 
 /** Clés des paramètres Google Calendar */
@@ -189,6 +191,8 @@ export const SETTING_LABELS: Record<string, string> = {
   email_footer_show_phone: 'Afficher téléphone dans le footer',
   email_footer_show_address: 'Afficher adresse dans le footer',
   email_footer_show_website: 'Afficher site web dans le footer',
+  email_notification_send_to_manager: 'Envoi au manager',
+  email_notification_custom_recipient: 'Adresse personnalisée',
   email_catalogue_url: 'URL du catalogue (emails)',
 
   google_calendar_enabled: 'Activer Google Calendar',

@@ -38,7 +38,9 @@ export type EmailSettingKey =
 export type NotificationSettingKey =
   | 'email_notification_new_reservation'
   | 'email_notification_cancellation'
-  | 'email_notification_modification';
+  | 'email_notification_modification'
+  | 'email_notification_send_to_manager'
+  | 'email_notification_custom_recipient';
 
 /** Clés de paramètres Google Calendar */
 export type GoogleCalendarSettingKey =
@@ -132,6 +134,8 @@ export interface NotificationSettings {
   email_notification_new_reservation: boolean;
   email_notification_cancellation: boolean;
   email_notification_modification: boolean;
+  email_notification_send_to_manager: boolean;
+  email_notification_custom_recipient: string;
 }
 
 /** Paramètres Google Calendar groupés */

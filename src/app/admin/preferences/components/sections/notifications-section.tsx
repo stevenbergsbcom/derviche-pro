@@ -3,7 +3,8 @@
  * Derviche Diffusion - Admin Preferences
  *
  * Config globale modifiable par super-admin uniquement.
- * Contrôle quels événements de réservation déclenchent un email aux admins.
+ * Contrôle quels événements de réservation déclenchent un email
+ * et à qui les envoyer (manager DD et/ou adresse personnalisée).
  */
 
 'use client';
@@ -12,6 +13,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { SettingsCard } from '../shared';
@@ -28,6 +30,14 @@ interface NotificationsSectionProps {
   canEdit: boolean;
   /** Callback pour notifier le parent des changements non sauvegardés */
   onDirtyChange?: (isDirty: boolean) => void;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // ============================================
@@ -49,6 +59,8 @@ export function NotificationsSection({ canEdit, onDirtyChange }: NotificationsSe
     email_notification_new_reservation: true,
     email_notification_cancellation: true,
     email_notification_modification: false,
+    email_notification_send_to_manager: true,
+    email_notification_custom_recipient: '',
   });
 
   // État initial pour détecter les changements
@@ -70,13 +82,29 @@ export function NotificationsSection({ canEdit, onDirtyChange }: NotificationsSe
     const changed =
       formData.email_notification_new_reservation !== initialData.email_notification_new_reservation ||
       formData.email_notification_cancellation !== initialData.email_notification_cancellation ||
-      formData.email_notification_modification !== initialData.email_notification_modification;
+      formData.email_notification_modification !== initialData.email_notification_modification ||
+      formData.email_notification_send_to_manager !== initialData.email_notification_send_to_manager ||
+      formData.email_notification_custom_recipient !== initialData.email_notification_custom_recipient;
 
     setHasChanges(changed);
     onDirtyChangeRef.current?.(changed);
   }, [formData, initialData, hasInitialData]);
 
-  // Toggle un switch
+  // Toggle local pour afficher/cacher le champ email personnalisé
+  const [customRecipientOpen, setCustomRecipientOpen] = useState(false);
+
+  // Synchroniser avec les données BDD au chargement
+  useEffect(() => {
+    if (data) {
+      setCustomRecipientOpen(data.email_notification_custom_recipient.trim() !== '');
+    }
+  }, [data]);
+
+  // Aucun destinataire = notifications désactivées
+  const customEmailValid = customRecipientOpen && isValidEmail(formData.email_notification_custom_recipient.trim());
+  const hasAnyRecipient = formData.email_notification_send_to_manager || customEmailValid;
+
+  // Toggle un switch booléen
   const handleToggle = (key: keyof NotificationSettings) => {
     setFormData((prev) => ({
       ...prev,
@@ -115,70 +143,153 @@ export function NotificationsSection({ canEdit, onDirtyChange }: NotificationsSe
   return (
     <SettingsCard
       icon={Bell}
-      title="Notifications email — Manager"
-      description="Choisissez quels événements déclenchent un email de notification. Les emails sont envoyés uniquement au manager Derviche assigné à chaque spectacle (champ « Responsable DD » dans la fiche spectacle)."
+      title="Notifications email"
+      description="Configurez les événements qui déclenchent une notification email et les destinataires."
       isLoading={isLoading}
       isSaving={isSaving}
       canEdit={canEdit}
       hasChanges={hasChanges}
       onSubmit={onSubmit}
     >
-      {/* Nouvelle réservation */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="notif_new_reservation" className="text-base">
-            Nouvelle réservation
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Le manager DD du spectacle reçoit un email à chaque nouvelle réservation
-          </p>
+      {/* ── Bloc 1 : Destinataires ── */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-semibold text-foreground">Destinataires</h4>
+
+        {/* Manager du spectacle */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="send_to_manager" className="text-base">
+              Manager du spectacle
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Le responsable DD assigné au spectacle reçoit les notifications
+            </p>
+          </div>
+          <Switch
+            id="send_to_manager"
+            checked={formData.email_notification_send_to_manager}
+            onCheckedChange={() => handleToggle('email_notification_send_to_manager')}
+            disabled={!canEdit}
+          />
         </div>
-        <Switch
-          id="notif_new_reservation"
-          checked={formData.email_notification_new_reservation}
-          onCheckedChange={() => handleToggle('email_notification_new_reservation')}
-          disabled={!canEdit}
-        />
+
+        {/* Adresse personnalisée */}
+        <div className="rounded-lg border p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="custom_recipient_toggle" className="text-base">
+                Adresse personnalisée
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Envoyer les notifications à une adresse email spécifique
+              </p>
+            </div>
+            <Switch
+              id="custom_recipient_toggle"
+              checked={customRecipientOpen}
+              onCheckedChange={(checked) => {
+                setCustomRecipientOpen(checked);
+                if (!checked) {
+                  setFormData((prev) => ({
+                    ...prev,
+                    email_notification_custom_recipient: '',
+                  }));
+                }
+              }}
+              disabled={!canEdit}
+            />
+          </div>
+          {customRecipientOpen && (
+            <div className="space-y-1">
+              <Input
+                id="custom_recipient_email"
+                type="email"
+                placeholder="exemple@domaine.com"
+                value={formData.email_notification_custom_recipient}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    email_notification_custom_recipient: e.target.value,
+                  }))
+                }
+                disabled={!canEdit}
+                className="max-w-sm"
+              />
+              {formData.email_notification_custom_recipient.trim() !== '' &&
+                !isValidEmail(formData.email_notification_custom_recipient.trim()) && (
+                  <p className="text-xs text-destructive">Adresse email invalide</p>
+                )}
+            </div>
+          )}
+        </div>
+
+        {!hasAnyRecipient && (
+          <p className="text-xs text-warning font-medium">
+            Aucun destinataire configuré — les notifications ne seront pas envoyées.
+          </p>
+        )}
       </div>
 
-      {/* Annulation */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="notif_cancellation" className="text-base">
-            Annulation de réservation
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Le manager DD du spectacle reçoit un email à chaque annulation
-          </p>
-        </div>
-        <Switch
-          id="notif_cancellation"
-          checked={formData.email_notification_cancellation}
-          onCheckedChange={() => handleToggle('email_notification_cancellation')}
-          disabled={!canEdit}
-        />
-      </div>
+      {/* ── Bloc 2 : Événements déclencheurs ── */}
+      <div className="space-y-3 pt-2">
+        <h4 className="text-sm font-semibold text-foreground">Événements</h4>
 
-      {/* Modification */}
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <div className="space-y-0.5">
-          <Label htmlFor="notif_modification" className="text-base">
-            Modification de réservation
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            Le manager DD du spectacle reçoit un email à chaque modification (désactivé par défaut)
-          </p>
+        {/* Nouvelle réservation */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="notif_new_reservation" className="text-base">
+              Nouvelle réservation
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Recevoir un email à chaque nouvelle réservation
+            </p>
+          </div>
+          <Switch
+            id="notif_new_reservation"
+            checked={formData.email_notification_new_reservation}
+            onCheckedChange={() => handleToggle('email_notification_new_reservation')}
+            disabled={!canEdit || !hasAnyRecipient}
+          />
         </div>
-        <Switch
-          id="notif_modification"
-          checked={formData.email_notification_modification}
-          onCheckedChange={() => handleToggle('email_notification_modification')}
-          disabled={!canEdit}
-        />
+
+        {/* Annulation */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="notif_cancellation" className="text-base">
+              Annulation de réservation
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Recevoir un email à chaque annulation
+            </p>
+          </div>
+          <Switch
+            id="notif_cancellation"
+            checked={formData.email_notification_cancellation}
+            onCheckedChange={() => handleToggle('email_notification_cancellation')}
+            disabled={!canEdit || !hasAnyRecipient}
+          />
+        </div>
+
+        {/* Modification */}
+        <div className="flex items-center justify-between rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <Label htmlFor="notif_modification" className="text-base">
+              Modification de réservation
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              Recevoir un email à chaque modification de créneau
+            </p>
+          </div>
+          <Switch
+            id="notif_modification"
+            checked={formData.email_notification_modification}
+            onCheckedChange={() => handleToggle('email_notification_modification')}
+            disabled={!canEdit || !hasAnyRecipient}
+          />
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Si aucun Responsable DD n&apos;est assigné à un spectacle, aucune notification n&apos;est envoyée.
         Seul un super-admin peut modifier ces préférences.
       </p>
     </SettingsCard>

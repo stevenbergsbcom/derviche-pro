@@ -318,22 +318,31 @@ export async function POST(request: Request): Promise<NextResponse> {
       });
     }
 
-    // 10. Vérifier les préférences de notification + notifier le manager
-    const { data: notifPrefData } = await adminClient
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'email_notification_modification')
-      .maybeSingle();
-
+    // 10. Vérifier les préférences de notification + notifier les destinataires configurés
     const isBooleanSettingTrue = (val: unknown): boolean =>
       val === true || val === 'true' || String(val) === 'true';
 
-    const notifEnabled = isBooleanSettingTrue(notifPrefData?.value);
+    const { data: notifSettings } = await adminClient
+      .from('app_settings')
+      .select('key, value')
+      .in('key', [
+        'email_notification_modification',
+        'email_notification_send_to_manager',
+        'email_notification_custom_recipient',
+      ]);
 
-    if (notifEnabled && managerEmail) {
-      const notifData: AdminNotificationEmailData = {
-        to: managerEmail,
-        adminName: managerName ?? managerEmail,
+    const settingsMap = Object.fromEntries(
+      (notifSettings ?? []).map((s) => [s.key, s.value])
+    );
+
+    const notifEnabled = isBooleanSettingTrue(settingsMap.email_notification_modification);
+    const sendToManager = isBooleanSettingTrue(settingsMap.email_notification_send_to_manager ?? true);
+    const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
+      ? settingsMap.email_notification_custom_recipient.trim()
+      : '';
+
+    if (notifEnabled && (sendToManager || customRecipient)) {
+      const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
         eventType: 'modification',
         guestFullName: recipientFullName,
         guestEmail: recipientEmail,
@@ -346,12 +355,25 @@ export async function POST(request: Request): Promise<NextResponse> {
         reservationId: reservation.id,
       };
 
-      await sendAdminNotificationEmail(notifData).catch((err) => {
-        logger.error('[API /emails/send-modification] Erreur notif manager', {
-          managerEmail,
-          err,
+      if (sendToManager && managerEmail) {
+        await sendAdminNotificationEmail({
+          ...baseNotifData,
+          to: managerEmail,
+          adminName: managerName ?? managerEmail,
+        }).catch((err) => {
+          logger.error('[API /emails/send-modification] Erreur notif manager', { managerEmail, err });
         });
-      });
+      }
+
+      if (customRecipient) {
+        await sendAdminNotificationEmail({
+          ...baseNotifData,
+          to: customRecipient,
+          adminName: 'Administrateur',
+        }).catch((err) => {
+          logger.error('[API /emails/send-modification] Erreur notif adresse personnalisée', { customRecipient, err });
+        });
+      }
     }
 
     // 11. Mettre à jour l'événement Google Calendar (non-bloquant)

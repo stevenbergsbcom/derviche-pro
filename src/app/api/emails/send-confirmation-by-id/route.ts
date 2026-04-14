@@ -257,20 +257,31 @@ export async function POST(request: Request): Promise<NextResponse> {
         logger.error('[API /emails/send-confirmation-by-id] Échec envoi', { reservationId, error: emailResult.error });
       }
 
-      // 9. Notifier le manager DD si préférence activée
+      // 9. Notifier les destinataires configurés (si préférence activée)
       try {
-        const { data: notifPrefData } = await adminClient
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'email_notification_new_reservation')
-          .maybeSingle();
-
         const isBoolTrue = (v: unknown) => v === true || v === 'true' || String(v) === 'true';
 
-        if (isBoolTrue(notifPrefData?.value) && managerEmail) {
-          const notifData: AdminNotificationEmailData = {
-            to: managerEmail,
-            adminName: managerName ?? managerEmail,
+        const { data: notifSettings } = await adminClient
+          .from('app_settings')
+          .select('key, value')
+          .in('key', [
+            'email_notification_new_reservation',
+            'email_notification_send_to_manager',
+            'email_notification_custom_recipient',
+          ]);
+
+        const settingsMap = Object.fromEntries(
+          (notifSettings ?? []).map((s) => [s.key, s.value])
+        );
+
+        const notifEnabled = isBoolTrue(settingsMap.email_notification_new_reservation);
+        const sendToManager = isBoolTrue(settingsMap.email_notification_send_to_manager ?? true);
+        const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
+          ? settingsMap.email_notification_custom_recipient.trim()
+          : '';
+
+        if (notifEnabled && (sendToManager || customRecipient)) {
+          const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
             eventType: 'new_reservation',
             guestFullName: recipientFullName,
             guestEmail: recipientEmail,
@@ -283,12 +294,28 @@ export async function POST(request: Request): Promise<NextResponse> {
             reservationId: reservation.id,
           };
 
-          await sendAdminNotificationEmail(notifData).catch((err) => {
-            logger.error('[API /emails/send-confirmation-by-id] Erreur notif manager', { err });
-          });
+          if (sendToManager && managerEmail) {
+            await sendAdminNotificationEmail({
+              ...baseNotifData,
+              to: managerEmail,
+              adminName: managerName ?? managerEmail,
+            }).catch((err) => {
+              logger.error('[API /emails/send-confirmation-by-id] Erreur notif manager', { err });
+            });
+          }
+
+          if (customRecipient) {
+            await sendAdminNotificationEmail({
+              ...baseNotifData,
+              to: customRecipient,
+              adminName: 'Administrateur',
+            }).catch((err) => {
+              logger.error('[API /emails/send-confirmation-by-id] Erreur notif adresse personnalisée', { err });
+            });
+          }
         }
       } catch (notifErr) {
-        logger.error('[API /emails/send-confirmation-by-id] Exception notif manager (non-bloquant)', { notifErr });
+        logger.error('[API /emails/send-confirmation-by-id] Exception notif (non-bloquant)', { notifErr });
       }
     }
 
