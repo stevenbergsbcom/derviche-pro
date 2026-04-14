@@ -1,4 +1,4 @@
-name: Rappel horaire (H-12)
+name: Rappel horaire (H-4)
 
 on:
   schedule:
@@ -11,7 +11,7 @@ jobs:
   trigger-hourly-reminders:
     runs-on: ubuntu-latest
     steps:
-      - name: Déclencher le cron hourly (H-12)
+      - name: Déclencher le cron hourly (H-4)
         run: |
           response=$(curl -s -L -o /tmp/response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
@@ -26,4 +26,4 @@ jobs:
             exit 1
           fi
 
-          echo "✅ Rappel H-12 déclenché avec succès"
+          echo "✅ Rappel H-4 déclenché avec succès"

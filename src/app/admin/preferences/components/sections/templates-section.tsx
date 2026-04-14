@@ -38,11 +38,11 @@ const TRANSACTIONAL_KEYS: EmailTemplateKey[] = [
   'admin_notification',
 ];
 
-/** Templates de rappels automatiques (J-7, J-2, H-12) */
+/** Templates de rappels automatiques (J-7, J-2, H-4) */
 const REMINDER_KEYS: EmailTemplateKey[] = [
   'reminder_7d',
   'reminder_2d',
-  'reminder_12h',
+  'reminder_4h',
 ];
 
 /** Templates post-checkin (S144 — envoyés après le check-in selon le statut de présence) */

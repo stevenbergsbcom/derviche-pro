@@ -20,7 +20,7 @@ import { buildModificationHtml }    from '@/lib/services/email/builders/modifica
 import { buildAdminNotificationHtml } from '@/lib/services/email/builders/admin-notification';
 import { buildReminder7dHtml }      from '@/lib/services/email/builders/reminder-7d';
 import { buildReminder2dHtml }      from '@/lib/services/email/builders/reminder-2d';
-import { buildReminder12hHtml }     from '@/lib/services/email/builders/reminder-12h';
+import { buildReminder4hHtml }      from '@/lib/services/email/builders/reminder-4h';
 import { buildSimpleHtml }          from '@/lib/services/email/builders/simple';
 import { logger } from '@/lib/logger';
 import type { EmailTemplate, EmailTemplateKey } from '@/types/email-templates';
@@ -127,7 +127,7 @@ const VALID_KEYS: EmailTemplateKey[] = [
   'admin_notification',
   'reminder_7d',
   'reminder_2d',
-  'reminder_12h',
+  'reminder_4h',
   'checkin_thank_you',
   'checkin_loved',
   'checkin_press',
@@ -246,8 +246,8 @@ function generatePreviewHtml(
       return buildReminder7dHtml(MOCK_REMINDER, config, template, appUrl);
     case 'reminder_2d':
       return buildReminder2dHtml(MOCK_REMINDER, config, template, appUrl);
-    case 'reminder_12h':
-      return buildReminder12hHtml(MOCK_REMINDER, config, template, appUrl);
+    case 'reminder_4h':
+      return buildReminder4hHtml(MOCK_REMINDER, config, template, appUrl);
     // Post-checkin (S144) : style sobre
     case 'checkin_thank_you':
     case 'checkin_loved':

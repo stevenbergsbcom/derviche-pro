@@ -50,7 +50,7 @@ export type GoogleCalendarSettingKey =
 export type ReminderSettingKey =
   | 'reminder_enabled_7d'
   | 'reminder_enabled_2d'
-  | 'reminder_enabled_12h';
+  | 'reminder_enabled_4h';
 
 /** Clés de paramètres RGPD */
 export type RgpdSettingKey = 'rgpd_data_retention_months' | 'rgpd_inactive_account_months';
@@ -148,7 +148,7 @@ export interface GoogleCalendarSettings {
 export interface ReminderSettings {
   reminder_enabled_7d: boolean;
   reminder_enabled_2d: boolean;
-  reminder_enabled_12h: boolean;
+  reminder_enabled_4h: boolean;
 }
 
 /** Paramètres RGPD groupés */

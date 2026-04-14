@@ -10,7 +10,7 @@
  *   3. rappel du même type PAS déjà envoyé (anti-doublon via sent_notifications)
  *
  * Anti-doublon : on utilise la table sent_notifications existante.
- *   Son type CHECK inclut déjà 'reminder_7d', 'reminder_2d', 'reminder_12h'.
+ *   Son type CHECK inclut déjà 'reminder_7d', 'reminder_2d', 'reminder_4h'.
  *
  * Sécurité : utilise le service role Supabase (bypass RLS).
  *   Ce module ne doit être appelé que depuis les routes /api/cron/*.
