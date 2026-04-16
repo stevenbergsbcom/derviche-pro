@@ -419,40 +419,38 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
       // Enrichir le profil si l'utilisateur est connecte (non-bloquant)
       void enrichUserProfile(formData);
 
-      // Envoyer l'email de confirmation (bloquant — on attend avant de naviguer)
-      try {
-        if (result.data) {
-          const dateFormattedForEmail = selectedDate.toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          });
-          const slotDateFormatted =
-            dateFormattedForEmail.charAt(0).toUpperCase() + dateFormattedForEmail.slice(1);
+      // Envoyer l'email de confirmation (non-bloquant, keepalive pour survivre à la navigation)
+      if (result.data) {
+        const dateFormattedForEmail = selectedDate.toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+        const slotDateFormatted =
+          dateFormattedForEmail.charAt(0).toUpperCase() + dateFormattedForEmail.slice(1);
 
-          await fetch('/api/emails/send-confirmation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: formData.email,
-              guestFullName: `${formData.firstName} ${formData.lastName}`.trim(),
-              reservationCode: result.data.code,
-              reservationId: result.data.reservationId,
-              showTitle: show.title,
-              showSlug: show.slug,
-              companyName: show.companyName,
-              slotDateFormatted,
-              slotTimeFormatted: selectedSlot.time,
-              venueName: selectedSlot.venueName,
-              venueCity: selectedSlot.venueCity,
-              numPlaces: participantCount,
-            }),
-          });
-        }
-      } catch {
-        // Silencieux : un échec email ne doit jamais bloquer la réservation
-        console.warn('[Booking] Échec envoi email de confirmation');
+        void fetch('/api/emails/send-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
+          body: JSON.stringify({
+            to: formData.email,
+            guestFullName: `${formData.firstName} ${formData.lastName}`.trim(),
+            reservationCode: result.data.code,
+            reservationId: result.data.reservationId,
+            showTitle: show.title,
+            showSlug: show.slug,
+            companyName: show.companyName,
+            slotDateFormatted,
+            slotTimeFormatted: selectedSlot.time,
+            venueName: selectedSlot.venueName,
+            venueCity: selectedSlot.venueCity,
+            numPlaces: participantCount,
+          }),
+        }).catch(() => {
+          // Silencieux : un échec email ne doit jamais bloquer la réservation
+        });
       }
 
       router.push(confirmationUrl);
