@@ -386,7 +386,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       debugTrace.exceptionMessage = calErr instanceof Error ? calErr.message : String(calErr);
       debugTrace.exceptionStack = calErr instanceof Error ? calErr.stack : undefined;
     }
-    logger.warn('[API /emails/send-confirmation] DEBUG Calendar SUMMARY', debugTrace);
+    // Double log : logger.error ET console.error direct pour garantir la visibilité
+    logger.error('[API /emails/send-confirmation] DEBUG Calendar SUMMARY', debugTrace);
+    console.error('[CALENDAR_DEBUG_MARKER]', JSON.stringify(debugTrace));
 
     return successResponse({ messageId: result.messageId });
   } catch (err) {
