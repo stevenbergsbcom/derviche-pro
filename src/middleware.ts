@@ -152,6 +152,8 @@ export async function middleware(request: NextRequest) {
         '/api/auth/google',
         // Routes API emails (sécurité gérée dans chaque route : validation payload + vérification email)
         '/api/emails',
+        // Route log-activity (accessible aux guests pour tracer les réservations publiques)
+        '/api/admin/log-activity',
         // Routes publiques
         '/catalogue',
         '/spectacle',

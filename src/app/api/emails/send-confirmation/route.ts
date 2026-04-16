@@ -56,6 +56,7 @@ type SendConfirmationPayload = z.infer<typeof sendConfirmationSchema>;
 // ============================================
 
 export async function POST(request: Request): Promise<NextResponse> {
+  logger.warn('[API /emails/send-confirmation] DEBUG ROUTE — ENTRY v2');
   try {
     // 0. Rate limiting (anti-spam emails)
     const rl = await checkRateLimit('emails', request);
