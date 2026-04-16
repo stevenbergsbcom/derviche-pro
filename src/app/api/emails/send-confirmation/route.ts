@@ -302,27 +302,22 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 6. Créer l'événement Google Calendar (non-bloquant)
+    const debugTrace: Record<string, unknown> = { step: 'entered-try' };
     try {
-      logger.warn('[API /emails/send-confirmation] DEBUG Calendar — démarrage', {
-        reservationId: payload.reservationId,
-      });
-
       const { data: calPref, error: calPrefError } = await adminClient
         .from('app_settings')
         .select('value')
         .eq('key', 'google_calendar_enabled')
         .maybeSingle();
 
-      logger.warn('[API /emails/send-confirmation] DEBUG Calendar — calPref', {
-        value: calPref?.value,
-        type: typeof calPref?.value,
-        error: calPrefError?.message,
-      });
+      debugTrace.calPrefValue = calPref?.value;
+      debugTrace.calPrefType = typeof calPref?.value;
+      debugTrace.calPrefError = calPrefError?.message;
 
       const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
       if (isBoolTrue(calPref?.value)) {
-        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — activé, fetch slot');
+        debugTrace.step = 'calendar-enabled';
 
         const { data: slotRaw, error: slotError } = await adminClient
           .from('reservations')
@@ -338,11 +333,9 @@ export async function POST(request: Request): Promise<NextResponse> {
           .eq('id', payload.reservationId)
           .maybeSingle();
 
-        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — slotRaw', {
-          hasData: !!slotRaw,
-          hasSlots: !!slotRaw?.slots,
-          error: slotError?.message,
-        });
+        debugTrace.hasSlotRaw = !!slotRaw;
+        debugTrace.hasSlots = !!slotRaw?.slots;
+        debugTrace.slotError = slotError?.message;
 
         const slot = (slotRaw?.slots as unknown) as {
           date: string;
@@ -350,14 +343,12 @@ export async function POST(request: Request): Promise<NextResponse> {
           shows: { duration_minutes: number | null };
         } | null;
 
-        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — slot parsed', {
-          hasSlot: !!slot,
-          date: slot?.date,
-          time: slot?.time,
-        });
+        debugTrace.hasSlot = !!slot;
+        debugTrace.slotDate = slot?.date;
+        debugTrace.slotTime = slot?.time;
 
         if (slot) {
-          logger.warn('[API /emails/send-confirmation] DEBUG Calendar — appel createCalendarEvent');
+          debugTrace.step = 'calling-createCalendarEvent';
           const calResult = await createCalendarEvent({
             showTitle:             payload.showTitle,
             guestFullName:         payload.guestFullName,
@@ -377,11 +368,9 @@ export async function POST(request: Request): Promise<NextResponse> {
             sendEmailNotification: true,
           });
 
-          logger.warn('[API /emails/send-confirmation] DEBUG Calendar — résultat', {
-            success: calResult.success,
-            eventId: calResult.success ? calResult.eventId : undefined,
-            error: !calResult.success ? calResult.error : undefined,
-          });
+          debugTrace.calResultSuccess = calResult.success;
+          debugTrace.calResultError = calResult.success ? undefined : calResult.error;
+          debugTrace.calResultEventId = calResult.success ? calResult.eventId : undefined;
 
           if (calResult.success) {
             await adminClient
@@ -390,17 +379,14 @@ export async function POST(request: Request): Promise<NextResponse> {
               .eq('id', payload.reservationId);
           }
         }
-      } else {
-        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — désactivé ou valeur inattendue', {
-          value: calPref?.value,
-        });
       }
+      debugTrace.step = debugTrace.step ?? 'finished-ok';
     } catch (calErr) {
-      logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', {
-        message: calErr instanceof Error ? calErr.message : String(calErr),
-        stack: calErr instanceof Error ? calErr.stack : undefined,
-      });
+      debugTrace.step = 'exception';
+      debugTrace.exceptionMessage = calErr instanceof Error ? calErr.message : String(calErr);
+      debugTrace.exceptionStack = calErr instanceof Error ? calErr.stack : undefined;
     }
+    logger.warn('[API /emails/send-confirmation] DEBUG Calendar SUMMARY', debugTrace);
 
     return successResponse({ messageId: result.messageId });
   } catch (err) {
