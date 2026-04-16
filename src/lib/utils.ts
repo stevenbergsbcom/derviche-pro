@@ -61,7 +61,7 @@ export function sanitizeSearchTerm(searchTerm: string): string {
 
 /**
  * Construit une clause OR sécurisée pour la recherche Supabase
- * 
+ *
  * @param searchTerm - Terme de recherche (sera sanitizé)
  * @param fields - Champs sur lesquels chercher
  * @returns Clause OR pour Supabase ou null si terme vide
@@ -71,11 +71,32 @@ export function buildSearchOrClause(
   fields: string[]
 ): string | null {
   const sanitized = sanitizeSearchTerm(searchTerm);
-  
+
   if (!sanitized) return null;
-  
+
   // Construire la clause OR : field1.ilike.%term%,field2.ilike.%term%,...
   return fields
     .map(field => `${field}.ilike.%${sanitized}%`)
     .join(',');
+}
+
+/**
+ * Slugifie une chaîne pour un segment de nom de fichier.
+ *
+ * Retire les accents, met en minuscules, remplace tout caractère
+ * non-alphanumérique par `-`, et tronque à `maxLength` caractères.
+ *
+ * @param value - Texte à convertir (ex: titre de spectacle, nom de lieu)
+ * @param maxLength - Longueur max du slug (défaut 60)
+ * @returns Slug ASCII sûr pour un filesystem (peut être vide si entrée vide
+ *          ou uniquement non-ASCII non-décomposable — prévoir un fallback).
+ */
+export function slugifyFilenameSegment(value: string, maxLength = 60): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLength);
 }

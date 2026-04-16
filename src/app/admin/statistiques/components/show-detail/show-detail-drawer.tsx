@@ -91,7 +91,9 @@ export function ShowDetailDrawer({
                 periodLabel={periodLabel}
                 from={from}
                 to={to}
-                disabled={isLoading}
+                // Empêche l'export tant que les bornes globales ne sont pas
+                // résolues (évite un PDF avec "Du  au " vide).
+                disabled={isLoading || !from || !to}
               />
             </div>
           </>

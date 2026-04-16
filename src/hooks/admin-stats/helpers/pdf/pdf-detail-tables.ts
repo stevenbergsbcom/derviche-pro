@@ -55,6 +55,16 @@ function renderSectionTitle(doc: jsPDF, title: string, y: number): number {
   return y + 4;
 }
 
+/** Affiche un message d'état vide quand la table n'a pas de données. */
+function renderEmptyTableMessage(doc: jsPDF, message: string, y: number): number {
+  const [mR, mG, mB] = PDF_COLORS_RGB.muted;
+  doc.setFont('helvetica', PDF_FONTS.body.style);
+  doc.setFontSize(PDF_FONTS.body.size);
+  doc.setTextColor(mR, mG, mB);
+  doc.text(message, PDF_PAGE.marginX, y + 6);
+  return y + 14;
+}
+
 // ============================================
 // API PUBLIQUE
 // ============================================
@@ -66,6 +76,14 @@ export function renderRepresentationsTable(
   startY: number
 ): number {
   let y = renderSectionTitle(doc, 'Représentations sur la période', startY);
+
+  if (rows.length === 0) {
+    return renderEmptyTableMessage(
+      doc,
+      'Aucune représentation sur cette période.',
+      y
+    );
+  }
 
   const columns = [
     'Date',
@@ -113,6 +131,14 @@ export function renderVenueShowsTable(
   startY: number
 ): number {
   let y = renderSectionTitle(doc, 'Spectacles joués dans ce lieu', startY);
+
+  if (rows.length === 0) {
+    return renderEmptyTableMessage(
+      doc,
+      'Aucun spectacle joué dans ce lieu sur cette période.',
+      y
+    );
+  }
 
   const columns = [
     'Spectacle',

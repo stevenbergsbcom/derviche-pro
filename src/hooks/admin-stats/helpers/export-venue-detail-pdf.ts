@@ -56,6 +56,9 @@ export async function exportVenueDetailPdf(
   doc.addPage();
   let y: number = PDF_PAGE.marginTop;
 
+  // 4 KPIs prioritaires pour la synthèse visuelle (grille 2×2). Absents et
+  // presse restent accessibles via le tableau détaillé juste en dessous, pour
+  // ne pas surcharger la cover page du PDF.
   y = renderDetailKpis(doc, {
     entries: [
       { label: 'Représentations', value: input.summary.representationsCount },

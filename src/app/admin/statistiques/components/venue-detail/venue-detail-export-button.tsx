@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { exportVenueDetailPdf } from '@/hooks/admin-stats';
 import type { VenueDetailRow, VenueStats } from '@/lib/services/admin-stats';
+import { slugifyFilenameSegment } from '@/lib/utils';
 import { EXPORT_FILENAME_PREFIX } from '../../constants';
 
 export interface VenueDetailExportButtonProps {
@@ -23,16 +24,6 @@ export interface VenueDetailExportButtonProps {
   from: string;
   to: string;
   disabled?: boolean;
-}
-
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
 }
 
 export function VenueDetailExportButton({
@@ -47,7 +38,7 @@ export function VenueDetailExportButton({
 
   const handleClick = useCallback(() => {
     setIsExporting(true);
-    const slug = slugify(summary.venueName) || 'lieu';
+    const slug = slugifyFilenameSegment(summary.venueName) || 'lieu';
     const filename = `${EXPORT_FILENAME_PREFIX}_${slug}_${from}_${to}.pdf`;
 
     void (async () => {
@@ -75,7 +66,7 @@ export function VenueDetailExportButton({
       aria-label="Exporter le détail de ce lieu au format PDF"
     >
       <FileDown className="mr-1.5 h-4 w-4" />
-      {isExporting ? 'Export…' : 'Exporter PDF'}
+      {isExporting ? 'Export en cours…' : 'Exporter PDF'}
     </Button>
   );
 }

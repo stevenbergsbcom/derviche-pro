@@ -59,6 +59,9 @@ export async function exportShowDetailPdf(
   doc.addPage();
   let y: number = PDF_PAGE.marginTop;
 
+  // 4 KPIs prioritaires pour la synthèse visuelle (grille 2×2). La colonne
+  // "Presse" et les capacités restent accessibles via le tableau détaillé
+  // juste en dessous.
   y = renderDetailKpis(doc, {
     entries: [
       { label: 'Représentations', value: input.summary.representationsCount },

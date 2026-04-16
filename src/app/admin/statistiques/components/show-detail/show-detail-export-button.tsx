@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { exportShowDetailPdf } from '@/hooks/admin-stats';
 import type { ShowDetailRow, ShowStats } from '@/lib/services/admin-stats';
+import { slugifyFilenameSegment } from '@/lib/utils';
 import { EXPORT_FILENAME_PREFIX } from '../../constants';
 
 export interface ShowDetailExportButtonProps {
@@ -23,17 +24,6 @@ export interface ShowDetailExportButtonProps {
   from: string;
   to: string;
   disabled?: boolean;
-}
-
-/** Slugifie une chaîne pour un nom de fichier (retire accents, espaces, caractères spéciaux). */
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
 }
 
 export function ShowDetailExportButton({
@@ -48,7 +38,7 @@ export function ShowDetailExportButton({
 
   const handleClick = useCallback(() => {
     setIsExporting(true);
-    const slug = slugify(summary.showTitle) || 'spectacle';
+    const slug = slugifyFilenameSegment(summary.showTitle) || 'spectacle';
     const filename = `${EXPORT_FILENAME_PREFIX}_${slug}_${from}_${to}.pdf`;
 
     void (async () => {
@@ -76,7 +66,7 @@ export function ShowDetailExportButton({
       aria-label="Exporter le détail de ce spectacle au format PDF"
     >
       <FileDown className="mr-1.5 h-4 w-4" />
-      {isExporting ? 'Export…' : 'Exporter PDF'}
+      {isExporting ? 'Export en cours…' : 'Exporter PDF'}
     </Button>
   );
 }
