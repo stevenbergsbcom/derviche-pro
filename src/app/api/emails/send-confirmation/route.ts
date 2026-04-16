@@ -386,9 +386,21 @@ export async function POST(request: Request): Promise<NextResponse> {
       debugTrace.exceptionMessage = calErr instanceof Error ? calErr.message : String(calErr);
       debugTrace.exceptionStack = calErr instanceof Error ? calErr.stack : undefined;
     }
-    // Double log : logger.error ET console.error direct pour garantir la visibilité
-    logger.error('[API /emails/send-confirmation] DEBUG Calendar SUMMARY', debugTrace);
-    console.error('[CALENDAR_DEBUG_MARKER]', JSON.stringify(debugTrace));
+    // Persistance debug trace en base (workaround limitation logs Vercel)
+    try {
+      await adminClient.from('app_logs').insert({
+        category: 'calendar',
+        level: 'info',
+        action: 'debug_calendar_trace',
+        status: 'success',
+        actor_id: null,
+        actor_role: null,
+        reservation_id: payload.reservationId,
+        details: debugTrace,
+      });
+    } catch {
+      // Ignore silently
+    }
 
     return successResponse({ messageId: result.messageId });
   } catch (err) {
