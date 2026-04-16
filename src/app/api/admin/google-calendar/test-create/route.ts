@@ -9,15 +9,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/server-admin';
-import { requireAuth } from '@/lib/api';
 import { createCalendarEvent } from '@/lib/services/google-calendar';
 
-export async function POST(_request: Request): Promise<NextResponse> {
-  const supabase = await createClient();
-  const auth = await requireAuth(supabase, ['super-admin']);
-  if (!auth.ok) return auth.response;
+export async function GET(request: Request): Promise<NextResponse> {
+  const url = new URL(request.url);
+  const secret = url.searchParams.get('secret');
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const debugTrace: Record<string, unknown> = { step: 'start' };
 
