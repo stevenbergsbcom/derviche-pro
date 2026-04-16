@@ -35,10 +35,9 @@ const VALID_CATEGORIES = ['email', 'calendar', 'reservation', 'system', 'show'] 
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    // 1. Vérification auth + rôle
+    // 1. Vérification auth + rôle (optionnel pour la catégorie 'reservation')
     const supabase = await createClient();
-    const auth = await requireAuth(supabase, STAFF_ROLES);
-    if (!auth.ok) return auth.response;
+    const { data: { user } } = await supabase.auth.getUser();
 
     // 2. Parsing du body
     const body = await request.json() as Record<string, unknown>;
@@ -56,6 +55,21 @@ export async function POST(request: Request): Promise<Response> {
       return errorResponse(`Catégorie invalide: ${category}`, 400);
     }
 
+    // Pour les catégories admin (email, calendar, system, show), auth staff requise
+    const requiresAuth = category !== 'reservation';
+    let authUserId: string | null = null;
+    let authRole: string | null = null;
+
+    if (requiresAuth) {
+      const auth = await requireAuth(supabase, STAFF_ROLES);
+      if (!auth.ok) return auth.response;
+      authUserId = auth.userId;
+      authRole = auth.role;
+    } else if (user) {
+      // Guest reservations : user peut être null, c'est OK
+      authUserId = user.id;
+    }
+
     // 3. Insertion via admin client (service_role)
     const adminClient = createAdminClient();
     const { error: insertError } = await adminClient.from('app_logs').insert({
@@ -63,8 +77,8 @@ export async function POST(request: Request): Promise<Response> {
       level: success ? 'info' : 'error',
       action,
       status: success ? 'success' : 'error',
-      actor_id: (body.actor_id as string) ?? auth.userId,
-      actor_role: (body.actor_role as string) ?? auth.role,
+      actor_id: (body.actor_id as string) ?? authUserId,
+      actor_role: (body.actor_role as string) ?? authRole,
       reservation_id: (body.reservation_id as string) ?? null,
       details: (body.details as Record<string, unknown>) ?? {},
     });
