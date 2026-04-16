@@ -23,9 +23,10 @@ import { VenuesTableFooter } from './venues-table-footer';
 export interface VenuesStatsTableProps {
   rows: VenueStats[];
   isLoading: boolean;
+  onRowClick?: (row: VenueStats) => void;
 }
 
-export function VenuesStatsTable({ rows, isLoading }: VenuesStatsTableProps) {
+export function VenuesStatsTable({ rows, isLoading, onRowClick }: VenuesStatsTableProps) {
   const [sortKey, setSortKey] = useState<VenuesSortKey>('confirmedCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
@@ -71,7 +72,11 @@ export function VenuesStatsTable({ rows, isLoading }: VenuesStatsTableProps) {
               </TableRow>
             )}
             {pageRows.map((row) => (
-              <VenuesTableRow key={row.venueId} row={row} />
+              <VenuesTableRow
+                key={row.venueId}
+                row={row}
+                {...(onRowClick ? { onClick: onRowClick } : {})}
+              />
             ))}
           </TableBody>
           <VenuesTableFooter rows={sorted} />

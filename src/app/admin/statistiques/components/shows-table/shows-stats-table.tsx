@@ -23,9 +23,10 @@ import { ShowsTableFooter } from './shows-table-footer';
 export interface ShowsStatsTableProps {
   rows: ShowStats[];
   isLoading: boolean;
+  onRowClick?: (row: ShowStats) => void;
 }
 
-export function ShowsStatsTable({ rows, isLoading }: ShowsStatsTableProps) {
+export function ShowsStatsTable({ rows, isLoading, onRowClick }: ShowsStatsTableProps) {
   const [sortKey, setSortKey] = useState<ShowsSortKey>('confirmedCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
@@ -71,7 +72,11 @@ export function ShowsStatsTable({ rows, isLoading }: ShowsStatsTableProps) {
               </TableRow>
             )}
             {pageRows.map((row) => (
-              <ShowsTableRow key={row.showId} row={row} />
+              <ShowsTableRow
+                key={row.showId}
+                row={row}
+                {...(onRowClick ? { onClick: onRowClick } : {})}
+              />
             ))}
           </TableBody>
           <ShowsTableFooter rows={sorted} />

@@ -3,8 +3,9 @@
  * Derviche Diffusion
  *
  * Point d'entrée unique pour la page /admin/statistiques.
- * Les sous-modules (kpis, shows, venues, orchestrator, helpers) sont
- * importés individuellement depuis ici pour préserver l'encapsulation.
+ * Les sous-modules (kpis, shows, venues, chart, detail, orchestrator,
+ * helpers) sont importés individuellement depuis ici pour préserver
+ * l'encapsulation.
  */
 
 // Types publics
@@ -14,6 +15,10 @@ export type {
   StatsKpis,
   ShowStats,
   VenueStats,
+  ShowDetailRow,
+  VenueDetailRow,
+  StatsChartPoint,
+  ChartGranularity,
   AdminStatsData,
   StatsResult,
 } from './types';
@@ -37,3 +42,5 @@ export { getAdminStats } from './orchestrator';
 export { getStatsKpis } from './kpis';
 export { getShowsStats } from './shows';
 export { getVenuesStats } from './venues';
+export { getStatsChart } from './chart';
+export { getShowDetailStats, getVenueDetailStats } from './detail';

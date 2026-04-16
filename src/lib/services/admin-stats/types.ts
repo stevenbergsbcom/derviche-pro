@@ -2,7 +2,9 @@
  * Types - Admin Stats Service
  * Derviche Diffusion
  *
- * Types publics pour la page /admin/statistiques (Phase 1 — MVP).
+ * Types publics pour la page /admin/statistiques.
+ * Phase 1 — MVP : kpis / shows / venues.
+ * Phase 2 — drill-down : show-detail / venue-detail / chart.
  */
 
 import type { PeriodBounds } from '@/lib/services/admin-dashboard';
@@ -86,6 +88,54 @@ export interface VenueStats {
 }
 
 // ============================================
+// DÉTAILS (Phase 2)
+// ============================================
+
+/** Ligne du tableau "Représentations" dans le drawer détail spectacle. */
+export interface ShowDetailRow {
+  slotId: string;
+  slotDate: string;
+  slotTime: string;
+  venueName: string;
+  venueCity: string;
+  capacity: number;
+  confirmedCount: number;
+  presentCount: number;
+  absentCount: number;
+  pressCount: number;
+}
+
+/** Ligne du tableau "Spectacles" dans le drawer détail lieu. */
+export interface VenueDetailRow {
+  showId: string;
+  showTitle: string;
+  showSlug: string;
+  companyName: string;
+  representationsCount: number;
+  confirmedCount: number;
+  presentCount: number;
+  absentCount: number;
+  pressCount: number;
+}
+
+// ============================================
+// CHART (Phase 2)
+// ============================================
+
+/** Granularité d'un bucket temporel. */
+export type ChartGranularity = 'day' | 'week' | 'month';
+
+/** Point de la série temporelle (chart). */
+export interface StatsChartPoint {
+  /** Date de début du bucket (YYYY-MM-DD). */
+  bucketStart: string;
+  /** Libellé FR pré-formaté (ex: "3 mars", "Sem. 12", "Mars 2026"). */
+  bucketLabel: string;
+  /** Nombre de réservations confirmées dans le bucket. */
+  confirmedCount: number;
+}
+
+// ============================================
 // BUNDLE ORCHESTRATEUR
 // ============================================
 
@@ -94,6 +144,8 @@ export interface AdminStatsData {
   kpis: StatsKpis;
   shows: ShowStats[];
   venues: VenueStats[];
+  chart: StatsChartPoint[];
+  chartGranularity: ChartGranularity;
   bounds: PeriodBounds;
 }
 

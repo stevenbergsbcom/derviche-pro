@@ -2,7 +2,7 @@
  * Orchestrator - Admin Stats Service
  * Derviche Diffusion
  *
- * Parallélise les trois requêtes (KPIs + spectacles + lieux) et
+ * Parallélise les quatre requêtes (KPIs + spectacles + lieux + chart) et
  * agrège les erreurs en une chaîne unique lisible côté UI.
  */
 
@@ -10,24 +10,45 @@ import { logger } from '@/lib/logger';
 import { getStatsKpis } from '../kpis';
 import { getShowsStats } from '../shows';
 import { getVenuesStats } from '../venues';
-import type { AdminStatsData, StatsFilters, StatsResult } from '../types';
+import { getStatsChart } from '../chart';
+import { pickGranularity } from '../helpers';
+import type {
+  AdminStatsData,
+  ChartGranularity,
+  StatsFilters,
+  StatsResult,
+} from '../types';
 
 export async function getAdminStats(
   filters: StatsFilters
 ): Promise<StatsResult<AdminStatsData>> {
   try {
-    const [kpisResult, showsResult, venuesResult] = await Promise.all([
+    const granularity: ChartGranularity = pickGranularity({
+      start: filters.from,
+      end: filters.to,
+    });
+
+    const [kpisResult, showsResult, venuesResult, chartResult] = await Promise.all([
       getStatsKpis(filters),
       getShowsStats(filters),
       getVenuesStats(filters),
+      getStatsChart(filters, granularity),
     ]);
 
-    const errors = [kpisResult.error, showsResult.error, venuesResult.error].filter(
-      (msg): msg is string => Boolean(msg)
-    );
+    const errors = [
+      kpisResult.error,
+      showsResult.error,
+      venuesResult.error,
+      chartResult.error,
+    ].filter((msg): msg is string => Boolean(msg));
 
-    // Si les 3 requêtes ont échoué → échec complet
-    if (!kpisResult.data && !showsResult.data && !venuesResult.data) {
+    // Si les 4 requêtes ont échoué → échec complet
+    if (
+      !kpisResult.data &&
+      !showsResult.data &&
+      !venuesResult.data &&
+      !chartResult.data
+    ) {
       return {
         data: null,
         error: errors.join(' ; ') || 'Erreur inconnue',
@@ -44,6 +65,8 @@ export async function getAdminStats(
         },
         shows: showsResult.data ?? [],
         venues: venuesResult.data ?? [],
+        chart: chartResult.data ?? [],
+        chartGranularity: granularity,
         bounds: { start: filters.from, end: filters.to },
       },
       error: errors.length > 0 ? `Erreur partielle : ${errors.join(' ; ')}` : null,

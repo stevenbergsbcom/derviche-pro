@@ -2,11 +2,10 @@
  * Page /admin/statistiques
  * Derviche Diffusion
  *
- * Phase 1 (MVP) — filtres (période, compagnies, lieux), KPIs, tableaux
- * spectacles & lieux, export CSV/Excel.
+ * Phase 1 — filtres, KPIs, tableaux, export CSV/Excel.
+ * Phase 2 — drawers détail spectacle + lieu, graphique d'évolution.
  *
- * Permissions : contrôlées par le middleware (RESTRICTED_ADMIN_ROUTES).
- * Pas de contrôle supplémentaire côté client.
+ * Permissions : middleware (RESTRICTED_ADMIN_ROUTES).
  */
 
 'use client';
@@ -15,13 +14,18 @@ import { Suspense } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AdminPageHeader } from '@/components/admin';
 import { AlertTriangle } from 'lucide-react';
-import { useStatsPage, useStatsExport } from './hooks';
+import { STATS_PERIOD_LABELS } from '@/lib/services/admin-stats';
+import { useStatsDrawers, useStatsExport, useStatsPage } from './hooks';
 import { PAGE_SUBTITLE, PAGE_TITLE } from './constants';
-import { StatsFilters, StatsKpis, ShowsStatsTable, VenuesStatsTable } from './components';
-
-// ============================================
-// COMPOSANT INTERNE (useSearchParams → Suspense requis)
-// ============================================
+import {
+  ShowDetailDrawer,
+  ShowsStatsTable,
+  StatsChart,
+  StatsFilters,
+  StatsKpis,
+  VenueDetailDrawer,
+  VenuesStatsTable,
+} from './components';
 
 function StatistiquesContent() {
   const page = useStatsPage();
@@ -30,6 +34,13 @@ function StatistiquesContent() {
     state: page.filters,
     bounds: page.bounds,
   });
+  const drawers = useStatsDrawers({
+    shows: page.data?.shows ?? [],
+    showDetail: page.showDetail,
+    venueDetail: page.venueDetail,
+  });
+
+  const periodLabel = STATS_PERIOD_LABELS[page.filters.period];
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -62,16 +73,47 @@ function StatistiquesContent() {
 
       <StatsKpis kpis={page.data?.kpis ?? null} isLoading={page.isLoading} />
 
-      <ShowsStatsTable rows={page.data?.shows ?? []} isLoading={page.isLoading} />
+      <ShowsStatsTable
+        rows={page.data?.shows ?? []}
+        isLoading={page.isLoading}
+        onRowClick={drawers.openShow}
+      />
 
-      <VenuesStatsTable rows={page.data?.venues ?? []} isLoading={page.isLoading} />
+      <VenuesStatsTable
+        rows={page.data?.venues ?? []}
+        isLoading={page.isLoading}
+        onRowClick={drawers.openVenue}
+      />
+
+      <StatsChart
+        data={page.data?.chart ?? []}
+        granularity={page.data?.chartGranularity ?? 'day'}
+        isLoading={page.isLoading}
+      />
+
+      <ShowDetailDrawer
+        isOpen={page.showDetail.isOpen}
+        summary={drawers.selectedShow}
+        periodLabel={periodLabel}
+        rows={page.showDetail.data}
+        isLoading={page.showDetail.isLoading}
+        error={page.showDetail.error}
+        onOpenChange={(open) => !open && page.showDetail.close()}
+      />
+
+      <VenueDetailDrawer
+        isOpen={page.venueDetail.isOpen}
+        summary={drawers.selectedVenue}
+        periodLabel={periodLabel}
+        rows={page.venueDetail.data}
+        isLoading={page.venueDetail.isLoading}
+        error={page.venueDetail.error}
+        onOpenChange={(open) => !open && page.venueDetail.close()}
+        onShowClick={drawers.openShowFromVenue}
+      />
     </div>
   );
 }
-
-// ============================================
-// EXPORT — wrappé dans <Suspense> pour useSearchParams
-// ============================================
 
 export default function StatistiquesPage() {
   return (
