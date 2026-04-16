@@ -107,6 +107,8 @@ function StatistiquesContent() {
         isOpen={page.showDetail.isOpen}
         summary={drawers.selectedShow}
         periodLabel={periodLabel}
+        from={page.bounds?.from ?? ''}
+        to={page.bounds?.to ?? ''}
         rows={page.showDetail.data}
         isLoading={page.showDetail.isLoading}
         error={page.showDetail.error}
@@ -117,6 +119,8 @@ function StatistiquesContent() {
         isOpen={page.venueDetail.isOpen}
         summary={drawers.selectedVenue}
         periodLabel={periodLabel}
+        from={page.bounds?.from ?? ''}
+        to={page.bounds?.to ?? ''}
         rows={page.venueDetail.data}
         isLoading={page.venueDetail.isLoading}
         error={page.venueDetail.error}

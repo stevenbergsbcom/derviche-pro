@@ -6,7 +6,7 @@
  *   - Header (titre, compagnie, libellé période)
  *   - Mini-KPIs (5 cartes)
  *   - Tableau des représentations sur la période
- *   - Bouton "Exporter PDF" (désactivé, phase 3)
+ *   - Bouton "Exporter PDF" (rapport focalisé sur ce spectacle)
  */
 
 'use client';
@@ -26,6 +26,9 @@ export interface ShowDetailDrawerProps {
   summary: ShowStats | null;
   /** Libellé lisible de la période filtrée ("Mois en cours", "Personnalisée", etc.). */
   periodLabel: string;
+  /** Bornes exactes de la période (nécessaires pour le nom de fichier PDF). */
+  from: string;
+  to: string;
   /** Détail des représentations (fetch asynchrone). */
   rows: ShowDetailRow[];
   isLoading: boolean;
@@ -37,6 +40,8 @@ export function ShowDetailDrawer({
   isOpen,
   summary,
   periodLabel,
+  from,
+  to,
   rows,
   isLoading,
   error,
@@ -80,7 +85,14 @@ export function ShowDetailDrawer({
             </div>
 
             <div className="flex items-center justify-end border-t px-4 py-3">
-              <ShowDetailExportButton />
+              <ShowDetailExportButton
+                summary={summary}
+                rows={rows}
+                periodLabel={periodLabel}
+                from={from}
+                to={to}
+                disabled={isLoading}
+              />
             </div>
           </>
         ) : null}

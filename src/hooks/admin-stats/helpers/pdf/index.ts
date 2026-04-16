@@ -14,3 +14,18 @@ export { renderShowsTable, renderVenuesTable } from './pdf-tables';
 
 export { renderChart } from './pdf-chart';
 export type { RenderChartInput } from './pdf-chart';
+
+export {
+  renderDetailCover,
+  renderDetailKpis,
+} from './pdf-detail';
+export type {
+  RenderDetailCoverInput,
+  RenderDetailKpisInput,
+  DetailKpiEntry,
+} from './pdf-detail';
+
+export {
+  renderRepresentationsTable,
+  renderVenueShowsTable,
+} from './pdf-detail-tables';

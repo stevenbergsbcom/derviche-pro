@@ -1,9 +1,9 @@
 /**
- * ShowDetailExportButton - Bouton "Exporter PDF" du drawer détail spectacle
+ * VenueDetailExportButton - Bouton "Exporter PDF" du drawer détail lieu
  * Derviche Diffusion
  *
- * Génère un rapport focalisé sur le spectacle courant :
- * cover + KPIs + table des représentations.
+ * Génère un rapport focalisé sur le lieu courant :
+ * cover + KPIs + table des spectacles joués.
  */
 
 'use client';
@@ -12,20 +12,19 @@ import { useCallback, useState } from 'react';
 import { FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { exportShowDetailPdf } from '@/hooks/admin-stats';
-import type { ShowDetailRow, ShowStats } from '@/lib/services/admin-stats';
+import { exportVenueDetailPdf } from '@/hooks/admin-stats';
+import type { VenueDetailRow, VenueStats } from '@/lib/services/admin-stats';
 import { EXPORT_FILENAME_PREFIX } from '../../constants';
 
-export interface ShowDetailExportButtonProps {
-  summary: ShowStats;
-  rows: ShowDetailRow[];
+export interface VenueDetailExportButtonProps {
+  summary: VenueStats;
+  rows: VenueDetailRow[];
   periodLabel: string;
   from: string;
   to: string;
   disabled?: boolean;
 }
 
-/** Slugifie une chaîne pour un nom de fichier (retire accents, espaces, caractères spéciaux). */
 function slugify(value: string): string {
   return value
     .normalize('NFD')
@@ -36,24 +35,24 @@ function slugify(value: string): string {
     .slice(0, 60);
 }
 
-export function ShowDetailExportButton({
+export function VenueDetailExportButton({
   summary,
   rows,
   periodLabel,
   from,
   to,
   disabled,
-}: ShowDetailExportButtonProps) {
+}: VenueDetailExportButtonProps) {
   const [isExporting, setIsExporting] = useState(false);
 
   const handleClick = useCallback(() => {
     setIsExporting(true);
-    const slug = slugify(summary.showTitle) || 'spectacle';
+    const slug = slugify(summary.venueName) || 'lieu';
     const filename = `${EXPORT_FILENAME_PREFIX}_${slug}_${from}_${to}.pdf`;
 
     void (async () => {
       try {
-        await exportShowDetailPdf(
+        await exportVenueDetailPdf(
           { summary, rows, periodLabel, from, to },
           filename
         );
@@ -73,7 +72,7 @@ export function ShowDetailExportButton({
       size="sm"
       onClick={handleClick}
       disabled={disabled || isExporting}
-      aria-label="Exporter le détail de ce spectacle au format PDF"
+      aria-label="Exporter le détail de ce lieu au format PDF"
     >
       <FileDown className="mr-1.5 h-4 w-4" />
       {isExporting ? 'Export…' : 'Exporter PDF'}

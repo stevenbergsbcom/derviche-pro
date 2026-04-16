@@ -8,3 +8,4 @@ export type { VenueDetailDrawerProps } from './venue-detail-drawer';
 export { VenueDetailHeader } from './venue-detail-header';
 export { VenueDetailKpis } from './venue-detail-kpis';
 export { VenueDetailShowsTable } from './venue-detail-shows-table';
+export { VenueDetailExportButton } from './venue-detail-export-button';

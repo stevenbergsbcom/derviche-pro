@@ -1,6 +1,8 @@
 /**
  * VenueDetailDrawer - Panneau latéral "Détail lieu"
  * Derviche Diffusion
+ *
+ * Inclut un bouton "Exporter PDF" (rapport focalisé sur ce lieu).
  */
 
 'use client';
@@ -12,11 +14,15 @@ import type { VenueDetailRow, VenueStats } from '@/lib/services/admin-stats';
 import { VenueDetailHeader } from './venue-detail-header';
 import { VenueDetailKpis } from './venue-detail-kpis';
 import { VenueDetailShowsTable } from './venue-detail-shows-table';
+import { VenueDetailExportButton } from './venue-detail-export-button';
 
 export interface VenueDetailDrawerProps {
   isOpen: boolean;
   summary: VenueStats | null;
   periodLabel: string;
+  /** Bornes exactes de la période (nécessaires pour le nom de fichier PDF). */
+  from: string;
+  to: string;
   rows: VenueDetailRow[];
   isLoading: boolean;
   error: string | null;
@@ -29,6 +35,8 @@ export function VenueDetailDrawer({
   isOpen,
   summary,
   periodLabel,
+  from,
+  to,
   rows,
   isLoading,
   error,
@@ -71,6 +79,17 @@ export function VenueDetailDrawer({
                   />
                 </section>
               </div>
+            </div>
+
+            <div className="flex items-center justify-end border-t px-4 py-3">
+              <VenueDetailExportButton
+                summary={summary}
+                rows={rows}
+                periodLabel={periodLabel}
+                from={from}
+                to={to}
+                disabled={isLoading}
+              />
             </div>
           </>
         ) : null}
