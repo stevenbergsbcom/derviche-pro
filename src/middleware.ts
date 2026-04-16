@@ -154,8 +154,6 @@ export async function middleware(request: NextRequest) {
         '/api/emails',
         // Route log-activity (accessible aux guests pour tracer les réservations publiques)
         '/api/admin/log-activity',
-        // TEMPORAIRE DEBUG : test Calendar accessible via CRON_SECRET
-        '/api/admin/google-calendar/test-create',
         // Routes publiques
         '/catalogue',
         '/spectacle',

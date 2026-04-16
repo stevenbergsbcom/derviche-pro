@@ -56,7 +56,7 @@ interface ReservationFull {
   guest_last_name: string | null;
   guest_email: string | null;
   guest_structure: string | null;
-  comments: string | null;
+  special_requests: string | null;
   user_id: string | null;
   profiles: { email: string; first_name: string | null; last_name: string | null } | null;
   slots: {
@@ -161,7 +161,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         guest_last_name,
         guest_email,
         guest_structure,
-        comments,
+        special_requests,
         user_id,
         profiles:user_id (
           email,
@@ -337,7 +337,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             guestStructure: reservation.guest_structure,
             guestEmail: recipientEmail,
             reservationId: reservation.id,
-            guestComment: reservation.comments,
+            guestComment: reservation.special_requests,
             managerName,
             managerPhone,
             managerEmail,

@@ -56,7 +56,6 @@ type SendConfirmationPayload = z.infer<typeof sendConfirmationSchema>;
 // ============================================
 
 export async function POST(request: Request): Promise<NextResponse> {
-  logger.warn('[API /emails/send-confirmation] DEBUG ROUTE — ENTRY v2');
   try {
     // 0. Rate limiting (anti-spam emails)
     const rl = await checkRateLimit('emails', request);
@@ -302,28 +301,21 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     // 6. Créer l'événement Google Calendar (non-bloquant)
-    const debugTrace: Record<string, unknown> = { step: 'entered-try' };
     try {
-      const { data: calPref, error: calPrefError } = await adminClient
+      const { data: calPref } = await adminClient
         .from('app_settings')
         .select('value')
         .eq('key', 'google_calendar_enabled')
         .maybeSingle();
 
-      debugTrace.calPrefValue = calPref?.value;
-      debugTrace.calPrefType = typeof calPref?.value;
-      debugTrace.calPrefError = calPrefError?.message;
-
       const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
       if (isBoolTrue(calPref?.value)) {
-        debugTrace.step = 'calendar-enabled';
-
-        const { data: slotRaw, error: slotError } = await adminClient
+        const { data: slotRaw } = await adminClient
           .from('reservations')
           .select(`
             guest_structure,
-            comments,
+            special_requests,
             slots!inner (
               date,
               time,
@@ -333,29 +325,20 @@ export async function POST(request: Request): Promise<NextResponse> {
           .eq('id', payload.reservationId)
           .maybeSingle();
 
-        debugTrace.hasSlotRaw = !!slotRaw;
-        debugTrace.hasSlots = !!slotRaw?.slots;
-        debugTrace.slotError = slotError?.message;
-
         const slot = (slotRaw?.slots as unknown) as {
           date: string;
           time: string;
           shows: { duration_minutes: number | null };
         } | null;
 
-        debugTrace.hasSlot = !!slot;
-        debugTrace.slotDate = slot?.date;
-        debugTrace.slotTime = slot?.time;
-
         if (slot) {
-          debugTrace.step = 'calling-createCalendarEvent';
           const calResult = await createCalendarEvent({
             showTitle:             payload.showTitle,
             guestFullName:         payload.guestFullName,
             guestStructure:        (slotRaw as { guest_structure?: string | null } | null)?.guest_structure ?? null,
             guestEmail:            payload.to,
             reservationId:         payload.reservationId,
-            guestComment:          (slotRaw as { comments?: string | null } | null)?.comments ?? null,
+            guestComment:          (slotRaw as { special_requests?: string | null } | null)?.special_requests ?? null,
             managerName:           confirmManagerName,
             managerPhone:          confirmManagerPhone,
             managerEmail:          confirmManagerEmail,
@@ -368,10 +351,6 @@ export async function POST(request: Request): Promise<NextResponse> {
             sendEmailNotification: true,
           });
 
-          debugTrace.calResultSuccess = calResult.success;
-          debugTrace.calResultError = calResult.success ? undefined : calResult.error;
-          debugTrace.calResultEventId = calResult.success ? calResult.eventId : undefined;
-
           if (calResult.success) {
             await adminClient
               .from('reservations')
@@ -380,26 +359,10 @@ export async function POST(request: Request): Promise<NextResponse> {
           }
         }
       }
-      debugTrace.step = debugTrace.step ?? 'finished-ok';
     } catch (calErr) {
-      debugTrace.step = 'exception';
-      debugTrace.exceptionMessage = calErr instanceof Error ? calErr.message : String(calErr);
-      debugTrace.exceptionStack = calErr instanceof Error ? calErr.stack : undefined;
-    }
-    // Persistance debug trace en base (workaround limitation logs Vercel)
-    try {
-      await adminClient.from('app_logs').insert({
-        category: 'calendar',
-        level: 'info',
-        action: 'debug_calendar_trace',
-        status: 'success',
-        actor_id: null,
-        actor_role: null,
-        reservation_id: payload.reservationId,
-        details: debugTrace,
+      logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', {
+        message: calErr instanceof Error ? calErr.message : String(calErr),
       });
-    } catch {
-      // Ignore silently
     }
 
     return successResponse({ messageId: result.messageId });
