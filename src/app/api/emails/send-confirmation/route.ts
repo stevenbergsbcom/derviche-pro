@@ -302,16 +302,28 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // 6. Créer l'événement Google Calendar (non-bloquant)
     try {
-      const { data: calPref } = await adminClient
+      logger.info('[API /emails/send-confirmation] DEBUG Calendar — démarrage', {
+        reservationId: payload.reservationId,
+      });
+
+      const { data: calPref, error: calPrefError } = await adminClient
         .from('app_settings')
         .select('value')
         .eq('key', 'google_calendar_enabled')
         .maybeSingle();
 
+      logger.info('[API /emails/send-confirmation] DEBUG Calendar — calPref', {
+        value: calPref?.value,
+        type: typeof calPref?.value,
+        error: calPrefError?.message,
+      });
+
       const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
       if (isBoolTrue(calPref?.value)) {
-        const { data: slotRaw } = await adminClient
+        logger.info('[API /emails/send-confirmation] DEBUG Calendar — activé, fetch slot');
+
+        const { data: slotRaw, error: slotError } = await adminClient
           .from('reservations')
           .select(`
             guest_structure,
@@ -325,13 +337,26 @@ export async function POST(request: Request): Promise<NextResponse> {
           .eq('id', payload.reservationId)
           .maybeSingle();
 
+        logger.info('[API /emails/send-confirmation] DEBUG Calendar — slotRaw', {
+          hasData: !!slotRaw,
+          hasSlots: !!slotRaw?.slots,
+          error: slotError?.message,
+        });
+
         const slot = (slotRaw?.slots as unknown) as {
           date: string;
           time: string;
           shows: { duration_minutes: number | null };
         } | null;
 
+        logger.info('[API /emails/send-confirmation] DEBUG Calendar — slot parsed', {
+          hasSlot: !!slot,
+          date: slot?.date,
+          time: slot?.time,
+        });
+
         if (slot) {
+          logger.info('[API /emails/send-confirmation] DEBUG Calendar — appel createCalendarEvent');
           const calResult = await createCalendarEvent({
             showTitle:             payload.showTitle,
             guestFullName:         payload.guestFullName,
@@ -351,6 +376,12 @@ export async function POST(request: Request): Promise<NextResponse> {
             sendEmailNotification: true,
           });
 
+          logger.info('[API /emails/send-confirmation] DEBUG Calendar — résultat', {
+            success: calResult.success,
+            eventId: calResult.success ? calResult.eventId : undefined,
+            error: !calResult.success ? calResult.error : undefined,
+          });
+
           if (calResult.success) {
             await adminClient
               .from('reservations')
@@ -358,9 +389,16 @@ export async function POST(request: Request): Promise<NextResponse> {
               .eq('id', payload.reservationId);
           }
         }
+      } else {
+        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — désactivé ou valeur inattendue', {
+          value: calPref?.value,
+        });
       }
     } catch (calErr) {
-      logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', { calErr });
+      logger.error('[API /emails/send-confirmation] Exception Calendar (non-bloquant)', {
+        message: calErr instanceof Error ? calErr.message : String(calErr),
+        stack: calErr instanceof Error ? calErr.stack : undefined,
+      });
     }
 
     return successResponse({ messageId: result.messageId });
