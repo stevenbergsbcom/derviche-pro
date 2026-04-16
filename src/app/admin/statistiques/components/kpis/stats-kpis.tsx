@@ -6,16 +6,16 @@
 'use client';
 
 import { Users, Ticket, Ban, Film } from 'lucide-react';
-import type { StatsKpis as StatsKpisData } from '@/lib/services/admin-stats';
+import type { StatsKpisWithDelta } from '@/lib/services/admin-stats';
 import { StatsKpiCard } from './stats-kpi-card';
 
 export interface StatsKpisProps {
-  kpis: StatsKpisData | null;
+  kpis: StatsKpisWithDelta | null;
   isLoading: boolean;
 }
 
 export function StatsKpis({ kpis, isLoading }: StatsKpisProps) {
-  const data: StatsKpisData = kpis ?? {
+  const data: StatsKpisWithDelta = kpis ?? {
     totalConfirmed: 0,
     totalCancelled: 0,
     totalPlacesConfirmed: 0,
@@ -42,6 +42,7 @@ export function StatsKpis({ kpis, isLoading }: StatsKpisProps) {
         iconClassName="text-derviche"
         sublabel="hors annulées"
         isLoading={isLoading}
+        {...(data.totalConfirmedDelta ? { delta: data.totalConfirmedDelta } : {})}
       />
       <StatsKpiCard
         title="Annulations"
@@ -50,6 +51,8 @@ export function StatsKpis({ kpis, isLoading }: StatsKpisProps) {
         iconClassName="text-red-600"
         sublabel={`${cancelRate}% du volume total`}
         isLoading={isLoading}
+        {...(data.totalCancelledDelta ? { delta: data.totalCancelledDelta } : {})}
+        deltaInverse
       />
       <StatsKpiCard
         title="Places confirmées"
@@ -58,6 +61,9 @@ export function StatsKpis({ kpis, isLoading }: StatsKpisProps) {
         iconClassName="text-green-600"
         sublabel={`moy. ${avgPlaces} / résa`}
         isLoading={isLoading}
+        {...(data.totalPlacesConfirmedDelta
+          ? { delta: data.totalPlacesConfirmedDelta }
+          : {})}
       />
       <StatsKpiCard
         title="Spectacles concernés"
@@ -66,6 +72,7 @@ export function StatsKpis({ kpis, isLoading }: StatsKpisProps) {
         iconClassName="text-blue-600"
         sublabel="sur la période"
         isLoading={isLoading}
+        {...(data.totalShowsDelta ? { delta: data.totalShowsDelta } : {})}
       />
     </div>
   );

@@ -154,3 +154,60 @@ export interface StatsResult<T> {
   data: T | null;
   error: string | null;
 }
+
+// ============================================
+// COMPARAISON (Phase 3)
+// ============================================
+
+/** Preset de comparaison entre périodes. */
+export type ComparePreset = 'year_before' | 'previous_equivalent' | 'previous_season';
+
+/** Valeurs delta absolu + pourcentage pour une métrique. */
+export interface DeltaValue {
+  /** Variation absolue (value - compareValue). */
+  delta: number;
+  /** Variation en pourcentage (arrondi à 1 décimale). null si base=0. */
+  deltaPercent: number | null;
+  /** Valeur de la période de comparaison (pour tooltip / PDF). */
+  compareValue: number;
+}
+
+/** KPIs enrichis avec deltas optionnels. */
+export interface StatsKpisWithDelta extends StatsKpis {
+  totalConfirmedDelta?: DeltaValue;
+  totalCancelledDelta?: DeltaValue;
+  totalPlacesConfirmedDelta?: DeltaValue;
+  totalShowsDelta?: DeltaValue;
+}
+
+/** Ligne spectacle enrichie avec delta sur confirmedCount. */
+export interface ShowStatsWithDelta extends ShowStats {
+  confirmedCountDelta?: DeltaValue;
+}
+
+/** Ligne lieu enrichie avec delta sur confirmedCount. */
+export interface VenueStatsWithDelta extends VenueStats {
+  confirmedCountDelta?: DeltaValue;
+}
+
+/** Point chart enrichi avec valeur de comparaison. */
+export interface StatsChartPointWithCompare extends StatsChartPoint {
+  /** Valeur de la période de comparaison (même index/décalage). undefined si pas de comparaison. */
+  confirmedCountCompare?: number;
+  /** Label du bucket de comparaison (pour tooltip). undefined si pas de comparaison. */
+  bucketLabelCompare?: string;
+}
+
+/** Données complètes avec comparaison optionnelle. */
+export interface AdminStatsDataWithComparison {
+  kpis: StatsKpisWithDelta;
+  shows: ShowStatsWithDelta[];
+  venues: VenueStatsWithDelta[];
+  chart: StatsChartPointWithCompare[];
+  chartGranularity: ChartGranularity;
+  bounds: PeriodBounds;
+  /** Bornes de la période de comparaison (si active). */
+  compareBounds?: PeriodBounds;
+  /** Preset de comparaison utilisé (si active). */
+  comparePreset?: ComparePreset;
+}

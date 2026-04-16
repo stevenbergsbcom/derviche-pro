@@ -1,21 +1,25 @@
 /**
- * use-stats-export - Dispatch des exports (CSV, Excel)
+ * use-stats-export - Dispatch des exports (CSV, Excel, PDF)
  * Derviche Diffusion
  *
- * Le PDF est explicitement différé en Phase 3 ; on exporte un type
- * `ExportFormat` qui accepte déjà `pdf` pour que l'UI puisse afficher
- * l'option "grisée" sans casser le typage.
+ * Phase 3B : l'export PDF est désormais fonctionnel. La signature du
+ * `exportAs` reste synchrone : l'orchestrateur PDF (qui est async) est
+ * enveloppé dans une IIFE afin d'éviter de modifier les appelants.
  */
 
 'use client';
 
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import type { AdminStatsData } from '@/lib/services/admin-stats';
+import type {
+  AdminStatsDataWithComparison,
+  ComparePreset,
+} from '@/lib/services/admin-stats';
 import { STATS_PERIOD_LABELS } from '@/lib/services/admin-stats';
 import {
   exportStatsCSV,
   exportStatsExcel,
+  exportStatsPdf,
 } from '@/hooks/admin-stats';
 import { EXPORT_FILENAME_PREFIX } from '../constants';
 import type { StatsFiltersState } from './use-stats-filters';
@@ -44,12 +48,22 @@ function buildFilename(prefix: string, from: string, to: string, ext: string): s
 // ============================================
 
 export interface UseStatsExportProps {
-  data: AdminStatsData | null;
+  data: AdminStatsDataWithComparison | null;
   state: StatsFiltersState;
   bounds: { from: string; to: string } | null;
+  /** Libellés des compagnies filtrées (optionnel, pour la cover PDF). */
+  companyLabels?: string[];
+  /** Libellés des lieux filtrés (optionnel, pour la cover PDF). */
+  venueLabels?: string[];
 }
 
-export function useStatsExport({ data, state, bounds }: UseStatsExportProps): UseStatsExportReturn {
+export function useStatsExport({
+  data,
+  state,
+  bounds,
+  companyLabels,
+  venueLabels,
+}: UseStatsExportProps): UseStatsExportReturn {
   const [isExporting, setIsExporting] = useState(false);
 
   const exportAs = useCallback(
@@ -59,15 +73,56 @@ export function useStatsExport({ data, state, bounds }: UseStatsExportProps): Us
         return;
       }
 
+      const periodLabel = STATS_PERIOD_LABELS[state.period];
+
       if (format === 'pdf') {
-        toast.info('L\'export PDF arrive bientôt');
+        // PDF est async : on enveloppe dans une IIFE pour garder la signature
+        // synchrone de `exportAs` (aucun appelant n'a besoin d'await).
+        setIsExporting(true);
+        void (async () => {
+          try {
+            const filename = buildFilename(
+              EXPORT_FILENAME_PREFIX,
+              bounds.from,
+              bounds.to,
+              'pdf'
+            );
+            const comparePreset: ComparePreset | undefined = state.comparePreset;
+            await exportStatsPdf(
+              {
+                data,
+                periodLabel,
+                from: bounds.from,
+                to: bounds.to,
+                compareMode: !!state.compareMode,
+                ...(comparePreset ? { comparePreset } : {}),
+                ...(data.compareBounds
+                  ? {
+                      compareFrom: data.compareBounds.start,
+                      compareTo: data.compareBounds.end,
+                    }
+                  : {}),
+                ...(companyLabels && companyLabels.length > 0
+                  ? { companyLabels }
+                  : {}),
+                ...(venueLabels && venueLabels.length > 0
+                  ? { venueLabels }
+                  : {}),
+              },
+              filename
+            );
+            toast.success('Export PDF téléchargé');
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Erreur export PDF');
+          } finally {
+            setIsExporting(false);
+          }
+        })();
         return;
       }
 
       setIsExporting(true);
       try {
-        const periodLabel = STATS_PERIOD_LABELS[state.period];
-
         if (format === 'csv') {
           exportStatsCSV(
             {
@@ -97,7 +152,7 @@ export function useStatsExport({ data, state, bounds }: UseStatsExportProps): Us
         setIsExporting(false);
       }
     },
-    [data, state, bounds]
+    [data, state, bounds, companyLabels, venueLabels]
   );
 
   return { isExporting, exportAs };

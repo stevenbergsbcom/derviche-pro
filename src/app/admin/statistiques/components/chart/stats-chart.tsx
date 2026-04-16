@@ -4,6 +4,9 @@
  *
  * Bar chart (recharts) avec granularité automatique (jour/semaine/mois).
  * Section repliable avec header + bouton toggle.
+ *
+ * Phase 3 : supporte une 2ᵉ série "comparaison" conditionnelle (dérivée de
+ * la présence de `confirmedCountCompare` sur les points) + légende.
  */
 
 'use client';
@@ -13,6 +16,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -24,12 +28,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
   ChartGranularity,
-  StatsChartPoint,
+  StatsChartPointWithCompare,
 } from '@/lib/services/admin-stats';
+import { CHART_COLORS } from '@/lib/services/admin-stats';
 import { ChartTooltip } from './chart-tooltip';
 
 export interface StatsChartProps {
-  data: StatsChartPoint[];
+  data: StatsChartPointWithCompare[];
   granularity: ChartGranularity;
   isLoading: boolean;
 }
@@ -56,8 +61,12 @@ export function StatsChart({ data, granularity, isLoading }: StatsChartProps) {
 
   const total = data.reduce((sum, p) => sum + p.confirmedCount, 0);
 
+  // Déduit la présence d'une série de comparaison depuis les données : évite
+  // d'exiger une prop supplémentaire côté page.
+  const hasCompare = data.some((p) => typeof p.confirmedCountCompare === 'number');
+
   return (
-    <Card>
+    <Card data-pdf-chart="true">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-base font-semibold">
@@ -96,7 +105,7 @@ export function StatsChart({ data, granularity, isLoading }: StatsChartProps) {
               Aucune donnée pour cette période
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={hasCompare ? 250 : 220}>
               <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -120,12 +129,25 @@ export function StatsChart({ data, granularity, isLoading }: StatsChartProps) {
                   cursor={{ fill: 'hsl(var(--muted) / 0.4)' }}
                   content={<ChartTooltip />}
                 />
+                {hasCompare && (
+                  <Legend wrapperStyle={{ fontSize: 12 }} iconType="rect" />
+                )}
                 <Bar
                   dataKey="confirmedCount"
-                  fill="#1e3a5f"
+                  name="Période courante"
+                  fill={CHART_COLORS.main}
                   radius={[4, 4, 0, 0]}
                   maxBarSize={40}
                 />
+                {hasCompare && (
+                  <Bar
+                    dataKey="confirmedCountCompare"
+                    name="Comparaison"
+                    fill="#94a3b8"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={40}
+                  />
+                )}
               </BarChart>
             </ResponsiveContainer>
           )}

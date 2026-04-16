@@ -3,5 +3,9 @@
  * Derviche Diffusion
  */
 
-export { exportStatsCSV, exportStatsExcel } from './helpers';
-export type { ExportStatsCSVInput, ExportStatsExcelInput } from './helpers';
+export { exportStatsCSV, exportStatsExcel, exportStatsPdf } from './helpers';
+export type {
+  ExportStatsCSVInput,
+  ExportStatsExcelInput,
+  ExportStatsPdfInput,
+} from './helpers';

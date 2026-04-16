@@ -8,6 +8,8 @@
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { DeltaValue } from '@/lib/services/admin-stats';
+import { StatsKpiDelta } from './stats-kpi-delta';
 
 export interface StatsKpiCardProps {
   title: string;
@@ -16,6 +18,10 @@ export interface StatsKpiCardProps {
   iconClassName?: string;
   sublabel?: string;
   isLoading?: boolean;
+  /** Valeur delta (mode comparaison). Optionnel. */
+  delta?: DeltaValue;
+  /** Inverse la logique couleur du delta (ex: annulations). */
+  deltaInverse?: boolean;
 }
 
 export function StatsKpiCard({
@@ -25,6 +31,8 @@ export function StatsKpiCard({
   iconClassName = 'text-derviche',
   sublabel,
   isLoading,
+  delta,
+  deltaInverse,
 }: StatsKpiCardProps) {
   return (
     <Card className="py-1 bg-card/80 border-muted-foreground/10">
@@ -42,6 +50,11 @@ export function StatsKpiCard({
         </div>
         {sublabel && (
           <p className="mt-1 text-xs text-muted-foreground">{sublabel}</p>
+        )}
+        {delta && !isLoading && (
+          <div className="mt-1">
+            <StatsKpiDelta value={delta} inverse={deltaInverse} />
+          </div>
         )}
       </CardContent>
     </Card>

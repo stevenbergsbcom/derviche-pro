@@ -9,7 +9,7 @@ import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
-import type { ShowStats } from '@/lib/services/admin-stats';
+import type { ShowStatsWithDelta } from '@/lib/services/admin-stats';
 import { DEFAULT_PAGE_SIZE } from '@/lib/services/admin-stats';
 import {
   sortShows,
@@ -21,19 +21,25 @@ import { ShowsTableRow } from './shows-table-row';
 import { ShowsTableFooter } from './shows-table-footer';
 
 export interface ShowsStatsTableProps {
-  rows: ShowStats[];
+  rows: ShowStatsWithDelta[];
   isLoading: boolean;
-  onRowClick?: (row: ShowStats) => void;
+  showCompareColumn?: boolean;
+  onRowClick?: (row: ShowStatsWithDelta) => void;
 }
 
-export function ShowsStatsTable({ rows, isLoading, onRowClick }: ShowsStatsTableProps) {
+export function ShowsStatsTable({
+  rows,
+  isLoading,
+  showCompareColumn,
+  onRowClick,
+}: ShowsStatsTableProps) {
   const [sortKey, setSortKey] = useState<ShowsSortKey>('confirmedCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
 
   const sorted = useMemo(
     () => sortShows(rows, sortKey, sortDirection),
-    [rows, sortKey, sortDirection]
+    [rows, sortKey, sortDirection],
   );
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / DEFAULT_PAGE_SIZE));
@@ -51,6 +57,8 @@ export function ShowsStatsTable({ rows, isLoading, onRowClick }: ShowsStatsTable
     setPage(1);
   };
 
+  const colSpan = showCompareColumn ? 9 : 8;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -61,12 +69,16 @@ export function ShowsStatsTable({ rows, isLoading, onRowClick }: ShowsStatsTable
           <ShowsTableHeader
             sortKey={sortKey}
             sortDirection={sortDirection}
+            {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
             onSort={handleSort}
           />
           <TableBody>
             {pageRows.length === 0 && !isLoading && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-6">
+                <TableCell
+                  colSpan={colSpan}
+                  className="text-center text-muted-foreground py-6"
+                >
                   Aucune donnée pour la période sélectionnée.
                 </TableCell>
               </TableRow>
@@ -75,11 +87,15 @@ export function ShowsStatsTable({ rows, isLoading, onRowClick }: ShowsStatsTable
               <ShowsTableRow
                 key={row.showId}
                 row={row}
+                {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
                 {...(onRowClick ? { onClick: onRowClick } : {})}
               />
             ))}
           </TableBody>
-          <ShowsTableFooter rows={sorted} />
+          <ShowsTableFooter
+            rows={sorted}
+            {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+          />
         </Table>
 
         {totalPages > 1 && (

@@ -16,8 +16,10 @@
 import { useCallback, useState } from 'react';
 import type {
   ShowStats,
+  ShowStatsWithDelta,
   VenueDetailRow,
   VenueStats,
+  VenueStatsWithDelta,
 } from '@/lib/services/admin-stats';
 import type { UseShowDetailReturn } from './use-show-detail';
 import type { UseVenueDetailReturn } from './use-venue-detail';
@@ -27,7 +29,7 @@ import type { UseVenueDetailReturn } from './use-venue-detail';
 // ============================================
 
 export interface UseStatsDrawersProps {
-  shows: ShowStats[];
+  shows: ShowStatsWithDelta[];
   showDetail: UseShowDetailReturn;
   venueDetail: UseVenueDetailReturn;
 }
@@ -35,8 +37,8 @@ export interface UseStatsDrawersProps {
 export interface UseStatsDrawersReturn {
   selectedShow: ShowStats | null;
   selectedVenue: VenueStats | null;
-  openShow: (row: ShowStats) => void;
-  openVenue: (row: VenueStats) => void;
+  openShow: (row: ShowStatsWithDelta) => void;
+  openVenue: (row: VenueStatsWithDelta) => void;
   openShowFromVenue: (showId: string) => void;
 }
 
@@ -73,7 +75,7 @@ export function useStatsDrawers({
   const [selectedVenue, setSelectedVenue] = useState<VenueStats | null>(null);
 
   const openShow = useCallback(
-    (row: ShowStats) => {
+    (row: ShowStatsWithDelta) => {
       setSelectedShow(row);
       showDetail.open(row.showId);
     },
@@ -81,7 +83,7 @@ export function useStatsDrawers({
   );
 
   const openVenue = useCallback(
-    (row: VenueStats) => {
+    (row: VenueStatsWithDelta) => {
       setSelectedVenue(row);
       venueDetail.open(row.venueId);
     },

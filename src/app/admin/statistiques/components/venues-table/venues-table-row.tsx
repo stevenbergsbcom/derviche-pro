@@ -6,15 +6,17 @@
 
 'use client';
 
-import type { VenueStats } from '@/lib/services/admin-stats';
+import type { VenueStatsWithDelta } from '@/lib/services/admin-stats';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { StatsKpiDelta } from '../kpis/stats-kpi-delta';
 
 export interface VenuesTableRowProps {
-  row: VenueStats;
-  onClick?: (row: VenueStats) => void;
+  row: VenueStatsWithDelta;
+  showCompareColumn?: boolean;
+  onClick?: (row: VenueStatsWithDelta) => void;
 }
 
-export function VenuesTableRow({ row, onClick }: VenuesTableRowProps) {
+export function VenuesTableRow({ row, showCompareColumn, onClick }: VenuesTableRowProps) {
   const handleClick = onClick ? () => onClick(row) : undefined;
   const handleKeyDown = onClick
     ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
@@ -41,6 +43,17 @@ export function VenuesTableRow({ row, onClick }: VenuesTableRowProps) {
       <TableCell className="text-right tabular-nums">{row.presentCount}</TableCell>
       <TableCell className="text-right tabular-nums">{row.absentCount}</TableCell>
       <TableCell className="text-right tabular-nums">{row.pressCount}</TableCell>
+      {showCompareColumn && (
+        <TableCell className="text-right tabular-nums">
+          {row.confirmedCountDelta ? (
+            <div className="inline-flex justify-end">
+              <StatsKpiDelta value={row.confirmedCountDelta} />
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
     </TableRow>
   );
 }

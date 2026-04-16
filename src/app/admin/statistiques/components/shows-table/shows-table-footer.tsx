@@ -4,10 +4,10 @@
 
 'use client';
 
-import type { ShowStats } from '@/lib/services/admin-stats';
+import type { ShowStatsWithDelta } from '@/lib/services/admin-stats';
 import { TableCell, TableFooter, TableRow } from '@/components/ui/table';
 
-function sum(rows: ShowStats[], key: keyof ShowStats): number {
+function sum(rows: ShowStatsWithDelta[], key: keyof ShowStatsWithDelta): number {
   let total = 0;
   for (const r of rows) {
     const v = r[key];
@@ -17,10 +17,11 @@ function sum(rows: ShowStats[], key: keyof ShowStats): number {
 }
 
 export interface ShowsTableFooterProps {
-  rows: ShowStats[];
+  rows: ShowStatsWithDelta[];
+  showCompareColumn?: boolean;
 }
 
-export function ShowsTableFooter({ rows }: ShowsTableFooterProps) {
+export function ShowsTableFooter({ rows, showCompareColumn }: ShowsTableFooterProps) {
   if (rows.length === 0) return null;
   return (
     <TableFooter>
@@ -45,6 +46,7 @@ export function ShowsTableFooter({ rows }: ShowsTableFooterProps) {
         <TableCell className="text-right tabular-nums">
           {sum(rows, 'pressCount')}
         </TableCell>
+        {showCompareColumn && <TableCell />}
       </TableRow>
     </TableFooter>
   );

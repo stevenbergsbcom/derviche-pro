@@ -7,3 +7,6 @@ export type { ExportStatsCSVInput } from './export-csv';
 
 export { exportStatsExcel } from './export-excel';
 export type { ExportStatsExcelInput } from './export-excel';
+
+export { exportStatsPdf } from './export-pdf';
+export type { ExportStatsPdfInput } from './export-pdf';

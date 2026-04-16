@@ -3,7 +3,7 @@
  * Derviche Diffusion
  */
 
-import type { StatsPeriod } from './types';
+import type { ComparePreset, StatsPeriod } from './types';
 
 /** Période par défaut sélectionnée au chargement de la page. */
 export const DEFAULT_STATS_PERIOD: StatsPeriod = 'month_current';
@@ -32,3 +32,16 @@ export const STATS_PERIOD_LABELS: Record<StatsPeriod, string> = {
   all: 'Tout',
   custom: 'Personnalisée',
 };
+
+/** Libellés FR des presets de comparaison. */
+export const COMPARE_PRESET_LABELS: Record<ComparePreset, string> = {
+  year_before: 'Année précédente (N-1)',
+  previous_equivalent: 'Période équivalente précédente',
+  previous_season: 'Saison précédente',
+};
+
+/** Couleurs utilisées dans le chart. */
+export const CHART_COLORS = {
+  main: '#1e3a5f',
+  compare: 'hsl(var(--muted-foreground))',
+} as const;

@@ -21,6 +21,14 @@ export type {
   ChartGranularity,
   AdminStatsData,
   StatsResult,
+  // Phase 3
+  ComparePreset,
+  DeltaValue,
+  StatsKpisWithDelta,
+  ShowStatsWithDelta,
+  VenueStatsWithDelta,
+  StatsChartPointWithCompare,
+  AdminStatsDataWithComparison,
 } from './types';
 
 // Constantes publiques
@@ -29,14 +37,32 @@ export {
   DEFAULT_PAGE_SIZE,
   STATS_PERIOD_LABELS,
   ALL_PERIOD_FROM,
+  COMPARE_PRESET_LABELS,
+  CHART_COLORS,
 } from './constants';
 
 // Helpers publics
-export { resolveStatsBounds, pickGranularity, daysBetween } from './helpers';
+export {
+  resolveStatsBounds,
+  resolveCompareBounds,
+  pickGranularity,
+  daysBetween,
+  toLocalISO,
+} from './helpers';
 export type { ResolvePeriodInput, StatsGranularity } from './helpers';
+
+// Helpers de comparaison (Phase 3)
+export {
+  computeDelta,
+  computeKpisDelta,
+  computeShowsDelta,
+  computeVenuesDelta,
+  computeChartCompare,
+} from './compare';
 
 // Orchestrateur (API principale)
 export { getAdminStats } from './orchestrator';
+export type { GetAdminStatsOptions } from './orchestrator/get-admin-stats';
 
 // Fonctions granulaires (pour consommateurs avancés ou tests)
 export { getStatsKpis } from './kpis';

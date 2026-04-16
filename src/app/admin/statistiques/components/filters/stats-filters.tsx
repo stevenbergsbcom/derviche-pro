@@ -8,10 +8,11 @@
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { StatsPeriod } from '@/lib/services/admin-stats';
+import type { ComparePreset, StatsPeriod } from '@/lib/services/admin-stats';
 import { PeriodSelector } from './period-selector';
 import { CompanyFilter } from './company-filter';
 import { VenueFilter } from './venue-filter';
+import { CompareSelector } from './compare-selector';
 import { ExportMenu } from './export-menu';
 import type { ExportFormat } from '../../hooks/use-stats-export';
 
@@ -21,6 +22,8 @@ export interface StatsFiltersProps {
   to?: string;
   companyIds: string[];
   venueIds: string[];
+  compareMode: boolean;
+  comparePreset?: ComparePreset;
   activeFiltersCount: number;
   isLoading?: boolean;
   isExporting?: boolean;
@@ -28,6 +31,8 @@ export interface StatsFiltersProps {
   onCustomRangeChange: (from: string, to: string) => void;
   onCompanyIdsChange: (ids: string[]) => void;
   onVenueIdsChange: (ids: string[]) => void;
+  onCompareModeChange: (enabled: boolean) => void;
+  onComparePresetChange: (preset: ComparePreset) => void;
   onReset: () => void;
   onExport: (format: ExportFormat) => void;
 }
@@ -39,6 +44,8 @@ export function StatsFilters(props: StatsFiltersProps) {
     to,
     companyIds,
     venueIds,
+    compareMode,
+    comparePreset,
     activeFiltersCount,
     isLoading,
     isExporting,
@@ -46,6 +53,8 @@ export function StatsFilters(props: StatsFiltersProps) {
     onCustomRangeChange,
     onCompanyIdsChange,
     onVenueIdsChange,
+    onCompareModeChange,
+    onComparePresetChange,
     onReset,
     onExport,
   } = props;
@@ -64,6 +73,15 @@ export function StatsFilters(props: StatsFiltersProps) {
         <CompanyFilter selectedIds={companyIds} onChange={onCompanyIdsChange} />
         <VenueFilter selectedIds={venueIds} onChange={onVenueIdsChange} />
       </div>
+
+      <CompareSelector
+        enabled={compareMode}
+        {...(comparePreset ? { preset: comparePreset } : {})}
+        period={period}
+        {...(isLoading !== undefined ? { disabled: isLoading } : {})}
+        onEnabledChange={onCompareModeChange}
+        onPresetChange={onComparePresetChange}
+      />
 
       <div className="ml-auto flex items-center gap-2">
         {activeFiltersCount > 0 && (

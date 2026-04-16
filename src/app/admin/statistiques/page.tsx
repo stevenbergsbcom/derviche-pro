@@ -4,6 +4,7 @@
  *
  * Phase 1 — filtres, KPIs, tableaux, export CSV/Excel.
  * Phase 2 — drawers détail spectacle + lieu, graphique d'évolution.
+ * Phase 3A — comparaison entre périodes (KPIs, tables, chart).
  *
  * Permissions : middleware (RESTRICTED_ADMIN_ROUTES).
  */
@@ -41,6 +42,9 @@ function StatistiquesContent() {
   });
 
   const periodLabel = STATS_PERIOD_LABELS[page.filters.period];
+  // Affichage conditionnel de la colonne "Évolution" : actif uniquement si la
+  // comparaison est activée côté filtres.
+  const compareMode = page.filters.compareMode ?? false;
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -52,6 +56,10 @@ function StatistiquesContent() {
         {...(page.filters.to ? { to: page.filters.to } : {})}
         companyIds={page.filters.companyIds}
         venueIds={page.filters.venueIds}
+        compareMode={compareMode}
+        {...(page.filters.comparePreset
+          ? { comparePreset: page.filters.comparePreset }
+          : {})}
         activeFiltersCount={page.activeFiltersCount}
         isLoading={page.isLoading}
         isExporting={exportApi.isExporting}
@@ -59,6 +67,8 @@ function StatistiquesContent() {
         onCustomRangeChange={page.setCustomRange}
         onCompanyIdsChange={page.setCompanyIds}
         onVenueIdsChange={page.setVenueIds}
+        onCompareModeChange={page.setCompareMode}
+        onComparePresetChange={page.setComparePreset}
         onReset={page.reset}
         onExport={exportApi.exportAs}
       />
@@ -76,12 +86,14 @@ function StatistiquesContent() {
       <ShowsStatsTable
         rows={page.data?.shows ?? []}
         isLoading={page.isLoading}
+        showCompareColumn={compareMode}
         onRowClick={drawers.openShow}
       />
 
       <VenuesStatsTable
         rows={page.data?.venues ?? []}
         isLoading={page.isLoading}
+        showCompareColumn={compareMode}
         onRowClick={drawers.openVenue}
       />
 

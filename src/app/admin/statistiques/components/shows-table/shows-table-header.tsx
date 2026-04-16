@@ -15,7 +15,7 @@ interface Column {
   align?: 'left' | 'right';
 }
 
-const COLUMNS: Column[] = [
+const BASE_COLUMNS: Column[] = [
   { key: 'showTitle', label: 'Spectacle', align: 'left' },
   { key: 'companyName', label: 'Compagnie', align: 'left' },
   { key: 'representationsCount', label: 'Représ.', align: 'right' },
@@ -26,17 +26,30 @@ const COLUMNS: Column[] = [
   { key: 'pressCount', label: 'Presse', align: 'right' },
 ];
 
+const COMPARE_COLUMN: Column = {
+  key: 'confirmedCountDelta',
+  label: 'Évolution',
+  align: 'right',
+};
+
 export interface ShowsTableHeaderProps {
   sortKey: ShowsSortKey;
   sortDirection: SortDirection;
+  showCompareColumn?: boolean;
   onSort: (key: ShowsSortKey) => void;
 }
 
-export function ShowsTableHeader({ sortKey, sortDirection, onSort }: ShowsTableHeaderProps) {
+export function ShowsTableHeader({
+  sortKey,
+  sortDirection,
+  showCompareColumn,
+  onSort,
+}: ShowsTableHeaderProps) {
+  const columns = showCompareColumn ? [...BASE_COLUMNS, COMPARE_COLUMN] : BASE_COLUMNS;
   return (
     <TableHeader>
       <TableRow>
-        {COLUMNS.map((col) => {
+        {columns.map((col) => {
           const active = col.key === sortKey;
           const Icon = active ? (sortDirection === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
           return (
@@ -44,14 +57,14 @@ export function ShowsTableHeader({ sortKey, sortDirection, onSort }: ShowsTableH
               key={col.key}
               className={cn(
                 'cursor-pointer select-none',
-                col.align === 'right' && 'text-right'
+                col.align === 'right' && 'text-right',
               )}
               onClick={() => onSort(col.key)}
             >
               <span
                 className={cn(
                   'inline-flex items-center gap-1',
-                  col.align === 'right' && 'flex-row-reverse'
+                  col.align === 'right' && 'flex-row-reverse',
                 )}
               >
                 <Icon className="h-3 w-3 opacity-60" />

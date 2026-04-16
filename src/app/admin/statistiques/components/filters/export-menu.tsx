@@ -1,6 +1,9 @@
 /**
- * ExportMenu - Dropdown CSV / Excel (PDF grisé, à venir)
+ * ExportMenu - Dropdown CSV / Excel / PDF
  * Derviche Diffusion
+ *
+ * Phase 3B : l'option PDF est active et déclenche la génération
+ * d'un rapport multi-pages via `exportStatsPdf`.
  */
 
 'use client';
@@ -47,10 +50,9 @@ export function ExportMenu({ onExport, disabled, isExporting }: ExportMenuProps)
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Excel
         </DropdownMenuItem>
-        <DropdownMenuItem disabled className="text-muted-foreground">
+        <DropdownMenuItem onClick={() => onExport('pdf')}>
           <FileType className="h-4 w-4 mr-2" />
           PDF
-          <span className="ml-auto text-xs">Bientôt</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

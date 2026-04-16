@@ -7,10 +7,10 @@
 
 'use client';
 
-import type { VenueStats } from '@/lib/services/admin-stats';
+import type { VenueStatsWithDelta } from '@/lib/services/admin-stats';
 import { TableCell, TableFooter, TableRow } from '@/components/ui/table';
 
-function sum(rows: VenueStats[], key: keyof VenueStats): number {
+function sum(rows: VenueStatsWithDelta[], key: keyof VenueStatsWithDelta): number {
   let total = 0;
   for (const r of rows) {
     const v = r[key];
@@ -20,10 +20,11 @@ function sum(rows: VenueStats[], key: keyof VenueStats): number {
 }
 
 export interface VenuesTableFooterProps {
-  rows: VenueStats[];
+  rows: VenueStatsWithDelta[];
+  showCompareColumn?: boolean;
 }
 
-export function VenuesTableFooter({ rows }: VenuesTableFooterProps) {
+export function VenuesTableFooter({ rows, showCompareColumn }: VenuesTableFooterProps) {
   if (rows.length === 0) return null;
   return (
     <TableFooter>
@@ -46,6 +47,7 @@ export function VenuesTableFooter({ rows }: VenuesTableFooterProps) {
         <TableCell className="text-right tabular-nums">
           {sum(rows, 'pressCount')}
         </TableCell>
+        {showCompareColumn && <TableCell />}
       </TableRow>
     </TableFooter>
   );

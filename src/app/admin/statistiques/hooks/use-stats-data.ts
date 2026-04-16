@@ -12,7 +12,7 @@ import type { SeasonSettings } from '@/lib/services/app-settings';
 import {
   getAdminStats,
   resolveStatsBounds,
-  type AdminStatsData,
+  type AdminStatsDataWithComparison,
   type StatsFilters,
 } from '@/lib/services/admin-stats';
 import type { StatsFiltersState } from './use-stats-filters';
@@ -22,7 +22,7 @@ import type { StatsFiltersState } from './use-stats-filters';
 // ============================================
 
 export interface UseStatsDataReturn {
-  data: AdminStatsData | null;
+  data: AdminStatsDataWithComparison | null;
   isLoading: boolean;
   error: string | null;
   /** Bornes effectivement utilisées (résolues depuis la période). */
@@ -43,7 +43,7 @@ const DEFAULT_SEASON: SeasonSettings = { season_start: '09-01', season_end: '06-
 
 export function useStatsData(state: StatsFiltersState): UseStatsDataReturn {
   const [season, setSeason] = useState<SeasonSettings>(DEFAULT_SEASON);
-  const [data, setData] = useState<AdminStatsData | null>(null);
+  const [data, setData] = useState<AdminStatsDataWithComparison | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +81,8 @@ export function useStatsData(state: StatsFiltersState): UseStatsDataReturn {
   // Stabiliser les dépendances des arrays
   const companiesKey = state.companyIds.join(',');
   const venuesKey = state.venueIds.join(',');
+  const compareMode = state.compareMode ?? false;
+  const comparePreset = state.comparePreset;
 
   const load = useCallback(async () => {
     const filters: StatsFilters = {
@@ -94,7 +96,12 @@ export function useStatsData(state: StatsFiltersState): UseStatsDataReturn {
     setIsLoading(true);
     setError(null);
 
-    const result = await getAdminStats(filters);
+    const result = await getAdminStats(filters, {
+      compareMode,
+      ...(comparePreset ? { comparePreset } : {}),
+      period: state.period,
+      season,
+    });
 
     // Ignorer si une nouvelle requête a été émise entre-temps
     if (reqId !== requestIdRef.current) return;
@@ -103,7 +110,16 @@ export function useStatsData(state: StatsFiltersState): UseStatsDataReturn {
     setData(result.data);
     setIsLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bounds.from, bounds.to, companiesKey, venuesKey]);
+  }, [
+    bounds.from,
+    bounds.to,
+    companiesKey,
+    venuesKey,
+    compareMode,
+    comparePreset,
+    state.period,
+    season,
+  ]);
 
   // Charger à chaque changement de filtres
   useEffect(() => {

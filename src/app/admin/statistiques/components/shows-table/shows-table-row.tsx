@@ -6,15 +6,17 @@
 
 'use client';
 
-import type { ShowStats } from '@/lib/services/admin-stats';
+import type { ShowStatsWithDelta } from '@/lib/services/admin-stats';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { StatsKpiDelta } from '../kpis/stats-kpi-delta';
 
 export interface ShowsTableRowProps {
-  row: ShowStats;
-  onClick?: (row: ShowStats) => void;
+  row: ShowStatsWithDelta;
+  showCompareColumn?: boolean;
+  onClick?: (row: ShowStatsWithDelta) => void;
 }
 
-export function ShowsTableRow({ row, onClick }: ShowsTableRowProps) {
+export function ShowsTableRow({ row, showCompareColumn, onClick }: ShowsTableRowProps) {
   const handleClick = onClick ? () => onClick(row) : undefined;
   const handleKeyDown = onClick
     ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
@@ -37,10 +39,23 @@ export function ShowsTableRow({ row, onClick }: ShowsTableRowProps) {
       <TableCell className="text-muted-foreground">{row.companyName || '—'}</TableCell>
       <TableCell className="text-right tabular-nums">{row.representationsCount}</TableCell>
       <TableCell className="text-right tabular-nums">{row.confirmedCount}</TableCell>
-      <TableCell className="text-right tabular-nums text-red-600">{row.cancelledCount}</TableCell>
+      <TableCell className="text-right tabular-nums text-red-600">
+        {row.cancelledCount}
+      </TableCell>
       <TableCell className="text-right tabular-nums">{row.presentCount}</TableCell>
       <TableCell className="text-right tabular-nums">{row.absentCount}</TableCell>
       <TableCell className="text-right tabular-nums">{row.pressCount}</TableCell>
+      {showCompareColumn && (
+        <TableCell className="text-right tabular-nums">
+          {row.confirmedCountDelta ? (
+            <div className="inline-flex justify-end">
+              <StatsKpiDelta value={row.confirmedCountDelta} />
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
+        </TableCell>
+      )}
     </TableRow>
   );
 }
