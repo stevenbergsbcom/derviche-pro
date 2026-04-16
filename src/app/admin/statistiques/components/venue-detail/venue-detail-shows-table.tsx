@@ -66,7 +66,15 @@ export function VenueDetailShowsTable({
             <TableRow
               key={row.showId}
               className="cursor-pointer hover:bg-muted/50"
+              role="button"
+              tabIndex={0}
               onClick={() => onShowClick(row.showId)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onShowClick(row.showId);
+                }
+              }}
             >
               <TableCell className="max-w-[220px]">
                 <div className="truncate font-medium">{row.showTitle}</div>

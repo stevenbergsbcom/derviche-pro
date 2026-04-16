@@ -54,10 +54,15 @@ export function useShowDetail(filters: StatsFilters): UseShowDetailReturn {
   }, []);
 
   const close = useCallback(() => {
+    // Invalider toute requête en vol pour éviter qu'elle mette à jour
+    // l'état après la fermeture (flash de données périmées à la réouverture).
+    requestIdRef.current++;
     setIsOpen(false);
+    setData([]);
+    setIsLoading(false);
     setError(null);
     // On garde showId pour que l'animation de fermeture ne fasse pas disparaître
-    // le contenu avant la fin de la transition. Il sera écrasé au prochain open.
+    // le header avant la fin de la transition. Il sera écrasé au prochain open.
   }, []);
 
   // Stabiliser les arrays dans la dépendance

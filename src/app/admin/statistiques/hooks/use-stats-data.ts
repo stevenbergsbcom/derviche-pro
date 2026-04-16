@@ -1,5 +1,5 @@
 /**
- * use-stats-data - Fetch des données stats (KPIs + shows + venues)
+ * use-stats-data - Fetch des données stats (KPIs + shows + venues + chart)
  * Derviche Diffusion
  */
 

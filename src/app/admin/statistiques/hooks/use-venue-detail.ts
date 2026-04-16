@@ -47,7 +47,12 @@ export function useVenueDetail(filters: StatsFilters): UseVenueDetailReturn {
   }, []);
 
   const close = useCallback(() => {
+    // Invalider toute requête en vol pour éviter qu'elle mette à jour
+    // l'état après la fermeture (flash de données périmées à la réouverture).
+    requestIdRef.current++;
     setIsOpen(false);
+    setData([]);
+    setIsLoading(false);
     setError(null);
   }, []);
 
