@@ -13,10 +13,17 @@ import { StatsKpiDelta } from '../kpis/stats-kpi-delta';
 export interface VenuesTableRowProps {
   row: VenueStatsWithDelta;
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (venueName reste toujours visible). */
+  hiddenColumns?: string[];
   onClick?: (row: VenueStatsWithDelta) => void;
 }
 
-export function VenuesTableRow({ row, showCompareColumn, onClick }: VenuesTableRowProps) {
+export function VenuesTableRow({
+  row,
+  showCompareColumn,
+  hiddenColumns = [],
+  onClick,
+}: VenuesTableRowProps) {
   const handleClick = onClick ? () => onClick(row) : undefined;
   const handleKeyDown = onClick
     ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
@@ -36,13 +43,27 @@ export function VenuesTableRow({ row, showCompareColumn, onClick }: VenuesTableR
       role={onClick ? 'button' : undefined}
     >
       <TableCell className="font-medium">{row.venueName}</TableCell>
-      <TableCell className="text-muted-foreground">{row.venueCity || '—'}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.representationsCount}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.showsCount}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.confirmedCount}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.presentCount}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.absentCount}</TableCell>
-      <TableCell className="text-right tabular-nums">{row.pressCount}</TableCell>
+      {!hiddenColumns.includes('venueCity') && (
+        <TableCell className="text-muted-foreground">{row.venueCity || '—'}</TableCell>
+      )}
+      {!hiddenColumns.includes('representationsCount') && (
+        <TableCell className="text-right tabular-nums">{row.representationsCount}</TableCell>
+      )}
+      {!hiddenColumns.includes('showsCount') && (
+        <TableCell className="text-right tabular-nums">{row.showsCount}</TableCell>
+      )}
+      {!hiddenColumns.includes('confirmedCount') && (
+        <TableCell className="text-right tabular-nums">{row.confirmedCount}</TableCell>
+      )}
+      {!hiddenColumns.includes('presentCount') && (
+        <TableCell className="text-right tabular-nums">{row.presentCount}</TableCell>
+      )}
+      {!hiddenColumns.includes('absentCount') && (
+        <TableCell className="text-right tabular-nums">{row.absentCount}</TableCell>
+      )}
+      {!hiddenColumns.includes('pressCount') && (
+        <TableCell className="text-right tabular-nums">{row.pressCount}</TableCell>
+      )}
       {showCompareColumn && (
         <TableCell className="text-right tabular-nums">
           {row.confirmedCountDelta ? (

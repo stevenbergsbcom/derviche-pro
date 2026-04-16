@@ -24,6 +24,8 @@ export interface VenuesStatsTableProps {
   rows: VenueStatsWithDelta[];
   isLoading: boolean;
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (hors `venueName` + colonne Évolution). */
+  hiddenColumns?: string[];
   onRowClick?: (row: VenueStatsWithDelta) => void;
 }
 
@@ -31,6 +33,7 @@ export function VenuesStatsTable({
   rows,
   isLoading,
   showCompareColumn,
+  hiddenColumns = [],
   onRowClick,
 }: VenuesStatsTableProps) {
   const [sortKey, setSortKey] = useState<VenuesSortKey>('confirmedCount');
@@ -57,7 +60,9 @@ export function VenuesStatsTable({
     setPage(1);
   };
 
-  const colSpan = showCompareColumn ? 9 : 8;
+  // 1 (venueName) + 7 colonnes cachables - hidden + (1 si compare)
+  const visibleBaseCount = 1 + (7 - hiddenColumns.length);
+  const colSpan = visibleBaseCount + (showCompareColumn ? 1 : 0);
 
   return (
     <Card>
@@ -70,6 +75,7 @@ export function VenuesStatsTable({
             sortKey={sortKey}
             sortDirection={sortDirection}
             {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+            hiddenColumns={hiddenColumns}
             onSort={handleSort}
           />
           <TableBody>
@@ -88,6 +94,7 @@ export function VenuesStatsTable({
                 key={row.venueId}
                 row={row}
                 {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+                hiddenColumns={hiddenColumns}
                 {...(onRowClick ? { onClick: onRowClick } : {})}
               />
             ))}
@@ -95,6 +102,7 @@ export function VenuesStatsTable({
           <VenuesTableFooter
             rows={sorted}
             {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+            hiddenColumns={hiddenColumns}
           />
         </Table>
 

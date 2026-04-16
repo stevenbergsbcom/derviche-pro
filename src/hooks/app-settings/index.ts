@@ -15,3 +15,4 @@ export { useRgpdSettings } from './use-rgpd-settings';
 export { useThemeSettings } from './use-theme-settings';
 export { useHomepageSettings } from './use-homepage-settings';
 export { useLegalSettings } from './use-legal-settings';
+export { useStatsSettings } from './use-stats-settings';

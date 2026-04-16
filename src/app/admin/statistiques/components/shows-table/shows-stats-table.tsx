@@ -24,6 +24,8 @@ export interface ShowsStatsTableProps {
   rows: ShowStatsWithDelta[];
   isLoading: boolean;
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (hors `showTitle` + colonne Évolution). */
+  hiddenColumns?: string[];
   onRowClick?: (row: ShowStatsWithDelta) => void;
 }
 
@@ -31,6 +33,7 @@ export function ShowsStatsTable({
   rows,
   isLoading,
   showCompareColumn,
+  hiddenColumns = [],
   onRowClick,
 }: ShowsStatsTableProps) {
   const [sortKey, setSortKey] = useState<ShowsSortKey>('confirmedCount');
@@ -57,7 +60,9 @@ export function ShowsStatsTable({
     setPage(1);
   };
 
-  const colSpan = showCompareColumn ? 9 : 8;
+  // 1 (showTitle) + 7 colonnes cachables - hidden + (1 si compare)
+  const visibleBaseCount = 1 + (7 - hiddenColumns.length);
+  const colSpan = visibleBaseCount + (showCompareColumn ? 1 : 0);
 
   return (
     <Card>
@@ -70,6 +75,7 @@ export function ShowsStatsTable({
             sortKey={sortKey}
             sortDirection={sortDirection}
             {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+            hiddenColumns={hiddenColumns}
             onSort={handleSort}
           />
           <TableBody>
@@ -88,6 +94,7 @@ export function ShowsStatsTable({
                 key={row.showId}
                 row={row}
                 {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+                hiddenColumns={hiddenColumns}
                 {...(onRowClick ? { onClick: onRowClick } : {})}
               />
             ))}
@@ -95,6 +102,7 @@ export function ShowsStatsTable({
           <ShowsTableFooter
             rows={sorted}
             {...(showCompareColumn !== undefined ? { showCompareColumn } : {})}
+            hiddenColumns={hiddenColumns}
           />
         </Table>
 

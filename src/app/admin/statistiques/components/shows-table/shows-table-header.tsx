@@ -36,6 +36,8 @@ export interface ShowsTableHeaderProps {
   sortKey: ShowsSortKey;
   sortDirection: SortDirection;
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (la colonne Évolution n'est jamais incluse ici). */
+  hiddenColumns?: string[];
   onSort: (key: ShowsSortKey) => void;
 }
 
@@ -43,9 +45,11 @@ export function ShowsTableHeader({
   sortKey,
   sortDirection,
   showCompareColumn,
+  hiddenColumns = [],
   onSort,
 }: ShowsTableHeaderProps) {
-  const columns = showCompareColumn ? [...BASE_COLUMNS, COMPARE_COLUMN] : BASE_COLUMNS;
+  const filteredBase = BASE_COLUMNS.filter((col) => !hiddenColumns.includes(col.key));
+  const columns = showCompareColumn ? [...filteredBase, COMPARE_COLUMN] : filteredBase;
   return (
     <TableHeader>
       <TableRow>

@@ -22,31 +22,49 @@ function sum(rows: VenueStatsWithDelta[], key: keyof VenueStatsWithDelta): numbe
 export interface VenuesTableFooterProps {
   rows: VenueStatsWithDelta[];
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (alignement avec header + rows). */
+  hiddenColumns?: string[];
 }
 
-export function VenuesTableFooter({ rows, showCompareColumn }: VenuesTableFooterProps) {
+export function VenuesTableFooter({
+  rows,
+  showCompareColumn,
+  hiddenColumns = [],
+}: VenuesTableFooterProps) {
   if (rows.length === 0) return null;
   return (
     <TableFooter>
       <TableRow>
         <TableCell className="font-semibold">Total ({rows.length})</TableCell>
-        <TableCell />
-        <TableCell className="text-right tabular-nums">
-          {sum(rows, 'representationsCount')}
-        </TableCell>
-        <TableCell className="text-right tabular-nums text-muted-foreground">—</TableCell>
-        <TableCell className="text-right tabular-nums">
-          {sum(rows, 'confirmedCount')}
-        </TableCell>
-        <TableCell className="text-right tabular-nums">
-          {sum(rows, 'presentCount')}
-        </TableCell>
-        <TableCell className="text-right tabular-nums">
-          {sum(rows, 'absentCount')}
-        </TableCell>
-        <TableCell className="text-right tabular-nums">
-          {sum(rows, 'pressCount')}
-        </TableCell>
+        {!hiddenColumns.includes('venueCity') && <TableCell />}
+        {!hiddenColumns.includes('representationsCount') && (
+          <TableCell className="text-right tabular-nums">
+            {sum(rows, 'representationsCount')}
+          </TableCell>
+        )}
+        {!hiddenColumns.includes('showsCount') && (
+          <TableCell className="text-right tabular-nums text-muted-foreground">—</TableCell>
+        )}
+        {!hiddenColumns.includes('confirmedCount') && (
+          <TableCell className="text-right tabular-nums">
+            {sum(rows, 'confirmedCount')}
+          </TableCell>
+        )}
+        {!hiddenColumns.includes('presentCount') && (
+          <TableCell className="text-right tabular-nums">
+            {sum(rows, 'presentCount')}
+          </TableCell>
+        )}
+        {!hiddenColumns.includes('absentCount') && (
+          <TableCell className="text-right tabular-nums">
+            {sum(rows, 'absentCount')}
+          </TableCell>
+        )}
+        {!hiddenColumns.includes('pressCount') && (
+          <TableCell className="text-right tabular-nums">
+            {sum(rows, 'pressCount')}
+          </TableCell>
+        )}
         {showCompareColumn && <TableCell />}
       </TableRow>
     </TableFooter>

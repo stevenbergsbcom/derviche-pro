@@ -7,7 +7,7 @@
 
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useCallback } from 'react';
-import { Building2, Home, Mail, Bell, CalendarClock, Shield, Palette, FileText, Calendar, Scale } from 'lucide-react';
+import { BarChart3, Building2, Home, Mail, Bell, CalendarClock, Shield, Palette, FileText, Calendar, Scale } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,6 +40,7 @@ export const PREFERENCE_TABS: PreferenceTab[] = [
   { id: 'google-calendar', label: 'Calendar',      icon: Calendar,     status: 'active',   statusLabel: 'Actif' },
   { id: 'rgpd',            label: 'RGPD',          icon: Shield,       status: 'inactive', statusLabel: 'Non connecté' },
   { id: 'legal',           label: 'Légal',         icon: Scale,        status: 'active',   statusLabel: 'Actif' },
+  { id: 'statistiques',    label: 'Statistiques',  icon: BarChart3,    status: 'active',   statusLabel: 'Actif' },
 ];
 
 const STATUS_STYLES: Record<PreferenceTab['status'], string> = {
@@ -67,7 +68,7 @@ export function PreferencesTabs({ activeTab, onTabChange }: PreferencesTabsProps
   return (
     <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
       {/* h-auto pour ne pas clipper les triggers flex-col à 2 lignes */}
-      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:grid-cols-10 h-auto gap-0.5 p-1">
+      <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:grid-cols-11 h-auto gap-0.5 p-1">
         {PREFERENCE_TABS.map((tab) => {
           const Icon = tab.icon;
           return (

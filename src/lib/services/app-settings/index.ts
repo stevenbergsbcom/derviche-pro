@@ -22,6 +22,8 @@ export type {
   SeasonSettingKey,
   HomepageSettingKey,
   LegalSettingKey,
+  StatsSettingKey,
+  StatsDefaultExportFormat,
   AppSettingKey,
   AppSettingRow,
   AppSettingResult,
@@ -44,6 +46,7 @@ export type {
   HomepageFooter,
   HomepageSettings,
   LegalSettings,
+  StatsSettings,
 } from './types';
 
 // Constants
@@ -58,10 +61,17 @@ export {
   SEASON_SETTING_KEYS,
   HOMEPAGE_SETTING_KEYS,
   LEGAL_SETTING_KEYS,
+  STATS_SETTING_KEYS,
   HOMEPAGE_DEFAULTS,
   SETTING_LABELS,
   SEASON_DEFAULTS,
   LEGAL_DEFAULTS,
+  STATS_DEFAULTS,
+  HIDEABLE_SHOWS_COLUMNS,
+  HIDEABLE_VENUES_COLUMNS,
+  VALID_STATS_PERIODS,
+  VALID_COMPARE_PRESETS,
+  VALID_EXPORT_FORMATS,
 } from './constants';
 
 // Core CRUD
@@ -98,3 +108,6 @@ export { getHomepageSettings, setHomepageSettings } from './homepage';
 
 // Legal
 export { getLegalSettings, setLegalSettings } from './legal';
+
+// Stats (Phase 4A)
+export { getStatsSettings, setStatsSettings } from './stats';

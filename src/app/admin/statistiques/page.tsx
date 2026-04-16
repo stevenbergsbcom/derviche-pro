@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AdminPageHeader } from '@/components/admin';
 import { AlertTriangle } from 'lucide-react';
 import { STATS_PERIOD_LABELS } from '@/lib/services/admin-stats';
+import { useStatsSettings } from '@/hooks/app-settings';
 import { useStatsDrawers, useStatsExport, useStatsPage } from './hooks';
 import { PAGE_SUBTITLE, PAGE_TITLE } from './constants';
 import {
@@ -30,6 +31,7 @@ import {
 
 function StatistiquesContent() {
   const page = useStatsPage();
+  const statsSettings = useStatsSettings();
   const exportApi = useStatsExport({
     data: page.data,
     state: page.filters,
@@ -45,6 +47,12 @@ function StatistiquesContent() {
   // Affichage conditionnel de la colonne "Évolution" : actif uniquement si la
   // comparaison est activée côté filtres.
   const compareMode = page.filters.compareMode ?? false;
+
+  // Colonnes masquées provenant des préférences admin (Phase 4A).
+  // Fallback `[]` pendant le chargement pour éviter un flash de colonnes
+  // puis disparition.
+  const hiddenColumnsShows = statsSettings.data?.stats_hidden_columns_shows ?? [];
+  const hiddenColumnsVenues = statsSettings.data?.stats_hidden_columns_venues ?? [];
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -87,6 +95,7 @@ function StatistiquesContent() {
         rows={page.data?.shows ?? []}
         isLoading={page.isLoading}
         showCompareColumn={compareMode}
+        hiddenColumns={hiddenColumnsShows}
         onRowClick={drawers.openShow}
       />
 
@@ -94,6 +103,7 @@ function StatistiquesContent() {
         rows={page.data?.venues ?? []}
         isLoading={page.isLoading}
         showCompareColumn={compareMode}
+        hiddenColumns={hiddenColumnsVenues}
         onRowClick={drawers.openVenue}
       />
 

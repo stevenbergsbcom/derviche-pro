@@ -36,6 +36,8 @@ export interface VenuesTableHeaderProps {
   sortKey: VenuesSortKey;
   sortDirection: SortDirection;
   showCompareColumn?: boolean;
+  /** Clés des colonnes à masquer (la colonne Évolution n'est jamais incluse ici). */
+  hiddenColumns?: string[];
   onSort: (key: VenuesSortKey) => void;
 }
 
@@ -43,9 +45,11 @@ export function VenuesTableHeader({
   sortKey,
   sortDirection,
   showCompareColumn,
+  hiddenColumns = [],
   onSort,
 }: VenuesTableHeaderProps) {
-  const columns = showCompareColumn ? [...BASE_COLUMNS, COMPARE_COLUMN] : BASE_COLUMNS;
+  const filteredBase = BASE_COLUMNS.filter((col) => !hiddenColumns.includes(col.key));
+  const columns = showCompareColumn ? [...filteredBase, COMPARE_COLUMN] : filteredBase;
   return (
     <TableHeader>
       <TableRow>
