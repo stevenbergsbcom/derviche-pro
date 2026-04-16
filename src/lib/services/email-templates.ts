@@ -15,6 +15,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server-admin';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
 import type {
@@ -90,7 +91,9 @@ export async function getEmailTemplate(
   key: EmailTemplateKey
 ): Promise<EmailTemplateResult> {
   try {
-    const supabase = await createClient();
+    // Utiliser le service_role pour bypass RLS — les routes email peuvent
+    // être appelées par des guests non authentifiés (réservations publiques).
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('email_templates')
