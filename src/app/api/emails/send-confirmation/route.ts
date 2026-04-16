@@ -302,7 +302,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     // 6. Créer l'événement Google Calendar (non-bloquant)
     try {
-      logger.info('[API /emails/send-confirmation] DEBUG Calendar — démarrage', {
+      logger.warn('[API /emails/send-confirmation] DEBUG Calendar — démarrage', {
         reservationId: payload.reservationId,
       });
 
@@ -312,7 +312,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         .eq('key', 'google_calendar_enabled')
         .maybeSingle();
 
-      logger.info('[API /emails/send-confirmation] DEBUG Calendar — calPref', {
+      logger.warn('[API /emails/send-confirmation] DEBUG Calendar — calPref', {
         value: calPref?.value,
         type: typeof calPref?.value,
         error: calPrefError?.message,
@@ -321,7 +321,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       const isBoolTrue = (v: unknown) => v === true || v === 'true';
 
       if (isBoolTrue(calPref?.value)) {
-        logger.info('[API /emails/send-confirmation] DEBUG Calendar — activé, fetch slot');
+        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — activé, fetch slot');
 
         const { data: slotRaw, error: slotError } = await adminClient
           .from('reservations')
@@ -337,7 +337,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           .eq('id', payload.reservationId)
           .maybeSingle();
 
-        logger.info('[API /emails/send-confirmation] DEBUG Calendar — slotRaw', {
+        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — slotRaw', {
           hasData: !!slotRaw,
           hasSlots: !!slotRaw?.slots,
           error: slotError?.message,
@@ -349,14 +349,14 @@ export async function POST(request: Request): Promise<NextResponse> {
           shows: { duration_minutes: number | null };
         } | null;
 
-        logger.info('[API /emails/send-confirmation] DEBUG Calendar — slot parsed', {
+        logger.warn('[API /emails/send-confirmation] DEBUG Calendar — slot parsed', {
           hasSlot: !!slot,
           date: slot?.date,
           time: slot?.time,
         });
 
         if (slot) {
-          logger.info('[API /emails/send-confirmation] DEBUG Calendar — appel createCalendarEvent');
+          logger.warn('[API /emails/send-confirmation] DEBUG Calendar — appel createCalendarEvent');
           const calResult = await createCalendarEvent({
             showTitle:             payload.showTitle,
             guestFullName:         payload.guestFullName,
@@ -376,7 +376,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             sendEmailNotification: true,
           });
 
-          logger.info('[API /emails/send-confirmation] DEBUG Calendar — résultat', {
+          logger.warn('[API /emails/send-confirmation] DEBUG Calendar — résultat', {
             success: calResult.success,
             eventId: calResult.success ? calResult.eventId : undefined,
             error: !calResult.success ? calResult.error : undefined,
