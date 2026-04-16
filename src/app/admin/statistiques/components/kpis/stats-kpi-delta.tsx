@@ -23,7 +23,7 @@ export interface StatsKpiDeltaProps {
 export function StatsKpiDelta({ value, inverse, className }: StatsKpiDeltaProps) {
   if (!value) return null;
 
-  const { delta, deltaPercent } = value;
+  const { delta, deltaPercent, compareValue } = value;
   const Icon = delta > 0 ? ArrowUp : delta < 0 ? ArrowDown : Minus;
 
   const isPositive = inverse ? delta < 0 : delta > 0;
@@ -41,6 +41,10 @@ export function StatsKpiDelta({ value, inverse, className }: StatsKpiDeltaProps)
       ? '—'
       : `${deltaPercent > 0 ? '+' : ''}${deltaPercent}%`;
 
+  // aria-label enrichi avec la valeur de référence pour un rendu audio complet
+  // (ex. "Évolution : +15 (+12%) par rapport à 125")
+  const ariaLabel = `Évolution : ${sign}${delta} (${percentText}) par rapport à ${compareValue}`;
+
   return (
     <div
       className={cn(
@@ -48,7 +52,7 @@ export function StatsKpiDelta({ value, inverse, className }: StatsKpiDeltaProps)
         colorClass,
         className,
       )}
-      aria-label={`Évolution : ${sign}${delta} (${percentText})`}
+      aria-label={ariaLabel}
     >
       <Icon className="h-3 w-3" aria-hidden />
       <span>

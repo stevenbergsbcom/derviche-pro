@@ -28,10 +28,19 @@ interface KpiEntry {
   label: string;
   value: number;
   delta?: DeltaValue;
+  /**
+   * Inverser la logique couleur : pour les métriques où "plus" est mauvais
+   * (ex. Annulations), delta > 0 doit s'afficher en rouge au lieu de vert.
+   * Reprend le comportement de `StatsKpiDelta` (prop `inverse`).
+   */
+  inverse?: boolean;
 }
 
-/** Formatte le badge de delta en texte court (ex: "↑ +15 (+12%)"). */
-function formatDeltaText(delta: DeltaValue): {
+/** Formatte le badge de delta en texte court (ex: "▲ +15 (+12%)"). */
+function formatDeltaText(
+  delta: DeltaValue,
+  inverse = false,
+): {
   text: string;
   color: [number, number, number];
 } {
@@ -41,12 +50,16 @@ function formatDeltaText(delta: DeltaValue): {
   const pctText = deltaPercent === null ? '—' : `${sign}${deltaPercent}%`;
   const text = `${arrow} ${sign}${d} (${pctText})`;
 
-  const color: [number, number, number] =
-    d > 0
-      ? PDF_COLORS_RGB.success
-      : d < 0
-        ? PDF_COLORS_RGB.danger
-        : PDF_COLORS_RGB.muted;
+  // Logique couleur : par défaut vert = amélioration. En mode inverse, les
+  // signes sont interprétés à l'envers (ex. annulations qui montent = rouge).
+  const isPositive = inverse ? d < 0 : d > 0;
+  const isNegative = inverse ? d > 0 : d < 0;
+
+  const color: [number, number, number] = isPositive
+    ? PDF_COLORS_RGB.success
+    : isNegative
+      ? PDF_COLORS_RGB.danger
+      : PDF_COLORS_RGB.muted;
 
   return { text, color };
 }
@@ -87,7 +100,7 @@ function renderKpiCard(
 
   // Delta (si compare mode et delta présent)
   if (compareMode && entry.delta) {
-    const { text, color } = formatDeltaText(entry.delta);
+    const { text, color } = formatDeltaText(entry.delta, entry.inverse);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(PDF_FONTS.small.size);
     doc.setTextColor(color[0], color[1], color[2]);
@@ -114,6 +127,9 @@ export function renderKpis(doc: jsPDF, input: RenderKpisInput): number {
     {
       label: 'Annulations',
       value: kpis.totalCancelled,
+      // Pour les annulations, "plus" = mauvaise nouvelle : on inverse la
+      // logique couleur pour rester aligné sur la carte UI (deltaInverse).
+      inverse: true,
       ...(kpis.totalCancelledDelta ? { delta: kpis.totalCancelledDelta } : {}),
     },
     {

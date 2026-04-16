@@ -143,7 +143,7 @@ export function StatsChart({ data, granularity, isLoading }: StatsChartProps) {
                   <Bar
                     dataKey="confirmedCountCompare"
                     name="Comparaison"
-                    fill="#94a3b8"
+                    fill={CHART_COLORS.compare}
                     radius={[4, 4, 0, 0]}
                     maxBarSize={40}
                   />

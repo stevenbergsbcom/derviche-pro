@@ -103,18 +103,20 @@ function parseComparePreset(raw: string | null): ComparePreset | undefined {
 function stateFromSearchParams(params: URLSearchParams): StatsFiltersState {
   const compareMode = parseCompareMode(params.get('compareMode'));
   const parsedPreset = parseComparePreset(params.get('comparePreset'));
+  // `comparePreset` sans `compareMode=1` n'a pas de sens métier : on l'ignore
+  // pour éviter un état hybride (preset mémorisé mais compa désactivée).
   return {
     period: parsePeriod(params.get('period')),
     from: parseDate(params.get('from')),
     to: parseDate(params.get('to')),
     companyIds: parseIds(params.get('companies')),
     venueIds: parseIds(params.get('venues')),
-    ...(compareMode ? { compareMode: true } : {}),
     ...(compareMode
-      ? { comparePreset: parsedPreset ?? DEFAULT_COMPARE_PRESET }
-      : parsedPreset
-        ? { comparePreset: parsedPreset }
-        : {}),
+      ? {
+          compareMode: true,
+          comparePreset: parsedPreset ?? DEFAULT_COMPARE_PRESET,
+        }
+      : {}),
   };
 }
 
@@ -219,10 +221,11 @@ export function useStatsFilters(): UseStatsFiltersReturn {
   }, []);
 
   const reset = useCallback(() => {
+    // Remise à l'état par défaut strict : on omet explicitement compareMode,
+    // comparePreset, from et to (tous optionnels). L'effet URL-sync produit
+    // ensuite une URL propre, sans paramètres résiduels.
     setFilters({
       period: DEFAULT_STATS_PERIOD,
-      from: undefined,
-      to: undefined,
       companyIds: [],
       venueIds: [],
     });

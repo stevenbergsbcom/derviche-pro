@@ -52,14 +52,29 @@ export function ShowsTableHeader({
         {columns.map((col) => {
           const active = col.key === sortKey;
           const Icon = active ? (sortDirection === 'asc' ? ArrowUp : ArrowDown) : ArrowUpDown;
+          const ariaSort: 'ascending' | 'descending' | 'none' = active
+            ? sortDirection === 'asc'
+              ? 'ascending'
+              : 'descending'
+            : 'none';
           return (
             <TableHead
               key={col.key}
               className={cn(
                 'cursor-pointer select-none',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
                 col.align === 'right' && 'text-right',
               )}
+              role="columnheader"
+              aria-sort={ariaSort}
+              tabIndex={0}
               onClick={() => onSort(col.key)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSort(col.key);
+                }
+              }}
             >
               <span
                 className={cn(

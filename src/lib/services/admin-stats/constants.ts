@@ -40,8 +40,14 @@ export const COMPARE_PRESET_LABELS: Record<ComparePreset, string> = {
   previous_season: 'Saison précédente',
 };
 
-/** Couleurs utilisées dans le chart. */
+/**
+ * Couleurs utilisées dans le chart (bar chart recharts).
+ *
+ * `main` : accent Derviche (aligné sur PDF_COLORS.accent).
+ * `compare` : gris slate-400 — choix d'un hex explicite (et non d'une var CSS)
+ * pour garantir un rendu cohérent dans html2canvas lors de l'export PDF.
+ */
 export const CHART_COLORS = {
   main: '#1e3a5f',
-  compare: 'hsl(var(--muted-foreground))',
+  compare: '#94a3b8',
 } as const;

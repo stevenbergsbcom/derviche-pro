@@ -138,7 +138,6 @@ export async function getAdminStats(
           { start: filters.from, end: filters.to },
           options.comparePreset,
           options.period,
-          options.season,
         );
 
         const compareFilters: StatsFilters = {
@@ -157,6 +156,16 @@ export async function getAdminStats(
             errors: compare.errors,
           });
         } else {
+          // Succès partiel : on log tout de même les erreurs restantes pour
+          // faciliter le diagnostic (ex. kpis OK mais venues KO → deltas
+          // venues calculés à partir d'un tableau vide).
+          if (compare.errors.length > 0) {
+            logger.warn(
+              '[admin-stats] Comparaison : erreurs partielles, deltas potentiellement dégradés',
+              { errors: compare.errors }
+            );
+          }
+
           const compareKpis = compare.kpis ?? EMPTY_KPIS;
           const compareShows = compare.shows ?? [];
           const compareVenues = compare.venues ?? [];

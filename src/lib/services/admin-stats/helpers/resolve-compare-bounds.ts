@@ -8,7 +8,6 @@
  */
 
 import type { PeriodBounds } from '@/lib/services/admin-dashboard';
-import type { SeasonSettings } from '@/lib/services/app-settings';
 import type { ComparePreset, StatsPeriod } from '../types';
 import { toLocalISO } from './period-bounds';
 
@@ -69,9 +68,17 @@ function shiftByDuration(bounds: PeriodBounds): PeriodBounds {
 }
 
 /**
- * Décale une saison d'un an. Les saisons Derviche chevauchent typiquement
- * 2 années civiles (ex. 01/09 → 30/06). Un simple shift de -1 an fonctionne
- * pour le cas normal.
+ * Décale une saison d'un an pour obtenir la saison précédente.
+ *
+ * Implémentation : shift de -1 an sur les 2 bornes. C'est sémantiquement
+ * équivalent à « saison N-1 » car les saisons Derviche sont stables (mêmes
+ * mois/jours de début et fin chaque année, ex. 01/09 → 30/06). Le paramètre
+ * `season` (accepté par le point d'entrée public `resolveCompareBounds`) n'a
+ * donc pas besoin d'être consulté ici.
+ *
+ * Si le modèle de saison évoluait (ex. bornes dynamiques par année), ce
+ * helper devrait recalculer les bornes via `resolveStatsBounds({ period:
+ * 'season_current', season: shiftedSeason })` plutôt que de shifter.
  */
 function shiftSeason(bounds: PeriodBounds): PeriodBounds {
   return shiftByYears(bounds, 1);
@@ -84,28 +91,26 @@ function shiftSeason(bounds: PeriodBounds): PeriodBounds {
 /**
  * Calcule les bornes de la période de comparaison selon le preset.
  *
+ * Note : aucun paramètre `season` n'est nécessaire car les saisons Derviche
+ * sont stables dans le temps (mêmes mois/jours chaque année). Voir le commentaire
+ * de `shiftSeason` si ce modèle doit évoluer.
+ *
  * @param originalBounds Bornes de la période courante
  * @param preset         Type de comparaison
  * @param period         Période d'origine (pour valider `previous_season`)
- * @param season         Paramètres de saison (requis pour `previous_season`)
  * @returns Bornes de la période de comparaison
  */
 export function resolveCompareBounds(
   originalBounds: PeriodBounds,
   preset: ComparePreset,
   period: StatsPeriod,
-  season?: SeasonSettings,
 ): PeriodBounds {
   // Le preset 'previous_season' n'a de sens que si la période courante est la
-  // saison courante. Sinon fallback sur 'year_before'.
+  // saison courante. Sinon fallback sur 'year_before' (comportement cohérent
+  // avec l'UI qui désactive cette option hors saison).
   if (preset === 'previous_season' && period !== 'season_current') {
     return shiftByYears(originalBounds, 1);
   }
-
-  // `season` est accepté dans la signature publique pour compatibilité future
-  // (si l'on doit un jour recalculer les bornes d'une saison autrement) ; il
-  // n'est pas utilisé par l'implémentation actuelle du décalage.
-  void season;
 
   switch (preset) {
     case 'year_before':
