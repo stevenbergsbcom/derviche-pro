@@ -1370,52 +1370,76 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ### S197 — Documentation utilisateur intégrée `/admin/aide` ✅
 
-**Feature majeure** : nouvelle page d'aide fonctionnelle accessible depuis la sidebar admin (item « Aide »), avec 26 articles MDX initiaux, recherche plein-texte Fuse.js, filtrage par rôle, layout sidebar + contenu.
+**Feature majeure** : nouvelle page d'aide fonctionnelle accessible depuis la sidebar admin (item « Aide »), avec **34 articles MDX en 16 catégories**, recherche plein-texte Fuse.js, filtrage par rôle, layout sidebar + contenu, article actif surligné.
 
 **Infrastructure (11 fichiers neufs)** :
-- `src/lib/help/content-loader.ts` — lecture disque MDX, parse frontmatter, arbo catégorie, filtrage rôle
+- `src/lib/help/content-loader.ts` — lecture disque MDX, parse frontmatter, arbo catégorie, filtrage rôle + `String(fm.category)` contre piège YAML
 - `scripts/generate-help-index.ts` — script Node (via tsx) qui génère `public/help-index.json` en prébuild
 - `src/app/admin/aide/layout.tsx` — shell avec recherche + sidebar + filtrage rôle
 - `src/app/admin/aide/page.tsx` — redirect vers `101/bienvenue`
 - `src/app/admin/aide/[...slug]/page.tsx` — rendu article dynamique (next-mdx-remote/rsc) + `generateStaticParams` + check rôle
-- `src/app/admin/aide/components/HelpSidebar.tsx` — TOC groupée par catégorie
+- `src/app/admin/aide/components/HelpSidebar.tsx` — TOC groupée par catégorie, Client Component avec `usePathname()` pour active state
 - `src/app/admin/aide/components/HelpSearch.tsx` — input + popover résultats Fuse.js
 - `src/app/admin/aide/components/HelpBreadcrumb.tsx`
-- `src/app/admin/aide/components/HelpArticle.tsx` — MDXRemote + rehype-slug + autolink + remark-gfm
+- `src/app/admin/aide/components/HelpArticle.tsx` — MDXRemote + rehype-slug + autolink + remark-gfm, classes `prose` via `@tailwindcss/typography`
 - `src/app/admin/aide/components/mdx-components.tsx` — Callout, Kbd, Screenshot (placeholder V1), RoleBadge
-- `src/app/admin/aide/hooks/useHelpSearch.ts` — Fuse.js lazy-load
+- `src/app/admin/aide/hooks/useHelpSearch.ts` — Fuse.js lazy-load, `useState` pour Fuse (pas ref, re-render propre)
 
-**Articles V1 (26 MDX)** :
+**34 articles V1 en 16 catégories** :
 - `101/` : bienvenue ⭐, rôles, navigation, dashboard, raccourcis (5)
 - `reservations/` : vue-ensemble, creer, modifier-annuler, transferer, exporter (5)
 - `spectacles/` : creer-publier, enrichir, vedette-classement (3)
+- `representations/` : vue-ensemble (1)
 - `checkin-pwa/` : installer, naviguer, pointer-presents, walk-in, emails-post-accueil (5)
+- `statistiques/` : vue-ensemble (1)
+- `lieux/` : vue-ensemble (1)
+- `compagnies/` : vue-ensemble (1)
+- `professionnels/` : vue-ensemble (1)
+- `utilisateurs/` : vue-ensemble (1, super-admin only)
+- `preferences/` : vue-ensemble (1, super-admin only)
+- `systeme/` : vue-ensemble (1, super-admin only)
+- `emails/` : vue-ensemble (1)
+- `notifications/` : cloche (1)
+- `mon-compte/` : profil-mot-de-passe (1)
 - `faq/` : email-non-recu, annulation-spectacle, surbooking, retrouver-ancienne-reservation, glossaire (5)
-- Transversaux : `mon-compte/profil-mot-de-passe`, `emails/vue-ensemble`, `notifications/cloche` (3)
 
-**Dépendances ajoutées** : `next-mdx-remote@6`, `fuse.js@7`, `gray-matter@4`, `rehype-slug@6`, `rehype-autolink-headings@7`, `remark-gfm@4`, `tsx@4` (dev), `@/components/ui/command.tsx` via shadcn.
+**Dépendances ajoutées** : `next-mdx-remote@6`, `fuse.js@7`, `gray-matter@4`, `rehype-slug@6`, `rehype-autolink-headings@7`, `remark-gfm@4`, `@tailwindcss/typography` (dev), `tsx@4` (dev), `@/components/ui/command.tsx` via shadcn.
 
-**Modifications existantes (4)** :
+**Modifications existantes (5)** :
 - `src/components/admin/admin-sidebar/constants.ts` : item « Aide » (icône `HelpCircle`) visible pour tous les rôles internes
+- `src/app/globals.css` : `@plugin "@tailwindcss/typography"` pour activer les classes `prose`
 - `package.json` : script `prebuild` lance la génération d'index ; script `help:index` pour usage manuel
 - `CLAUDE.md` : nouvelle section **📚 Documentation utilisateur — Règle absolue** avec checklist obligatoire avant merge main
 - `README.md` : ajout « Documentation utilisateur intégrée » dans Fonctionnalités + étape 7 du processus de livraison dédié à la MAJ doc
 
+**Terminologie** : « professionnel(s) » homogénéisé partout dans les docs et textes utilisateur (13 MDX + 3 docs renommés pour supprimer l'ancien terme). Décision produit consignée en mémoire : ne jamais utiliser d'autre label que « professionnel » / « pro » dans les textes visibles.
+
 **Comportement** :
 - Route `/admin/aide` → redirect vers `101/bienvenue`
 - Sidebar filtrée par rôle (admin simple ne voit pas `utilisateurs`, `preferences`, `systeme`)
-- Recherche : index chargé au 1er focus, Fuse fuzzy (threshold 0.35), scoring titre > keywords > categoryLabel > body
+- Article actif surligné dans la sidebar via `usePathname()` (Client Component)
+- Recherche : index chargé au 1er focus, Fuse fuzzy (threshold 0.35), scoring titre > keywords > categoryLabel > body, excerpts nettoyés (markdown stripped)
 - Articles pré-rendus au build (SSG) via `generateStaticParams`, zéro coût runtime
 - Composants MDX custom : `<Callout type="tip|warning|info">`, `<Kbd>`, `<Screenshot>` (placeholder V1), `<RoleBadge>`
+
+**Audit post-livraison** :
+- 🟠 Fixés : 8 liens MDX morts (redirigés vers `vue-ensemble` correspondants ou article le plus proche) + lien « Compagnies » qui pointait vers `/admin/aide` au lieu de `/compagnies/vue-ensemble`
+- 🟡 Fixés : active state sidebar (Client Component + `usePathname()`), `isReady` basé sur `useState` plutôt qu'un ref (réel re-render)
+- Bugs corrigés avant merge : piège YAML `category: 101` → nombre (cast `String()` défensif), `stripMdxToPlainText` retire maintenant `**gras**`, `*italique*`, `~~barré~~`, blocs code, listes
+- Typography plugin manquant : `@tailwindcss/typography` ajouté + directive `@plugin` dans `globals.css`
 
 **Hors scope V1 (à traiter en V2)** :
 - Captures d'écran réelles (composant `<Screenshot>` existe mais rend un placeholder pour le moment)
 - GIFs / vidéos pour les flux complexes
 - Sheet contextuel avec bouton `?` depuis chaque page admin (deep-linking V1.5)
-- 46 articles restants pour atteindre les 72 prévus au plan (Représentations détaillées, Lieux, Compagnies, Professionnels, Utilisateurs super-admin, Statistiques, 8 onglets Préférences, Système, Emails détaillés, FAQ étendues)
+- **Articles V2 à approfondir** : les 8 « vue-ensemble » ajoutés en V1 (lieux, compagnies, professionnels, utilisateurs, statistiques, representations, preferences, systeme) sont synthétiques. À splitter en articles détaillés en V2 (estimation +30 à 40 articles dérivés)
+- Articles Préférences par onglet (8 onglets à détailler : Organisation, Page d'accueil, Apparence, Email, Templates, Notifications, Rappels, Calendar, RGPD, Légal)
+- Emails détaillés par template (12 templates)
+- FAQ étendues (cas métier plus rares)
 - Hook pre-push enforçant automatiquement la règle MAJ doc
 - Feedback utilisateur (« Cet article vous a-t-il aidé ? »)
 - Export PDF d'un article
+- Cache dev du content-loader qui peut servir du stale après édition MDX (non-bloquant, résolu en redémarrant le dev server)
 - i18n (français uniquement pour le moment)
 
 ---
