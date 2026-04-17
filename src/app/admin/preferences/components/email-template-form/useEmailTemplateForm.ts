@@ -77,8 +77,10 @@ export function useEmailTemplateForm({
       // Dossier photo (S170)
       show_photo_folder_link: template.show_photo_folder_link ?? false,
       photo_folder_link_text: template.photo_folder_link_text ?? 'Consulter le dossier photo',
-      // CTA dervichediffusion.com — libellé = cta_text
+      // CTA dervichediffusion.com — toggle + libellé (utilisé par les 4 post-checkin)
       show_derviche_site_link: template.show_derviche_site_link ?? false,
+      derviche_site_link_text:
+        template.derviche_site_link_text ?? 'Voir la fiche spectacle sur dervichediffusion.com',
       // Bloc « Gérer ma réservation »
       show_manage_reservation_link: template.show_manage_reservation_link ?? false,
       manage_reservation_link_text:
@@ -109,17 +111,23 @@ export function useEmailTemplateForm({
   const isSimpleStyle       = template.is_simple_style === true;
   /**
    * Templates dont le builder HTML utilise `template.show_derviche_site_link`
-   * pour router le CTA vers dervichediffusion.com :
-   * confirmation, modification, rappels J-7 / J-2 / H-4.
-   * Hors scope : cancellation (CTA catalogue), admin_notification (CTA admin),
-   * post-checkin (lien booking_link déjà toggleable, sémantique différente).
+   * pour afficher un lien vers la page marketing dervichediffusion.com :
+   *  - confirmation / modification / rappels J-7 / J-2 / H-4 : le toggle
+   *    route le CTA principal vers l'URL externe (sinon fiche publique interne)
+   *  - 4 templates post-checkin : le toggle ajoute une entrée dans la liste
+   *    des liens complémentaires (libellé hardcodé, pas de champ texte dédié)
+   * Hors scope : cancellation (CTA catalogue), admin_notification (CTA admin).
    */
   const supportsDervicheSiteLink =
     template.template_key === 'reservation_confirmation' ||
     template.template_key === 'reservation_modification' ||
     template.template_key === 'reminder_7d' ||
     template.template_key === 'reminder_2d' ||
-    template.template_key === 'reminder_4h';
+    template.template_key === 'reminder_4h' ||
+    template.template_key === 'checkin_thank_you' ||
+    template.template_key === 'checkin_loved' ||
+    template.template_key === 'checkin_press' ||
+    template.template_key === 'checkin_followup_absent';
 
   // Notifier le parent quand isDirty change
   useEffect(() => {
@@ -211,8 +219,9 @@ export function useEmailTemplateForm({
       // Dossier photo (S170)
       show_photo_folder_link: v.show_photo_folder_link ?? false,
       photo_folder_link_text: v.photo_folder_link_text ?? '',
-      // CTA dervichediffusion.com — libellé = cta_text
+      // CTA dervichediffusion.com — toggle + libellé custom (post-checkin, migration 112)
       show_derviche_site_link: v.show_derviche_site_link ?? false,
+      derviche_site_link_text: v.derviche_site_link_text ?? '',
       // Bloc « Gérer ma réservation »
       show_manage_reservation_link: v.show_manage_reservation_link ?? false,
       manage_reservation_link_text: v.manage_reservation_link_text ?? '',

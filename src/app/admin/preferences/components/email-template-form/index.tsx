@@ -430,6 +430,24 @@ export function EmailTemplateForm({
                 canEdit={canEdit}
                 registerFn={register}
               />
+
+              {/* Lien vers dervichediffusion.com — S186 + migration 112 */}
+              {supportsDervicheSiteLink && (
+                <OptionalLinkToggle
+                  templateKey={template.template_key}
+                  label="Lien vers la page dervichediffusion.com"
+                  description="Affiché uniquement si l'URL marketing est renseignée sur le spectacle"
+                  showFieldName="show_derviche_site_link"
+                  textFieldName="derviche_site_link_text"
+                  placeholder="Ex: Voir la fiche spectacle sur dervichediffusion.com"
+                  isVisible={showDervicheSiteLink}
+                  onToggle={(checked) =>
+                    setValue('show_derviche_site_link', checked, { shouldDirty: true })
+                  }
+                  canEdit={canEdit}
+                  registerFn={register}
+                />
+              )}
             </div>
           </>
         )}
