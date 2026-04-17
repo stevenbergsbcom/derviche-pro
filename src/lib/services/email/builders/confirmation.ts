@@ -45,12 +45,17 @@ export function buildConfirmationHtml(
   const rawVars: EmailTemplateVariables = {
     prénom: extractFirstName(data.guestFullName), nom: data.guestFullName,
     spectacle: data.showTitle, date: data.slotDateFormatted, heure: data.slotTimeFormatted,
-    lieu: data.venueName, code: data.reservationCode, organisation: config.organizationName,
+    lieu: data.venueName, ville: data.venueCity,
+    adresse: data.venueAddress ?? '', code_postal: data.venuePostalCode ?? '',
+    code: data.reservationCode, organisation: config.organizationName,
   };
   const htmlVars: EmailTemplateVariables = {
     prénom: escapeHtml(extractFirstName(data.guestFullName)), nom: escapeHtml(data.guestFullName),
     spectacle: escapeHtml(data.showTitle), date: escapeHtml(data.slotDateFormatted),
     heure: escapeHtml(data.slotTimeFormatted), lieu: escapeHtml(data.venueName),
+    ville: escapeHtml(data.venueCity),
+    adresse: escapeHtml(data.venueAddress ?? ''),
+    code_postal: escapeHtml(data.venuePostalCode ?? ''),
     code: escapeHtml(data.reservationCode), organisation: escapeHtml(config.organizationName),
   };
 

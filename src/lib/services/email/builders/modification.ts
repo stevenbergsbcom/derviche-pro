@@ -42,12 +42,17 @@ export function buildModificationHtml(
   const rawVars: EmailTemplateVariables = {
     prénom: extractFirstName(data.guestFullName), nom: data.guestFullName,
     spectacle: data.showTitle, date: data.newSlotDateFormatted, heure: data.newSlotTimeFormatted,
-    lieu: data.venueName, organisation: config.organizationName,
+    lieu: data.venueName, ville: data.venueCity,
+    adresse: data.venueAddress ?? '', code_postal: data.venuePostalCode ?? '',
+    organisation: config.organizationName,
   };
   const htmlVars: EmailTemplateVariables = {
     prénom: escapeHtml(extractFirstName(data.guestFullName)), nom: escapeHtml(data.guestFullName),
     spectacle: escapeHtml(data.showTitle), date: escapeHtml(data.newSlotDateFormatted),
     heure: escapeHtml(data.newSlotTimeFormatted), lieu: escapeHtml(data.venueName),
+    ville: escapeHtml(data.venueCity),
+    adresse: escapeHtml(data.venueAddress ?? ''),
+    code_postal: escapeHtml(data.venuePostalCode ?? ''),
     organisation: escapeHtml(config.organizationName),
   };
 

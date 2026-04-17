@@ -65,9 +65,9 @@ export interface EmailTemplateVariables {
   lieu?: string;
   /** Ville du lieu de représentation */
   ville?: string;
-  /** Adresse (rue) du lieu — post-checkin uniquement (simple.ts) */
+  /** Adresse (rue) du lieu */
   adresse?: string;
-  /** Code postal du lieu — post-checkin uniquement (simple.ts) */
+  /** Code postal du lieu */
   code_postal?: string;
   /** Synopsis court du spectacle (short_description en DB) */
   synopsis?: string;
@@ -232,6 +232,8 @@ export function resolveTemplateVariables(
     .replace(/\{\{heure\}\}/g,         variables.heure         ?? '{{heure}}')
     .replace(/\{\{lieu\}\}/g,          variables.lieu          ?? '{{lieu}}')
     .replace(/\{\{ville\}\}/g,         variables.ville         ?? '{{ville}}')
+    .replace(/\{\{adresse\}\}/g,       variables.adresse       ?? '{{adresse}}')
+    .replace(/\{\{code_postal\}\}/g,   variables.code_postal   ?? '{{code_postal}}')
     .replace(/\{\{synopsis\}\}/g,      variables.synopsis      ?? '{{synopsis}}')
     .replace(/\{\{durée\}\}/g,         variables.durée         ?? '{{durée}}')
     .replace(/\{\{public_cible\}\}/g,  variables.public_cible  ?? '{{public_cible}}')
