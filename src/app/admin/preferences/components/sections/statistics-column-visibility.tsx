@@ -23,6 +23,9 @@ export interface StatisticsColumnVisibilityProps {
   title: string;
   /** Description optionnelle */
   description?: string;
+  /** Préfixe sans espaces utilisé pour générer des id HTML stables
+   *  (ex: `shows`, `venues`). Requis pour éviter des IDs invalides. */
+  idPrefix: string;
   /** Colonnes qui peuvent être cachées */
   hideableColumns: Column[];
   /** Liste des clés actuellement cachées */
@@ -40,6 +43,7 @@ export interface StatisticsColumnVisibilityProps {
 export function StatisticsColumnVisibility({
   title,
   description,
+  idPrefix,
   hideableColumns,
   hiddenColumns,
   disabled,
@@ -68,13 +72,13 @@ export function StatisticsColumnVisibility({
           return (
             <div key={col.key} className="flex items-center gap-2">
               <Checkbox
-                id={`col-${title}-${col.key}`}
+                id={`col-${idPrefix}-${col.key}`}
                 checked={hidden}
                 disabled={disabled}
                 onCheckedChange={(v) => toggle(col.key, Boolean(v))}
               />
               <Label
-                htmlFor={`col-${title}-${col.key}`}
+                htmlFor={`col-${idPrefix}-${col.key}`}
                 className="cursor-pointer text-sm font-normal"
               >
                 Masquer « {col.label} »

@@ -74,7 +74,7 @@ const EXPORT_OPTIONS: { value: StatsSettings['stats_default_export_format']; lab
   { value: 'pdf', label: 'PDF' },
 ];
 
-const FUTURE_NOTE = 'Sera appliqué automatiquement dans une prochaine version.';
+const FUTURE_NOTE = 'Sera appliqué dans une prochaine version.';
 
 // ============================================
 // COMPONENT
@@ -84,11 +84,12 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
   const { data, isLoading, isSaving, error, update } = useStatsSettings();
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Ref pour callback (anti-loop)
+  // Ref pour callback (anti-loop) : on garde la dernière version du callback
+  // sans retrigger les effets qui lisent la ref.
   const onDirtyChangeRef = useRef(onDirtyChange);
   useEffect(() => {
     onDirtyChangeRef.current = onDirtyChange;
-  });
+  }, [onDirtyChange]);
 
   // État local du formulaire
   const [formData, setFormData] = useState<StatsSettings>(STATS_DEFAULTS);
@@ -155,7 +156,7 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
       <SettingsCard
         icon={BarChart3}
         title="Préférences statistiques"
-        description="Défauts appliqués lors de l'ouverture de /admin/statistiques."
+        description="Colonnes masquées appliquées à /admin/statistiques. Les autres défauts (période, taille de page, preset de comparaison, format d'export) sont enregistrés ici et seront appliqués dans une prochaine version."
         isLoading={isLoading}
         isSaving={isSaving}
         canEdit={canEdit}
@@ -271,6 +272,7 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
 
         <StatisticsColumnVisibility
           title={'Tableau « Par spectacle »'}
+          idPrefix="shows"
           description="Colonnes cochées = masquées. Le titre du spectacle reste toujours visible."
           hideableColumns={HIDEABLE_SHOWS_COLUMNS}
           hiddenColumns={formData.stats_hidden_columns_shows}
@@ -282,6 +284,7 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
 
         <StatisticsColumnVisibility
           title={'Tableau « Par lieu »'}
+          idPrefix="venues"
           description="Colonnes cochées = masquées. Le nom du lieu reste toujours visible."
           hideableColumns={HIDEABLE_VENUES_COLUMNS}
           hiddenColumns={formData.stats_hidden_columns_venues}

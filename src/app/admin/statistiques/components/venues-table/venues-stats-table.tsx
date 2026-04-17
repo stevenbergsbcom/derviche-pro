@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import type { VenueStatsWithDelta } from '@/lib/services/admin-stats';
 import { DEFAULT_PAGE_SIZE } from '@/lib/services/admin-stats';
+import { HIDEABLE_VENUES_COLUMNS } from '@/lib/services/app-settings';
 import {
   sortVenues,
   type SortDirection,
@@ -60,8 +61,14 @@ export function VenuesStatsTable({
     setPage(1);
   };
 
-  // 1 (venueName) + 7 colonnes cachables - hidden + (1 si compare)
-  const visibleBaseCount = 1 + (7 - hiddenColumns.length);
+  // 1 (venueName sentinel) + colonnes cachables effectivement visibles + compare.
+  // On filtre hiddenColumns sur les clés connues et on dédoublonne pour éviter
+  // un colSpan incorrect si la DB contient des clés obsolètes ou dupliquées.
+  const hideableKeys = new Set(HIDEABLE_VENUES_COLUMNS.map((c) => c.key));
+  const effectiveHidden = new Set(
+    hiddenColumns.filter((k) => hideableKeys.has(k))
+  );
+  const visibleBaseCount = 1 + (hideableKeys.size - effectiveHidden.size);
   const colSpan = visibleBaseCount + (showCompareColumn ? 1 : 0);
 
   return (
