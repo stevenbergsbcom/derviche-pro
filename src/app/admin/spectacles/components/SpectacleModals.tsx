@@ -46,12 +46,14 @@ export function SpectacleModals({
   isCategoriesDialogOpen,
   onCategoriesDialogOpenChange,
   onAddCategory,
+  onRenameCategory,
   onRemoveCategory,
 
   // Target audience manager
   isAudiencesDialogOpen,
   onAudiencesDialogOpenChange,
   onAddTargetAudience,
+  onRenameTargetAudience,
   onRemoveTargetAudience,
 
   // Company quick create
@@ -107,6 +109,7 @@ export function SpectacleModals({
         onOpenChange={onCategoriesDialogOpenChange}
         categories={rawCategories}
         onAddCategory={onAddCategory}
+        onRenameCategory={onRenameCategory}
         onRemoveCategory={onRemoveCategory}
       />
 
@@ -116,6 +119,7 @@ export function SpectacleModals({
         onOpenChange={onAudiencesDialogOpenChange}
         targetAudiences={targetAudiences}
         onAddTargetAudience={onAddTargetAudience}
+        onRenameTargetAudience={onRenameTargetAudience}
         onRemoveTargetAudience={onRemoveTargetAudience}
       />
 

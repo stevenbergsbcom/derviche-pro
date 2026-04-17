@@ -324,6 +324,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       newSlotTimeFormatted: formatTimeFr(slots.time),
       venueName: newVenue?.name ?? '',
       venueCity: newVenue?.city ?? '',
+      venueAddress: newVenue?.address ?? null,
+      venuePostalCode: newVenue?.postal_code ?? null,
       numPlaces: reservation.num_places,
       dervisheSiteUrl: show.derviche_site_url ?? null,
       managerName:  managerName,

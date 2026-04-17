@@ -65,6 +65,10 @@ export interface EmailTemplateVariables {
   lieu?: string;
   /** Ville du lieu de représentation */
   ville?: string;
+  /** Adresse (rue) du lieu — post-checkin uniquement (simple.ts) */
+  adresse?: string;
+  /** Code postal du lieu — post-checkin uniquement (simple.ts) */
+  code_postal?: string;
   /** Synopsis court du spectacle (short_description en DB) */
   synopsis?: string;
   /** Durée du spectacle formatée (ex: "1h15") */

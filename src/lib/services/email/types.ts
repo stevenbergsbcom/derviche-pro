@@ -62,6 +62,10 @@ export interface ReservationCancellationEmailData extends ManagerContact {
   slotTimeFormatted: string;
   venueName: string;
   venueCity: string;
+  /** Adresse postale (rue) du lieu — affichée dans l'email si présente. */
+  venueAddress: string | null;
+  /** Code postal du lieu — affiché combiné avec la ville si présent. */
+  venuePostalCode: string | null;
   numPlaces: number;
   cancellationReason?: string | null;
 }
@@ -79,6 +83,10 @@ export interface ReservationModificationEmailData extends ManagerContact {
   newSlotTimeFormatted: string;
   venueName: string;
   venueCity: string;
+  /** Adresse postale (rue) du lieu — affichée dans l'email si présente. */
+  venueAddress: string | null;
+  /** Code postal du lieu — affiché combiné avec la ville si présent. */
+  venuePostalCode: string | null;
   numPlaces: number;
   /**
    * URL de la page marketing du spectacle sur dervichediffusion.com.
@@ -164,6 +172,10 @@ export interface CheckinFollowupEmailData extends ManagerContact {
   // Lieu
   venueName: string;
   venueCity: string;
+  /** Adresse postale (rue) du lieu — affichée dans l'email si présente. */
+  venueAddress: string | null;
+  /** Code postal du lieu — affiché combiné avec la ville si présent. */
+  venuePostalCode: string | null;
 }
 
 // ============================================

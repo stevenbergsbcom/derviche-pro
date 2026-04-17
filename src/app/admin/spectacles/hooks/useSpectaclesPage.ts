@@ -54,6 +54,7 @@ export function useSpectaclesPage() {
     error: categoriesError,
     refresh: refreshCategories,
     create: createCategory,
+    rename: renameCategory,
     remove: removeCategory,
     checkUsage: checkCategoryUsage,
   } = useCategories();
@@ -64,6 +65,7 @@ export function useSpectaclesPage() {
     error: targetAudiencesError,
     refresh: refreshTargetAudiences,
     create: createTargetAudience,
+    rename: renameTargetAudience,
     remove: removeTargetAudience,
     checkUsage: checkTargetAudienceUsage,
   } = useTargetAudiences();
@@ -153,9 +155,11 @@ export function useSpectaclesPage() {
     checkShowUsage: checkShowUsage,
     generateSlug,
     createCategory,
+    renameCategory,
     removeCategory,
     checkCategoryUsage: checkCategoryUsage,
     createTargetAudience,
+    renameTargetAudience,
     removeTargetAudience,
     checkTargetAudienceUsage: checkTargetAudienceUsage,
     createCompany,

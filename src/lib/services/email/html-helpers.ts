@@ -47,6 +47,38 @@ export function isSafeUrl(url: string | null | undefined): url is string {
 // ============================================
 
 /**
+ * Rend les lignes d'adresse du lieu à l'intérieur d'une cellule « Lieu »
+ * (pattern commun à confirmation / modification / cancellation / reminders).
+ *
+ * Structure HTML produite (lignes `<p>` avec marges serrées) :
+ * ```
+ * venueName (gras)
+ * venueAddress (si présente)
+ * (postalCode ville) | ville
+ * ```
+ *
+ * Utilise `escapeHtml` sur chaque segment. Retourne les 2 ou 3 `<p>` à insérer
+ * dans une cellule de tableau qui hérite du style alentour.
+ */
+export function buildVenueLines(
+  venueName: string,
+  venueCity: string,
+  venueAddress: string | null | undefined,
+  venuePostalCode: string | null | undefined
+): string {
+  const safeVenueName = escapeHtml(venueName);
+  const safeVenueAddress = venueAddress ? escapeHtml(venueAddress) : '';
+  const cityLine = venuePostalCode
+    ? `${venuePostalCode} ${venueCity}`.trim()
+    : venueCity;
+  const safeVenueCityLine = cityLine ? escapeHtml(cityLine) : '';
+
+  return `<p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
+                    ${safeVenueAddress ? `<p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueAddress}</p>` : ''}
+                    ${safeVenueCityLine ? `<p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCityLine}</p>` : ''}`;
+}
+
+/**
  * Bloc contact manager — conditionnel (show_contact_block + données présentes).
  */
 export function buildContactBlock(

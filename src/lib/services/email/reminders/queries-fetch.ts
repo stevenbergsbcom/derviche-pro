@@ -80,6 +80,8 @@ interface RawReservationRow {
     venues: {
       name: string;
       city: string;
+      address: string | null;
+      postal_code: string | null;
     } | null;
   } | null;
 }
@@ -177,7 +179,9 @@ export async function getEligibleReservations(
         ),
         venues!inner (
           name,
-          city
+          city,
+          address,
+          postal_code
         )
       )
     `)
@@ -250,6 +254,8 @@ export async function getEligibleReservations(
       slot_start_at:        `${slot.date}T${slot.time}`,
       venue_name:           venue.name,
       venue_city:           venue.city,
+      venue_address:        venue.address ?? null,
+      venue_postal_code:    venue.postal_code ?? null,
       derviche_site_url:    show.derviche_site_url ?? null,
       // Manager résolu séparément (cf. enrichWithManagers)
       manager_name:   null,

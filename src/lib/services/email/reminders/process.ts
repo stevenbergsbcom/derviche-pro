@@ -93,6 +93,8 @@ function toEmailData(
     slotTimeFormatted: reservation.slot_time_formatted,
     venueName:         reservation.venue_name,
     venueCity:         reservation.venue_city,
+    venueAddress:      reservation.venue_address,
+    venuePostalCode:   reservation.venue_postal_code,
     numPlaces:         reservation.num_places,
     dervisheSiteUrl:   reservation.derviche_site_url,
     managerName:       reservation.manager_name,

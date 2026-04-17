@@ -94,7 +94,12 @@ interface ReservationForFollowup {
           target_audiences: { name: string } | null;
         }[];
       };
-    venues: { name: string; city: string } | null;
+    venues: {
+      name: string;
+      city: string;
+      address: string | null;
+      postal_code: string | null;
+    } | null;
   };
 }
 
@@ -197,7 +202,7 @@ export async function POST(request: Request): Promise<NextResponse> {
               target_audiences ( name )
             )
           ),
-          venues ( name, city )
+          venues ( name, city, address, postal_code )
         )
       `)
       .eq('id', reservationId)
@@ -313,6 +318,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName:         venue?.name ?? '',
         venueCity:         venue?.city ?? '',
+        venueAddress:      venue?.address ?? null,
+        venuePostalCode:   venue?.postal_code ?? null,
         managerName,
         managerEmail,
         managerPhone,

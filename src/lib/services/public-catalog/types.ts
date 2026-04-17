@@ -20,6 +20,10 @@ export interface PublicSlot {
   venueId: string;
   venueName: string;
   venueCity: string;
+  /** Adresse postale (rue) du lieu, `null` si non renseignée. */
+  venueAddress: string | null;
+  /** Code postal du lieu, `null` si non renseigné. */
+  venuePostalCode: string | null;
   /** null = illimité */
   capacity: number | null;
   /** Places restantes (null si illimité) */

@@ -19,6 +19,7 @@ import {
   buildSignatureBlock,
   buildCtaBlock,
   buildFooterRow,
+  buildVenueLines,
   orgContactFromConfig,
   isSafeUrl,
 } from '../html-helpers';
@@ -62,8 +63,12 @@ export function buildModificationHtml(
   const safeHeaderTitle = escapeHtml(resolvedHeaderTitle);
   const safeShowTitle   = escapeHtml(data.showTitle);
   const safeCompanyName = escapeHtml(data.companyName);
-  const safeVenueName   = escapeHtml(data.venueName);
-  const safeVenueCity   = escapeHtml(data.venueCity);
+  const venueLines      = buildVenueLines(
+    data.venueName,
+    data.venueCity,
+    data.venueAddress,
+    data.venuePostalCode,
+  );
   const safeOldDate     = escapeHtml(data.oldSlotDateFormatted);
   const safeOldTime     = escapeHtml(data.oldSlotTimeFormatted);
   const safeNewDate     = escapeHtml(data.newSlotDateFormatted);
@@ -122,8 +127,7 @@ export function buildModificationHtml(
                   </td>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCity}</p>
+                    ${venueLines}
                   </td>
                 </tr></table>
               </td></tr>

@@ -64,7 +64,7 @@ const DEFAULT_VALUES: EmailFormData = {
   email_from_address: '',
   email_reply_to: '',
   email_signature: "L'équipe Derviche Diffusion",
-  email_footer_text: 'Derviche Diffusion — reservation.derviche@gmail.com',
+  email_footer_text: 'Derviche Diffusion',
   email_footer_show_email: true,
   email_footer_show_phone: true,
   email_footer_show_address: true,
@@ -311,7 +311,7 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
         <Label htmlFor="email_footer_text">Pied de page</Label>
         <Textarea
           id="email_footer_text"
-          placeholder="Derviche Diffusion — reservation.derviche@gmail.com"
+          placeholder="Derviche Diffusion"
           rows={2}
           disabled={!canEdit}
           {...register('email_footer_text')}
@@ -320,7 +320,9 @@ export function EmailSection({ canEdit, onDirtyChange }: EmailSectionProps) {
           <p className="text-sm text-destructive">{errors.email_footer_text.message}</p>
         )}
         <p className="text-xs text-muted-foreground">
-          Texte affiché dans la zone grise en bas de tous les emails
+          Texte affiché dans la zone grise en bas de tous les emails. Évitez d&apos;y
+          inclure l&apos;email, le téléphone, l&apos;adresse ou le site : ils sont
+          rajoutés automatiquement par les cases ci-dessous.
         </p>
       </div>
 

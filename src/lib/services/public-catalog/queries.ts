@@ -75,7 +75,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         capacity,
         remaining_capacity,
         hosted_by,
-        venues!inner(id, name, city)
+        venues!inner(id, name, city, address, postal_code)
       `)
       .in('show_id', showIds)
       .gte('date', todayISO)
@@ -108,7 +108,13 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
     // Organiser les slots par show_id
     const slotsByShow: Record<string, PublicSlot[]> = {};
     (slots || []).forEach(slot => {
-      const venueData = slot.venues as { id: string; name: string; city: string } | null;
+      const venueData = slot.venues as {
+        id: string;
+        name: string;
+        city: string;
+        address: string | null;
+        postal_code: string | null;
+      } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
       const booked = calculateBooked(slot.capacity, slot.remaining_capacity);
@@ -120,6 +126,8 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         venueId: venueData?.id || '',
         venueName: venueData?.name || 'Lieu inconnu',
         venueCity: venueData?.city || '',
+        venueAddress: venueData?.address ?? null,
+        venuePostalCode: venueData?.postal_code ?? null,
         capacity,
         remainingCapacity,
         booked: Math.max(0, booked),
@@ -269,7 +277,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         capacity,
         remaining_capacity,
         hosted_by,
-        venues!inner(id, name, city)
+        venues!inner(id, name, city, address, postal_code)
       `)
       .eq('show_id', show.id)
       .gte('date', todayISO)
@@ -295,7 +303,13 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
 
     // Construire les slots
     const publicSlots: PublicSlot[] = (slots || []).map(slot => {
-      const venueData = slot.venues as { id: string; name: string; city: string } | null;
+      const venueData = slot.venues as {
+        id: string;
+        name: string;
+        city: string;
+        address: string | null;
+        postal_code: string | null;
+      } | null;
       const capacity = convertCapacity(slot.capacity);
       const remainingCapacity = convertCapacity(slot.remaining_capacity);
       const booked = calculateBooked(slot.capacity, slot.remaining_capacity);
@@ -307,6 +321,8 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         venueId: venueData?.id || '',
         venueName: venueData?.name || 'Lieu inconnu',
         venueCity: venueData?.city || '',
+        venueAddress: venueData?.address ?? null,
+        venuePostalCode: venueData?.postal_code ?? null,
         capacity,
         remainingCapacity,
         booked,
