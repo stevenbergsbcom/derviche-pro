@@ -14,3 +14,4 @@ export { ShowDetailSidebar } from './show-detail-sidebar';
 export { MountingState, LoadingState, ErrorState, NotFoundState } from './page-states';
 export { BookingStepsPanel } from './booking-steps-panel';
 export { BookingDialogs } from './booking-dialogs';
+export { TeaserButtonWithDialog } from './teaser-dialog';
