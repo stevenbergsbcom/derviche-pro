@@ -12,14 +12,26 @@ import type { QuickLinkItem } from '../types';
 /**
  * Props pour QuickLink (sous-ensemble de QuickLinkItem)
  */
-type QuickLinkProps = Pick<QuickLinkItem, 'href' | 'icon' | 'title' | 'description'>;
+type QuickLinkProps = Pick<
+  QuickLinkItem,
+  'href' | 'icon' | 'title' | 'description' | 'openInNewTab'
+>;
 
 /**
  * Carte cliquable pour la navigation rapide
  */
-function QuickLinkComponent({ href, icon: Icon, title, description }: QuickLinkProps) {
+function QuickLinkComponent({
+  href,
+  icon: Icon,
+  title,
+  description,
+  openInNewTab,
+}: QuickLinkProps) {
   return (
-    <Link href={href}>
+    <Link
+      href={href}
+      {...(openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+    >
       <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
         <CardContent className="flex items-center gap-4 p-4">
           <div className="p-2 bg-primary/10 rounded-lg">

@@ -147,6 +147,7 @@ export default function AdminDashboardPage() {
               icon={link.icon}
               title={link.title}
               description={link.description}
+              {...(link.openInNewTab ? { openInNewTab: true } : {})}
             />
           ))}
           {/* QR Code d'accès rapide à la PWA check-in */}
