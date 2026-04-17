@@ -10,6 +10,7 @@ import type { TargetAudienceRow, TargetAudienceInsert } from '@/types/database';
 import {
   getTargetAudiences,
   createTargetAudience,
+  updateTargetAudience,
   deleteTargetAudience,
   isTargetAudienceUsed,
   generateTargetAudienceSlug,
@@ -22,6 +23,10 @@ export interface UseTargetAudiencesReturn {
   error: string | null;
   refresh: () => Promise<void>;
   create: (name: string) => Promise<{ success: boolean; data?: TargetAudienceRow; error?: string }>;
+  rename: (
+    id: string,
+    name: string
+  ) => Promise<{ success: boolean; data?: TargetAudienceRow; error?: string }>;
   remove: (id: string) => Promise<{ success: boolean; error?: string }>;
   checkUsage: (id: string) => Promise<{ used: boolean; count: number; error: string | null }>;
 }
@@ -84,6 +89,32 @@ export function useTargetAudiences(): UseTargetAudiencesReturn {
     return { success: false, error: 'Erreur inconnue' };
   }, []);
 
+  const rename = useCallback(async (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { success: false, error: 'Le nom ne peut pas être vide' };
+    }
+
+    const collision = targetAudiencesRef.current.find(
+      (ta) => ta.id !== id && ta.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (collision) {
+      return { success: false, error: 'Ce public cible existe déjà' };
+    }
+
+    const slug = generateTargetAudienceSlug(trimmed);
+    const result = await updateTargetAudience(id, { name: trimmed, slug });
+
+    if (result.error || !result.data) {
+      return { success: false, error: result.error ?? 'Erreur inconnue' };
+    }
+
+    setTargetAudiences((prev) =>
+      prev.map((ta) => (ta.id === id ? result.data! : ta))
+    );
+    return { success: true, data: result.data };
+  }, []);
+
   const remove = useCallback(async (id: string) => {
     const result = await deleteTargetAudience(id);
 
@@ -105,6 +136,7 @@ export function useTargetAudiences(): UseTargetAudiencesReturn {
     error,
     refresh: loadTargetAudiences,
     create,
+    rename,
     remove,
     checkUsage,
   };

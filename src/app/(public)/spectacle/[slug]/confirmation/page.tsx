@@ -114,7 +114,17 @@ function ConfirmationContent() {
     const matchingSlot = show.slots.find(slot => slot.date === slotDate && slot.time === slotTime);
     const venueName = matchingSlot?.venueName || show.nextVenue || 'Théâtre';
     const venueCity = matchingSlot?.venueCity || '';
-    const venueAddress = venueCity ? `${venueName}, ${venueCity}` : venueName;
+    const venueStreet = matchingSlot?.venueAddress ?? null;
+    const venuePostalCode = matchingSlot?.venuePostalCode ?? null;
+
+    // Adresse postale affichée sous le nom du lieu : « rue, CP ville »
+    // (fallback : juste la ville, ou chaîne vide si rien). Jamais « nom, ville ».
+    const cityLine = venuePostalCode
+      ? `${venuePostalCode} ${venueCity}`.trim()
+      : venueCity;
+    const venueAddress = venueStreet
+      ? (cityLine ? `${venueStreet}, ${cityLine}` : venueStreet)
+      : cityLine;
 
     const mockConfirmation: ReservationConfirmation = {
       code: `DD-${reservationId.replace(/-/g, '').substring(0, 6).toUpperCase()}`,
@@ -310,9 +320,10 @@ function ConfirmationContent() {
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">{confirmation.venue.name}</p>
-                    {confirmation.venue.address !== confirmation.venue.name && (
-                      <p className="text-muted-foreground">{confirmation.venue.address}</p>
-                    )}
+                    {confirmation.venue.address &&
+                      confirmation.venue.address !== confirmation.venue.name && (
+                        <p className="text-muted-foreground">{confirmation.venue.address}</p>
+                      )}
                   </div>
                 </div>
 

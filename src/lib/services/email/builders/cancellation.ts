@@ -19,6 +19,7 @@ import {
   buildSignatureBlock,
   buildCtaBlock,
   buildFooterRow,
+  buildVenueLines,
   orgContactFromConfig,
 } from '../html-helpers';
 
@@ -32,12 +33,17 @@ export function buildCancellationHtml(
   const rawVars: EmailTemplateVariables = {
     prénom: extractFirstName(data.guestFullName), nom: data.guestFullName,
     spectacle: data.showTitle, date: data.slotDateFormatted, heure: data.slotTimeFormatted,
-    lieu: data.venueName, organisation: config.organizationName,
+    lieu: data.venueName, ville: data.venueCity,
+    adresse: data.venueAddress ?? '', code_postal: data.venuePostalCode ?? '',
+    organisation: config.organizationName,
   };
   const htmlVars: EmailTemplateVariables = {
     prénom: escapeHtml(extractFirstName(data.guestFullName)), nom: escapeHtml(data.guestFullName),
     spectacle: escapeHtml(data.showTitle), date: escapeHtml(data.slotDateFormatted),
     heure: escapeHtml(data.slotTimeFormatted), lieu: escapeHtml(data.venueName),
+    ville: escapeHtml(data.venueCity),
+    adresse: escapeHtml(data.venueAddress ?? ''),
+    code_postal: escapeHtml(data.venuePostalCode ?? ''),
     organisation: escapeHtml(config.organizationName),
   };
 
@@ -53,8 +59,12 @@ export function buildCancellationHtml(
   const safeHeaderTitle        = escapeHtml(resolvedHeaderTitle);
   const safeShowTitle          = escapeHtml(data.showTitle);
   const safeCompanyName        = escapeHtml(data.companyName);
-  const safeVenueName          = escapeHtml(data.venueName);
-  const safeVenueCity          = escapeHtml(data.venueCity);
+  const venueLines             = buildVenueLines(
+    data.venueName,
+    data.venueCity,
+    data.venueAddress,
+    data.venuePostalCode,
+  );
   const safeCancellationReason = escapeHtml(data.cancellationReason);
   const safeDateFormatted      = escapeHtml(data.slotDateFormatted);
   const safeTimeFormatted      = escapeHtml(data.slotTimeFormatted);
@@ -110,8 +120,7 @@ export function buildCancellationHtml(
                   </td>
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                    <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCity}</p>
+                    ${venueLines}
                   </td>
                 </tr></table>
               </td></tr>

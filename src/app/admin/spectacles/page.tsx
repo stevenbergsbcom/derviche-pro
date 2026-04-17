@@ -92,8 +92,10 @@ function AdminSpectaclesContent() {
     handleCloseView,
     handleDeleteFromForm,
     handleAddCategory,
+    handleRenameCategory,
     handleRemoveCategoryById,
     handleAddTargetAudience,
+    handleRenameTargetAudience,
     handleRemoveTargetAudience,
     handleCreateCompany,
     handleCompanyCreated,
@@ -229,10 +231,12 @@ function AdminSpectaclesContent() {
         isCategoriesDialogOpen={isCategoriesDialogOpen}
         onCategoriesDialogOpenChange={setIsCategoriesDialogOpen}
         onAddCategory={handleAddCategory}
+        onRenameCategory={handleRenameCategory}
         onRemoveCategory={handleRemoveCategoryById}
         isAudiencesDialogOpen={isAudiencesDialogOpen}
         onAudiencesDialogOpenChange={setIsAudiencesDialogOpen}
         onAddTargetAudience={handleAddTargetAudience}
+        onRenameTargetAudience={handleRenameTargetAudience}
         onRemoveTargetAudience={handleRemoveTargetAudience}
         isNewCompanyDialogOpen={isNewCompanyDialogOpen}
         onNewCompanyDialogOpenChange={setIsNewCompanyDialogOpen}

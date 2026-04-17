@@ -301,6 +301,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       slotTimeFormatted: formatTimeFr(slots.time),
       venueName: venue?.name ?? '',
       venueCity: venue?.city ?? '',
+      venueAddress: venue?.address ?? null,
+      venuePostalCode: venue?.postal_code ?? null,
       numPlaces: reservation.num_places,
       cancellationReason: reservation.cancellation_reason,
       managerName,

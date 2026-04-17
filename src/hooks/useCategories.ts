@@ -10,6 +10,7 @@ import type { ShowCategoryRow, ShowCategoryInsert } from '@/types/database';
 import {
   getCategories,
   createCategory,
+  updateCategory,
   deleteCategory,
   isCategoryUsed,
   generateCategorySlug,
@@ -22,6 +23,10 @@ export interface UseCategoriesReturn {
   error: string | null;
   refresh: () => Promise<void>;
   create: (name: string) => Promise<{ success: boolean; data?: ShowCategoryRow; error?: string }>;
+  rename: (
+    id: string,
+    name: string
+  ) => Promise<{ success: boolean; data?: ShowCategoryRow; error?: string }>;
   remove: (id: string) => Promise<{ success: boolean; error?: string }>;
   checkUsage: (id: string) => Promise<{ used: boolean; count: number; error: string | null }>;
 }
@@ -84,6 +89,34 @@ export function useCategories(): UseCategoriesReturn {
     return { success: false, error: 'Erreur inconnue' };
   }, []);
 
+  const rename = useCallback(async (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return { success: false, error: 'Le nom ne peut pas être vide' };
+    }
+
+    // Collision insensible à la casse, hors soi-même
+    const collision = categoriesRef.current.find(
+      (c) => c.id !== id && c.name.toLowerCase() === trimmed.toLowerCase()
+    );
+    if (collision) {
+      return { success: false, error: 'Cette catégorie existe déjà' };
+    }
+
+    // Régénère le slug (cosmétique, non utilisé publiquement).
+    const slug = generateCategorySlug(trimmed);
+    const result = await updateCategory(id, { name: trimmed, slug });
+
+    if (result.error || !result.data) {
+      return { success: false, error: result.error ?? 'Erreur inconnue' };
+    }
+
+    setCategories((prev) =>
+      prev.map((c) => (c.id === id ? result.data! : c))
+    );
+    return { success: true, data: result.data };
+  }, []);
+
   const remove = useCallback(async (id: string) => {
     const result = await deleteCategory(id);
 
@@ -105,6 +138,7 @@ export function useCategories(): UseCategoriesReturn {
     error,
     refresh: loadCategories,
     create,
+    rename,
     remove,
     checkUsage,
   };

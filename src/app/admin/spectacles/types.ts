@@ -182,12 +182,14 @@ export interface SpectacleModalsProps {
   isCategoriesDialogOpen: boolean;
   onCategoriesDialogOpenChange: (open: boolean) => void;
   onAddCategory: (name: string) => Promise<void>;
+  onRenameCategory: (id: string, name: string) => Promise<void>;
   onRemoveCategory: (id: string) => Promise<void>;
 
   // Target audience manager
   isAudiencesDialogOpen: boolean;
   onAudiencesDialogOpenChange: (open: boolean) => void;
   onAddTargetAudience: (name: string) => Promise<void>;
+  onRenameTargetAudience: (id: string, name: string) => Promise<void>;
   onRemoveTargetAudience: (id: string) => Promise<void>;
 
   // Company quick create

@@ -51,12 +51,20 @@ interface UseSpectacleCrudParams {
   createCategory: (
     name: string
   ) => Promise<{ success: boolean; data?: ShowCategoryRow; error?: string }>;
+  renameCategory: (
+    id: string,
+    name: string
+  ) => Promise<{ success: boolean; data?: ShowCategoryRow; error?: string }>;
   removeCategory: (id: string) => Promise<{ success: boolean; error?: string }>;
   checkCategoryUsage: (
     id: string
   ) => Promise<{ used: boolean; count: number; error: string | null }>;
   // Target audiences
   createTargetAudience: (
+    name: string
+  ) => Promise<{ success: boolean; data?: TargetAudienceRow; error?: string }>;
+  renameTargetAudience: (
+    id: string,
     name: string
   ) => Promise<{ success: boolean; data?: TargetAudienceRow; error?: string }>;
   removeTargetAudience: (id: string) => Promise<{ success: boolean; error?: string }>;
@@ -85,9 +93,11 @@ export function useSpectacleCrud({
   checkShowUsage,
   generateSlug,
   createCategory,
+  renameCategory,
   removeCategory,
   checkCategoryUsage,
   createTargetAudience,
+  renameTargetAudience,
   removeTargetAudience,
   checkTargetAudienceUsage,
   createCompany,
@@ -379,6 +389,14 @@ export function useSpectacleCrud({
     if (result.error) throw new Error(result.error);
   }, [createCategory]);
 
+  const handleRenameCategory = useCallback(
+    async (categoryId: string, newName: string) => {
+      const result = await renameCategory(categoryId, newName);
+      if (result.error) throw new Error(result.error);
+    },
+    [renameCategory]
+  );
+
   const handleRemoveCategoryById = useCallback(async (categoryId: string) => {
     const category = rawCategories.find((c) => c.id === categoryId);
     const categoryName = category?.name || 'cette catégorie';
@@ -397,6 +415,14 @@ export function useSpectacleCrud({
     const result = await createTargetAudience(name);
     if (result.error) throw new Error(result.error);
   }, [createTargetAudience]);
+
+  const handleRenameTargetAudience = useCallback(
+    async (id: string, newName: string) => {
+      const result = await renameTargetAudience(id, newName);
+      if (result.error) throw new Error(result.error);
+    },
+    [renameTargetAudience]
+  );
 
   const handleRemoveTargetAudience = useCallback(async (id: string) => {
     const audienceName = rawTargetAudiences.find((ta) => ta.id === id)?.name || 'ce public cible';
@@ -485,8 +511,10 @@ export function useSpectacleCrud({
     handleCloseView,
     handleDeleteFromForm,
     handleAddCategory,
+    handleRenameCategory,
     handleRemoveCategoryById,
     handleAddTargetAudience,
+    handleRenameTargetAudience,
     handleRemoveTargetAudience,
     handleCreateCompany,
     handleCompanyCreated,
