@@ -37,10 +37,12 @@ export function PreferencesSubmenuExpanded() {
   const onPrefs = isOnPrefsPath(pathname);
   const activeTabId = getActiveTabId(searchParams);
 
-  // Auto-ouverture quand on est dans /admin/preferences/*
+  // Auto-ouverture quand on est dans /admin/preferences/* et auto-fermeture
+  // quand on en sort, pour éviter que le sous-menu reste déplié sur une
+  // autre route admin après navigation (audit 320112d point 5).
   const [open, setOpen] = useState<boolean>(onPrefs);
   useEffect(() => {
-    if (onPrefs) setOpen(true);
+    setOpen(onPrefs);
   }, [onPrefs]);
 
   return (

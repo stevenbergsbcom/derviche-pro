@@ -846,7 +846,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | `src/components/layout/header.tsx` | Logo dynamique (theme settings) |
 | `src/hooks/useAppSettings.ts` | Hook `useHomepageSettings` |
 | `src/app/admin/preferences/components/preferences-content.tsx` | Onglet Homepage intégré |
-| `src/app/admin/preferences/components/preferences-tabs.tsx` | Tab Homepage + badge Organisation → Actif |
+| `src/app/admin/preferences/config/preference-tabs.ts` | Tab Homepage + badge Organisation → Actif (source unique, migrée depuis `preferences-tabs.tsx` supprimé) |
 | `src/app/admin/preferences/components/sections/index.ts` | Export HomepageSection |
 | `src/app/admin/preferences/components/sections/organization-section.tsx` | Fix NOT NULL (|| '' uniforme), suppression `organization_logo_url` |
 
@@ -935,7 +935,7 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 |---------|------------|
 | `src/lib/services/app-settings.ts` | +`LegalSettingKey`, `LegalSettings`, `LEGAL_DEFAULTS`, `getLegalSettings`, `setLegalSettings` |
 | `src/hooks/useAppSettings.ts` | +`useLegalSettings()` hook |
-| `src/app/admin/preferences/components/preferences-tabs.tsx` | +onglet Légal (icône Scale), grille 10 colonnes |
+| `src/app/admin/preferences/config/preference-tabs.ts` | +onglet Légal (icône Scale) (source unique, migrée depuis `preferences-tabs.tsx` supprimé) |
 | `src/app/admin/preferences/components/preferences-content.tsx` | +`LegalSection` import, dirty handler, rendu conditionnel |
 | `src/app/admin/preferences/components/sections/index.ts` | +export `LegalSection` |
 | `src/components/layout/footer.tsx` | `href="#"` → `/mentions-legales`, `/politique-confidentialite`, `/cgu` |
