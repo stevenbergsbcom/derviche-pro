@@ -126,11 +126,19 @@ export function buildSimpleHtml(
        </td></tr>`
     : '';
 
-  const hasLinks = folderLinkBlock || teaserLinkBlock || captationLinkBlock || bookingLinkBlock || photoFolderLinkBlock;
+  // Page marketing dervichediffusion.com (S186 + migration 112)
+  // Libellé custom par template via `template.derviche_site_link_text`.
+  const dervicheSiteLinkBlock = (template.show_derviche_site_link && isSafeUrl(data.dervisheSiteUrl))
+    ? `<tr><td style="padding:16px 0 0 0;">
+        <a href="${escapeHtml(data.dervisheSiteUrl)}" style="color:#1e3a5f;font-size:14px;">🌐 ${escapeHtml(template.derviche_site_link_text)}</a>
+       </td></tr>`
+    : '';
+
+  const hasLinks = folderLinkBlock || teaserLinkBlock || captationLinkBlock || bookingLinkBlock || photoFolderLinkBlock || dervicheSiteLinkBlock;
   const linksBlock = hasLinks
     ? `<tr><td style="padding:20px 0 0 0;border-top:1px solid #e5e7eb;">
         <table width="100%" cellpadding="0" cellspacing="0">
-          ${folderLinkBlock}${teaserLinkBlock}${captationLinkBlock}${bookingLinkBlock}${photoFolderLinkBlock}
+          ${folderLinkBlock}${teaserLinkBlock}${captationLinkBlock}${bookingLinkBlock}${photoFolderLinkBlock}${dervicheSiteLinkBlock}
         </table>
        </td></tr>`
     : '';

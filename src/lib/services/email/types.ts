@@ -166,6 +166,11 @@ export interface CheckinFollowupEmailData extends ManagerContact {
   captationUrl: string | null;
   /** URL du dossier photo (null si non renseignée) — S170 */
   photoFolderUrl: string | null;
+  /**
+   * URL de la page marketing sur dervichediffusion.com.
+   * Rendu conditionné par le toggle `template.show_derviche_site_link`.
+   */
+  dervisheSiteUrl: string | null;
   // Créneau
   slotDateFormatted: string;
   slotTimeFormatted: string;

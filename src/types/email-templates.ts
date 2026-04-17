@@ -95,12 +95,15 @@ export interface EmailTemplate {
   show_photo_folder_link: boolean;
   photo_folder_link_text: string;
   /**
-   * Si true + shows.derviche_site_url renseigné, le CTA principal pointe vers
-   * la page dervichediffusion.com au lieu de la fiche publique interne.
-   * Le libellé du bouton reste `cta_text` dans les deux cas (l'admin l'adapte
-   * manuellement si besoin, ex. « Découvrir le spectacle »).
+   * Si true + shows.derviche_site_url renseigné :
+   *  - 5 templates classiques : le CTA principal pointe vers
+   *    dervichediffusion.com (libellé = cta_text, comportement inchangé)
+   *  - 4 templates post-checkin (is_simple_style) : un lien complémentaire
+   *    est ajouté dans la liste des liens (libellé = derviche_site_link_text)
    */
   show_derviche_site_link: boolean;
+  /** Libellé du lien marketing — uniquement utilisé par les templates post-checkin (migration 112). */
+  derviche_site_link_text: string;
   /**
    * Si true, affiche un bloc « Gérer ma réservation » sous le CTA principal.
    * Compte pro → bouton vers /professional/reservations.
@@ -149,6 +152,7 @@ export type EmailTemplateUpdatePayload = Pick<
   | 'photo_folder_link_text'
   // CTA externe dervichediffusion.com
   | 'show_derviche_site_link'
+  | 'derviche_site_link_text'
   // Bloc « Gérer ma réservation »
   | 'show_manage_reservation_link'
   | 'manage_reservation_link_text'

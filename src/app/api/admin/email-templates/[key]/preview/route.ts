@@ -172,6 +172,7 @@ const MOCK_CHECKIN_FOLLOWUP: CheckinFollowupEmailData = {
   teaserUrl: 'https://youtube.com/example-teaser',
   captationUrl: 'https://vimeo.com/example-captation',
   photoFolderUrl: 'https://drive.google.com/example-photos',
+  dervisheSiteUrl: 'https://dervichediffusion.com/spectacles/le-bal-des-ames',
   slotDateFormatted: 'mercredi 15 avril 2026',
   slotTimeFormatted: '19h30',
   venueName: 'Théâtre de la Ville',
@@ -247,8 +248,10 @@ function buildTemplateFromParams(
     // Dossier photo (S170)
     show_photo_folder_link: q.get('show_photo_folder_link') === 'true',
     photo_folder_link_text: q.get('photo_folder_link_text') ?? 'Consulter le dossier photo',
-    // CTA dervichediffusion.com — toggle uniquement
+    // CTA dervichediffusion.com — toggle + libellé custom (post-checkin)
     show_derviche_site_link: q.get('show_derviche_site_link') === 'true',
+    derviche_site_link_text:
+      q.get('derviche_site_link_text') ?? 'Voir la fiche spectacle sur dervichediffusion.com',
     // Bloc « Gérer ma réservation »
     show_manage_reservation_link: q.get('show_manage_reservation_link') === 'true',
     manage_reservation_link_text:
@@ -393,6 +396,9 @@ export async function GET(
         photo_folder_link_text: dbTemplate.photo_folder_link_text ?? 'Consulter le dossier photo',
         // CTA dervichediffusion.com
         show_derviche_site_link: dbTemplate.show_derviche_site_link ?? false,
+        derviche_site_link_text:
+          dbTemplate.derviche_site_link_text ??
+          'Voir la fiche spectacle sur dervichediffusion.com',
         // Bloc « Gérer ma réservation »
         show_manage_reservation_link: dbTemplate.show_manage_reservation_link ?? false,
         manage_reservation_link_text:

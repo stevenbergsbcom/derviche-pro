@@ -87,6 +87,7 @@ interface ReservationForFollowup {
     teaser_url:          string | null;
     captation_url:       string | null;
     photo_folder_url:    string | null;
+    derviche_site_url:   string | null;
     derviche_manager_id: string | null;
     company_id:          string | null;
       companies: { name: string } | null;
@@ -195,6 +196,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             teaser_url,
             captation_url,
             photo_folder_url,
+            derviche_site_url,
             derviche_manager_id,
             company_id,
             companies:company_id ( name ),
@@ -314,6 +316,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         teaserUrl:         isSafeUrl(show.teaser_url)    ? show.teaser_url    : null,
         captationUrl:      isSafeUrl(show.captation_url)  ? show.captation_url  : null,
         photoFolderUrl:    isSafeUrl(show.photo_folder_url) ? show.photo_folder_url : null,
+        dervisheSiteUrl:   isSafeUrl(show.derviche_site_url) ? show.derviche_site_url : null,
         slotDateFormatted: formatDateFr(slots.date),
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName:         venue?.name ?? '',

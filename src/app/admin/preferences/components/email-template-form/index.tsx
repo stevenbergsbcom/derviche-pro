@@ -246,9 +246,13 @@ export function EmailTemplateForm({
               </p>
             </div>
 
-            {/* Toggle : rediriger vers dervichediffusion.com — dispo sur tous
-                les templates dont le builder lit ce flag (confirmation,
-                modification, rappels J-7 / J-2 / H-4). */}
+            {/* Toggle : rediriger le CTA vers dervichediffusion.com.
+                Rendu UNIQUEMENT pour les templates non `is_simple_style`
+                (confirmation, modification, rappels J-7 / J-2 / H-4) — ils
+                ont un CTA principal dont ce switch change l'URL.
+                Les 4 post-checkin sont `is_simple_style=true` et gèrent
+                ce toggle via OptionalLinkToggle dans la section "Liens
+                optionnels" plus bas, avec libellé éditable. */}
             {supportsDervicheSiteLink && (
               <div className="flex items-start gap-3 rounded-md border border-dashed p-3">
                 <Switch
@@ -430,6 +434,24 @@ export function EmailTemplateForm({
                 canEdit={canEdit}
                 registerFn={register}
               />
+
+              {/* Lien vers dervichediffusion.com — S186 + migration 112 */}
+              {supportsDervicheSiteLink && (
+                <OptionalLinkToggle
+                  templateKey={template.template_key}
+                  label="Lien vers la page dervichediffusion.com"
+                  description="Affiché uniquement si l'URL marketing est renseignée sur le spectacle"
+                  showFieldName="show_derviche_site_link"
+                  textFieldName="derviche_site_link_text"
+                  placeholder="Ex: Voir la fiche spectacle sur dervichediffusion.com"
+                  isVisible={showDervicheSiteLink}
+                  onToggle={(checked) =>
+                    setValue('show_derviche_site_link', checked, { shouldDirty: true })
+                  }
+                  canEdit={canEdit}
+                  registerFn={register}
+                />
+              )}
             </div>
           </>
         )}

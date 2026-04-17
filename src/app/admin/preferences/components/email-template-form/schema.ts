@@ -32,8 +32,9 @@ export const templateFormSchema = z.object({
   // Dossier photo (S170)
   show_photo_folder_link: z.boolean(),
   photo_folder_link_text: z.string().max(200),
-  // CTA dervichediffusion.com — toggle uniquement (libellé = cta_text)
+  // CTA dervichediffusion.com — toggle + libellé custom pour post-checkin (migration 112)
   show_derviche_site_link: z.boolean(),
+  derviche_site_link_text: z.string().max(200),
   // Bloc « Gérer ma réservation »
   show_manage_reservation_link: z.boolean(),
   manage_reservation_link_text: z.string().max(200),
