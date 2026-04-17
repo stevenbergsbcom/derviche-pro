@@ -63,6 +63,7 @@ export const QUICK_LINKS: QuickLinkItem[] = [
     icon: Calendar,
     title: 'Check-in',
     description: 'Accueil des invités',
+    openInNewTab: true,
   },
   {
     href: '/admin/preferences',

@@ -25,6 +25,8 @@ export interface QuickLinkItem {
   description: string;
   /** Nécessite un accès complet (super-admin/admin) ? */
   requiresFullAccess?: boolean;
+  /** Ouvrir le lien dans un nouvel onglet ? */
+  openInNewTab?: boolean;
 }
 
 // ============================================
