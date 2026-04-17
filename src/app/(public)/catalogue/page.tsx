@@ -179,7 +179,7 @@ export default function CataloguePage() {
           return false;
         }
 
-        // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
+        // Filtre "En tournée uniquement" (exclut les 'coming_soon' et les spectacles sans créneaux)
         if (onlyAvailable) {
           if (spectacle.status === 'coming_soon') return false;
           if (spectacle.status === 'closed') return false;
