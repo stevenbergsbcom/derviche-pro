@@ -64,6 +64,8 @@ export interface PublicShow {
   closureDates: string | null;
   /** Politique d'invitation (ex: "1 invitation + détaxe, sur réservation") */
   invitationPolicy: string | null;
+  /** URL du teaser vidéo (YouTube ou Vimeo). Null si non renseigné. */
+  teaserUrl: string | null;
   /** Responsable Derviche — prénom + nom + tél + email */
   dervisheManager: {
     firstName: string;

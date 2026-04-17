@@ -9,6 +9,7 @@ import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import type { PublicShow } from '@/lib/services/public-catalog';
 
 import { ImagePlaceholder } from './image-placeholder';
+import { TeaserButtonWithDialog } from './teaser-dialog';
 
 // ============================================
 // PROPS
@@ -83,10 +84,24 @@ export function ShowDetailSidebar({
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        <div className="absolute bottom-4 left-4 right-4">
+        <div
+          className={`absolute bottom-4 left-4 right-4 ${
+            show.teaserUrl ? 'pr-36 sm:pr-44' : ''
+          }`}
+        >
           <p className="text-white/80 text-sm mb-1">{show.companyName}</p>
           <h1 className="text-2xl md:text-3xl font-bold text-white">{show.title}</h1>
         </div>
+
+        {/* Bouton teaser vidéo — overlay bas-droite (réserve d'espace via pr-* sur le titre) */}
+        {show.teaserUrl && (
+          <div className="absolute bottom-4 right-4 z-20">
+            <TeaserButtonWithDialog
+              teaserUrl={show.teaserUrl}
+              showTitle={show.title}
+            />
+          </div>
+        )}
       </div>
 
       {/* Infos sous l'image */}
