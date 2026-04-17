@@ -22,7 +22,8 @@ const serverEnvSchema = z.object({
         .string()
         .min(1, 'SUPABASE_SERVICE_ROLE_KEY est requis pour les opérations admin'),
     // Google Calendar (optionnelles — absentes si l'intégration est désactivée)
-    GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().email().optional(),
+    // Zod v4 : validateurs top-level (z.string().email() supprimé)
+    GOOGLE_SERVICE_ACCOUNT_EMAIL: z.email().optional(),
     GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().min(1).optional(),
     GOOGLE_CALENDAR_ID: z.string().min(1).optional(),
 });

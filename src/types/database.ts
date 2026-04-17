@@ -385,6 +385,9 @@ export interface ShowRow {
   photo_folder_url: string | null;
   // Page marketing externe (dervichediffusion.com)
   derviche_site_url: string | null;
+  // Migration 111 — Classement éditorial
+  is_featured: boolean;
+  display_order: number | null;
   // Champs système
   deleted_at: string | null;
   created_at: string;
@@ -419,6 +422,9 @@ export interface ShowInsert {
   photo_folder_url?: string | null;
   // Page marketing externe
   derviche_site_url?: string | null;
+  // Migration 111 — Classement éditorial
+  is_featured?: boolean;
+  display_order?: number | null;
 }
 
 /** Données pour mettre à jour un spectacle */
@@ -449,6 +455,9 @@ export interface ShowUpdate {
   photo_folder_url?: string | null;
   // Page marketing externe
   derviche_site_url?: string | null;
+  // Migration 111 — Classement éditorial
+  is_featured?: boolean;
+  display_order?: number | null;
   // Champs système
   deleted_at?: string | null;
 }

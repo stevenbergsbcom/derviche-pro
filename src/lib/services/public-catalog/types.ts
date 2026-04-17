@@ -74,6 +74,15 @@ export interface PublicShow {
   teaserUrl: string | null;
   /** URL de la page marketing sur dervichediffusion.com. Null si non renseigné. */
   dervisheSiteUrl: string | null;
+  /**
+   * Migration 111 — Classement éditorial
+   * `isFeatured` : si true, le spectacle apparaît dans le slider hero de la
+   * page d'accueil.
+   * `displayOrder` : ordre éditorial (asc, NULL = fin de liste). Pilote le tri
+   * catalogue public et l'ordre interne du carousel homepage.
+   */
+  isFeatured: boolean;
+  displayOrder: number | null;
   /** Responsable Derviche — prénom + nom + tél + email */
   dervisheManager: {
     firstName: string;

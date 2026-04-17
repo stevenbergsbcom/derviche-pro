@@ -61,6 +61,11 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
   const { shows: publicShows, isLoading, error, refresh } = usePublicCatalog();
 
   // Transformer les PublicShow en Spectacle (disponibles en premier, comme le catalogue)
+  //
+  // Tri :
+  //  1. par statut (available → coming_soon → closed, closed exclus)
+  //  2. par display_order asc (migration 111, null = fin de liste)
+  //  3. par titre en tie-break
   const spectacles = useMemo(() => {
     const statusOrder: Record<SpectacleStatus, number> = {
       available: 0,
@@ -70,15 +75,31 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
     return publicShows
       .map(transformShowToSpectacle)
       .filter((s) => s.status !== 'closed')
-      .sort(
-        (a, b) =>
-          (statusOrder[a.status ?? 'closed'] ?? 2) - (statusOrder[b.status ?? 'closed'] ?? 2)
-      );
+      .sort((a, b) => {
+        const statusDiff =
+          (statusOrder[a.status ?? 'closed'] ?? 2) -
+          (statusOrder[b.status ?? 'closed'] ?? 2);
+        if (statusDiff !== 0) return statusDiff;
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.title.localeCompare(b.title, 'fr');
+      });
   }, [publicShows]);
 
-  // Spectacles avec image pour le Hero Slider
-  const spectaclesWithImage = useMemo(() => {
-    return spectacles.filter((s) => s.image && !s.image.includes('placeholder'));
+  // Spectacles vedette pour le Hero Slider (migration 111).
+  // Trié par display_order puis titre. Filtré aussi sur présence d'image
+  // (HeroSection ne sait rien afficher sans image de background).
+  // Si la liste est vide → HeroSection masqué entièrement plus bas.
+  const featuredSpectacles = useMemo(() => {
+    return spectacles
+      .filter((s) => s.isFeatured && s.image && !s.image.includes('placeholder'))
+      .sort((a, b) => {
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.title.localeCompare(b.title, 'fr');
+      });
   }, [spectacles]);
 
   // Fix d'hydratation
@@ -134,14 +155,20 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
     <div className="min-h-screen bg-background scroll-smooth">
       <Header />
 
-      <HeroSection hero={homepage_hero} spectaclesWithImage={spectaclesWithImage} />
+      {/* HeroSection : toujours affichée (titre / description / CTAs).
+          Seul le slider d'images interne est masqué si aucun spectacle
+          « en vedette » sélectionné (cf. /admin/preferences?tab=classement).
+          Le masquage du slider est géré à l'intérieur de HeroSection. */}
+      <HeroSection hero={homepage_hero} spectaclesWithImage={featuredSpectacles} />
 
-      <AvantagesSection avantages={homepage_avantages} />
-
+      {/* Spectacles (bg-muted) avant Avantages (bg-white) pour alterner proprement
+          avec Impact (bg-muted) et Contact (bg-white) qui suivent. */}
       <SpectaclesSection
         spectaclesSettings={homepage_spectacles}
         spectacles={spectacles}
       />
+
+      <AvantagesSection avantages={homepage_avantages} />
 
       <ImpactSection impact={homepage_impact} />
 

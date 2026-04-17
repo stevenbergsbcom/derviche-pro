@@ -199,7 +199,17 @@ export default function CataloguePage() {
 
         return true;
       })
-      .sort((a, b) => (statusOrder[a.status ?? 'closed'] ?? 2) - (statusOrder[b.status ?? 'closed'] ?? 2));
+      .sort((a, b) => {
+        // Tri : statut → display_order (migration 111) → titre
+        const statusDiff =
+          (statusOrder[a.status ?? 'closed'] ?? 2) -
+          (statusOrder[b.status ?? 'closed'] ?? 2);
+        if (statusDiff !== 0) return statusDiff;
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        return a.title.localeCompare(b.title, 'fr');
+      });
   }, [spectacles, genreFilter, moisFilter, lieuFilter, villeFilter, onlyAvailable, searchQuery]);
 
   // Attendre que le composant soit monté pour éviter les erreurs d'hydratation

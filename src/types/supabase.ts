@@ -749,6 +749,8 @@ export type Database = {
           teaser_url: string | null
           photo_folder_url: string | null
           derviche_site_url: string | null
+          is_featured: boolean
+          display_order: number | null
           title: string
           updated_at: string
         }
@@ -778,6 +780,8 @@ export type Database = {
           teaser_url?: string | null
           photo_folder_url?: string | null
           derviche_site_url?: string | null
+          is_featured?: boolean
+          display_order?: number | null
           title: string
           updated_at?: string
         }
@@ -807,6 +811,8 @@ export type Database = {
           teaser_url?: string | null
           photo_folder_url?: string | null
           derviche_site_url?: string | null
+          is_featured?: boolean
+          display_order?: number | null
           title?: string
           updated_at?: string
         }
