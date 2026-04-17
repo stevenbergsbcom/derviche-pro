@@ -1,0 +1,75 @@
+---
+title: Un pro ne reçoit pas son email — que faire ?
+slug: faq/email-non-recu
+category: faq
+categoryLabel: FAQ & dépannage
+categoryIcon: HelpCircle
+keywords: [email, non reçu, spam, resend, échec, problème, bounce, adresse incorrecte]
+roles: [super-admin, admin, externe]
+order: 1
+---
+
+Un professionnel signale ne pas avoir reçu son email de confirmation ou de rappel. Voici la démarche de diagnostic.
+
+## 1. Vérifier l'adresse email
+
+1. Ouvrez la réservation en édition.
+2. Vérifiez l'**adresse email** : faute de frappe courante (accent, lettre oubliée, domaine mal tapé).
+3. Si l'adresse est fausse : corrigez-la, puis **renvoyez manuellement** l'email depuis le panneau (bouton « Renvoyer confirmation »).
+
+## 2. Vérifier le dossier spam du pro
+
+Certains emails transactionnels finissent dans les spams, surtout à la **première réception** depuis Derviche.
+
+Demandez au pro de :
+- Vérifier son dossier **Spam** / **Courrier indésirable** / **Promotions** (Gmail)
+- Ajouter **`noreply@dervichediffusion.com`** (ou l'adresse d'expédition configurée) à ses contacts
+- Marquer l'email précédent comme « Non spam » si trouvé
+
+## 3. Consulter les logs (super-admin)
+
+Ouvrez **Système → Logs** puis filtrez :
+- Catégorie : **Email**
+- Recherche : l'email du pro ou le code de réservation
+
+Trois cas possibles :
+
+### a) Aucun log d'envoi
+L'email n'a **jamais été envoyé**. Cause probable :
+- Case « Envoyer l'email » décochée lors de la création
+- Erreur silencieuse au moment de la création
+
+→ Solution : renvoi manuel depuis le panneau d'édition de la réservation.
+
+### b) Log d'envoi avec statut « Success »
+L'email est parti avec succès depuis la plateforme. Il est **quelque part** :
+- Spam du pro
+- Boîte secondaire
+- Rejeté par le serveur destinataire (voir c)
+
+### c) Log d'envoi avec statut « Error » ou « Bounce »
+L'email a été **refusé par le serveur du pro** :
+- **Bounce hard** : adresse inexistante → corrigez l'adresse
+- **Bounce soft** : boîte pleine / serveur temporairement indisponible → renvoyez plus tard
+- **Rate limit** : vous avez dépassé la limite d'envoi → voir point 4
+
+## 4. Vérifier le quota Resend
+
+Dans **Système**, le widget **Quota Resend** montre la consommation mensuelle. Si le quota est atteint :
+- Les nouveaux envois échouent avec un code 429
+- Un super-admin doit augmenter le plan Resend ou attendre le renouvellement
+
+## 5. Renvoyer manuellement
+
+Depuis le panneau d'édition d'une réservation (admin web), bouton **« Renvoyer la confirmation »** ou **« Renvoyer les rappels »** (selon le type d'email initial).
+
+Pour les **emails post-accueil**, voir [Envoyer les emails post-accueil](/admin/aide/checkin-pwa/emails-post-accueil).
+
+<Callout type="warning">
+**Anti-doublon** : certains emails (notamment post-accueil) sont protégés contre les double-envois. Un renvoi est bloqué si le même email a déjà été envoyé.
+</Callout>
+
+## Pour aller plus loin
+
+- [Les emails envoyés automatiquement](/admin/aide/emails/vue-ensemble)
+- [Consulter les logs système](/admin/aide/systeme/vue-ensemble) (V2)

@@ -1,0 +1,59 @@
+---
+title: Modifier ou annuler une réservation
+slug: reservations/modifier-annuler
+category: reservations
+categoryLabel: Réservations
+categoryIcon: Calendar
+keywords: [modifier, annuler, édition, éditer, suppression, changement, résa, reservation]
+roles: [super-admin, admin, externe]
+order: 3
+---
+
+## Modifier une réservation
+
+1. Dans la liste Réservations, cliquez sur l'**icône crayon** d'une ligne.
+2. Un panneau latéral s'ouvre avec toutes les informations.
+
+Vous pouvez modifier :
+
+- **Informations du professionnel** : nom, email, téléphone, structure
+- **Nombre de places**
+- **Notes internes Derviche** (jamais visibles par le pro ni la compagnie)
+- **Demandes spéciales** (visibles PWA / admin / compagnie)
+- **Statut check-in** (présent / absent / coup de cœur / presse)
+
+Cliquez **« Enregistrer »**. Un toast confirme la sauvegarde.
+
+<Callout type="info">
+**Pas d'envoi d'email automatique** pour une simple modification de données du pro. Si vous changez de **créneau**, voir [Transférer une réservation](/admin/aide/reservations/transferer) qui déclenche un email dédié.
+</Callout>
+
+## Annuler une réservation
+
+1. Dans la liste, cliquez sur l'**icône d'annulation** (croix rouge) — ou depuis le panneau d'édition, bouton « Annuler la réservation ».
+2. Une boîte de dialogue demande confirmation.
+
+Options disponibles :
+
+- **Motif d'annulation** (optionnel, libre) — stocké pour l'historique
+- **Envoyer un email d'annulation au pro ?** — case cochée par défaut
+- **Supprimer l'événement Google Calendar ?** — case cochée par défaut (si un événement existe)
+
+Cliquez **« Confirmer l'annulation »**.
+
+<Callout type="warning">
+L'annulation met la réservation au statut « Annulée » mais **ne la supprime pas** de la base. Elle reste visible dans l'historique du pro et des stats (avec son motif).
+</Callout>
+
+## Réactiver une réservation annulée
+
+Actuellement, il n'existe pas de bouton « Réactiver ». Deux options :
+
+1. Créer une **nouvelle réservation** pour le même pro/créneau (si places disponibles)
+2. Demander à un <RoleBadge role="super-admin" /> de modifier le statut directement en base (rare)
+
+## Pour aller plus loin
+
+- [Transférer une réservation](/admin/aide/reservations/transferer)
+- [Exporter les réservations](/admin/aide/reservations/exporter)
+- [Un pro ne reçoit pas son email](/admin/aide/faq/email-non-recu)

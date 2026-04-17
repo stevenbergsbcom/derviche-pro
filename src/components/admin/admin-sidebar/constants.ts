@@ -13,6 +13,7 @@ import {
   UserCheck,
   ServerCog,
   BarChart3,
+  HelpCircle,
 } from 'lucide-react';
 import type { InternalRole } from '@/types/database';
 import type { AdminNavItem } from './types';
@@ -97,6 +98,13 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     icon: ServerCog,
     tooltip: 'Logs & monitoring',
     allowedRoles: ['super-admin'], // Visible uniquement pour super-admin
+  },
+  {
+    label: 'Aide',
+    href: '/admin/aide',
+    icon: HelpCircle,
+    tooltip: 'Documentation utilisateur',
+    // Visible par tous les rôles internes (admin + super-admin + externe)
   },
 ];
 

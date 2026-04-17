@@ -1,0 +1,66 @@
+---
+title: La cloche de notifications admin
+slug: notifications/cloche
+category: notifications
+categoryLabel: Notifications
+categoryIcon: HelpCircle
+keywords: [cloche, notifications, alertes, badge, non lues, réservation, nouveauté]
+roles: [super-admin, admin]
+order: 1
+---
+
+La **cloche** en haut à droite du header admin affiche les événements importants en temps réel : nouvelles réservations, annulations, modifications.
+
+## L'icône cloche
+
+- **🔔 Cloche vide** : aucune notification non lue
+- **🔔 + badge rouge** : X notifications non lues (le chiffre affiche le count)
+
+Cliquez la cloche → un **panneau latéral** s'ouvre avec la liste paginée.
+
+## Les types d'événements notifiés
+
+Selon la configuration (Préférences → Notifications, super-admin) :
+
+- **Nouvelle réservation** (publique ou admin)
+- **Annulation de réservation**
+- **Modification de créneau** (transfert)
+- **Nouveau professionnel créé**
+- **Nouveau spectacle créé ou publié**
+- **Alerte seuil de capacité** (ex. créneau à 90 %)
+- **Erreur Google Calendar** (sync cassée)
+- **Alerte quota Resend** (à 80 % du quota)
+
+## Agir sur une notification
+
+Chaque notification a un **bouton d'action** contextuel :
+
+- Réservation → navigue vers la résa en édition (ouvre le panneau)
+- Créneau → navigue vers le spectacle / représentation
+- Erreur → ouvre la page Système
+- Pro → ouvre la fiche du pro
+
+## Marquer comme lue
+
+- Clic sur la notification → automatiquement marquée comme lue
+- **Bouton « Tout marquer lu »** en haut du panneau
+- **Bouton « Supprimer »** sur chaque ligne pour l'effacer définitivement
+
+## Emails d'alerte parallèles
+
+Indépendamment de la cloche, certains événements peuvent déclencher **un email** aux adresses configurées dans Préférences → Notifications. Cela permet à une équipe non connectée en permanence d'être au courant.
+
+## Pourquoi je ne reçois pas de notifications ?
+
+1. **Vérifier le rôle** : seuls <RoleBadge role="super-admin" /> et <RoleBadge role="admin" /> voient la cloche.
+2. **Vérifier la configuration** : un super-admin doit avoir activé les types d'événements dans Préférences → Notifications.
+3. **Vérifier que vous êtes dans la liste des destinataires** (pour les emails parallèles).
+
+<Callout type="tip">
+**Ne laissez pas la cloche s'accumuler** : des dizaines de notifications non lues rendent les vraies urgences invisibles. Passez 30 secondes par jour à les trier.
+</Callout>
+
+## Pour aller plus loin
+
+- [Les emails envoyés automatiquement](/admin/aide/emails/vue-ensemble)
+- [Configurer les notifications](/admin/aide/preferences/vue-ensemble) (V2)

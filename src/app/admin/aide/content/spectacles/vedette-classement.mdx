@@ -1,0 +1,68 @@
+---
+title: Mettre en vedette et ordonner les spectacles
+slug: spectacles/vedette-classement
+category: spectacles
+categoryLabel: Spectacles
+categoryIcon: Star
+keywords: [vedette, classement, mise en avant, featured, ordre, priorité, drag, drop, carousel, hero, slider]
+roles: [super-admin]
+order: 3
+---
+
+Derviche peut piloter **quels spectacles mettre en avant** sur la page d'accueil publique et **dans quel ordre** afficher le catalogue.
+
+Cette fonction est accessible via **Préférences → Classement** (super-admin uniquement).
+
+## Les 2 zones de classement
+
+### Zone 1 — Spectacles en vedette (slider hero)
+
+Petite liste drag&drop des spectacles qui apparaissent dans le **slider d'images** en haut de la page d'accueil publique.
+
+- **Ajouter un spectacle en vedette** : bouton « + Ajouter », popover de sélection avec recherche
+- **Réordonner** : drag & drop vertical
+- **Retirer** : croix à droite de chaque ligne
+
+**Comportement public** :
+- Si **aucun** spectacle n'est en vedette → le slider est **masqué** (le reste du hero reste visible)
+- Si **plusieurs** → les spectacles défilent automatiquement toutes les 5 secondes
+
+<Callout type="tip">
+Le slider n'est visible **qu'en desktop / tablette** (≥ 768px). Sur mobile, seuls le titre et les CTAs du hero s'affichent — inutile de s'inquiéter du format mobile de vos vedettes.
+</Callout>
+
+### Zone 2 — Ordre global (catalogue + carousel home)
+
+Liste drag&drop de **tous les spectacles** non supprimés. Définit l'ordre d'affichage :
+
+- Dans le **catalogue public** (`/catalogue`) — appliqué **après** le tri par statut (disponibles d'abord)
+- Dans le **carousel « Spectacles à découvrir »** de la page d'accueil
+
+**Filtres pour s'y retrouver** :
+- **Recherche** par titre / compagnie
+- **Filtre statut** : Tous / Publié / Brouillon / Archivé
+
+**Drag désactivé pendant un filtre actif** — un bandeau ambre vous le rappelle. Effacez le filtre pour réordonner.
+
+**Alternative au drag&drop** : champ **Rang** numérique sur chaque ligne, éditable au clavier. Plus petit = plus haut.
+
+### Tie-break
+
+Si deux spectacles ont le même rang (ou n'en ont aucun), le tri se fait **par titre alphabétique**.
+
+## Réinitialiser l'ordre
+
+Bouton **« Réinitialiser l'ordre »** en bas de la zone 2 → tous les rangs passent à vide, le tri redevient alphabétique pur.
+
+## Sauvegarde automatique
+
+**Chaque action est enregistrée immédiatement** (pas de bouton « Enregistrer »). Un toast de confirmation apparaît à chaque drop / blur / toggle vedette. En cas d'erreur, l'action est annulée et un toast rouge s'affiche.
+
+<Callout type="info">
+Les <RoleBadge role="admin" /> ne voient pas cet onglet. Seul un <RoleBadge role="super-admin" /> peut modifier le classement.
+</Callout>
+
+## Pour aller plus loin
+
+- [Créer un spectacle](/admin/aide/spectacles/creer-publier)
+- [Enrichir la fiche](/admin/aide/spectacles/enrichir)

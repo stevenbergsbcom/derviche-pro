@@ -1,0 +1,68 @@
+---
+title: Envoyer les emails post-accueil
+slug: checkin-pwa/emails-post-accueil
+category: checkin-pwa
+categoryLabel: Check-in sur place
+categoryIcon: CheckSquare
+keywords: [email, post-accueil, remerciement, coup de cœur, presse, absent, suivi, mention, merci]
+roles: [super-admin, admin, externe]
+order: 5
+---
+
+Après un spectacle, vous pouvez envoyer des emails personnalisés aux pros en fonction de leur statut de check-in — merci, coup de cœur, couverture presse, suivi d'absence.
+
+## Les 4 types d'email post-accueil
+
+- **Merci présence** (`checkin_thank_you`) — standard pour les présents
+- **Coup de cœur** (`checkin_loved`) — version chaleureuse pour les pros qui ont adoré
+- **Presse** (`checkin_press`) — remerciement spécifique journalistes / critiques
+- **Absent** (`checkin_followup_absent`) — suivi si le pro n'est pas venu, avec proposition de prochains créneaux
+
+Les 4 templates sont **éditables** depuis **Préférences → Templates** (super-admin) — chacun avec sujet, corps et liens optionnels personnalisables.
+
+## Envoyer depuis l'app check-in
+
+1. Ouvrez le créneau (écran 3).
+2. **Tapez sur la ligne du pro** → un panneau latéral s'ouvre.
+3. Section **« Emails post-accueil »**, 4 boutons :
+   - Merci présence
+   - Coup de cœur
+   - Presse
+   - Absent
+4. Cliquez le bouton adapté → le template correspondant est envoyé **immédiatement**.
+
+<Callout type="info">
+Le bouton est **grisé** si aucun email de destination n'est disponible (ex. walk-in sans email saisi).
+</Callout>
+
+## Anti-doublon
+
+Chaque template ne peut être envoyé **qu'une seule fois par réservation + type**. Si vous cliquez deux fois, le deuxième envoi est ignoré (et un message « Déjà envoyé le JJ/MM à HHhMM » apparaît).
+
+Si besoin de renvoyer, un super-admin peut nettoyer l'entrée dans la table `checkin_followup_emails` — mais cette action est rare.
+
+## Envoyer depuis l'admin web (édition réservation)
+
+Les mêmes 4 boutons sont accessibles dans le panneau d'édition d'une réservation (`/admin/reservations`), section **Emails post-accueil**.
+
+## Liens inclus automatiquement
+
+Chaque template peut afficher (si le toggle est activé sur le template ET que l'URL correspondante est renseignée sur le spectacle) :
+
+- 📂 **Dossier de presse**
+- 🎬 **Teaser vidéo**
+- 🎥 **Captation**
+- 🎭 **Lien de réservation** (vers la fiche publique)
+- 📷 **Dossier photo**
+- 🌐 **Page dervichediffusion.com** (libellé personnalisable par template)
+
+Voir [Enrichir la fiche spectacle](/admin/aide/spectacles/enrichir) pour remplir ces URLs.
+
+<Callout type="tip">
+Les emails post-accueil sont **le bon moment** pour relancer les pros « coup de cœur » vers d'autres spectacles de votre catalogue — ajustez les liens dans le template pour pointer vers la page vitrine.
+</Callout>
+
+## Pour aller plus loin
+
+- [Personnaliser un template email](/admin/aide/preferences/vue-ensemble) (V2)
+- [Un pro ne reçoit pas son email](/admin/aide/faq/email-non-recu)

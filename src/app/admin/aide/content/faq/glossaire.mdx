@@ -1,0 +1,78 @@
+---
+title: Glossaire — les termes à connaître
+slug: faq/glossaire
+category: faq
+categoryLabel: FAQ & dépannage
+categoryIcon: HelpCircle
+keywords: [glossaire, lexique, vocabulaire, définitions, termes, walk-in, hosted_by, vedette]
+roles: [super-admin, admin, externe]
+order: 5
+---
+
+Liste des termes spécifiques à la plateforme, par ordre alphabétique.
+
+## Admin
+Rôle interne de l'équipe Derviche avec accès à la gestion opérationnelle (réservations, spectacles, créneaux, lieux, compagnies, professionnels, statistiques). N'a pas accès aux préférences, aux utilisateurs internes ni au système.
+
+## Classement éditorial
+Mécanisme par lequel Derviche pilote **quels spectacles mettre en vedette** sur la home et **dans quel ordre** afficher le catalogue. Deux zones : vedette (slider hero) + ordre global (catalogue). Voir [Mettre en vedette](/admin/aide/spectacles/vedette-classement).
+
+## Company
+Rôle externe utilisé par les **compagnies artistiques** pour consulter les statistiques de leurs spectacles. Peut faire le check-in si le créneau est marqué `hosted_by = 'company'`.
+
+## Créneau (slot)
+Synonyme de **représentation**. Une date + heure + lieu + capacité d'un spectacle. Un spectacle a plusieurs créneaux (série de tournée).
+
+## Externe
+Rôle interne pour les collaborateurs ponctuels (accueil, techniciens). Accès **uniquement** à l'app check-in PWA, sur les spectacles qui leur sont **assignés**.
+
+## Guest / Réservation invitée
+Réservation créée **sans compte pro associé**. Le pro donne juste nom + email. Créée par un admin en walk-in ou par le pro lui-même en réservation publique sans inscription.
+
+## Hosted by (accueil assuré par)
+Indique **qui assure l'accueil** d'un créneau :
+- **Derviche** : l'équipe Derviche (admin ou externe assigné)
+- **Company** : la compagnie elle-même
+- **Externe** : un externe spécifique assigné au spectacle
+
+Détermine qui a accès à la PWA pour ce créneau précis.
+
+## Invitation policy
+Texte libre affiché sur la fiche publique d'un spectacle, dans le bloc « Pour les professionnels ». Explique aux pros les conditions d'invitation (ex. « 2 places offertes par structure »).
+
+## Professionnel
+Les responsables de salles de théâtre qui réservent vos spectacles. Rôle `professional` en base.
+
+## PWA
+*Progressive Web App*. L'app mobile `/accueil` qui s'installe sur téléphone/tablette sans passer par l'App Store. Utilisée pour le check-in sur place. Voir [Installer l'app](/admin/aide/checkin-pwa/installer).
+
+## Rappels (J-7, J-2, H-4)
+Emails automatiques envoyés aux pros **avant** leur spectacle :
+- **J-7** : 7 jours avant (rappel large)
+- **J-2** : 2 jours avant (confirmation engagement)
+- **H-4** : 4 heures avant (info pratique imminente)
+
+Configurables dans Préférences → Rappels (super-admin).
+
+## Simple style
+Flag technique sur un template email indiquant qu'il utilise le **style sobre** (fond blanc, texte noir, pas de CTA flashy). Utilisé pour les 4 templates post-checkin.
+
+## Super-admin
+Rôle interne avec accès **complet** : tout ce qu'un admin peut faire, plus préférences, utilisateurs internes, système.
+
+## Template email
+Un modèle d'email éditable (sujet + corps + options) qui est envoyé automatiquement lors d'événements (réservation, rappel, check-in). 12 templates en tout. Accessibles dans **Préférences → Templates**.
+
+## Vedette (featured)
+Un spectacle marqué `is_featured = true` via l'onglet **Classement**. Il apparaît dans le slider hero de la page d'accueil publique. Maximum ~10 pour ne pas diluer l'attention.
+
+## Walk-in
+Une réservation créée **sur place le jour J**, sans réservation préalable. Créée via le bouton flottant gold dans la PWA check-in.
+
+## Workflow rappels (cron)
+Les emails de rappel (J-7, J-2, H-4) sont envoyés par un **cron job** (GitHub Actions) qui tourne plusieurs fois par jour et déclenche les envois au bon moment selon l'heure configurée.
+
+## Pour aller plus loin
+
+- [Bienvenue](/admin/aide/101/bienvenue) (page 101)
+- [Les rôles et qui fait quoi](/admin/aide/101/roles)

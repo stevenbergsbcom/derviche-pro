@@ -1,0 +1,54 @@
+---
+title: Transférer une réservation vers un autre créneau
+slug: reservations/transferer
+category: reservations
+categoryLabel: Réservations
+categoryIcon: Calendar
+keywords: [transférer, transfert, changer, créneau, date, reporter, déplacer]
+roles: [super-admin, admin, externe]
+order: 4
+---
+
+Un professionnel ne peut plus venir à la date initialement prévue ? Transférez sa réservation vers un autre créneau **sans la recréer**.
+
+## Depuis la liste des réservations
+
+1. Ouvrez la réservation (icône crayon).
+2. Dans le panneau d'édition, section **Créneau**, cliquez **« Changer de créneau »**.
+3. Un drawer s'ouvre avec la liste des créneaux disponibles du **même spectacle** (uniquement futurs, avec places restantes).
+4. Sélectionnez le nouveau créneau.
+5. Options :
+   - **Envoyer un email de modification au pro ?** (coché par défaut)
+   - **Mettre à jour l'événement Google Calendar ?** (coché par défaut)
+6. Cliquez **« Confirmer le transfert »**.
+
+## Depuis l'app check-in PWA
+
+Dans la liste des réservations d'un créneau, icône **flèche de transfert** sur la ligne → même drawer.
+
+## Ce qui se passe
+
+- La réservation reste **la même entité** (code de réservation inchangé)
+- Elle est déplacée sur le nouveau créneau
+- L'**ancien créneau retrouve ses places** (décompte automatique)
+- Le nouveau créneau **consomme les places** (vérif capacité)
+- Un **email « Modification de votre réservation »** est envoyé au pro (si case cochée)
+- Google Calendar : l'ancien événement est **modifié** (pas supprimé/recréé)
+
+<Callout type="warning">
+Le transfert est uniquement possible **au sein du même spectacle**. Pour changer de spectacle, il faut annuler l'ancienne résa et en créer une nouvelle.
+</Callout>
+
+<Callout type="tip">
+Si vous devez **transférer plusieurs réservations d'un coup** (ex. un créneau annulé), filtrez la liste par créneau, puis utilisez l'action par ligne une par une. Un batch n'est pas disponible en V1.
+</Callout>
+
+## Cas particuliers
+
+- **Si le nouveau créneau est complet** : le transfert est refusé avec un message d'erreur. Libérez d'abord une place.
+- **Si vous êtes <RoleBadge role="externe" />** : vous ne pouvez transférer que vers des créneaux de spectacles auxquels vous êtes assigné.
+
+## Pour aller plus loin
+
+- [Annuler un spectacle entier](/admin/aide/faq/annulation-spectacle)
+- [Gérer un surbooking](/admin/aide/faq/surbooking)

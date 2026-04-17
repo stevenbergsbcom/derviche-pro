@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-**Derviche Diffusion** est une plateforme professionnelle de réservation pour le spectacle vivant. Elle permet aux programmateurs (directeurs de salles) de découvrir et réserver des spectacles, aux administrateurs de gérer la programmation, et aux compagnies de consulter leurs statistiques de fréquentation.
+**Derviche Diffusion** est une plateforme professionnelle de réservation pour le spectacle vivant. Elle permet aux professionnels (directeurs de salles) de découvrir et réserver des spectacles, aux administrateurs de gérer la programmation, et aux compagnies de consulter leurs statistiques de fréquentation.
 
 ### Stack technique
 - **Framework** : Next.js 16 (App Router + Turbopack)
@@ -297,7 +297,7 @@ export function useAdminReservations(pageSize = 50) {
 ## Workflows principaux
 
 ### Réservation publique
-1. Programmateur consulte catalogue (`/spectacle/[slug]`)
+1. Professionnel consulte catalogue (`/spectacle/[slug]`)
 2. Sélectionne un créneau disponible
 3. Remplit formulaire (guest ou connecté)
 4. Confirmation + email
@@ -314,3 +314,41 @@ export function useAdminReservations(pageSize = 50) {
 2. Ajout créneaux (représentations)
 3. Publication (status = published)
 4. Suivi réservations + export Excel/CSV
+
+---
+
+## 📚 Documentation utilisateur — Règle absolue
+
+**Avant tout merge sur `main`** qui touche à une fonctionnalité visible pour les utilisateurs admin, super-admin, externe ou company (ou toute zone publique impactée), la documentation correspondante dans `src/app/admin/aide/content/` doit être **mise à jour ou créée**.
+
+### Critère de déclenchement
+
+Si le commit modifie un fichier dans l'un de ces dossiers :
+- `src/app/admin/**`
+- `src/app/accueil/**`
+- `src/app/(public)/**` (si comportement visible)
+- `src/components/admin/**`
+- `src/components/accueil/**`
+
+→ vérifier que le ou les articles MDX correspondants sont à jour (titre, contenu, keywords du frontmatter).
+
+### Checklist obligatoire avant merge main
+
+- [ ] L'article MDX impacté a été mis à jour dans le même commit/PR
+- [ ] Les `keywords` du frontmatter couvrent les nouveaux termes de la feature
+- [ ] Si nouvelle fonctionnalité : **nouvel article créé** + lien dans la sidebar via `category` + `order`
+- [ ] L'index de recherche `public/help-index.json` sera régénéré au build (automatique via `prebuild`)
+- [ ] Les liens internes entre articles (`[…](/admin/aide/…)`) restent valides
+
+### Exemple
+
+Session qui ajoute un toggle sur un template email → mettre à jour :
+- `content/emails/vue-ensemble.mdx` (liste des options visibles)
+- `content/preferences/templates.mdx` si édition concernée (V2)
+- Potentiellement `content/checkin-pwa/emails-post-accueil.mdx` si impact utilisateur final
+
+### Pour localiser les articles à toucher
+
+- Rechercher des mots-clés dans `src/app/admin/aide/content/` avec votre éditeur
+- Consulter la sidebar en live (`/admin/aide`) pour voir où se placerait le nouvel article
+- En cas de doute, privilégier la mise à jour plutôt que l'omission

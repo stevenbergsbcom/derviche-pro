@@ -1,0 +1,68 @@
+---
+title: Retrouver une ancienne réservation
+slug: faq/retrouver-ancienne-reservation
+category: faq
+categoryLabel: FAQ & dépannage
+categoryIcon: HelpCircle
+keywords: [retrouver, ancienne, archive, historique, passée, chercher, filtrer]
+roles: [super-admin, admin, externe]
+order: 4
+---
+
+Vous cherchez une réservation d'il y a 2 mois, 6 mois, 2 ans ? Plusieurs méthodes selon ce que vous savez.
+
+## 1. Par nom ou email du pro
+
+Dans **Réservations**, utilisez la **barre de recherche** en haut :
+- Tapez le nom, prénom, email ou téléphone du pro
+- La recherche s'applique à **toutes** les réservations, passées comme à venir
+- Si rien n'apparaît, élargissez le filtre **Période** à « Toutes » ou « Saison »
+
+## 2. Par code de réservation
+
+Chaque réservation a un **code unique** (format `DD-XXYYZZ`) affiché dans les emails et sur la confirmation.
+
+Si vous avez le code :
+- Collez-le dans la barre de recherche de la page Réservations
+- Le système le reconnaît et filtre la liste
+
+## 3. Par spectacle / créneau
+
+Si vous savez **quand** :
+1. Ouvrez **Spectacles** → fiche du spectacle.
+2. Cliquez **« Représentations »**.
+3. Sélectionnez le créneau.
+4. Depuis la PWA check-in (`/accueil`), ou bien via le filtre Spectacle + Créneau de la page Réservations.
+
+## 4. Par statut
+
+Si vous cherchez une réservation **annulée** :
+1. Filtre **Statut : Annulée**
+2. Combinez avec la période (À venir / Saison / Toutes)
+
+<Callout type="info">
+Les réservations **annulées** restent en base — elles ne sont jamais supprimées. Elles sont juste masquées par défaut (filtre Statut par défaut sur « Confirmée »).
+</Callout>
+
+## 5. Via le profil du pro
+
+Dans **Professionnels**, ouvrez la fiche d'un pro. L'onglet **Historique** liste **toutes ses réservations passées** (20 dernières, avec bouton pour en charger plus).
+
+Depuis la PWA check-in, la même fonctionnalité est accessible en tapant sur une ligne de réservation → drawer historique.
+
+## 6. Si rien ne marche
+
+<Callout type="warning">
+Si une réservation **n'apparaît nulle part** alors que vous êtes sûr qu'elle a existé, demandez à un super-admin de consulter les **logs système** :
+
+1. **Système → Logs**, catégorie **Reservation**
+2. Filtrez par email ou code
+3. Le log d'origine montrera l'ID et l'état à la création
+
+Parfois, une réservation peut être masquée par une erreur RLS (rare) ou avoir été supprimée manuellement. Les logs sont la source de vérité.
+</Callout>
+
+## Pour aller plus loin
+
+- [Vue d'ensemble des réservations](/admin/aide/reservations/vue-ensemble)
+- [Exporter les réservations](/admin/aide/reservations/exporter)

@@ -1,0 +1,70 @@
+---
+title: Système — logs, quotas, monitoring
+slug: systeme/vue-ensemble
+category: systeme
+categoryLabel: Système
+categoryIcon: FileText
+keywords: [système, logs, journal, quota, resend, rate limiting, monitoring, purge, maintenance]
+roles: [super-admin]
+order: 1
+---
+
+Section **réservée aux <RoleBadge role="super-admin" />**. Centralise la supervision technique : journaux d'événements, quotas de services externes, outils de maintenance.
+
+## Widgets en tête de page
+
+### Quota Resend (emails)
+
+Jauge de consommation mensuelle des envois d'emails :
+- Nombre d'emails envoyés aujourd'hui / cette semaine / ce mois
+- Limite du plan Resend (free = 3000/mois, pro = plus)
+- Alerte visuelle si consommation > 80 %
+
+<Callout type="warning">
+Si le quota est atteint, les nouveaux envois échouent avec un code 429. Pensez à upgrader le plan Resend en amont ou attendre le renouvellement mensuel.
+</Callout>
+
+### Rate limiting
+
+Statistiques des blocages de requêtes (protection anti-spam) :
+- Blocages aujourd'hui
+- Blocages sur 7 jours
+- Badge « Activité suspecte » si > 10/jour
+- Répartition par route (`auth`, `emails`, `reservations`)
+- Dernière IP masquée (anonymisée RGPD)
+
+### Google Calendar (santé)
+
+Dernière synchronisation réussie, erreurs récentes, lien de re-authentification si le token OAuth a expiré.
+
+## Journal des logs
+
+Tableau paginé (50 par page) avec filtres :
+- **Catégorie** : Email / Calendar / Reservation / System / Show
+- **Niveau** : Info / Warning / Error
+- **Status** : Success / Error
+
+Cliquer sur une ligne → drawer avec le contexte détaillé (userId, payload, message d'erreur stack).
+
+Utile pour :
+- [Diagnostiquer un email non reçu](/admin/aide/faq/email-non-recu)
+- Traquer une erreur Calendar
+- Vérifier qu'une action de modification a bien été enregistrée
+
+## Maintenance
+
+- **Purge notifications lues** : bouton pour nettoyer les anciennes notifications admin (évite l'accumulation)
+- **Purge logs anciens** : cron automatique qui supprime les logs > 90 jours
+
+<Callout type="info">
+Les logs **> 90 jours** sont purgés automatiquement par le cron `/api/cron/purge-logs` (nuit). Inutile de le faire à la main.
+</Callout>
+
+## Accès restreint
+
+Seul <RoleBadge role="super-admin" /> voit cet onglet dans la sidebar.
+
+## Pour aller plus loin
+
+- [Un pro ne reçoit pas son email](/admin/aide/faq/email-non-recu) (consultation des logs)
+- [Vue d'ensemble des préférences](/admin/aide/preferences/vue-ensemble) (ajuster rate limits)

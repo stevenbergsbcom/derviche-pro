@@ -1,0 +1,75 @@
+---
+title: Se repérer dans l'app check-in
+slug: checkin-pwa/naviguer
+category: checkin-pwa
+categoryLabel: Check-in sur place
+categoryIcon: CheckSquare
+keywords: [pwa, naviguer, navigation, écrans, pages, accueil, interface, spectacles, représentations, réservations]
+roles: [super-admin, admin, externe]
+order: 2
+---
+
+L'app check-in s'organise en **3 écrans imbriqués** : spectacles → représentations → réservations.
+
+## Écran 1 — Liste des spectacles
+
+Dès l'ouverture de l'app, vous voyez les spectacles auxquels vous avez accès :
+
+- <RoleBadge role="super-admin" /> <RoleBadge role="admin" /> : tous les spectacles publiés
+- <RoleBadge role="externe" /> : uniquement les spectacles **auxquels on vous a assigné**
+- **Compagnie** : uniquement vos propres spectacles
+
+**Onglets** : À venir / Passés.
+
+**Chaque carte** affiche : image, titre, compagnie, nombre de créneaux à venir.
+
+**Tapez une carte** pour ouvrir l'écran 2.
+
+<Callout type="tip">
+Si vous ne voyez aucun spectacle en tant que <RoleBadge role="externe" />, c'est qu'on ne vous a pas encore assigné. Demandez à un super-admin d'ajouter des assignations via **Utilisateurs**.
+</Callout>
+
+## Écran 2 — Représentations d'un spectacle
+
+Liste des créneaux du spectacle choisi, **groupés par date**.
+
+- Section **« Aujourd'hui »** en haut si un créneau est prévu dans la journée
+- Onglets : À venir / Passés
+- Bouton **« Charger l'historique »** pour voir au-delà des 30 derniers jours
+
+**Chaque carte** : date, heure, lieu, capacité (places occupées / totales).
+
+**Tapez une carte** pour ouvrir l'écran 3 et commencer le check-in.
+
+## Écran 3 — Réservations d'un créneau (check-in)
+
+C'est là que se passe la vraie action.
+
+**En-tête** : titre du spectacle, date/heure, lieu, compteurs (confirmées / présentes).
+
+**Barre de recherche** : recherche un pro par nom ou email (debouncé).
+
+**Liste des réservations** (tableau sur tablet, cartes sur téléphone) :
+- Nom, compagnie, email
+- Statut (confirmée, annulée, etc.)
+- Check-in (présent, absent, coup de cœur, presse)
+- Icônes d'actions (transférer, annuler)
+
+## Navigation retour
+
+- Sur chaque écran, une **flèche de retour** en haut à gauche.
+- Le **logo Derviche** ramène à l'écran 1 (liste des spectacles).
+
+## Fonctions hors écran
+
+Accessibles de manière contextuelle :
+
+- **Recherche globale pro** (écran 1) : trouver un pro sur toute la plateforme
+- **Historique d'un pro** : à partir d'une ligne de réservation → drawer avec ses 20 dernières résas
+- **Ajout walk-in** : bouton flottant gold (écran 3)
+
+## Pour aller plus loin
+
+- [Pointer les présents](/admin/aide/checkin-pwa/pointer-presents)
+- [Ajouter une réservation de dernière minute](/admin/aide/checkin-pwa/walk-in)
+- [Envoyer les emails post-accueil](/admin/aide/checkin-pwa/emails-post-accueil)

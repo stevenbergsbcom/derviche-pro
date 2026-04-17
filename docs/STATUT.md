@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S196 — Lien dervichediffusion.com éditable dans templates post-checkin — 17 avril 2026
+> Dernière mise à jour : Session S197 — Documentation utilisateur intégrée `/admin/aide` — 17 avril 2026
 
 ---
 
@@ -277,7 +277,7 @@
 | 11 | Pages légales | CGU, mentions légales, politique de confidentialité |
 | 12 | Champs org dans emails | `contact_email`, `phone`, `address`, `website` — footer ✅ S176, emails ✅ S177 |
 | 13 | Redirection mobile auto au login | Selon device + rôle (prévu au CDC section 2.6) |
-| 14 | Stats compagnie avancées | Profil des programmateurs par fonction et région |
+| 14 | Stats compagnie avancées | Profil des professionnels par fonction et région |
 | 15 | Refacto fichiers trop gros | `useCompanyReservations.ts` (18 KB), `app-settings.ts` (18 KB), `internal-users.ts` (16 KB), `useAdminReservations.ts` (15 KB) |
 
 ### 🔭 Phase 2 — Post-MVP
@@ -621,7 +621,7 @@ PaginationControls
 - **Alignement colonnes desktop** : actions header + card `w-56 justify-end`
 - **Mon compte** : suppression `max-w-4xl` (skeleton + return)
 - **Sidebar** : suppression doublon "Mon compte" footer + `PROFESSIONAL_ACCOUNT_HREF` (code mort)
-- **Label rôle** : "Programmateur" → "Professionnel"
+- **Label rôle** : "Professionnel" → "Professionnel"
 - **Titre header mobile** : dynamique selon la route (`getMobilePageTitle`)
 - **Sidebar mobile** : fermeture automatique au clic sur un lien (`useSidebar` + `setOpenMobile`)
 
@@ -1368,16 +1368,85 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S197 — Documentation utilisateur intégrée `/admin/aide` ✅
+
+**Feature majeure** : nouvelle page d'aide fonctionnelle accessible depuis la sidebar admin (item « Aide »), avec 26 articles MDX initiaux, recherche plein-texte Fuse.js, filtrage par rôle, layout sidebar + contenu.
+
+**Infrastructure (11 fichiers neufs)** :
+- `src/lib/help/content-loader.ts` — lecture disque MDX, parse frontmatter, arbo catégorie, filtrage rôle
+- `scripts/generate-help-index.ts` — script Node (via tsx) qui génère `public/help-index.json` en prébuild
+- `src/app/admin/aide/layout.tsx` — shell avec recherche + sidebar + filtrage rôle
+- `src/app/admin/aide/page.tsx` — redirect vers `101/bienvenue`
+- `src/app/admin/aide/[...slug]/page.tsx` — rendu article dynamique (next-mdx-remote/rsc) + `generateStaticParams` + check rôle
+- `src/app/admin/aide/components/HelpSidebar.tsx` — TOC groupée par catégorie
+- `src/app/admin/aide/components/HelpSearch.tsx` — input + popover résultats Fuse.js
+- `src/app/admin/aide/components/HelpBreadcrumb.tsx`
+- `src/app/admin/aide/components/HelpArticle.tsx` — MDXRemote + rehype-slug + autolink + remark-gfm
+- `src/app/admin/aide/components/mdx-components.tsx` — Callout, Kbd, Screenshot (placeholder V1), RoleBadge
+- `src/app/admin/aide/hooks/useHelpSearch.ts` — Fuse.js lazy-load
+
+**Articles V1 (26 MDX)** :
+- `101/` : bienvenue ⭐, rôles, navigation, dashboard, raccourcis (5)
+- `reservations/` : vue-ensemble, creer, modifier-annuler, transferer, exporter (5)
+- `spectacles/` : creer-publier, enrichir, vedette-classement (3)
+- `checkin-pwa/` : installer, naviguer, pointer-presents, walk-in, emails-post-accueil (5)
+- `faq/` : email-non-recu, annulation-spectacle, surbooking, retrouver-ancienne-reservation, glossaire (5)
+- Transversaux : `mon-compte/profil-mot-de-passe`, `emails/vue-ensemble`, `notifications/cloche` (3)
+
+**Dépendances ajoutées** : `next-mdx-remote@6`, `fuse.js@7`, `gray-matter@4`, `rehype-slug@6`, `rehype-autolink-headings@7`, `remark-gfm@4`, `tsx@4` (dev), `@/components/ui/command.tsx` via shadcn.
+
+**Modifications existantes (4)** :
+- `src/components/admin/admin-sidebar/constants.ts` : item « Aide » (icône `HelpCircle`) visible pour tous les rôles internes
+- `package.json` : script `prebuild` lance la génération d'index ; script `help:index` pour usage manuel
+- `CLAUDE.md` : nouvelle section **📚 Documentation utilisateur — Règle absolue** avec checklist obligatoire avant merge main
+- `README.md` : ajout « Documentation utilisateur intégrée » dans Fonctionnalités + étape 7 du processus de livraison dédié à la MAJ doc
+
+**Comportement** :
+- Route `/admin/aide` → redirect vers `101/bienvenue`
+- Sidebar filtrée par rôle (admin simple ne voit pas `utilisateurs`, `preferences`, `systeme`)
+- Recherche : index chargé au 1er focus, Fuse fuzzy (threshold 0.35), scoring titre > keywords > categoryLabel > body
+- Articles pré-rendus au build (SSG) via `generateStaticParams`, zéro coût runtime
+- Composants MDX custom : `<Callout type="tip|warning|info">`, `<Kbd>`, `<Screenshot>` (placeholder V1), `<RoleBadge>`
+
+**Hors scope V1 (à traiter en V2)** :
+- Captures d'écran réelles (composant `<Screenshot>` existe mais rend un placeholder pour le moment)
+- GIFs / vidéos pour les flux complexes
+- Sheet contextuel avec bouton `?` depuis chaque page admin (deep-linking V1.5)
+- 46 articles restants pour atteindre les 72 prévus au plan (Représentations détaillées, Lieux, Compagnies, Professionnels, Utilisateurs super-admin, Statistiques, 8 onglets Préférences, Système, Emails détaillés, FAQ étendues)
+- Hook pre-push enforçant automatiquement la règle MAJ doc
+- Feedback utilisateur (« Cet article vous a-t-il aidé ? »)
+- Export PDF d'un article
+- i18n (français uniquement pour le moment)
+
+---
+
 ## Backlog / TODO
 
-### Prochaine session : S197 — à définir
+### Prochaine session : S198 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
-| 1 | Barrel exports manquants (21 dossiers) | Faible | DX |
-| 2 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
-| 3 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
-| 4 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
-| 5 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
+| 1 | **V2 Documentation** : 46 articles MDX restants + captures d'écran + Sheet contextuel depuis pages admin | Moyenne | UX |
+| 2 | Barrel exports manquants (21 dossiers) | Faible | DX |
+| 3 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
+| 4 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
+| 5 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
+| 6 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
+| 7 | Hook pre-push / GitHub Action d'enforcement automatique de la règle MAJ doc | Faible | Fiabilité |
+
+### Template fin de session (obligatoire)
+
+```md
+### SXXX — Titre de la feature ✅
+
+**Checklist fin de session**
+- [x] Code mergé sur main
+- [x] Lint + type-check + build OK
+- [x] **Doc `/admin/aide` à jour** (articles concernés listés ci-dessous)
+- [x] STATUT.md à jour
+
+**Articles doc modifiés / créés :**
+- `content/xxx/yyy.mdx` — …
+```
 

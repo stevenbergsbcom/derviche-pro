@@ -1,0 +1,55 @@
+---
+title: Exporter les réservations
+slug: reservations/exporter
+category: reservations
+categoryLabel: Réservations
+categoryIcon: Calendar
+keywords: [export, exporter, csv, excel, télécharger, download, extraction, listes]
+roles: [super-admin, admin, externe]
+order: 5
+---
+
+Vous pouvez exporter la liste des réservations **filtrées** en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur.
+
+## Comment exporter
+
+1. Ouvrez **Réservations**.
+2. **Appliquez vos filtres** (spectacle, lieu, période, statut, recherche…) : l'export reprend exactement la même vue.
+3. Cliquez sur le bouton **« Exporter »** en haut à droite.
+4. Choisissez le format :
+   - **CSV** — universel, léger, ouvrable partout
+   - **Excel (.xlsx)** — mise en forme préservée, prêt pour Excel / Google Sheets / LibreOffice
+5. Le fichier se télécharge immédiatement dans votre navigateur.
+
+## Colonnes exportées
+
+L'export reprend **les colonnes visibles** du tableau. Pour ajouter / retirer des colonnes :
+
+1. Cliquez sur l'icône des colonnes (en haut du tableau).
+2. Cochez / décochez les colonnes.
+3. Votre sélection est sauvegardée pour les prochaines fois.
+
+Colonnes disponibles :
+- Pro (nom, prénom, email, téléphone, structure, fonction, ville, code postal, pays)
+- Spectacle, Compagnie
+- Créneau (date, heure, lieu)
+- Statut (Confirmée, Annulée, etc.)
+- Check-in (présent, coup de cœur, presse, absent)
+- Nombre de places
+- Notes internes Derviche (⚠ ne jamais partager en dehors de l'équipe)
+- Demandes spéciales
+- Code de réservation
+- Dates (création, modification)
+
+<Callout type="warning">
+**Protection des données personnelles** : un fichier exporté contient des emails, téléphones et parfois adresses. Stockez-le en lieu sûr et supprimez-le dès qu'il n'est plus nécessaire (RGPD).
+</Callout>
+
+<Callout type="tip">
+**Export rapide d'un spectacle** : filtrez par spectacle + « À venir » + exportez → vous obtenez la liste des invités à imprimer pour l'accueil sur place.
+</Callout>
+
+## Pour aller plus loin
+
+- [Personnaliser les colonnes](/admin/aide/reservations/vue-ensemble#colonnes-du-tableau)
+- Page [Statistiques](/admin/aide/statistiques/vue-ensemble) (V2) — exports plus riches avec graphiques PDF

@@ -1,0 +1,67 @@
+---
+title: Annuler un spectacle entier (procédure)
+slug: faq/annulation-spectacle
+category: faq
+categoryLabel: FAQ & dépannage
+categoryIcon: HelpCircle
+keywords: [annulation, spectacle, créneau, annuler, grève, maladie, imprévu, procédure]
+roles: [super-admin, admin]
+order: 2
+---
+
+Un spectacle doit être annulé en urgence (maladie, intempéries, grève). Voici la procédure à suivre **dans le bon ordre**.
+
+## 1. Annuler les créneaux concernés
+
+Ouvrez le spectacle → **Représentations**.
+
+Pour chaque créneau à annuler :
+1. Icône crayon → ouvrir en édition.
+2. Passer le statut à **« Annulé »** (ou supprimer si le créneau n'a encore aucune résa).
+
+## 2. Informer les professionnels ayant réservé
+
+<Callout type="warning">
+L'annulation d'un créneau **ne déclenche pas automatiquement** l'email aux pros. Vous devez les prévenir **individuellement** ou **par lot**.
+</Callout>
+
+### Option A — Email individualisé (recommandé)
+
+Pour chaque réservation du créneau :
+1. Ouvrez-la.
+2. Cliquez **« Annuler la réservation »**.
+3. Saisissez un **motif d'annulation** clair : « Spectacle annulé pour raisons techniques. Nous vous recontactons. »
+4. Cochez **« Envoyer un email »** → déclenche l'email « Annulation de votre réservation » avec le motif.
+
+### Option B — Email hors plateforme
+
+Si vous voulez un message plus personnel :
+1. Filtrez la liste des réservations par spectacle + créneau.
+2. Exportez en CSV.
+3. Ouvrez votre client email et écrivez un message groupé (CCi pour la confidentialité).
+
+## 3. Proposer un report
+
+Si le spectacle est **reporté à une nouvelle date** :
+1. Créez le nouveau créneau dans **Représentations**.
+2. Pour chaque réservation annulée, proposez le **transfert** plutôt que l'annulation sèche :
+   - Plutôt que d'annuler à l'étape 2, utilisez **« Transférer vers un autre créneau »** directement.
+   - Un email « Modification de votre réservation » est envoyé.
+
+## 4. Notifier la compagnie
+
+Envoyez un email hors plateforme à la compagnie (contact défini dans la fiche compagnie). Pas d'envoi automatique côté compagnie.
+
+## 5. Documenter
+
+- Ajoutez une **note interne Derviche** sur le spectacle pour garder la trace (motif, date de décision).
+- Consultez les logs (Système → Logs) pour vérifier que tous les emails sont bien partis.
+
+<Callout type="tip">
+Si vous traitez souvent des annulations, envisagez de créer un **template email custom** dans Préférences → Templates. Pattern : « Annulation spectacle + report ».
+</Callout>
+
+## Pour aller plus loin
+
+- [Modifier ou annuler une réservation](/admin/aide/reservations/modifier-annuler)
+- [Transférer une réservation](/admin/aide/reservations/transferer)

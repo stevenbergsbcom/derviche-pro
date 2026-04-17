@@ -1,0 +1,63 @@
+---
+title: Lire le dashboard statistiques
+slug: statistiques/vue-ensemble
+category: statistiques
+categoryLabel: Statistiques
+categoryIcon: BookOpen
+keywords: [statistiques, stats, kpi, graphique, comparaison, export, pdf, drill-down, période]
+roles: [super-admin, admin]
+order: 1
+---
+
+La page **Statistiques** (`/admin/statistiques`) centralise les analyses de fréquentation et de performance. Accessible aux <RoleBadge role="super-admin" /> et <RoleBadge role="admin" />.
+
+## KPIs en tête
+
+4 cartes mises à jour selon les filtres :
+- **Total réservations**
+- **Réservations confirmées** + %
+- **Réservations présentes** (après check-in) + taux de présence
+- **Taux de remplissage moyen** des créneaux
+
+## Filtres principaux
+
+- **Période** : Aujourd'hui / 7j / 30j / Saison / **plage personnalisée** (MM-JJ → MM-JJ)
+- **Compagnies** (multi-select)
+- **Lieux** (multi-select)
+- **Comparaison** : toggle + preset (période précédente / année précédente)
+
+## Tableaux avec drill-down
+
+Deux tableaux :
+- **Spectacles** : titre, rés., confirmées, présentes, taux remplissage
+- **Lieux** : nom, capacité, rés., taux remplissage
+
+**Clic sur une ligne** → drawer latéral avec :
+- Détail des représentations (spectacle) ou des spectacles qui s'y sont joués (lieu)
+- Évolution par jour
+- Export PDF focalisé
+
+## Graphique d'évolution
+
+Courbe des réservations sur la période, avec comparaison optionnelle en overlay. Choix de granularité : jour / semaine / mois.
+
+## Export
+
+- **Export global** : tableau complet en Excel ou CSV (format par défaut dans Préférences → Statistiques)
+- **Export focalisé PDF** : depuis un drawer spectacle ou lieu → rapport dédié avec graphique
+
+## Personnaliser les colonnes
+
+Un <RoleBadge role="super-admin" /> peut choisir dans **Préférences → Statistiques** quelles colonnes sont visibles par défaut (pour tous les utilisateurs) et la taille de pagination.
+
+## Comparaison entre périodes
+
+Activez le toggle **« Comparer »** → les deltas apparaissent en badges colorés à côté des chiffres (🟢 positif / 🔴 négatif).
+
+<Callout type="tip">
+**Usage courant** : comparer la saison en cours avec la saison précédente pour mesurer la progression, ou un mois avec le même mois de l'année d'avant.
+</Callout>
+
+## Pour aller plus loin
+
+- [Exporter les réservations](/admin/aide/reservations/exporter)

@@ -1,0 +1,59 @@
+---
+title: Votre tableau de bord
+slug: 101/dashboard
+category: "101"
+categoryLabel: Bien démarrer
+categoryIcon: Rocket
+keywords: [tableau de bord, dashboard, accueil, stats, widgets, aperçu]
+roles: [super-admin, admin, externe]
+order: 4
+---
+
+Le tableau de bord est la première page que vous voyez en vous connectant. Il affiche une synthèse visuelle de l'activité.
+
+## Les 4 cartes statistiques
+
+En haut, quatre cartes résument les chiffres clés :
+
+1. **Spectacles actifs** — nombre de spectacles publiés sur la plateforme
+2. **Créneaux à venir** — représentations programmées dans le futur
+3. **Réservations** — total + aujourd'hui + cette semaine
+4. **Taux de remplissage** — moyenne pondérée par créneau
+
+<Callout type="info">
+Ces chiffres respectent votre rôle. Un <RoleBadge role="externe" /> ne voit que les chiffres de ses spectacles assignés.
+</Callout>
+
+## Le graphique d'évolution
+
+Au centre, un graphique (recharts) montre l'évolution des réservations par période.
+
+- **Sélecteur de période** en haut à droite du graphique : 7 jours / 30 jours / Saison en cours
+- **Survoler une barre** pour voir le détail (date + nombre)
+
+## Les listes à droite
+
+Trois blocs vous donnent le contexte immédiat :
+
+- **Top 3 spectacles** — les plus réservés sur la période
+- **Créneaux 24h** — représentations imminentes
+- **Réservations récentes** — les dernières entrées
+
+## Les accès rapides (mobile et desktop)
+
+Une série de boutons permet de sauter directement vers les pages les plus utilisées :
+
+- Spectacles
+- Réservations
+- Lieux / Compagnies / Utilisateurs
+- Check-in (nouvel onglet, PWA)
+- Préférences (super-admin)
+- Générateur de **QR code** pour partager rapidement l'URL de la PWA check-in à votre équipe
+
+<Callout type="tip">
+Le **bouton Check-in** ouvre l'application dans un nouvel onglet. Gardez l'onglet admin ouvert à côté pour basculer rapidement.
+</Callout>
+
+## Période saisonnière
+
+La saison théâtrale configurée dans [Préférences → Organisation](/admin/aide/preferences/vue-ensemble) (V2) définit automatiquement le filtre « Saison ». C'est typiquement septembre → juin.

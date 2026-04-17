@@ -1,0 +1,70 @@
+---
+title: Enrichir la fiche spectacle (teaser, dossier, photos, page vitrine)
+slug: spectacles/enrichir
+category: spectacles
+categoryLabel: Spectacles
+categoryIcon: Star
+keywords: [enrichir, teaser, vidéo, dossier, presse, captation, photos, page vitrine, médias, dervichediffusion]
+roles: [super-admin, admin]
+order: 2
+---
+
+Une fiche spectacle riche se remarque dans le catalogue **et** améliore l'efficacité des emails post-accueil.
+
+## Les champs média
+
+Sur la fiche d'édition d'un spectacle, section **Médias & liens** :
+
+### Image principale
+
+L'image qui apparaît dans les cards du catalogue, sur la fiche publique, dans le slider du hero, dans l'app check-in et dans les emails. **Format paysage 16/9 recommandé**, 1600×900 px minimum pour rester nette.
+
+### Teaser vidéo
+
+URL YouTube ou Vimeo. Quand elle est renseignée, un **bouton « Voir le teaser »** apparaît sur la fiche publique — la vidéo s'ouvre en modale sans quitter la page. Utilisez le lien partage standard : `https://youtube.com/watch?v=...` ou `https://vimeo.com/...`.
+
+### Captation vidéo
+
+Lien vers une captation intégrale (souvent Vimeo privé). Utile pour les professionnels qui veulent voir le spectacle avant de réserver. Apparaît dans les **emails post-accueil** si le toggle correspondant est activé sur le template.
+
+### Dossier de presse
+
+Lien public vers un Google Drive, Dropbox ou fichier PDF. Même logique que la captation : bouton optionnel dans les emails post-accueil.
+
+### Dossier photo
+
+Lien vers la banque d'images du spectacle. Utile pour les journalistes et les supports de communication.
+
+### Page vitrine (dervichediffusion.com)
+
+URL de la page marketing sur le site vitrine de Derviche Diffusion. Quand elle est renseignée **et** que le toggle « Lien dervichediffusion.com » est activé sur un template email, le bouton **CTA principal** pointe vers cette page plutôt que vers la fiche publique interne.
+
+<Callout type="tip">
+Pour les 4 templates **post-accueil**, le lien vitrine s'ajoute comme **lien supplémentaire** (avec libellé personnalisable par template) — pas en remplacement du CTA. Voir [Les emails envoyés automatiquement](/admin/aide/emails/vue-ensemble) (V2).
+</Callout>
+
+## Politique d'invitation
+
+Champ libre qui apparaît dans un bloc sur la fiche publique, destiné aux professionnels :
+
+> Exemple : « Invitation de 2 places offerte aux professionnels. Contactez Sophie pour plus. »
+
+## Responsable Derviche
+
+Sélectionnez un membre de l'équipe dans la liste (issu des utilisateurs internes). Ses **nom, téléphone et email** sont affichés dans le bloc « Pour les professionnels » de la fiche publique **et** utilisés comme expéditeur/signataire dans les emails transactionnels.
+
+<Callout type="warning">
+Si vous ne définissez pas de responsable, les emails seront signés par défaut avec l'email de l'organisation défini dans Préférences → Organisation.
+</Callout>
+
+## Période et dates de relâche
+
+- **Période** : texte libre, ex. « Saison 2026–2027 » ou « Tournée printemps »
+- **Dates de relâche** : texte libre, ex. « Du 15 au 30 juillet »
+
+Ces deux champs sont affichés sur la fiche publique pour donner aux pros le contexte de disponibilité.
+
+## Pour aller plus loin
+
+- [Mettre en vedette et ordonner](/admin/aide/spectacles/vedette-classement)
+- [Gérer les catégories et publics cibles](/admin/aide/spectacles/enrichir) (V2)
