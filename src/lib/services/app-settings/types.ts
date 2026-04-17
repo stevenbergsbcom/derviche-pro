@@ -4,6 +4,7 @@
  */
 
 import type { Json } from '@/types/supabase';
+import type { ComparePreset, StatsPeriod } from '@/lib/services/admin-stats';
 
 // Re-export Json for use by other modules in this package
 export type { Json };
@@ -79,6 +80,18 @@ export type HomepageSettingKey =
 /** Clés de paramètres pages légales */
 export type LegalSettingKey = 'legal_mentions' | 'legal_privacy' | 'legal_cgu';
 
+/** Clés de paramètres statistiques admin */
+export type StatsSettingKey =
+  | 'stats_default_period'
+  | 'stats_default_page_size'
+  | 'stats_default_compare_preset'
+  | 'stats_hidden_columns_shows'
+  | 'stats_hidden_columns_venues'
+  | 'stats_default_export_format';
+
+/** Format d'export par défaut des statistiques */
+export type StatsDefaultExportFormat = 'csv' | 'excel' | 'pdf';
+
 /** Toutes les clés de paramètres */
 export type AppSettingKey =
   | OrganizationSettingKey
@@ -90,6 +103,7 @@ export type AppSettingKey =
   | ThemeSettingKey
   | HomepageSettingKey
   | LegalSettingKey
+  | StatsSettingKey
   | string;
 
 /** Ligne de paramètre depuis la base */
@@ -272,4 +286,25 @@ export interface LegalSettings {
   legal_mentions: string;
   legal_privacy: string;
   legal_cgu: string;
+}
+
+/**
+ * Paramètres statistiques admin (défauts workspace pour /admin/statistiques)
+ *
+ * Phase 4A : seuls `stats_hidden_columns_*` sont appliqués aux tables.
+ * Les 4 autres sont stockés + éditables mais pas encore consommés.
+ */
+export interface StatsSettings {
+  /** Période sélectionnée par défaut à l'ouverture de la page */
+  stats_default_period: StatsPeriod;
+  /** Taille de page par défaut pour les tableaux (10-100) */
+  stats_default_page_size: number;
+  /** Preset de comparaison par défaut */
+  stats_default_compare_preset: ComparePreset;
+  /** Clés des colonnes masquées du tableau "Par spectacle" */
+  stats_hidden_columns_shows: string[];
+  /** Clés des colonnes masquées du tableau "Par lieu" */
+  stats_hidden_columns_venues: string[];
+  /** Format d'export pré-sélectionné (csv | excel | pdf) */
+  stats_default_export_format: StatsDefaultExportFormat;
 }

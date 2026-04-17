@@ -20,6 +20,7 @@ const RESTRICTED_ADMIN_ROUTES: string[] = [
     '/admin/compagnies',
     '/admin/utilisateurs',
     '/admin/professionnels',
+    '/admin/statistiques',
 ];
 
 // Routes admin réservées exclusivement au super-admin

@@ -13,6 +13,7 @@ import {
   UserCheck,
   Settings,
   ServerCog,
+  BarChart3,
 } from 'lucide-react';
 import type { InternalRole } from '@/types/database';
 import type { AdminNavItem } from './types';
@@ -45,6 +46,13 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     icon: Calendar,
     tooltip: 'Gérer les réservations',
     // Visible par tous les rôles internes
+  },
+  {
+    label: 'Statistiques',
+    href: '/admin/statistiques',
+    icon: BarChart3,
+    tooltip: 'Statistiques de réservations',
+    allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
   },
   {
     label: 'Spectacles',

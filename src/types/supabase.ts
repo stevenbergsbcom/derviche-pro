@@ -1216,6 +1216,113 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      get_stats_kpis: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_company_ids?: string[] | null
+          p_venue_ids?: string[] | null
+        }
+        Returns: {
+          total_confirmed: number
+          total_cancelled: number
+          total_places_confirmed: number
+          total_shows: number
+        }[]
+      }
+      get_shows_stats: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_company_ids?: string[] | null
+          p_venue_ids?: string[] | null
+        }
+        Returns: {
+          show_id: string
+          show_title: string
+          show_slug: string
+          company_id: string | null
+          company_name: string
+          representations_count: number
+          confirmed_count: number
+          cancelled_count: number
+          present_count: number
+          absent_count: number
+          press_count: number
+        }[]
+      }
+      get_venues_stats: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_company_ids?: string[] | null
+        }
+        Returns: {
+          venue_id: string
+          venue_name: string
+          venue_city: string
+          representations_count: number
+          shows_count: number
+          confirmed_count: number
+          present_count: number
+          absent_count: number
+          press_count: number
+        }[]
+      }
+      get_show_detail_stats: {
+        Args: {
+          p_show_id: string
+          p_from: string
+          p_to: string
+          p_company_ids?: string[] | null
+          p_venue_ids?: string[] | null
+        }
+        Returns: {
+          slot_id: string
+          slot_date: string
+          slot_time: string
+          venue_name: string
+          venue_city: string
+          capacity: number
+          confirmed_count: number
+          present_count: number
+          absent_count: number
+          press_count: number
+        }[]
+      }
+      get_venue_detail_stats: {
+        Args: {
+          p_venue_id: string
+          p_from: string
+          p_to: string
+          p_company_ids?: string[] | null
+        }
+        Returns: {
+          show_id: string
+          show_title: string
+          show_slug: string
+          company_name: string
+          representations_count: number
+          confirmed_count: number
+          present_count: number
+          absent_count: number
+          press_count: number
+        }[]
+      }
+      get_stats_chart: {
+        Args: {
+          p_from: string
+          p_to: string
+          p_granularity: string
+          p_company_ids?: string[] | null
+          p_venue_ids?: string[] | null
+        }
+        Returns: {
+          bucket_start: string
+          bucket_label: string
+          confirmed_count: number
+        }[]
+      }
       update_reservation_safe: {
         Args: {
           p_address?: string

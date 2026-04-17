@@ -3,6 +3,7 @@
  * Derviche Diffusion
  */
 
+import type { ComparePreset, StatsPeriod } from '@/lib/services/admin-stats';
 import type {
   OrganizationSettingKey,
   EmailSettingKey,
@@ -17,6 +18,8 @@ import type {
   LegalSettingKey,
   LegalSettings,
   SeasonSettings,
+  StatsSettingKey,
+  StatsSettings,
 } from './types';
 
 // ============================================
@@ -103,6 +106,78 @@ export const LEGAL_SETTING_KEYS: LegalSettingKey[] = [
   'legal_mentions',
   'legal_privacy',
   'legal_cgu',
+];
+
+/** Clés des paramètres statistiques admin */
+export const STATS_SETTING_KEYS: StatsSettingKey[] = [
+  'stats_default_period',
+  'stats_default_page_size',
+  'stats_default_compare_preset',
+  'stats_hidden_columns_shows',
+  'stats_hidden_columns_venues',
+  'stats_default_export_format',
+];
+
+/** Valeurs par défaut des préférences statistiques */
+export const STATS_DEFAULTS: StatsSettings = {
+  stats_default_period: 'month_current',
+  stats_default_page_size: 20,
+  stats_default_compare_preset: 'year_before',
+  stats_hidden_columns_shows: [],
+  stats_hidden_columns_venues: [],
+  stats_default_export_format: 'excel',
+};
+
+/**
+ * Colonnes du tableau "Par spectacle" qui peuvent être masquées.
+ * `showTitle` reste toujours visible (sentinel).
+ */
+export const HIDEABLE_SHOWS_COLUMNS: { key: string; label: string }[] = [
+  { key: 'companyName', label: 'Compagnie' },
+  { key: 'representationsCount', label: 'Représentations' },
+  { key: 'confirmedCount', label: 'Confirmées' },
+  { key: 'cancelledCount', label: 'Annulées' },
+  { key: 'presentCount', label: 'Présents' },
+  { key: 'absentCount', label: 'Absents' },
+  { key: 'pressCount', label: 'Presse' },
+];
+
+/**
+ * Colonnes du tableau "Par lieu" qui peuvent être masquées.
+ * `venueName` reste toujours visible (sentinel).
+ */
+export const HIDEABLE_VENUES_COLUMNS: { key: string; label: string }[] = [
+  { key: 'venueCity', label: 'Ville' },
+  { key: 'representationsCount', label: 'Représentations' },
+  { key: 'showsCount', label: 'Spectacles' },
+  { key: 'confirmedCount', label: 'Confirmées' },
+  { key: 'presentCount', label: 'Présents' },
+  { key: 'absentCount', label: 'Absents' },
+  { key: 'pressCount', label: 'Presse' },
+];
+
+/** Valeurs acceptables pour `stats_default_period` (validation du parsing). */
+export const VALID_STATS_PERIODS: StatsPeriod[] = [
+  'month_current',
+  'month_previous',
+  'season_current',
+  'year_current',
+  'all',
+  'custom',
+];
+
+/** Valeurs acceptables pour `stats_default_compare_preset`. */
+export const VALID_COMPARE_PRESETS: ComparePreset[] = [
+  'year_before',
+  'previous_equivalent',
+  'previous_season',
+];
+
+/** Valeurs acceptables pour `stats_default_export_format`. */
+export const VALID_EXPORT_FORMATS: StatsSettings['stats_default_export_format'][] = [
+  'csv',
+  'excel',
+  'pdf',
 ];
 
 /** Valeurs par défaut — contenu actuel hardcodé de la homepage */
