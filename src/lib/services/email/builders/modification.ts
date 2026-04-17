@@ -20,6 +20,7 @@ import {
   buildCtaBlock,
   buildFooterRow,
   orgContactFromConfig,
+  isSafeUrl,
 } from '../html-helpers';
 
 export function buildModificationHtml(
@@ -28,7 +29,13 @@ export function buildModificationHtml(
   template: EmailTemplate,
   appUrl: string
 ): string {
-  const showUrl     = `${appUrl}/spectacle/${data.showSlug}`;
+  const internalShowUrl = `${appUrl}/spectacle/${data.showSlug}`;
+  // Si le template active show_derviche_site_link ET que l'URL marketing est
+  // valide (http/https), le CTA pointe vers dervichediffusion.com au lieu de
+  // la fiche publique interne. Le libellé reste `cta_text` dans les deux cas.
+  const useDervicheSite =
+    template.show_derviche_site_link && isSafeUrl(data.dervisheSiteUrl);
+  const showUrl = useDervicheSite ? data.dervisheSiteUrl! : internalShowUrl;
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
 
   const rawVars: EmailTemplateVariables = {

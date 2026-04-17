@@ -66,6 +66,8 @@ export interface PublicShow {
   invitationPolicy: string | null;
   /** URL du teaser vidéo (YouTube ou Vimeo). Null si non renseigné. */
   teaserUrl: string | null;
+  /** URL de la page marketing sur dervichediffusion.com. Null si non renseigné. */
+  dervisheSiteUrl: string | null;
   /** Responsable Derviche — prénom + nom + tél + email */
   dervisheManager: {
     firstName: string;

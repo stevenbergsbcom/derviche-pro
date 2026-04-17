@@ -62,6 +62,8 @@ export interface SpectacleFormData {
   captationUrl: string;
   /** URL du dossier photo — S170 */
   photoFolderUrl: string;
+  /** URL de la page marketing sur dervichediffusion.com */
+  dervisheSiteUrl: string;
 }
 
 // ============================================
@@ -187,6 +189,9 @@ export interface MediaSectionProps {
   /** S170 — Dossier photo */
   photoFolderUrl: string;
   onPhotoFolderUrlChange: (value: string) => void;
+  /** Page marketing dervichediffusion.com */
+  dervisheSiteUrl: string;
+  onDervisheSiteUrlChange: (value: string) => void;
   onImageChange: (file: File | null) => void;
 }
 

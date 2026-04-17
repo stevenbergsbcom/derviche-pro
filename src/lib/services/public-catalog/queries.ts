@@ -197,6 +197,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         closureDates: null,
         invitationPolicy: null,
         teaserUrl: null,
+        dervisheSiteUrl: null,
         dervisheManager: null,
       };
     });
@@ -236,6 +237,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         closure_dates,
         invitation_policy,
         teaser_url,
+        derviche_site_url,
         companies!inner(name),
         profiles!derviche_manager_id(first_name, last_name, phone, email)
       `)
@@ -367,6 +369,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       closureDates: show.closure_dates,
       invitationPolicy: show.invitation_policy,
       teaserUrl: show.teaser_url ?? null,
+      dervisheSiteUrl: show.derviche_site_url ?? null,
       dervisheManager,
     };
 

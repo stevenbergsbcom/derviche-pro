@@ -33,7 +33,22 @@ export interface ReservationConfirmationEmailData extends ManagerContact {
   slotTimeFormatted: string;
   venueName: string;
   venueCity: string;
+  /** Adresse postale (rue) du lieu — affichée dans l'email si présente. */
+  venueAddress: string | null;
+  /** Code postal du lieu — affiché combiné avec la ville si présent. */
+  venuePostalCode: string | null;
   numPlaces: number;
+  /**
+   * URL de la page marketing du spectacle sur dervichediffusion.com.
+   * Utilisée comme CTA principal si `template.show_derviche_site_link` est activé.
+   */
+  dervisheSiteUrl: string | null;
+  /**
+   * ID du compte utilisateur associé à la réservation.
+   * `null` = réservation guest (sans compte) → bloc gérer = message + mailto.
+   * non-null = compte pro → bloc gérer = bouton vers /professional/reservations.
+   */
+  userId: string | null;
 }
 
 export interface ReservationCancellationEmailData extends ManagerContact {
@@ -65,20 +80,49 @@ export interface ReservationModificationEmailData extends ManagerContact {
   venueName: string;
   venueCity: string;
   numPlaces: number;
+  /**
+   * URL de la page marketing du spectacle sur dervichediffusion.com.
+   * Utilisée comme CTA principal si `template.show_derviche_site_link` est activé.
+   */
+  dervisheSiteUrl: string | null;
 }
 
 export interface AdminNotificationEmailData {
   to: string;
   adminName: string;
   eventType: 'new_reservation' | 'cancellation' | 'modification';
+  // Pro
   guestFullName: string;
   guestEmail: string;
   guestStructure?: string | null;
+  /** Téléphone du professionnel (si renseigné). */
+  guestPhone?: string | null;
+  /** Fonction / poste (si renseigné). */
+  guestFunction?: string | null;
+  /** N° AFC (si renseigné). */
+  guestAfcNumber?: string | null;
+  /**
+   * `null` = réservation guest sans compte, sinon ID du compte pro lié.
+   * Utilisé pour badger « Guest » / « Compte pro » dans l'email.
+   */
+  userId: string | null;
+  // Spectacle
   showTitle: string;
+  /** Nom de la compagnie du spectacle. */
+  companyName: string;
+  // Créneau
   slotDateFormatted: string;
   slotTimeFormatted: string;
   venueName: string;
+  /** Ville du lieu. */
+  venueCity: string;
+  /** Adresse (rue) du lieu, si renseignée. */
+  venueAddress?: string | null;
+  /** Code postal du lieu, si renseigné. */
+  venuePostalCode?: string | null;
   numPlaces: number;
+  /** Demandes spéciales du pro (si renseignées). */
+  specialRequests?: string | null;
   reservationId: string;
   cancellationReason?: string | null;
 }

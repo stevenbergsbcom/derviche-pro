@@ -42,12 +42,27 @@ export function buildAdminNotificationHtml(
   const safeGuestFullName      = escapeHtml(data.guestFullName);
   const safeGuestEmail         = escapeHtml(data.guestEmail);
   const safeGuestStructure     = escapeHtml(data.guestStructure);
+  const safeGuestPhone         = data.guestPhone ? escapeHtml(data.guestPhone) : '';
+  const safeGuestFunction      = data.guestFunction ? escapeHtml(data.guestFunction) : '';
+  const safeGuestAfcNumber     = data.guestAfcNumber ? escapeHtml(data.guestAfcNumber) : '';
   const safeShowTitle          = escapeHtml(data.showTitle);
+  const safeCompanyName        = data.companyName ? escapeHtml(data.companyName) : '';
   const safeVenueName          = escapeHtml(data.venueName);
+  const safeVenueAddress       = data.venueAddress ? escapeHtml(data.venueAddress) : '';
+  const venueCityLine          = data.venuePostalCode
+    ? `${data.venuePostalCode} ${data.venueCity}`.trim()
+    : data.venueCity;
+  const safeVenueCityLine      = venueCityLine ? escapeHtml(venueCityLine) : '';
   const safeSlotDateFormatted  = escapeHtml(data.slotDateFormatted);
   const safeSlotTimeFormatted  = escapeHtml(data.slotTimeFormatted);
   const safeCancellationReason = escapeHtml(data.cancellationReason);
+  const safeSpecialRequests    = data.specialRequests ? escapeHtml(data.specialRequests) : '';
   const safeFooterText         = escapeHtml(config.footerText);
+
+  // Badge « Guest » (gris) / « Compte pro » (bleu) pour distinguer rapidement.
+  const accountBadge = data.userId
+    ? `<span style="display:inline-block;background-color:#dbeafe;color:#1e40af;font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:8px;vertical-align:middle;">Compte pro</span>`
+    : `<span style="display:inline-block;background-color:#f3f4f6;color:#4b5563;font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-left:8px;vertical-align:middle;">Guest</span>`;
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -67,32 +82,44 @@ export function buildAdminNotificationHtml(
         <tr><td style="padding:24px 40px 0 40px;">
           <div style="background-color:${style.bgColor};border:1px solid ${style.borderColor};border-radius:8px;padding:16px 20px;margin-bottom:20px;">
             <p style="margin:0;font-size:11px;font-weight:700;color:${style.color};text-transform:uppercase;letter-spacing:1px;">Professionnel</p>
-            <p style="margin:4px 0 0 0;font-size:15px;font-weight:600;color:#111827;">${safeGuestFullName}</p>
+            <p style="margin:4px 0 0 0;font-size:15px;font-weight:600;color:#111827;">
+              ${safeGuestFullName}${accountBadge}
+            </p>
             <p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestEmail}</p>
-            ${safeGuestStructure ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestStructure}</p>` : ''}
+            ${safeGuestPhone ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">☎ ${safeGuestPhone}</p>` : ''}
+            ${safeGuestStructure ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestStructure}${safeGuestFunction ? ` — ${safeGuestFunction}` : ''}</p>` : safeGuestFunction ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeGuestFunction}</p>` : ''}
+            ${safeGuestAfcNumber ? `<p style="margin:2px 0 0 0;font-size:12px;color:#9ca3af;">N° AFC : ${safeGuestAfcNumber}</p>` : ''}
           </div>
 
           <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f9fa;border-radius:8px;border:1px solid #e5e7eb;">
             <tr><td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
               <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Spectacle</p>
               <p style="margin:4px 0 0 0;font-size:14px;font-weight:600;color:#111827;">${safeShowTitle}</p>
+              ${safeCompanyName ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeCompanyName}</p>` : ''}
             </td></tr>
             <tr><td style="padding:16px 20px;border-bottom:1px solid #e5e7eb;">
               <table width="100%"><tr>
-                <td width="50%">
+                <td width="50%" style="vertical-align:top;">
                   <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Date &amp; heure</p>
                   <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${safeSlotDateFormatted} à ${safeSlotTimeFormatted}</p>
                 </td>
-                <td width="50%">
+                <td width="50%" style="vertical-align:top;">
                   <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
-                  <p style="margin:4px 0 0 0;font-size:13px;color:#111827;">${safeVenueName}</p>
+                  <p style="margin:4px 0 0 0;font-size:13px;color:#111827;font-weight:600;">${safeVenueName}</p>
+                  ${safeVenueAddress ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeVenueAddress}</p>` : ''}
+                  ${safeVenueCityLine ? `<p style="margin:2px 0 0 0;font-size:13px;color:#6b7280;">${safeVenueCityLine}</p>` : ''}
                 </td>
               </tr></table>
             </td></tr>
-            <tr><td style="padding:16px 20px;${data.cancellationReason ? 'border-bottom:1px solid #e5e7eb;' : ''}">
+            <tr><td style="padding:16px 20px;${safeSpecialRequests || data.cancellationReason ? 'border-bottom:1px solid #e5e7eb;' : ''}">
               <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Places</p>
               <p style="margin:4px 0 0 0;font-size:13px;color:#111827;font-weight:600;">${placesLabel}</p>
             </td></tr>
+            ${safeSpecialRequests ? `
+            <tr><td style="padding:16px 20px;background-color:#fffbeb;${data.cancellationReason ? 'border-bottom:1px solid #e5e7eb;' : ''}">
+              <p style="margin:0;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:1px;">Demandes spéciales</p>
+              <p style="margin:4px 0 0 0;font-size:13px;color:#374151;white-space:pre-wrap;">${safeSpecialRequests}</p>
+            </td></tr>` : ''}
             ${safeCancellationReason ? `
             <tr><td style="padding:16px 20px;background-color:#fef2f2;">
               <p style="margin:0;font-size:11px;font-weight:700;color:#7f1d1d;text-transform:uppercase;letter-spacing:1px;">Motif d'annulation</p>

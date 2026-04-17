@@ -349,6 +349,8 @@ export async function deleteShow(id: string): Promise<ShowResult> {
       price_type: data.price_type as ShowPriceType,
       // S170 : photo_folder_url ajouté après migration 083, cast nécessaire
       photo_folder_url: (data as Record<string, unknown>).photo_folder_url as string | null ?? null,
+      // Migration 107 : derviche_site_url, cast défensif (types Supabase non regénérés)
+      derviche_site_url: (data as Record<string, unknown>).derviche_site_url as string | null ?? null,
     };
 
     logger.info(`Show supprimé (soft): ${typedData.title} (${typedData.id})`);

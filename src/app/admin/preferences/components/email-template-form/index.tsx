@@ -80,9 +80,12 @@ export function EmailTemplateForm({
     showCaptationLink,
     showBookingLink,
     showPhotoFolderLink,
+    showDervicheSiteLink,
+    showManageReservationLink,
     showReservationCode,
     // Derived
     isConfirmation,
+    supportsDervicheSiteLink,
     isSimpleStyle,
     // Preview
     previewOpen,
@@ -227,19 +230,117 @@ export function EmailTemplateForm({
 
         {/* CTA text — masqué pour les templates style sobre */}
         {!isSimpleStyle && (
-          <div className="space-y-1.5">
-            <Label htmlFor={`cta_text-${template.template_key}`}>
-              Texte du bouton d&apos;action
-            </Label>
-            <Input
-              id={`cta_text-${template.template_key}`}
-              {...register('cta_text')}
-              disabled={!canEdit}
-              placeholder="Ex: Voir le spectacle →"
-            />
-            <p className="text-xs text-muted-foreground">
-              Laisser vide pour masquer le bouton.
-            </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`cta_text-${template.template_key}`}>
+                Texte du bouton d&apos;action
+              </Label>
+              <Input
+                id={`cta_text-${template.template_key}`}
+                {...register('cta_text')}
+                disabled={!canEdit}
+                placeholder="Ex: Voir le spectacle →"
+              />
+              <p className="text-xs text-muted-foreground">
+                Laisser vide pour masquer le bouton.
+              </p>
+            </div>
+
+            {/* Toggle : rediriger vers dervichediffusion.com — dispo sur tous
+                les templates dont le builder lit ce flag (confirmation,
+                modification, rappels J-7 / J-2 / H-4). */}
+            {supportsDervicheSiteLink && (
+              <div className="flex items-start gap-3 rounded-md border border-dashed p-3">
+                <Switch
+                  id={`show_derviche_site_link-${template.template_key}`}
+                  checked={showDervicheSiteLink}
+                  onCheckedChange={(checked) =>
+                    setValue('show_derviche_site_link', checked, { shouldDirty: true })
+                  }
+                  disabled={!canEdit}
+                />
+                <div className="flex-1 space-y-0.5">
+                  <Label
+                    htmlFor={`show_derviche_site_link-${template.template_key}`}
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Rediriger vers dervichediffusion.com
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si activé et l&apos;URL est renseignée sur le spectacle, le
+                    bouton pointe vers la page du site vitrine au lieu de la
+                    fiche publique interne. Le libellé reste celui défini
+                    ci-dessus.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Bloc « Gérer ma réservation » — CTA secondaire conditionnel
+                compte pro / guest (seul le builder confirmation le lit). */}
+            {isConfirmation && (
+              <div className="flex items-start gap-3 rounded-md border border-dashed p-3">
+                <Switch
+                  id={`show_manage_reservation_link-${template.template_key}`}
+                  checked={showManageReservationLink}
+                  onCheckedChange={(checked) =>
+                    setValue('show_manage_reservation_link', checked, { shouldDirty: true })
+                  }
+                  disabled={!canEdit}
+                />
+                <div className="flex-1 space-y-2">
+                  <div className="space-y-0.5">
+                    <Label
+                      htmlFor={`show_manage_reservation_link-${template.template_key}`}
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Bloc « Gérer ma réservation »
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Ajoute après le CTA principal un bouton vers
+                      «&nbsp;Mes réservations&nbsp;» (compte pro) ou un message
+                      + bouton mailto (guest).
+                    </p>
+                  </div>
+                  {showManageReservationLink && (
+                    <div className="space-y-2 pt-2 border-t border-dashed">
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`manage_reservation_link_text-${template.template_key}`}
+                          className="text-xs"
+                        >
+                          Libellé du bouton (compte pro)
+                        </Label>
+                        <Input
+                          id={`manage_reservation_link_text-${template.template_key}`}
+                          {...register('manage_reservation_link_text')}
+                          disabled={!canEdit}
+                          placeholder="Ex: Annuler ou modifier ma réservation"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor={`guest_contact_message-${template.template_key}`}
+                          className="text-xs"
+                        >
+                          Message pour les réservations guest
+                        </Label>
+                        <Input
+                          id={`guest_contact_message-${template.template_key}`}
+                          {...register('guest_contact_message')}
+                          disabled={!canEdit}
+                          placeholder="Ex: Pour modifier ou annuler votre réservation, contactez-nous."
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Suivi d&apos;un bouton «&nbsp;Nous contacter&nbsp;»
+                          (mailto:) avec l&apos;adresse de contact Derviche.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

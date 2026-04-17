@@ -137,6 +137,8 @@ export interface EligibleReservation {
   venue_name: string;
   /** Ville du lieu */
   venue_city: string;
+  /** URL page marketing dervichediffusion.com (utilisée si show_derviche_site_link). */
+  derviche_site_url: string | null;
   /** Nom du manager assigné (contact block) */
   manager_name: string | null;
   /** Email du manager assigné (contact block) */
@@ -178,6 +180,8 @@ export interface ReminderEmailData {
   venueCity: string;
   /** Nombre de places */
   numPlaces: number;
+  /** URL page marketing dervichediffusion.com (si show_derviche_site_link). */
+  dervisheSiteUrl: string | null;
   /** Nom du manager (contact block) */
   managerName?: string | null;
   /** Email du manager (contact block) */

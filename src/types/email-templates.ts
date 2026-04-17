@@ -94,6 +94,23 @@ export interface EmailTemplate {
   /** Afficher le lien vers le dossier photo (si photo_folder_url renseigné sur le spectacle) — S170 */
   show_photo_folder_link: boolean;
   photo_folder_link_text: string;
+  /**
+   * Si true + shows.derviche_site_url renseigné, le CTA principal pointe vers
+   * la page dervichediffusion.com au lieu de la fiche publique interne.
+   * Le libellé du bouton reste `cta_text` dans les deux cas (l'admin l'adapte
+   * manuellement si besoin, ex. « Découvrir le spectacle »).
+   */
+  show_derviche_site_link: boolean;
+  /**
+   * Si true, affiche un bloc « Gérer ma réservation » sous le CTA principal.
+   * Compte pro → bouton vers /professional/reservations.
+   * Guest → paragraphe + bouton mailto pré-rempli.
+   */
+  show_manage_reservation_link: boolean;
+  /** Libellé du bouton pour les utilisateurs connectés. */
+  manage_reservation_link_text: string;
+  /** Message introductif affiché aux guests avant le bouton mailto. */
+  guest_contact_message: string;
   /** Template actif ou désactivé */
   is_active: boolean;
   created_at: string;
@@ -130,6 +147,12 @@ export type EmailTemplateUpdatePayload = Pick<
   // Dossier photo (S170)
   | 'show_photo_folder_link'
   | 'photo_folder_link_text'
+  // CTA externe dervichediffusion.com
+  | 'show_derviche_site_link'
+  // Bloc « Gérer ma réservation »
+  | 'show_manage_reservation_link'
+  | 'manage_reservation_link_text'
+  | 'guest_contact_message'
 >;
 
 // ============================================

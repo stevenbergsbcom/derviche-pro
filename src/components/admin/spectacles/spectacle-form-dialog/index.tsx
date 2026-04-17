@@ -201,6 +201,7 @@ export function SpectacleFormDialog({
                 captationAvailable={formData.captationAvailable}
                 captationUrl={formData.captationUrl}
                 photoFolderUrl={formData.photoFolderUrl}
+                dervisheSiteUrl={formData.dervisheSiteUrl}
                 imageUrl={formData.imageUrl}
                 isSubmitting={isSubmitting}
                 onFolderUrlChange={(value) => updateField('folderUrl', value)}
@@ -208,6 +209,7 @@ export function SpectacleFormDialog({
                 onCaptationAvailableChange={(value) => updateField('captationAvailable', value)}
                 onCaptationUrlChange={(value) => updateField('captationUrl', value)}
                 onPhotoFolderUrlChange={(value) => updateField('photoFolderUrl', value)}
+                onDervisheSiteUrlChange={(value) => updateField('dervisheSiteUrl', value)}
                 onImageChange={handleImageChange}
               />
             </div>

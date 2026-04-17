@@ -20,6 +20,7 @@ import {
   buildCtaBlock,
   buildFooterRow,
   orgContactFromConfig,
+  isSafeUrl,
 } from '../html-helpers';
 
 export function buildConfirmationHtml(
@@ -28,7 +29,16 @@ export function buildConfirmationHtml(
   template: EmailTemplate,
   appUrl: string
 ): string {
-  const showUrl     = `${appUrl}/spectacle/${data.showSlug}`;
+  const internalShowUrl = `${appUrl}/spectacle/${data.showSlug}`;
+  // Si le template active show_derviche_site_link ET que l'URL marketing est
+  // valide (http/https), le CTA pointe vers dervichediffusion.com au lieu de
+  // la fiche publique interne. Le libellé reste `cta_text` dans les deux cas.
+  const useDervicheSite =
+    template.show_derviche_site_link && isSafeUrl(data.dervisheSiteUrl);
+  // `isSafeUrl` agit comme type guard, mais le narrowing ne survit pas à
+  // travers `useDervicheSite` (variable intermédiaire). Le `!` est donc
+  // requis pour TS — il est sûr grâce au `&&` qui précède.
+  const ctaUrl = useDervicheSite ? data.dervisheSiteUrl! : internalShowUrl;
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
 
   const rawVars: EmailTemplateVariables = {
@@ -49,14 +59,31 @@ export function buildConfirmationHtml(
   const resolvedBody        = textToHtml(resolveTemplateVariables(template.body_text,  htmlVars));
   const resolvedInfo        = resolveTemplateVariables(template.info_text,  htmlVars);
   const resolvedSalutation  = resolveTemplateVariables(template.salutation, rawVars);
-  const resolvedCtaText     = resolveTemplateVariables(template.cta_text,   rawVars);
+  // Libellé unique du CTA : cta_text s'applique peu importe l'URL (interne vs externe).
+  const resolvedCtaText     = resolveTemplateVariables(template.cta_text, rawVars);
+
+  // Bloc « Gérer ma réservation » (optionnel, conditionnel compte/guest).
+  const manageBlock = buildManageReservationBlock({
+    template,
+    data,
+    config,
+    appUrl,
+    htmlVars,
+    rawVars,
+  });
 
   const safeOrgName      = escapeHtml(config.organizationName);
   const safeHeaderTitle  = escapeHtml(resolvedHeaderTitle);
   const safeShowTitle    = escapeHtml(data.showTitle);
   const safeCompanyName  = escapeHtml(data.companyName);
   const safeVenueName    = escapeHtml(data.venueName);
-  const safeVenueCity    = escapeHtml(data.venueCity);
+  // Adresse postale : ligne « rue » optionnelle + ligne « CP ville »
+  // (CP combiné à la ville si présent, sinon ville seule).
+  const safeVenueAddress = data.venueAddress ? escapeHtml(data.venueAddress) : '';
+  const cityLine = data.venuePostalCode
+    ? `${data.venuePostalCode} ${data.venueCity}`.trim()
+    : data.venueCity;
+  const safeVenueCityLine = escapeHtml(cityLine);
   const safeCode         = escapeHtml(data.reservationCode);
   const safeDateFormatted = escapeHtml(data.slotDateFormatted);
   const safeTimeFormatted = escapeHtml(data.slotTimeFormatted);
@@ -121,7 +148,8 @@ export function buildConfirmationHtml(
                   <td width="50%" style="vertical-align:top;">
                     <p style="margin:0;font-size:11px;font-weight:700;color:#1e3a5f;text-transform:uppercase;letter-spacing:1px;">Lieu</p>
                     <p style="margin:6px 0 0 0;font-size:14px;color:#111827;font-weight:600;">${safeVenueName}</p>
-                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCity}</p>
+                    ${safeVenueAddress ? `<p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueAddress}</p>` : ''}
+                    <p style="margin:2px 0 0 0;font-size:14px;color:#6b7280;">${safeVenueCityLine}</p>
                   </td>
                 </tr></table>
               </td></tr>
@@ -133,7 +161,8 @@ export function buildConfirmationHtml(
           </td>
         </tr>
 
-        ${buildCtaBlock(safeCtaText, showUrl)}
+        ${buildCtaBlock(safeCtaText, ctaUrl)}
+        ${manageBlock}
         ${bodyBlock}
         ${buildInfoBlock(resolvedInfo)}
         ${buildContactBlock(template, data.managerName, data.managerEmail, data.managerPhone)}
@@ -145,4 +174,79 @@ export function buildConfirmationHtml(
   </table>
 </body>
 </html>`;
+}
+
+// ============================================
+// BLOC « GÉRER MA RÉSERVATION » (optionnel)
+// ============================================
+
+interface ManageReservationContext {
+  template: EmailTemplate;
+  data: ReservationConfirmationEmailData;
+  config: EmailConfig;
+  appUrl: string;
+  htmlVars: EmailTemplateVariables;
+  rawVars: EmailTemplateVariables;
+}
+
+/**
+ * Construit un bloc conditionnel affiché sous le CTA principal :
+ *   • Compte pro → bouton secondaire vers /professional/reservations.
+ *   • Guest      → paragraphe + bouton mailto pré-rempli.
+ *
+ * Retourne une chaîne vide si le toggle est désactivé ou si aucune adresse
+ * de contact n'est disponible pour les guests.
+ */
+function buildManageReservationBlock(ctx: ManageReservationContext): string {
+  if (!ctx.template.show_manage_reservation_link) return '';
+
+  const isGuest = ctx.data.userId === null;
+
+  // ── Compte pro ──
+  if (!isGuest) {
+    const labelRaw = resolveTemplateVariables(
+      ctx.template.manage_reservation_link_text,
+      ctx.rawVars,
+    );
+    const safeLabel = escapeHtml(labelRaw);
+    const href = `${ctx.appUrl}/professional/reservations`;
+    // Gris anthracite pour distinguer du CTA primaire bleu.
+    return buildCtaBlock(safeLabel, href, '#4b5563');
+  }
+
+  // ── Guest ──
+  const contactEmail =
+    ctx.data.managerEmail ||
+    ctx.config.organizationContactEmail ||
+    ctx.config.replyTo;
+
+  if (!contactEmail) return '';
+
+  const messageRaw = resolveTemplateVariables(
+    ctx.template.guest_contact_message,
+    ctx.htmlVars,
+  );
+  const message = textToHtml(messageRaw);
+
+  const subject = `Modification réservation ${ctx.data.reservationCode}`;
+  const body =
+    `Bonjour,\n\n` +
+    `Je souhaite modifier ou annuler ma réservation :\n` +
+    `- Code : ${ctx.data.reservationCode}\n` +
+    `- Spectacle : ${ctx.data.showTitle}\n` +
+    `- Date : ${ctx.data.slotDateFormatted} à ${ctx.data.slotTimeFormatted}\n\n` +
+    `Merci,\n${ctx.data.guestFullName}`;
+
+  const mailto =
+    `mailto:${encodeURIComponent(contactEmail)}` +
+    `?subject=${encodeURIComponent(subject)}` +
+    `&body=${encodeURIComponent(body)}`;
+
+  return `
+        <tr>
+          <td style="padding:16px 40px 0 40px;">
+            <p style="margin:0;color:#374151;font-size:14px;line-height:1.6;">${message}</p>
+          </td>
+        </tr>
+        ${buildCtaBlock('Nous contacter', mailto, '#4b5563')}`;
 }

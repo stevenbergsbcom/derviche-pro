@@ -747,6 +747,8 @@ export type Database = {
           slug: string
           status: string
           teaser_url: string | null
+          photo_folder_url: string | null
+          derviche_site_url: string | null
           title: string
           updated_at: string
         }
@@ -774,6 +776,8 @@ export type Database = {
           slug: string
           status?: string
           teaser_url?: string | null
+          photo_folder_url?: string | null
+          derviche_site_url?: string | null
           title: string
           updated_at?: string
         }
@@ -801,6 +805,8 @@ export type Database = {
           slug?: string
           status?: string
           teaser_url?: string | null
+          photo_folder_url?: string | null
+          derviche_site_url?: string | null
           title?: string
           updated_at?: string
         }

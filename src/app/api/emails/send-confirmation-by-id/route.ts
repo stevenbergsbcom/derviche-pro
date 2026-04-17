@@ -55,10 +55,13 @@ interface ReservationFull {
   guest_first_name: string | null;
   guest_last_name: string | null;
   guest_email: string | null;
+  guest_phone: string | null;
   guest_structure: string | null;
+  guest_function: string | null;
+  guest_afc_number: string | null;
   special_requests: string | null;
   user_id: string | null;
-  profiles: { email: string; first_name: string | null; last_name: string | null } | null;
+  profiles: { email: string; first_name: string | null; last_name: string | null; phone: string | null } | null;
   slots: {
     date: string;
     time: string;
@@ -67,9 +70,15 @@ interface ReservationFull {
       slug: string;
       duration_minutes: number | null;
       derviche_manager_id: string | null;
+      derviche_site_url: string | null;
       companies: { name: string } | null;
     };
-    venues: { name: string; city: string } | null;
+    venues: {
+      name: string;
+      city: string;
+      address: string | null;
+      postal_code: string | null;
+    } | null;
   };
 }
 
@@ -160,13 +169,17 @@ export async function POST(request: Request): Promise<NextResponse> {
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_phone,
         guest_structure,
+        guest_function,
+        guest_afc_number,
         special_requests,
         user_id,
         profiles:user_id (
           email,
           first_name,
-          last_name
+          last_name,
+          phone
         ),
         slots!inner (
           date,
@@ -176,9 +189,10 @@ export async function POST(request: Request): Promise<NextResponse> {
             slug,
             duration_minutes,
             derviche_manager_id,
+            derviche_site_url,
             companies:company_id ( name )
           ),
-          venues ( name, city )
+          venues ( name, city, address, postal_code )
         )
       `)
       .eq('id', reservationId)
@@ -247,7 +261,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName: venue?.name ?? '',
         venueCity: venue?.city ?? '',
+        venueAddress: venue?.address ?? null,
+        venuePostalCode: venue?.postal_code ?? null,
         numPlaces: reservation.num_places,
+        dervisheSiteUrl: show.derviche_site_url ?? null,
+        userId: reservation.user_id,
         managerName,
         managerEmail,
         managerPhone,
@@ -281,16 +299,31 @@ export async function POST(request: Request): Promise<NextResponse> {
           : '';
 
         if (notifEnabled && (sendToManager || customRecipient)) {
+          // Téléphone : guest prioritaire, sinon profil compte pro.
+          const guestPhone =
+            reservation.guest_phone ??
+            (profileData as { phone?: string | null } | null | undefined)?.phone ??
+            null;
+
           const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
             eventType: 'new_reservation',
             guestFullName: recipientFullName,
             guestEmail: recipientEmail,
             guestStructure: reservation.guest_structure,
+            guestPhone,
+            guestFunction: reservation.guest_function,
+            guestAfcNumber: reservation.guest_afc_number,
+            userId: reservation.user_id,
             showTitle: show.title,
+            companyName: company?.name ?? '',
             slotDateFormatted: formatDateFr(slots.date),
             slotTimeFormatted: formatTimeFr(slots.time),
             venueName: venue?.name ?? '',
+            venueCity: venue?.city ?? '',
+            venueAddress: venue?.address ?? null,
+            venuePostalCode: venue?.postal_code ?? null,
             numPlaces: reservation.num_places,
+            specialRequests: reservation.special_requests,
             reservationId: reservation.id,
           };
 

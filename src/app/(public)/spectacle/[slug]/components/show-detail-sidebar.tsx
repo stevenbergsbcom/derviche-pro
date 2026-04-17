@@ -5,8 +5,9 @@
 
 import Image from 'next/image';
 import { SafeHtml } from '@/components/ui/safe-html';
-import { Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, MapPin, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import type { PublicShow } from '@/lib/services/public-catalog';
+import { isSafeUrl } from '@/lib/services/email/html-helpers';
 
 import { ImagePlaceholder } from './image-placeholder';
 import { TeaserButtonWithDialog } from './teaser-dialog';
@@ -186,6 +187,22 @@ export function ShowDetailSidebar({
             )}
           </button>
         </div>
+
+        {/* CTA page dervichediffusion.com */}
+        {isSafeUrl(show.dervisheSiteUrl) && (
+          <div className="pt-2">
+            <a
+              href={show.dervisheSiteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-md bg-derviche text-white hover:bg-derviche-dark px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-derviche"
+              aria-label={`Découvrir le spectacle ${show.title} sur dervichediffusion.com (nouvel onglet)`}
+            >
+              <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              Découvrir le spectacle
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -71,6 +71,12 @@ const updatePayloadSchema = z.object({
   // Dossier photo (S170)
   show_photo_folder_link: z.boolean(),
   photo_folder_link_text: z.string().max(200),
+  // CTA dervichediffusion.com — toggle uniquement (libellé = cta_text)
+  show_derviche_site_link: z.boolean(),
+  // Bloc « Gérer ma réservation » (compte pro / guest)
+  show_manage_reservation_link: z.boolean(),
+  manage_reservation_link_text: z.string().max(200),
+  guest_contact_message: z.string().max(500),
 });
 
 // ============================================

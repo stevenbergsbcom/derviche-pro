@@ -383,6 +383,8 @@ export interface ShowRow {
   captation_url: string | null;
   // S170 - Dossier photo
   photo_folder_url: string | null;
+  // Page marketing externe (dervichediffusion.com)
+  derviche_site_url: string | null;
   // Champs système
   deleted_at: string | null;
   created_at: string;
@@ -415,6 +417,8 @@ export interface ShowInsert {
   captation_url?: string | null;
   // S170 - Dossier photo
   photo_folder_url?: string | null;
+  // Page marketing externe
+  derviche_site_url?: string | null;
 }
 
 /** Données pour mettre à jour un spectacle */
@@ -443,6 +447,8 @@ export interface ShowUpdate {
   captation_url?: string | null;
   // S170 - Dossier photo
   photo_folder_url?: string | null;
+  // Page marketing externe
+  derviche_site_url?: string | null;
   // Champs système
   deleted_at?: string | null;
 }

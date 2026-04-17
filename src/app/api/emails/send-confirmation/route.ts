@@ -144,17 +144,37 @@ export async function POST(request: Request): Promise<NextResponse> {
     let confirmManagerName: string | null = null;
     let confirmManagerEmail: string | null = null;
     let confirmManagerPhone: string | null = null;
+    let confirmDervisheSiteUrl: string | null = null;
+    let confirmVenueAddress: string | null = null;
+    let confirmVenuePostalCode: string | null = null;
 
     try {
       const { data: showData } = await adminClient
         .from('reservations')
-        .select('slots!inner(shows!inner(derviche_manager_id))')
+        .select(
+          'slots!inner(venues(address, postal_code), shows!inner(derviche_manager_id, derviche_site_url))',
+        )
         .eq('id', payload.reservationId)
         .maybeSingle();
 
-      const managerId = (showData as unknown as {
-        slots: { shows: { derviche_manager_id: string | null } };
-      } | null)?.slots?.shows?.derviche_manager_id;
+      const slotsRecord = (showData as unknown as {
+        slots: {
+          venues: {
+            address: string | null;
+            postal_code: string | null;
+          } | null;
+          shows: {
+            derviche_manager_id: string | null;
+            derviche_site_url: string | null;
+          };
+        };
+      } | null)?.slots;
+      const showRecord = slotsRecord?.shows;
+      const venueRecord = slotsRecord?.venues ?? null;
+      const managerId = showRecord?.derviche_manager_id;
+      confirmDervisheSiteUrl = showRecord?.derviche_site_url ?? null;
+      confirmVenueAddress = venueRecord?.address ?? null;
+      confirmVenuePostalCode = venueRecord?.postal_code ?? null;
 
       if (managerId) {
         const { data: mgr } = await adminClient
@@ -175,6 +195,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await sendReservationConfirmationEmail({
       ...payload,
+      venueAddress: confirmVenueAddress,
+      venuePostalCode: confirmVenuePostalCode,
+      dervisheSiteUrl: confirmDervisheSiteUrl,
+      userId: reservation.user_id,
       managerName:  confirmManagerName,
       managerEmail: confirmManagerEmail,
       managerPhone: confirmManagerPhone,
@@ -219,37 +243,78 @@ export async function POST(request: Request): Promise<NextResponse> {
           .from('reservations')
           .select(`
             guest_structure,
+            guest_phone,
+            guest_function,
+            guest_afc_number,
+            special_requests,
+            user_id,
+            profiles:user_id ( phone ),
             slots!inner (
               date,
               time,
-              venues ( name ),
+              venues ( name, city, address, postal_code ),
               shows!inner (
                 title,
-                derviche_manager_id
+                derviche_manager_id,
+                companies:company_id ( name )
               )
             )
           `)
           .eq('id', payload.reservationId)
           .maybeSingle();
 
-        const slots = (reservationDetails?.slots as unknown) as {
-          date: string;
-          time: string;
-          venues: { name: string } | null;
-          shows: { title: string; derviche_manager_id: string | null };
+        const rd = reservationDetails as unknown as {
+          guest_structure: string | null;
+          guest_phone: string | null;
+          guest_function: string | null;
+          guest_afc_number: string | null;
+          special_requests: string | null;
+          user_id: string | null;
+          profiles: { phone: string | null } | null;
+          slots: {
+            date: string;
+            time: string;
+            venues: {
+              name: string;
+              city: string;
+              address: string | null;
+              postal_code: string | null;
+            } | null;
+            shows: {
+              title: string;
+              derviche_manager_id: string | null;
+              companies: { name: string } | null;
+            };
+          };
         } | null;
+
+        const slots = rd?.slots ?? null;
+
+        // Téléphone : champ guest prioritaire, sinon profil du compte pro lié.
+        // Cohérent avec send-confirmation-by-id / send-cancellation / send-modification.
+        const profilePhone = rd?.profiles?.phone ?? null;
+        const guestPhone = rd?.guest_phone ?? profilePhone;
 
         // Construire les données communes de notification
         const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
           eventType: 'new_reservation',
           guestFullName: payload.guestFullName,
           guestEmail: payload.to,
-          guestStructure: (reservationDetails as { guest_structure?: string | null } | null)?.guest_structure ?? null,
+          guestStructure: rd?.guest_structure ?? null,
+          guestPhone,
+          guestFunction: rd?.guest_function ?? null,
+          guestAfcNumber: rd?.guest_afc_number ?? null,
+          userId: rd?.user_id ?? null,
           showTitle: payload.showTitle,
+          companyName: slots?.shows?.companies?.name ?? payload.companyName ?? '',
           slotDateFormatted: payload.slotDateFormatted,
           slotTimeFormatted: payload.slotTimeFormatted,
           venueName: payload.venueName,
+          venueCity: slots?.venues?.city ?? payload.venueCity ?? '',
+          venueAddress: slots?.venues?.address ?? null,
+          venuePostalCode: slots?.venues?.postal_code ?? null,
           numPlaces: payload.numPlaces,
+          specialRequests: rd?.special_requests ?? null,
           reservationId: payload.reservationId,
         };
 

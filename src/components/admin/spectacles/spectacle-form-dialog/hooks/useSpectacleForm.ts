@@ -113,6 +113,7 @@ export function useSpectacleForm({
           captationAvailable: editingShow.captation_available,
           captationUrl: editingShow.captation_url || '',
           photoFolderUrl: editingShow.photo_folder_url || '',
+          dervisheSiteUrl: editingShow.derviche_site_url || '',
         });
       } else {
         // Mode création

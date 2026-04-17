@@ -94,6 +94,7 @@ function toEmailData(
     venueName:         reservation.venue_name,
     venueCity:         reservation.venue_city,
     numPlaces:         reservation.num_places,
+    dervisheSiteUrl:   reservation.derviche_site_url,
     managerName:       reservation.manager_name,
     managerEmail:      reservation.manager_email,
     managerPhone:      reservation.manager_phone,

@@ -110,6 +110,8 @@ export interface MediaResourcesSectionProps {
   captationUrl: string | null;
   /** URL du dossier photo — S170 */
   photoFolderUrl: string | null;
+  /** URL de la page marketing dervichediffusion.com */
+  dervisheSiteUrl: string | null;
 }
 
 /**
