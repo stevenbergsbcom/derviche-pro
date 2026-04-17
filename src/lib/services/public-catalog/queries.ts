@@ -199,6 +199,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         slots: showSlots,
         availableSlotsCount: availableSlots.length,
         nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
+        nextTime: nextSlot?.time ?? null,
         nextVenue: nextSlot ? nextSlot.venueName : null,
         // Champs détail — non chargés en mode catalogue
         period: null,
@@ -380,6 +381,7 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       slots: publicSlots,
       availableSlotsCount: availableSlots.length,
       nextDate: nextSlot ? formatDateFr(nextSlot.date) : null,
+      nextTime: nextSlot?.time ?? null,
       nextVenue: nextSlot ? nextSlot.venueName : null,
       period: show.period,
       closureDates: show.closure_dates,

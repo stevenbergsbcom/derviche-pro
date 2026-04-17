@@ -14,6 +14,7 @@ import { Header, Footer } from '@/components/layout';
 import type { SpectacleStatus } from '@/components/spectacles';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
+import { useScrollToHash } from '@/hooks/useScrollToHash';
 import type { HomepageSettings, OrganizationSettings } from '@/lib/services/app-settings';
 import { transformShowToSpectacle } from '@/lib/utils/shows';
 import {
@@ -39,6 +40,11 @@ interface HomePageClientProps {
 // ============================================
 
 export function HomePageClient({ settings, organization }: HomePageClientProps) {
+  // Scroll vers #contact (ou toute autre ancre) quand on arrive depuis une
+  // autre page du site. Next.js ne gère pas cette navigation par ancre de
+  // façon fiable quand la section est chargée en Suspense/async.
+  useScrollToHash();
+
   const {
     homepage_hero,
     homepage_avantages,

@@ -59,6 +59,7 @@ export default function CataloguePage() {
   const [genreFilter, setGenreFilter] = useState<string>('Tous');
   const [moisFilter, setMoisFilter] = useState<string>('Tous');
   const [lieuFilter, setLieuFilter] = useState<string>('Tous');
+  const [villeFilter, setVilleFilter] = useState<string>('Toutes');
   const [onlyAvailable, setOnlyAvailable] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState<boolean>(false);
@@ -100,6 +101,17 @@ export default function CataloguePage() {
     return ['Tous', ...venues.map((v) => (v.city ? `${v.name} - ${v.city}` : v.name)).sort()];
   }, [venues]);
 
+  // Villes distinctes tirées des lieux chargés par le hook.
+  // Évite d'introduire une 3ᵉ source de données : même périmètre que la liste
+  // des lieux (représentations futures uniquement).
+  const villes = useMemo(() => {
+    const uniqueCities = new Set<string>();
+    venues.forEach((v) => {
+      if (v.city) uniqueCities.add(v.city);
+    });
+    return ['Toutes', ...Array.from(uniqueCities).sort((a, b) => a.localeCompare(b, 'fr'))];
+  }, [venues]);
+
   const mois = [
     'Tous',
     'Janvier',
@@ -126,6 +138,7 @@ export default function CataloguePage() {
     setGenreFilter('Tous');
     setMoisFilter('Tous');
     setLieuFilter('Tous');
+    setVilleFilter('Toutes');
     setOnlyAvailable(false);
     setSearchQuery('');
   };
@@ -158,7 +171,15 @@ export default function CataloguePage() {
           return false;
         }
 
-        // Filtre "Seulement disponibles" (exclut les 'coming_soon' et les spectacles sans créneaux)
+        // Filtre par ville (vérifie si la ville fait partie des villes distinctes du spectacle)
+        if (
+          villeFilter !== 'Toutes' &&
+          !(spectacle.cities ?? []).includes(villeFilter)
+        ) {
+          return false;
+        }
+
+        // Filtre "En tournée uniquement" (exclut les 'coming_soon' et les spectacles sans créneaux)
         if (onlyAvailable) {
           if (spectacle.status === 'coming_soon') return false;
           if (spectacle.status === 'closed') return false;
@@ -179,7 +200,7 @@ export default function CataloguePage() {
         return true;
       })
       .sort((a, b) => (statusOrder[a.status ?? 'closed'] ?? 2) - (statusOrder[b.status ?? 'closed'] ?? 2));
-  }, [spectacles, genreFilter, moisFilter, lieuFilter, onlyAvailable, searchQuery]);
+  }, [spectacles, genreFilter, moisFilter, lieuFilter, villeFilter, onlyAvailable, searchQuery]);
 
   // Attendre que le composant soit monté pour éviter les erreurs d'hydratation
   if (!isMounted) {
@@ -239,7 +260,7 @@ export default function CataloguePage() {
       <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 text-derviche-dark">
-            Nos spectacles disponibles
+            Nos spectacles en tournée
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
             {filteredSpectacles.length} spectacle{filteredSpectacles.length > 1 ? 's' : ''} à découvrir
@@ -252,7 +273,7 @@ export default function CataloguePage() {
         <div className="container mx-auto px-4">
           <Card>
             <CardContent className="px-4 md:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
                 {/* Select Genre */}
                 <div className="space-y-2">
                   <Label htmlFor="genre">Genre</Label>
@@ -304,7 +325,24 @@ export default function CataloguePage() {
                   </Select>
                 </div>
 
-                {/* Switch Disponibles uniquement */}
+                {/* Select Ville */}
+                <div className="space-y-2">
+                  <Label htmlFor="ville">Ville</Label>
+                  <Select value={villeFilter} onValueChange={setVilleFilter}>
+                    <SelectTrigger id="ville">
+                      <SelectValue placeholder="Ville" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {villes.map((ville) => (
+                        <SelectItem key={ville} value={ville}>
+                          {ville}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Switch En tournée uniquement */}
                 <div className="space-y-2">
                   <Label htmlFor="available" className="text-sm text-muted-foreground">
                     Disponibilité
@@ -319,7 +357,7 @@ export default function CataloguePage() {
                       htmlFor="available"
                       className="text-sm font-normal cursor-pointer"
                     >
-                      Disponibles uniquement
+                      En tournée uniquement
                     </Label>
                   </div>
                 </div>

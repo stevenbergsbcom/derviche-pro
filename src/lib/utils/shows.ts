@@ -41,10 +41,14 @@ export function transformShowToSpectacle(show: PublicShow): Spectacle {
     title: show.title,
     company: show.companyName,
     venues: show.venues.map((v) => (v.city ? `${v.name} - ${v.city}` : v.name)),
+    cities: Array.from(
+      new Set(show.venues.map((v) => v.city).filter((c): c is string => Boolean(c))),
+    ),
     image: show.imageUrl || PLACEHOLDER_IMAGE,
     slug: show.slug,
     genres: show.categories,
     nextDate: status === 'available' ? (show.nextDate || '') : '',
+    nextTime: status === 'available' ? show.nextTime : null,
     remainingSlots: show.availableSlotsCount,
     status,
   };

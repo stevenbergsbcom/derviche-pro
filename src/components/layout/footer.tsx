@@ -148,7 +148,7 @@ export function Footer({ settings, organization }: FooterProps = {}) {
                 </Link>
               </li>
               <li>
-                <Link href="#contact" className="text-white/70 hover:text-white transition">
+                <Link href="/#contact" className="text-white/70 hover:text-white transition">
                   Contact
                 </Link>
               </li>
