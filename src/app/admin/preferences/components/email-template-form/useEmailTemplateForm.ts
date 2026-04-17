@@ -113,9 +113,11 @@ export function useEmailTemplateForm({
    * Templates dont le builder HTML utilise `template.show_derviche_site_link`
    * pour afficher un lien vers la page marketing dervichediffusion.com :
    *  - confirmation / modification / rappels J-7 / J-2 / H-4 : le toggle
-   *    route le CTA principal vers l'URL externe (sinon fiche publique interne)
+   *    route le CTA principal vers l'URL externe (libellé = `cta_text`,
+   *    sinon fiche publique interne)
    *  - 4 templates post-checkin : le toggle ajoute une entrée dans la liste
-   *    des liens complémentaires (libellé hardcodé, pas de champ texte dédié)
+   *    des liens complémentaires (libellé = `derviche_site_link_text`,
+   *    éditable par template depuis la migration 112)
    * Hors scope : cancellation (CTA catalogue), admin_notification (CTA admin).
    */
   const supportsDervicheSiteLink =
