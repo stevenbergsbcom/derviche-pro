@@ -76,8 +76,11 @@ export function CatalogueMobileFilters(props: CatalogueMobileFiltersProps) {
           <SheetHeader className="px-4 pt-4 pb-2 border-b">
             <SheetTitle>Filtres</SheetTitle>
             <SheetDescription>
-              {props.resultsCount} spectacle
-              {props.resultsCount > 1 ? 's' : ''} correspondent à vos critères.
+              {props.resultsCount === 0
+                ? 'Aucun spectacle ne correspond à vos critères.'
+                : props.resultsCount === 1
+                  ? '1 spectacle correspond à vos critères.'
+                  : `${props.resultsCount} spectacles correspondent à vos critères.`}
             </SheetDescription>
           </SheetHeader>
 

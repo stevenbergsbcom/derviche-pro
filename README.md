@@ -205,9 +205,9 @@ lib/services/admin-reservations/
 └── transformers.ts    # Transformation données
 ```
 
-Principaux domaines : `admin-reservations`, `shows`, `public-catalog`, `email`, `logs`, `stats`, `checkin`, `companies`, `venues`, `app-settings`.
+Principaux domaines : `admin-reservations`, `admin-stats`, `shows`, `public-catalog`, `email`, `logs`, `checkin`, `companies`, `venues`, `app-settings`.
 
-Toutes les mutations retournent un `ApiResult<T>` standardisé (`{ success, data?, error? }`).
+La majorité des mutations retournent un `ApiResult<T>` standardisé (`{ success, data?, error? }` ou `{ data, error }` selon les services historiques). Le public-catalog utilise un format légèrement différent hérité.
 
 ### Pattern 2 — Colocation par feature (dans `app/*`)
 
@@ -247,17 +247,24 @@ Voir [`src/lib/rate-limit.ts`](src/lib/rate-limit.ts).
 
 | Rôle | Nombre | Accès principaux |
 |---|---|---|
-| `super-admin` | 2–3 | Accès complet + `/admin/preferences`, `/admin/systeme`, `/admin/utilisateurs` |
-| `admin` | 3–7 | Gestion spectacles / réservations / créneaux / emails — sauf utilisateurs, préférences, système |
+| `super-admin` | 2–3 | Accès complet + `/admin/preferences`, `/admin/systeme` |
+| `admin` | 3–7 | Gestion spectacles / réservations / créneaux / emails / lieux / compagnies / utilisateurs / professionnels / statistiques — sauf préférences et système |
 | `externe` | 10–20 | PWA check-in sur les spectacles qui leur sont assignés |
 | `professional` | 500–1000 | Catalogue, réservation, espace `/professional/mon-compte` |
 | `company` | 15–20 | Consultation statistiques de leurs spectacles, peut check-in si `hosted_by = 'company'` |
 
-Le middleware applique :
+Les deux sources de vérité pour les règles d'accès :
 
-- `SUPER_ADMIN_ONLY_ROUTES` = `/admin/preferences`, `/admin/systeme`, `/admin/utilisateurs`
-- `ADMIN_ROLES` = `['super-admin', 'admin']` pour la majorité des routes admin
-- `STAFF_ROLES` = `['super-admin', 'admin', 'externe', 'company']` pour l'accueil PWA
+**[`src/middleware.ts`](src/middleware.ts)** (routing / redirections) :
+
+- `SUPER_ADMIN_ONLY_ROUTES` = `['/admin/preferences', '/admin/systeme']`
+- `RESTRICTED_ADMIN_ROUTES` = `['/admin/lieux', '/admin/compagnies', '/admin/utilisateurs', '/admin/professionnels', '/admin/statistiques']` (super-admin + admin)
+- `ACCUEIL_ROLES` = `['super-admin', 'admin', 'externe', 'company']` (PWA `/accueil/*`)
+
+**[`src/lib/api/admin-guard.ts`](src/lib/api/admin-guard.ts)** (auth des routes API) :
+
+- `ADMIN_ROLES` = `['super-admin', 'admin']` (défaut de `requireAuth()`)
+- `STAFF_ROLES` = `['super-admin', 'admin', 'externe', 'company']` (équivalent à `ACCUEIL_ROLES`)
 
 ## 🌿 Workflow Git
 
