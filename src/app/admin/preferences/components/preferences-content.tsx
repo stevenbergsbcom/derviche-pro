@@ -1,12 +1,20 @@
 /**
  * PreferencesContent - Conteneur principal de la page Préférences
- * Gère les onglets, le rôle utilisateur et affiche la section active
  * Derviche Diffusion
+ *
+ * Les onglets sont désormais rendus dans la sidebar admin
+ * (cf. `PreferencesSubmenu`). Cette page rend uniquement la section active
+ * déterminée par `?tab=<id>`, avec un header titre + sous-titre reprenant
+ * le libellé de l'onglet courant.
+ *
+ * La protection « modifs non sauvegardées » est centralisée dans
+ * `PreferencesDirtyProvider` (layout admin) — les sections appellent
+ * `ctx.setDirty(sectionId, boolean)` via `usePreferencesDirty()`.
  */
 
 'use client';
 
-import { Suspense, useState, useCallback } from 'react';
+import { Suspense, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 
 import { AdminPageHeader } from '@/components/admin';
@@ -15,9 +23,9 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
-import { useUnsavedChangesWarning } from '@/hooks/useUnsavedChangesWarning';
-import { PreferencesTabs, usePreferencesTab } from './preferences-tabs';
-import { UnsavedChangesDialog } from './shared';
+import { usePreferencesTab } from '@/hooks/usePreferencesTab';
+import { PREFERENCE_TABS } from '@/app/admin/preferences/config/preference-tabs';
+import { usePreferencesDirty } from '@/components/admin/preferences-dirty';
 import {
   OrganizationSection,
   HomepageSection,
@@ -41,7 +49,6 @@ function PreferencesSkeleton() {
   return (
     <div className="space-y-6">
       <AdminPageHeader title="Préférences" />
-      <Skeleton className="h-10 w-full" />
       <Card>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
@@ -63,42 +70,14 @@ function PreferencesSkeleton() {
 
 interface PreferencesInnerContentProps {
   canEdit: boolean;
-  hasUnsavedChanges: boolean;
   onDirtyChange: (sectionId: string, isDirty: boolean) => void;
-  onResetAllDirty: () => void;
 }
 
 function PreferencesInnerContent({
   canEdit,
-  hasUnsavedChanges,
   onDirtyChange,
-  onResetAllDirty,
 }: PreferencesInnerContentProps) {
-  const { activeTab, setActiveTab } = usePreferencesTab();
-  const [pendingTab, setPendingTab] = useState<string | null>(null);
-
-  const handleTabChange = useCallback(
-    (newTab: string) => {
-      if (hasUnsavedChanges) {
-        setPendingTab(newTab);
-      } else {
-        setActiveTab(newTab);
-      }
-    },
-    [hasUnsavedChanges, setActiveTab]
-  );
-
-  const handleConfirmTabChange = useCallback(() => {
-    if (pendingTab) {
-      onResetAllDirty();
-      setActiveTab(pendingTab);
-      setPendingTab(null);
-    }
-  }, [pendingTab, setActiveTab, onResetAllDirty]);
-
-  const handleCancelTabChange = useCallback(() => {
-    setPendingTab(null);
-  }, []);
+  const { activeTab } = usePreferencesTab();
 
   // Callbacks stables par section
   const handleOrganizationDirty  = useCallback((d: boolean) => onDirtyChange('organization',  d), [onDirtyChange]);
@@ -115,55 +94,56 @@ function PreferencesInnerContent({
   const handleClassementDirty     = useCallback((d: boolean) => onDirtyChange('classement',      d), [onDirtyChange]);
 
   return (
-    <>
-      <PreferencesTabs activeTab={activeTab} onTabChange={handleTabChange} />
-
-      <div className="mt-6">
-        {activeTab === 'organization' && (
-          <OrganizationSection  canEdit={canEdit} onDirtyChange={handleOrganizationDirty} />
-        )}
-        {activeTab === 'homepage' && (
-          <HomepageSection      canEdit={canEdit} onDirtyChange={handleHomepageDirty} />
-        )}
-        {activeTab === 'classement' && (
-          <ClassementSection    canEdit={canEdit} onDirtyChange={handleClassementDirty} />
-        )}
-        {activeTab === 'appearance' && (
-          <AppearanceSection    canEdit={canEdit} onDirtyChange={handleAppearanceDirty} />
-        )}
-        {activeTab === 'email' && (
-          <EmailSection         canEdit={canEdit} onDirtyChange={handleEmailDirty} />
-        )}
-        {activeTab === 'notifications' && (
-          <NotificationsSection canEdit={canEdit} onDirtyChange={handleNotificationsDirty} />
-        )}
-        {activeTab === 'reminders' && (
-          <RemindersSection     canEdit={canEdit} onDirtyChange={handleRemindersDirty} />
-        )}
-        {activeTab === 'templates' && (
-          <EmailTemplatesSection canEdit={canEdit} onDirtyChange={handleTemplatesDirty} />
-        )}
-        {activeTab === 'google-calendar' && (
-          <GoogleCalendarSection canEdit={canEdit} onDirtyChange={handleGoogleCalendarDirty} />
-        )}
-        {activeTab === 'rgpd' && (
-          <RgpdSection           canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
-        )}
-        {activeTab === 'legal' && (
-          <LegalSection          canEdit={canEdit} onDirtyChange={handleLegalDirty} />
-        )}
-        {activeTab === 'statistiques' && (
-          <StatisticsSection     canEdit={canEdit} onDirtyChange={handleStatisticsDirty} />
-        )}
-      </div>
-
-      <UnsavedChangesDialog
-        open={pendingTab !== null}
-        onCancel={handleCancelTabChange}
-        onConfirm={handleConfirmTabChange}
-      />
-    </>
+    <div>
+      {activeTab === 'organization' && (
+        <OrganizationSection  canEdit={canEdit} onDirtyChange={handleOrganizationDirty} />
+      )}
+      {activeTab === 'homepage' && (
+        <HomepageSection      canEdit={canEdit} onDirtyChange={handleHomepageDirty} />
+      )}
+      {activeTab === 'classement' && (
+        <ClassementSection    canEdit={canEdit} onDirtyChange={handleClassementDirty} />
+      )}
+      {activeTab === 'appearance' && (
+        <AppearanceSection    canEdit={canEdit} onDirtyChange={handleAppearanceDirty} />
+      )}
+      {activeTab === 'email' && (
+        <EmailSection         canEdit={canEdit} onDirtyChange={handleEmailDirty} />
+      )}
+      {activeTab === 'notifications' && (
+        <NotificationsSection canEdit={canEdit} onDirtyChange={handleNotificationsDirty} />
+      )}
+      {activeTab === 'reminders' && (
+        <RemindersSection     canEdit={canEdit} onDirtyChange={handleRemindersDirty} />
+      )}
+      {activeTab === 'templates' && (
+        <EmailTemplatesSection canEdit={canEdit} onDirtyChange={handleTemplatesDirty} />
+      )}
+      {activeTab === 'google-calendar' && (
+        <GoogleCalendarSection canEdit={canEdit} onDirtyChange={handleGoogleCalendarDirty} />
+      )}
+      {activeTab === 'rgpd' && (
+        <RgpdSection           canEdit={canEdit} onDirtyChange={handleRgpdDirty} />
+      )}
+      {activeTab === 'legal' && (
+        <LegalSection          canEdit={canEdit} onDirtyChange={handleLegalDirty} />
+      )}
+      {activeTab === 'statistiques' && (
+        <StatisticsSection     canEdit={canEdit} onDirtyChange={handleStatisticsDirty} />
+      )}
+    </div>
   );
+}
+
+// ============================================
+// PAGE HEADER (lit ?tab pour afficher le sous-titre)
+// ============================================
+
+function PreferencesHeader() {
+  const { activeTab } = usePreferencesTab();
+  const activeLabel =
+    PREFERENCE_TABS.find((t) => t.id === activeTab)?.label ?? '';
+  return <AdminPageHeader title="Préférences" subtitle={activeLabel} />;
 }
 
 // ============================================
@@ -172,19 +152,7 @@ function PreferencesInnerContent({
 
 export function PreferencesContent() {
   const { role, isLoading } = useCurrentUserRole();
-
-  const [dirtyState, setDirtyState] = useState<Record<string, boolean>>({});
-  const hasUnsavedChanges = Object.values(dirtyState).some((d) => d);
-
-  useUnsavedChangesWarning(hasUnsavedChanges);
-
-  const handleDirtyChange = useCallback((sectionId: string, isDirty: boolean) => {
-    setDirtyState((prev) => ({ ...prev, [sectionId]: isDirty }));
-  }, []);
-
-  const handleResetAllDirty = useCallback(() => {
-    setDirtyState({});
-  }, []);
+  const { setDirty } = usePreferencesDirty();
 
   const canEdit = role === 'super-admin';
 
@@ -209,14 +177,11 @@ export function PreferencesContent() {
 
   return (
     <div className="space-y-6">
-      <AdminPageHeader title="Préférences" />
       <Suspense fallback={<Skeleton className="h-10 w-full" />}>
-        <PreferencesInnerContent
-          canEdit={canEdit}
-          hasUnsavedChanges={hasUnsavedChanges}
-          onDirtyChange={handleDirtyChange}
-          onResetAllDirty={handleResetAllDirty}
-        />
+        <PreferencesHeader />
+      </Suspense>
+      <Suspense fallback={<Skeleton className="h-10 w-full" />}>
+        <PreferencesInnerContent canEdit={canEdit} onDirtyChange={setDirty} />
       </Suspense>
     </div>
   );

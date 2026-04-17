@@ -3,7 +3,11 @@
  */
 
 export { PreferencesContent } from './preferences-content';
-export { PreferencesTabs, usePreferencesTab, PREFERENCE_TABS } from './preferences-tabs';
+// Ré-exports de compatibilité :
+//  - `usePreferencesTab` a migré vers `@/hooks/usePreferencesTab`
+//  - `PREFERENCE_TABS` a migré vers `@/app/admin/preferences/config/preference-tabs`
+export { usePreferencesTab } from '@/hooks/usePreferencesTab';
+export { PREFERENCE_TABS } from '@/app/admin/preferences/config/preference-tabs';
 
 // Sections
 export {

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { memo } from 'react';
+import { Fragment, memo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -28,6 +28,7 @@ import {
   isRouteActive,
 } from '@/components/shared-sidebar';
 import { useAdminSidebarData } from './hooks/useAdminSidebarData';
+import { PreferencesSubmenu } from './preferences-submenu';
 import {
   ADMIN_BASE_HREF,
   ADMIN_ACCOUNT_HREF,
@@ -57,24 +58,34 @@ function AdminSidebarComponent() {
                 const Icon = item.icon;
                 const isActive = isRouteActive(pathname, item.href, ADMIN_BASE_HREF);
 
+                // Le sous-menu Préférences (11 sous-items) s'intercale juste
+                // avant l'item « Système » — ordre défini dans constants.ts.
+                const renderPrefsBefore = item.href === '/admin/systeme';
+
                 return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.tooltip || item.label}
-                    >
-                      <Link
-                        href={item.href}
-                        aria-current={isActive ? 'page' : undefined}
+                  <Fragment key={item.href}>
+                    {renderPrefsBefore && <PreferencesSubmenu role={userData?.role ?? null} />}
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive}
+                        tooltip={item.tooltip || item.label}
                       >
-                        <Icon aria-hidden="true" className="size-4" />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                        <Link
+                          href={item.href}
+                          aria-current={isActive ? 'page' : undefined}
+                        >
+                          <Icon aria-hidden="true" className="size-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </Fragment>
                 );
               })}
+              {/* Cas où « Système » n'est pas visible (rôle non super-admin) :
+                  PreferencesSubmenu reste masqué côté rôle, donc pas besoin
+                  d'une branche supplémentaire ici. */}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
