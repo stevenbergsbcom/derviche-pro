@@ -101,6 +101,16 @@ export interface EmailTemplate {
    * manuellement si besoin, ex. « Découvrir le spectacle »).
    */
   show_derviche_site_link: boolean;
+  /**
+   * Si true, affiche un bloc « Gérer ma réservation » sous le CTA principal.
+   * Compte pro → bouton vers /professional/reservations.
+   * Guest → paragraphe + bouton mailto pré-rempli.
+   */
+  show_manage_reservation_link: boolean;
+  /** Libellé du bouton pour les utilisateurs connectés. */
+  manage_reservation_link_text: string;
+  /** Message introductif affiché aux guests avant le bouton mailto. */
+  guest_contact_message: string;
   /** Template actif ou désactivé */
   is_active: boolean;
   created_at: string;
@@ -139,6 +149,10 @@ export type EmailTemplateUpdatePayload = Pick<
   | 'photo_folder_link_text'
   // CTA externe dervichediffusion.com
   | 'show_derviche_site_link'
+  // Bloc « Gérer ma réservation »
+  | 'show_manage_reservation_link'
+  | 'manage_reservation_link_text'
+  | 'guest_contact_message'
 >;
 
 // ============================================

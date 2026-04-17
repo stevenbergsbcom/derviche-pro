@@ -57,8 +57,11 @@ const MOCK_CONFIRMATION: ReservationConfirmationEmailData = {
   slotTimeFormatted: '19h30',
   venueName: 'Théâtre de la Ville',
   venueCity: 'Bordeaux',
+  venueAddress: '12 rue des Trois-Conils',
+  venuePostalCode: '33000',
   numPlaces: 2,
   dervisheSiteUrl: 'https://dervichediffusion.com/spectacles/le-bal-des-ames',
+  userId: 'preview-user-id',
   managerName: 'Sophie Lefèvre',
   managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
@@ -108,11 +111,20 @@ const MOCK_ADMIN_NOTIFICATION: AdminNotificationEmailData = {
   guestFullName: 'Marie Dupont',
   guestEmail: 'marie.dupont@theatre-ville.fr',
   guestStructure: 'Théâtre de la Ville — Bordeaux',
+  guestPhone: '06 98 76 54 32',
+  guestFunction: 'Responsable programmation',
+  guestAfcNumber: 'AFC-2026-042',
+  userId: 'preview-user-id',
   showTitle: 'Le Bal des Âmes',
+  companyName: 'Compagnie des Miroirs',
   slotDateFormatted: 'mercredi 15 avril 2026',
   slotTimeFormatted: '19h30',
   venueName: 'Théâtre de la Ville',
+  venueCity: 'Bordeaux',
+  venueAddress: '12 rue des Trois-Conils',
+  venuePostalCode: '33000',
   numPlaces: 2,
+  specialRequests: 'Accès PMR souhaité. Présence presse confirmée.',
   reservationId: 'preview-id',
   cancellationReason: null,
 };
@@ -224,6 +236,13 @@ function buildTemplateFromParams(
     photo_folder_link_text: q.get('photo_folder_link_text') ?? 'Consulter le dossier photo',
     // CTA dervichediffusion.com — toggle uniquement
     show_derviche_site_link: q.get('show_derviche_site_link') === 'true',
+    // Bloc « Gérer ma réservation »
+    show_manage_reservation_link: q.get('show_manage_reservation_link') === 'true',
+    manage_reservation_link_text:
+      q.get('manage_reservation_link_text') ?? 'Annuler ou modifier ma réservation',
+    guest_contact_message:
+      q.get('guest_contact_message') ??
+      'Pour modifier ou annuler votre réservation, contactez-nous ci-dessous.',
   };
 }
 
@@ -361,6 +380,13 @@ export async function GET(
         photo_folder_link_text: dbTemplate.photo_folder_link_text ?? 'Consulter le dossier photo',
         // CTA dervichediffusion.com
         show_derviche_site_link: dbTemplate.show_derviche_site_link ?? false,
+        // Bloc « Gérer ma réservation »
+        show_manage_reservation_link: dbTemplate.show_manage_reservation_link ?? false,
+        manage_reservation_link_text:
+          dbTemplate.manage_reservation_link_text ?? 'Annuler ou modifier ma réservation',
+        guest_contact_message:
+          dbTemplate.guest_contact_message ??
+          'Pour modifier ou annuler votre réservation, contactez-nous ci-dessous.',
       };
     }
 

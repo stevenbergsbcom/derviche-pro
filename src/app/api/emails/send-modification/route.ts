@@ -67,16 +67,29 @@ interface ReservationWithDetails {
   guest_first_name: string | null;
   guest_last_name: string | null;
   guest_email: string | null;
+  guest_phone: string | null;
   guest_structure: string | null;
+  guest_function: string | null;
+  guest_afc_number: string | null;
   special_requests: string | null;
   google_calendar_event_id: string | null;
   user_id: string | null;
-  profiles: { email: string; first_name: string | null; last_name: string | null } | null;
+  profiles: {
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  } | null;
   slots: {
     id: string;
     date: string;
     time: string;
-    venues: { name: string; city: string } | null;
+    venues: {
+      name: string;
+      city: string;
+      address: string | null;
+      postal_code: string | null;
+    } | null;
     shows: {
       title: string;
       slug: string;
@@ -154,14 +167,18 @@ export async function POST(request: Request): Promise<NextResponse> {
         guest_first_name,
         guest_last_name,
         guest_email,
+        guest_phone,
         guest_structure,
+        guest_function,
+        guest_afc_number,
         special_requests,
         google_calendar_event_id,
         user_id,
         profiles:user_id (
           email,
           first_name,
-          last_name
+          last_name,
+          phone
         ),
         slots!inner (
           id,
@@ -170,7 +187,9 @@ export async function POST(request: Request): Promise<NextResponse> {
           hosted_by_id,
           venues (
             name,
-            city
+            city,
+            address,
+            postal_code
           ),
           shows!inner (
             title,
@@ -342,16 +361,28 @@ export async function POST(request: Request): Promise<NextResponse> {
       : '';
 
     if (notifEnabled && (sendToManager || customRecipient)) {
+      const guestPhone =
+        reservation.guest_phone ?? reservation.profiles?.phone ?? null;
+
       const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
         eventType: 'modification',
         guestFullName: recipientFullName,
         guestEmail: recipientEmail,
         guestStructure: reservation.guest_structure,
+        guestPhone,
+        guestFunction: reservation.guest_function,
+        guestAfcNumber: reservation.guest_afc_number,
+        userId: reservation.user_id,
         showTitle: show.title,
+        companyName: company?.name ?? '',
         slotDateFormatted: formatDateFr(slots.date),
         slotTimeFormatted: formatTimeFr(slots.time),
         venueName: newVenue?.name ?? '',
+        venueCity: newVenue?.city ?? '',
+        venueAddress: newVenue?.address ?? null,
+        venuePostalCode: newVenue?.postal_code ?? null,
         numPlaces: reservation.num_places,
+        specialRequests: reservation.special_requests,
         reservationId: reservation.id,
       };
 

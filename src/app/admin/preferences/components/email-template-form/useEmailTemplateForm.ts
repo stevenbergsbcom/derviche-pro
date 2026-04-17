@@ -79,6 +79,13 @@ export function useEmailTemplateForm({
       photo_folder_link_text: template.photo_folder_link_text ?? 'Consulter le dossier photo',
       // CTA dervichediffusion.com — libellé = cta_text
       show_derviche_site_link: template.show_derviche_site_link ?? false,
+      // Bloc « Gérer ma réservation »
+      show_manage_reservation_link: template.show_manage_reservation_link ?? false,
+      manage_reservation_link_text:
+        template.manage_reservation_link_text ?? 'Annuler ou modifier ma réservation',
+      guest_contact_message:
+        template.guest_contact_message ??
+        'Pour modifier ou annuler votre réservation, contactez-nous ci-dessous.',
     },
   });
 
@@ -96,6 +103,7 @@ export function useEmailTemplateForm({
   const showBookingLink     = useWatch({ control, name: 'show_booking_link' });
   const showPhotoFolderLink = useWatch({ control, name: 'show_photo_folder_link' });
   const showDervicheSiteLink = useWatch({ control, name: 'show_derviche_site_link' });
+  const showManageReservationLink = useWatch({ control, name: 'show_manage_reservation_link' });
   const showReservationCode = useWatch({ control, name: 'show_reservation_code' });
   const isConfirmation      = template.template_key === 'reservation_confirmation';
   const isSimpleStyle       = template.is_simple_style === true;
@@ -192,6 +200,10 @@ export function useEmailTemplateForm({
       photo_folder_link_text: v.photo_folder_link_text ?? '',
       // CTA dervichediffusion.com — libellé = cta_text
       show_derviche_site_link: v.show_derviche_site_link ?? false,
+      // Bloc « Gérer ma réservation »
+      show_manage_reservation_link: v.show_manage_reservation_link ?? false,
+      manage_reservation_link_text: v.manage_reservation_link_text ?? '',
+      guest_contact_message: v.guest_contact_message ?? '',
     };
   };
 
@@ -235,6 +247,7 @@ export function useEmailTemplateForm({
     showBookingLink,
     showPhotoFolderLink,
     showDervicheSiteLink,
+    showManageReservationLink,
     showReservationCode,
     // Derived
     isConfirmation,
