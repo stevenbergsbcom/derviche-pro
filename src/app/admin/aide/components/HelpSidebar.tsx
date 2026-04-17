@@ -2,12 +2,15 @@
  * HelpSidebar — TOC catégorisée des articles
  * Derviche Diffusion — S197
  *
- * Server Component qui lit le contenu MDX + filtre par rôle et rend une
- * arbo de catégories avec leurs articles. L'article actif est surligné
- * côté client via un sous-composant.
+ * Client Component : lit le contenu MDX (passé en prop par le layout
+ * Server) + utilise `usePathname` pour détecter l'article actif et le
+ * surligner. Le filtrage par rôle est déjà appliqué en amont côté serveur.
  */
 
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   BookOpen,
   Building2,
@@ -55,11 +58,19 @@ const ICON_MAP: Record<string, LucideIcon> = {
 
 interface HelpSidebarProps {
   tree: HelpCategory[];
-  /** Slug de l'article actif (ex. `reservations/creer`). */
-  activeSlug?: string;
 }
 
-export function HelpSidebar({ tree, activeSlug }: HelpSidebarProps) {
+const AIDE_PREFIX = '/admin/aide/';
+
+export function HelpSidebar({ tree }: HelpSidebarProps) {
+  const pathname = usePathname();
+  // Dérive le slug actif depuis l'URL : /admin/aide/reservations/creer
+  // → "reservations/creer". Utilisé pour surligner l'entrée correspondante.
+  const activeSlug =
+    pathname?.startsWith(AIDE_PREFIX)
+      ? pathname.slice(AIDE_PREFIX.length)
+      : undefined;
+
   return (
     <nav className="flex flex-col gap-6" aria-label="Table des matières de l'aide">
       {tree.map((cat) => {
