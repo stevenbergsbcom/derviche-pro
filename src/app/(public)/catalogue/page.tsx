@@ -5,20 +5,12 @@ import { Header, Footer } from '@/components/layout';
 import { SpectacleCard, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Search, ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
 import { transformShowToSpectacle } from '@/lib/utils/shows';
+import { CatalogueFiltersForm } from './components/CatalogueFiltersForm';
+import { CatalogueMobileFilters } from './components/CatalogueMobileFilters';
 
 // ============================================
 // HELPERS
@@ -266,8 +258,9 @@ export default function CataloguePage() {
     <div className="min-h-screen bg-background scroll-smooth">
       <Header />
 
-      {/* Section Hero */}
-      <section className="py-12 md:py-16 bg-gradient-to-b from-white to-muted/30">
+      {/* Section Hero — padding bottom resserré sur mobile pour rapprocher
+          la zone de filtres du bandeau titre. */}
+      <section className="pt-12 pb-6 md:py-16 bg-gradient-to-b from-white to-muted/30">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4 text-derviche-dark">
             Nos spectacles en tournée
@@ -278,124 +271,56 @@ export default function CataloguePage() {
         </div>
       </section>
 
-      {/* Barre de filtres */}
-      <section className="py-6 md:py-8 bg-white border-b">
+      {/* Barre de filtres — padding mobile resserré (juste un bouton)
+          vs desktop (Card avec 6 filtres inline). */}
+      <section className="py-3 md:py-8 bg-white border-b">
         <div className="container mx-auto px-4">
-          <Card>
+          {/* Mobile (< md) : bouton Filtres → Sheet, barre compacte */}
+          <CatalogueMobileFilters
+            value={{
+              genre: genreFilter,
+              mois: moisFilter,
+              lieu: lieuFilter,
+              ville: villeFilter,
+              onlyAvailable,
+              searchQuery,
+            }}
+            options={{ genres, mois, lieux, villes }}
+            resultsCount={filteredSpectacles.length}
+            onGenreChange={setGenreFilter}
+            onMoisChange={setMoisFilter}
+            onLieuChange={setLieuFilter}
+            onVilleChange={setVilleFilter}
+            onAvailableChange={setOnlyAvailable}
+            onSearchChange={setSearchQuery}
+            onReset={resetFilters}
+          />
+
+          {/* Desktop (≥ md) : filtres inline dans une Card */}
+          <Card className="hidden md:block">
             <CardContent className="px-4 md:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
-                {/* Select Genre */}
-                <div className="space-y-2">
-                  <Label htmlFor="genre">Genre</Label>
-                  <Select value={genreFilter} onValueChange={setGenreFilter}>
-                    <SelectTrigger id="genre">
-                      <SelectValue placeholder="Genre" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {genres.map((genre) => (
-                        <SelectItem key={genre} value={genre}>
-                          {genre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Select Mois */}
-                <div className="space-y-2">
-                  <Label htmlFor="mois">Mois</Label>
-                  <Select value={moisFilter} onValueChange={setMoisFilter}>
-                    <SelectTrigger id="mois">
-                      <SelectValue placeholder="Mois" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {mois.map((m) => (
-                        <SelectItem key={m} value={m}>
-                          {m}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Select Lieu */}
-                <div className="space-y-2">
-                  <Label htmlFor="lieu">Lieu</Label>
-                  <Select value={lieuFilter} onValueChange={setLieuFilter}>
-                    <SelectTrigger id="lieu">
-                      <SelectValue placeholder="Lieu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lieux.map((lieu) => (
-                        <SelectItem key={lieu} value={lieu}>
-                          {lieu}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Select Ville */}
-                <div className="space-y-2">
-                  <Label htmlFor="ville">Ville</Label>
-                  <Select value={villeFilter} onValueChange={setVilleFilter}>
-                    <SelectTrigger id="ville">
-                      <SelectValue placeholder="Ville" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {villes.map((ville) => (
-                        <SelectItem key={ville} value={ville}>
-                          {ville}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Switch En tournée uniquement */}
-                <div className="space-y-2">
-                  <Label htmlFor="available" className="text-sm text-muted-foreground">
-                    Disponibilité
-                  </Label>
-                  <div className="flex items-center gap-3 h-10">
-                    <Switch
-                      id="available"
-                      checked={onlyAvailable}
-                      onCheckedChange={setOnlyAvailable}
-                    />
-                    <Label
-                      htmlFor="available"
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      En tournée uniquement
-                    </Label>
-                  </div>
-                </div>
-
-                {/* Input Recherche */}
-                <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="search">Recherche</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      id="search"
-                      type="text"
-                      placeholder="Rechercher un spectacle..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              </div>
+              <CatalogueFiltersForm
+                layout="grid"
+                value={{
+                  genre: genreFilter,
+                  mois: moisFilter,
+                  lieu: lieuFilter,
+                  ville: villeFilter,
+                  onlyAvailable,
+                  searchQuery,
+                }}
+                options={{ genres, mois, lieux, villes }}
+                onGenreChange={setGenreFilter}
+                onMoisChange={setMoisFilter}
+                onLieuChange={setLieuFilter}
+                onVilleChange={setVilleFilter}
+                onAvailableChange={setOnlyAvailable}
+                onSearchChange={setSearchQuery}
+              />
 
               {/* Bouton Réinitialiser */}
               <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  onClick={resetFilters}
-                  className="text-sm"
-                >
+                <Button variant="outline" onClick={resetFilters} className="text-sm">
                   Réinitialiser
                 </Button>
               </div>
@@ -404,8 +329,9 @@ export default function CataloguePage() {
         </div>
       </section>
 
-      {/* Grille de spectacles */}
-      <section className="py-8 md:py-12 bg-muted/30">
+      {/* Grille de spectacles — padding top resserré sur mobile pour
+          rapprocher les cards du bouton Filtres. */}
+      <section className="pt-4 pb-8 md:py-12 bg-muted/30">
         <div className="container mx-auto px-4">
           {filteredSpectacles.length === 0 ? (
             <div className="text-center py-12">

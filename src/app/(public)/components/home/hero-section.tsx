@@ -58,9 +58,9 @@ export function HeroSection({ hero, spectaclesWithImage }: HeroSectionProps) {
           )}
         </div>
 
-        {/* Hero Slider */}
+        {/* Hero Slider — masqué en mobile (< md) */}
         {spectaclesWithImage.length > 0 && (
-          <div className="max-w-4xl mx-auto">
+          <div className="hidden md:block max-w-4xl mx-auto">
             <div className="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
               {spectaclesWithImage.map((spectacle, index) => (
                 <div

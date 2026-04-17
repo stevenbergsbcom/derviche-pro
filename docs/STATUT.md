@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S188 — Enrichir fiche spectacle publique — 13 mars 2026
+> Dernière mise à jour : Session S196 — Lien dervichediffusion.com éditable dans templates post-checkin — 17 avril 2026
 
 ---
 
@@ -36,8 +36,12 @@
 - **S188** : Badges catégories (bg-gold) et publics cible sur l'image
 - **S188** : Période et dates de relâche depuis la DB (au lieu de calculé)
 - **S188** : Bloc "Pour les professionnels" dynamique (invitation_policy + contact manager)
+- **S190** : Teaser vidéo en modale (YouTube + Vimeo) sur la fiche spectacle publique
+- **S193** : Catalogue — label « En tournée uniquement » + heure de la prochaine date + filtre Ville
+- **S194** : Tri éditorial par `display_order` sur le catalogue et le carousel home
+- **S194** : Drag-to-scroll sur le carousel « Spectacles à découvrir » de la home
 - Formulaire réservation (guest ou connecté)
-- Confirmation de réservation
+- Confirmation de réservation — **fix adresse lieu dupliquée (S191)**
 
 ### ✅ Check-in PWA (100%)
 - Flux : spectacles → créneaux → liste réservations
@@ -74,15 +78,16 @@
 ### ✅ Admin (100%)
 | Module | État |
 |--------|------|
-| Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison |
+| Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison, **bouton Check-in → nouvel onglet (S190)** |
 | Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export |
-| Spectacles | ✅ Liste, filtres, CRUD, catégories, publics cibles, médias |
+| **Statistiques** | ✅ Page `/admin/statistiques` dédiée — KPIs, drill-down drawers, comparaison périodes, export PDF, préférences column visibility (S189) |
+| Spectacles | ✅ Liste, filtres, CRUD, catégories (renommables S192), publics cibles (renommables S192), médias, **champ `derviche_site_url` (S191)** |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
 | Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
 | Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
-| Préférences | ✅ Organisation, Apparence (thème custom S174), Email, Notifications, Rappels, Templates (11, UX DRY S175), Google Calendar, RGPD, **Page d'accueil (S176)** |
-| Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137, **fix résa publique S182** |
+| Préférences | ✅ Organisation, Apparence (thème custom S174), **Classement (vedette + ordre global, S194)**, Email, Templates (12, UX DRY S175), Notifications, Rappels, Google Calendar, RGPD, **Page d'accueil (S176)** — **sous-menu collapsible dans la sidebar (S195)** |
+| Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137, **fix résa publique S182**, **notification admin enrichie (S191)** |
 | **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
 | **Utilisateurs** | ✅ CRUD comptes internes + vue assignations spectacles pour externes — S153 |
 
@@ -1232,9 +1237,140 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S189 — Page Statistiques admin (Phases 1–4) ✅
+
+**Feature majeure** : nouvelle page `/admin/statistiques` dédiée avec drill-down, comparaison périodes, export PDF et préférences admin.
+
+**Phase 1 — MVP** : page avec KPIs globaux (réservations, check-ins, taux de présence) + tableau top spectacles/lieux/professionnels. RPCs Postgres `stats_rpcs` pour agrégats côté DB.
+
+**Phase 2 — Drill-down** : drawers latéraux au clic sur chaque KPI (détail réservations/checkins par créneau, par spectacle, par lieu). Graphique d'évolution (recharts) par jour/semaine/mois.
+
+**Phase 3 — Comparaison & Export** : comparateur entre deux périodes (deltas colorés), export PDF focalisé depuis les drawers détail (jsPDF) et depuis la page globale.
+
+**Phase 4 — Préférences admin** : onglet « Statistiques » dans `/admin/preferences` avec column visibility par module, réinitialisation. Appliqué à la page live.
+
+**Migrations** : 103 `stats_rpcs`, 104 fix ambiguous, 105 `stats_detail_rpcs`, 106 `stats_preferences`.
+
+---
+
+### S190 — UX dashboard + teaser vidéo public ✅
+
+**Check-in nouvel onglet** : le bouton Check-in du dashboard admin ouvre `/accueil/[showSlug]` dans un nouvel onglet (target=_blank + rel noopener).
+
+**Teaser vidéo** : modale sur la fiche spectacle publique lisant l'URL `shows.teaser_url` (YouTube ou Vimeo, embed auto-détecté). Bouton « Voir le teaser » à côté du bouton de réservation.
+
+---
+
+### S191 — `shows.derviche_site_url` + emails enrichis ✅
+
+**Feature produit** : gestion complète du lien marketing vitrine depuis l'admin, emails enrichis.
+
+**Spectacles** :
+- Migration 107 : nouveau champ `shows.derviche_site_url` (page marketing sur dervichediffusion.com)
+- Form admin : input URL dans SettingsSection, affiché dans spectacle-view-dialog
+- Type `PublicShow.dervisheSiteUrl` exposé côté public
+
+**Emails** :
+- Migration 108 : toggle `email_templates.show_derviche_site_link` sur 5 templates (confirmation, modification, rappels J-7/J-2/H-4) — si ON + URL valide, le CTA principal pointe vers la page vitrine au lieu de la fiche interne (libellé reste `cta_text`)
+- Migration 109 : drop `derviche_site_link_text` (simplification — le libellé vient de `cta_text`)
+- Migration 110 : bloc « Gérer ma réservation » sur `reservation_confirmation` (compte pro → bouton `/professional/reservations` / guest → paragraphe + mailto pré-rempli)
+- Adresse complète du lieu (nom + rue + code postal + ville) affichée dans **tous** les emails avec bloc venue, via helper `buildVenueLines`
+- Notification admin post-réservation enrichie : phone, function, AFC, company, adresse, demandes spéciales, badge guest/account (tout sauf le code de réservation)
+
+**Fix public** : page `/spectacle/[slug]/confirmation` n'affichait plus « Théâtre, Paris » en double (reconstruction propre de `venueAddress` avec `address` + `postal_code` + `city`).
+
+---
+
+### S192 — Renommage catégories/publics + resolver variables ✅
+
+**Rename inline** : dans `category-manager-dialog` et `target-audience-manager-dialog`, pictogramme crayon + Enter/Escape keyboard + auto-focus pour éditer le nom. Vérification collision casse-insensitive, régénération du slug. Hooks `useCategories.rename()` et `useTargetAudiences.rename()`.
+
+**Fix resolver** : `{{adresse}}` et `{{code_postal}}` n'étaient pas substitués dans les sujets/header_title. Ajouts dans `resolveTemplateVariables` + propagation dans les 5 builders email (rawVars + htmlVars).
+
+**Renommage métier** : catégories et publics cibles peuvent être renommés sans perdre les associations existantes.
+
+---
+
+### S193 — Catalogue public amélioré + lien Contact universel ✅
+
+**Catalogue** :
+- Switch « Disponibles uniquement » → « En tournée uniquement »
+- Hero homepage label « Disponibles en ce moment » → « En tournée »
+- Heure de la prochaine date affichée à côté du texte (« Prochaine date : jj/mm à HHhMM »), sur home + catalogue
+- Nouveau filtre « Ville » dans la barre de filtres catalogue (Select)
+
+**Lien Contact universel** : `href="#contact"` ne marchait que sur la home. Refonte vers `href="/#contact"` + nouveau hook `useScrollToHash` qui lit `window.location.hash` après changement de pathname et fait `scrollIntoView` avec retry jusqu'à 500ms (pour Suspense/async boundaries).
+
+**Types étendus** : `PublicShow.nextTime`, `Spectacle.cities`.
+
+---
+
+### S194 — Classement éditorial (is_featured + display_order) ✅
+
+**Feature produit** : le client Derviche pilote l'ordre d'affichage des spectacles via un nouvel onglet admin.
+
+**Migration 111** : colonnes `shows.is_featured` (BOOL NOT NULL DEFAULT false) et `shows.display_order` (INT NULLABLE) + 2 index partiels.
+
+**Onglet « Classement »** (`/admin/preferences?tab=classement`) :
+- **Zone 1 — En vedette** : liste drag&drop des spectacles `is_featured = true` (pilote le slider hero de la homepage). Popover de sélection + retrait. Save auto via `/api/admin/shows/reorder` avec UI optimiste + rollback.
+- **Zone 2 — Ordre global** : liste drag&drop de tous les spectacles non supprimés avec filtre statut/recherche + input numérique « Rang » synchronisé. Bouton « Réinitialiser l'ordre » (all → NULL).
+
+**Impact public** :
+- `HeroSection` de la homepage : slider d'images masqué si aucune vedette sélectionnée (mais titre/CTAs toujours visibles)
+- Carousel `SpectaclesSection` : tri par `status → display_order → title`
+- Catalogue : tri par `status → display_order → title`
+
+**Home** : ordre des sections inversé (Spectacles avant Avantages) pour alternance propre muted/white/muted/white.
+
+**Drag-to-scroll** sur le carousel homepage milieu : pointer events, `onClickCapture` qui bloque le clic sur une card si drag > 8px, `onDragStart` qui prévient le drag natif du `<a>`/`<img>`.
+
+**Fix Zod v4** : `z.string().uuid()` avait un variant bit strict rejetant certains UUID DB → remplacé par regex loose `/^[0-9a-f]{8}-[0-9a-f]{4}-…/i` sur 2 routes API.
+
+---
+
+### S195 — Sous-menu Préférences dans la sidebar admin ✅
+
+**Refonte UX** : les 11 onglets horizontaux de `/admin/preferences` migrent en sous-menu collapsible dans la sidebar admin (pattern Stripe / Linear / Vercel / Supabase).
+
+**Architecture (10 fichiers neufs, ≤80 lignes chacun)** :
+- `config/preference-tabs.ts` : source unique `PREFERENCE_TABS` + `DEFAULT_TAB`
+- `hooks/usePreferencesTab.ts` : hook extrait, lecture `?tab=`
+- `components/admin/preferences-dirty/` : `context.tsx`, `provider.tsx`, `ConfirmableNavLink.tsx`, barrel — protection « modifs non sauvegardées » centralisée au `AdminLayout`
+- `admin-sidebar/preferences-submenu/` : `helpers.ts`, `Expanded.tsx` (Collapsible + SidebarMenuSub), `Collapsed.tsx` (DropdownMenu pour mode icon-only), `index.tsx` (aiguillage rôle + état sidebar)
+
+**Comportement** :
+- Clic sur « Préférences » → expand + navigate `?tab=organization`
+- Auto-ouverture sur `/admin/preferences/*`, auto-fermeture ailleurs
+- Mode icon-only → popover `DropdownMenu` à droite
+- Mobile (Sheet) : mode expanded forcé
+- Garde dirty : `ConfirmableNavLink` intercepte le clic, Provider affiche `UnsavedChangesDialog` global
+- Header de page : `AdminPageHeader` avec `subtitle = activeTabLabel` (remplace la ligne d'onglets supprimée)
+
+**Suppression** : `components/preferences-tabs.tsx` (UI + hook déplacés vers les nouveaux modules).
+
+---
+
+### S196 — Lien dervichediffusion.com éditable dans templates post-checkin ✅
+
+**Extension du pattern** `show_derviche_site_link` aux 4 templates post-checkin (style sobre : `checkin_thank_you`, `checkin_loved`, `checkin_press`, `checkin_followup_absent`).
+
+**Migration 112** : réintroduit `email_templates.derviche_site_link_text` TEXT NOT NULL DEFAULT `'Voir la fiche spectacle sur dervichediffusion.com'` (droppée en 109).
+
+**Comportement divergent** :
+- 5 templates classiques : le toggle route le CTA principal vers la vitrine, libellé = `cta_text` (inchangé)
+- 4 templates post-checkin : le toggle ajoute une entrée dans la liste des liens complémentaires, libellé éditable = `derviche_site_link_text` (nouveau, **différent par template**)
+
+**Builder `simple.ts`** : nouveau bloc `dervicheSiteLinkBlock` consommant `template.derviche_site_link_text` + `data.dervisheSiteUrl` (filtré `isSafeUrl`).
+
+**API** : `/api/emails/send-checkin-followup` étend son SELECT avec `derviche_site_url` et passe `dervisheSiteUrl` à `sendCheckinFollowupEmail`. Route PATCH `/api/admin/email-templates/[key]` + preview acceptent la nouvelle colonne.
+
+**UI** : dans la section « Liens optionnels » du form template (rendue uniquement pour `is_simple_style`), ajout d'un `<OptionalLinkToggle>` avec libellé éditable — pattern identique aux 5 autres liens optionnels post-checkin.
+
+---
+
 ## Backlog / TODO
 
-### Prochaine session : S189 — à définir
+### Prochaine session : S197 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
@@ -1242,4 +1378,6 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | 1 | Barrel exports manquants (21 dossiers) | Faible | DX |
 | 2 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
 | 3 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
+| 4 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
+| 5 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
 
