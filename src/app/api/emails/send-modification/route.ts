@@ -95,6 +95,7 @@ interface ReservationWithDetails {
       slug: string;
       duration_minutes: number | null;
       derviche_manager_id: string | null;
+      derviche_site_url: string | null;
       companies: { name: string } | null;
     };
   };
@@ -196,6 +197,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             slug,
             duration_minutes,
             derviche_manager_id,
+            derviche_site_url,
             companies:company_id (
               name
             )
@@ -323,6 +325,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       venueName: newVenue?.name ?? '',
       venueCity: newVenue?.city ?? '',
       numPlaces: reservation.num_places,
+      dervisheSiteUrl: show.derviche_site_url ?? null,
       managerName:  managerName,
       managerEmail: managerEmail,
       managerPhone: managerPhone,

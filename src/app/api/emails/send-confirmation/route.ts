@@ -248,6 +248,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             guest_afc_number,
             special_requests,
             user_id,
+            profiles:user_id ( phone ),
             slots!inner (
               date,
               time,
@@ -269,6 +270,7 @@ export async function POST(request: Request): Promise<NextResponse> {
           guest_afc_number: string | null;
           special_requests: string | null;
           user_id: string | null;
+          profiles: { phone: string | null } | null;
           slots: {
             date: string;
             time: string;
@@ -288,13 +290,18 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const slots = rd?.slots ?? null;
 
+        // Téléphone : champ guest prioritaire, sinon profil du compte pro lié.
+        // Cohérent avec send-confirmation-by-id / send-cancellation / send-modification.
+        const profilePhone = rd?.profiles?.phone ?? null;
+        const guestPhone = rd?.guest_phone ?? profilePhone;
+
         // Construire les données communes de notification
         const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
           eventType: 'new_reservation',
           guestFullName: payload.guestFullName,
           guestEmail: payload.to,
           guestStructure: rd?.guest_structure ?? null,
-          guestPhone: rd?.guest_phone ?? null,
+          guestPhone,
           guestFunction: rd?.guest_function ?? null,
           guestAfcNumber: rd?.guest_afc_number ?? null,
           userId: rd?.user_id ?? null,

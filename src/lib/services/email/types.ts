@@ -80,6 +80,11 @@ export interface ReservationModificationEmailData extends ManagerContact {
   venueName: string;
   venueCity: string;
   numPlaces: number;
+  /**
+   * URL de la page marketing du spectacle sur dervichediffusion.com.
+   * Utilisée comme CTA principal si `template.show_derviche_site_link` est activé.
+   */
+  dervisheSiteUrl: string | null;
 }
 
 export interface AdminNotificationEmailData {

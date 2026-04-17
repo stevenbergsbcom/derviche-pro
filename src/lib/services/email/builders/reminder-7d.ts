@@ -24,6 +24,7 @@ import {
   buildCtaBlock,
   buildFooterRow,
   orgContactFromConfig,
+  isSafeUrl,
 } from '../html-helpers';
 
 export function buildReminder7dHtml(
@@ -32,7 +33,12 @@ export function buildReminder7dHtml(
   template: EmailTemplate,
   appUrl: string
 ): string {
-  const showUrl     = `${appUrl}/spectacle/${data.showSlug}`;
+  const internalShowUrl = `${appUrl}/spectacle/${data.showSlug}`;
+  // Toggle show_derviche_site_link : CTA vers la page marketing si URL valide,
+  // sinon fallback sur la fiche publique interne. Libellé reste `cta_text`.
+  const useDervicheSite =
+    template.show_derviche_site_link && isSafeUrl(data.dervisheSiteUrl);
+  const showUrl = useDervicheSite ? data.dervisheSiteUrl! : internalShowUrl;
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
 
   const rawVars: EmailTemplateVariables = {

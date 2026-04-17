@@ -107,6 +107,19 @@ export function useEmailTemplateForm({
   const showReservationCode = useWatch({ control, name: 'show_reservation_code' });
   const isConfirmation      = template.template_key === 'reservation_confirmation';
   const isSimpleStyle       = template.is_simple_style === true;
+  /**
+   * Templates dont le builder HTML utilise `template.show_derviche_site_link`
+   * pour router le CTA vers dervichediffusion.com :
+   * confirmation, modification, rappels J-7 / J-2 / H-4.
+   * Hors scope : cancellation (CTA catalogue), admin_notification (CTA admin),
+   * post-checkin (lien booking_link déjà toggleable, sémantique différente).
+   */
+  const supportsDervicheSiteLink =
+    template.template_key === 'reservation_confirmation' ||
+    template.template_key === 'reservation_modification' ||
+    template.template_key === 'reminder_7d' ||
+    template.template_key === 'reminder_2d' ||
+    template.template_key === 'reminder_4h';
 
   // Notifier le parent quand isDirty change
   useEffect(() => {
@@ -251,6 +264,7 @@ export function useEmailTemplateForm({
     showReservationCode,
     // Derived
     isConfirmation,
+    supportsDervicheSiteLink,
     isSimpleStyle,
     // Preview
     previewOpen,

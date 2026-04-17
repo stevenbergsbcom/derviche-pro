@@ -72,6 +72,7 @@ interface RawReservationRow {
       title: string;
       slug: string;
       derviche_manager_id: string | null;
+      derviche_site_url: string | null;
       companies: {
         name: string;
       } | null;
@@ -169,6 +170,7 @@ export async function getEligibleReservations(
           title,
           slug,
           derviche_manager_id,
+          derviche_site_url,
           companies!inner (
             name
           )
@@ -248,6 +250,7 @@ export async function getEligibleReservations(
       slot_start_at:        `${slot.date}T${slot.time}`,
       venue_name:           venue.name,
       venue_city:           venue.city,
+      derviche_site_url:    show.derviche_site_url ?? null,
       // Manager résolu séparément (cf. enrichWithManagers)
       manager_name:   null,
       manager_email:  null,

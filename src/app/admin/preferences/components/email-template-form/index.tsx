@@ -85,6 +85,7 @@ export function EmailTemplateForm({
     showReservationCode,
     // Derived
     isConfirmation,
+    supportsDervicheSiteLink,
     isSimpleStyle,
     // Preview
     previewOpen,
@@ -245,9 +246,10 @@ export function EmailTemplateForm({
               </p>
             </div>
 
-            {/* Toggle : rediriger vers dervichediffusion.com — spécifique au
-                template de confirmation (seul builder qui lit ce flag). */}
-            {isConfirmation && (
+            {/* Toggle : rediriger vers dervichediffusion.com — dispo sur tous
+                les templates dont le builder lit ce flag (confirmation,
+                modification, rappels J-7 / J-2 / H-4). */}
+            {supportsDervicheSiteLink && (
               <div className="flex items-start gap-3 rounded-md border border-dashed p-3">
                 <Switch
                   id={`show_derviche_site_link-${template.template_key}`}

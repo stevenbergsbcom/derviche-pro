@@ -3,7 +3,10 @@
  * GET /api/admin/email-templates/[key]/preview
  *
  * Génère un rendu HTML d'un template avec des données fictives,
- * en utilisant les VRAIS builders — rendu identique aux emails envoyés.
+ * en utilisant les VRAIS builders. Les blocs conditionnels (liens teaser/site
+ * vitrine, bloc « gérer ma réservation », téléphone pro, etc.) supposent que
+ * les données sont renseignées sur le spectacle/profil ; un lien absent en
+ * prod retombe sur la fiche publique interne ou disparaît.
  *
  * Les valeurs du formulaire peuvent être passées en query string
  * pour prévisualiser les modifications avant sauvegarde.
@@ -99,6 +102,7 @@ const MOCK_MODIFICATION: ReservationModificationEmailData = {
   venueName: 'Théâtre de la Ville',
   venueCity: 'Bordeaux',
   numPlaces: 2,
+  dervisheSiteUrl: 'https://dervichediffusion.com/spectacles/le-bal-des-ames',
   managerName: 'Sophie Lefèvre',
   managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
@@ -187,6 +191,7 @@ const MOCK_REMINDER: ReminderEmailData = {
   venueName: 'Théâtre de la Ville',
   venueCity: 'Bordeaux',
   numPlaces: 2,
+  dervisheSiteUrl: 'https://dervichediffusion.com/spectacles/le-bal-des-ames',
   managerName: 'Sophie Lefèvre',
   managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
@@ -291,7 +296,7 @@ function generatePreviewHtml(
 function injectPreviewBanner(html: string): string {
   const banner = `
   <div style="background:#fef3c7;border-bottom:2px solid #f59e0b;padding:10px 20px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#92400e;">
-    ⚠️ <strong>Aperçu avec données fictives</strong> — Les variables sont remplacées par des exemples. Le rendu est identique à l'email réellement envoyé.
+    ⚠️ <strong>Aperçu avec données fictives</strong> — Les variables et blocs conditionnels (liens, bloc « gérer ma réservation », téléphone pro…) supposent que les données sont renseignées sur le spectacle et le profil. En réel, un lien absent retombe sur la fiche publique interne ou disparaît.
   </div>`;
   return html.replace(
     /(<body[^>]*>)/,
