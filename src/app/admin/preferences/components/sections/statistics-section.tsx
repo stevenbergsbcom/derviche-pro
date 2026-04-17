@@ -1,10 +1,17 @@
 /**
  * Section Statistiques - Préférences admin pour /admin/statistiques
- * Derviche Diffusion — Phase 4A
+ * Derviche Diffusion — Phases 4A + 4B
  *
- * Phase 4A : seules les colonnes cachées sont appliquées aux tables stats.
- * Les 4 autres préférences (période, taille de page, preset compare, format export)
- * sont stockées et éditables mais pas encore consommées (note UI).
+ * Les 6 préférences sont stockées dans app_settings (migration 106) et
+ * appliquées par la page stats :
+ *   - colonnes masquées shows + venues   → filtrage direct des tables (4A)
+ *   - période par défaut                 → useStatsFilters (si URL vide)   (4B)
+ *   - taille de page                     → prop pageSize des tables        (4B)
+ *   - preset comparaison par défaut      → fallback de setCompareMode      (4B)
+ *   - format d'export par défaut         → split button ExportMenu         (4B)
+ *
+ * Une URL partagée avec des paramètres explicites prime toujours sur les
+ * défauts workspace (bookmarks préservés).
  */
 
 'use client';
@@ -53,13 +60,15 @@ interface StatisticsSectionProps {
 // CONSTANTES
 // ============================================
 
-const PERIOD_OPTIONS: StatsPeriod[] = [
+// `custom` est volontairement exclu des options de défaut : les bornes
+// from/to ne sont pas paramétrables ici, ce qui produirait une période
+// sans bornes valides au chargement de /admin/statistiques.
+const PERIOD_OPTIONS: Exclude<StatsPeriod, 'custom'>[] = [
   'month_current',
   'month_previous',
   'season_current',
   'year_current',
   'all',
-  'custom',
 ];
 
 const COMPARE_OPTIONS: ComparePreset[] = [

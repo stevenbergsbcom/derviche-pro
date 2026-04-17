@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type {
   AdminStatsDataWithComparison,
@@ -65,9 +65,13 @@ export function useStatsExport({
   venueLabels,
 }: UseStatsExportProps): UseStatsExportReturn {
   const [isExporting, setIsExporting] = useState(false);
+  // Garde synchrone contre les double-clics rapides (avant que React
+  // propage `isExporting=true` aux boutons disabled).
+  const isRunningRef = useRef(false);
 
   const exportAs = useCallback(
     (format: ExportFormat) => {
+      if (isRunningRef.current) return;
       if (!data || !bounds) {
         toast.error('Aucune donnée à exporter');
         return;
@@ -78,6 +82,7 @@ export function useStatsExport({
       if (format === 'pdf') {
         // PDF est async : on enveloppe dans une IIFE pour garder la signature
         // synchrone de `exportAs` (aucun appelant n'a besoin d'await).
+        isRunningRef.current = true;
         setIsExporting(true);
         void (async () => {
           try {
@@ -116,11 +121,13 @@ export function useStatsExport({
             toast.error(err instanceof Error ? err.message : 'Erreur export PDF');
           } finally {
             setIsExporting(false);
+            isRunningRef.current = false;
           }
         })();
         return;
       }
 
+      isRunningRef.current = true;
       setIsExporting(true);
       try {
         if (format === 'csv') {
@@ -150,6 +157,7 @@ export function useStatsExport({
         toast.error(err instanceof Error ? err.message : 'Erreur export');
       } finally {
         setIsExporting(false);
+        isRunningRef.current = false;
       }
     },
     [data, state, bounds, companyLabels, venueLabels]

@@ -19,6 +19,12 @@ import {
 import { getAppSettings } from './core';
 import { parseNumber, parseStringArray, parseStringEnum } from './helpers';
 
+// `custom` n'est pas acceptable comme période par DÉFAUT (pas de from/to
+// paramétrable). On filtre l'enum valide pour ne jamais le renvoyer.
+const VALID_DEFAULT_PERIODS = VALID_STATS_PERIODS.filter(
+  (p) => p !== 'custom',
+);
+
 /**
  * Récupère les paramètres statistiques (avec fallback sur les défauts).
  *
@@ -40,7 +46,7 @@ export async function getStatsSettings(): Promise<AppSettingResult<StatsSettings
     data: {
       stats_default_period: parseStringEnum(
         raw.stats_default_period,
-        VALID_STATS_PERIODS,
+        VALID_DEFAULT_PERIODS,
         STATS_DEFAULTS.stats_default_period,
       ),
       stats_default_page_size: parseNumber(

@@ -59,7 +59,11 @@ export function ExportMenu({
   const defaultLabel = FORMAT_LABELS[defaultFormat];
 
   return (
-    <div className="inline-flex rounded-md shadow-sm" role="group">
+    <div
+      className="inline-flex rounded-md shadow-sm"
+      role="group"
+      aria-label="Exporter les statistiques"
+    >
       {/* Partie gauche : action directe sur le format par défaut */}
       <Button
         type="button"

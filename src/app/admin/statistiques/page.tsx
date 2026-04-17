@@ -11,7 +11,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useMemo } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AdminPageHeader } from '@/components/admin';
 import { AlertTriangle } from 'lucide-react';
@@ -38,16 +38,25 @@ function StatistiquesContent() {
   // Défauts préférences workspace (Phase 4B). Peuvent être `undefined` tant
   // que les settings ne sont pas chargés — les hooks reçoivent alors juste
   // le fallback hardcoded.
-  const filterDefaults = statsSettings.data
-    ? {
-        period: statsSettings.data.stats_default_period,
-        comparePreset: statsSettings.data.stats_default_compare_preset,
-      }
-    : undefined;
-
-  const page = useStatsPage(
-    filterDefaults ? { filterDefaults } : undefined
+  // `useMemo` stabilise la référence pour éviter que le `useEffect`
+  // d'application dans `useStatsFilters` ne se re-déclenche à chaque render.
+  const statsSettingsData = statsSettings.data;
+  const filterDefaults = useMemo(
+    () =>
+      statsSettingsData
+        ? {
+            period: statsSettingsData.stats_default_period,
+            comparePreset: statsSettingsData.stats_default_compare_preset,
+          }
+        : undefined,
+    [statsSettingsData]
   );
+  const pageOptions = useMemo(
+    () => (filterDefaults ? { filterDefaults } : undefined),
+    [filterDefaults]
+  );
+
+  const page = useStatsPage(pageOptions);
   const exportApi = useStatsExport({
     data: page.data,
     state: page.filters,

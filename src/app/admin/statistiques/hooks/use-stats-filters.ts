@@ -9,6 +9,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ComparePreset, StatsPeriod } from '@/lib/services/admin-stats';
 import { DEFAULT_STATS_PERIOD } from '@/lib/services/admin-stats';
+import {
+  DEFAULT_COMPARE_PRESET,
+  parsePeriodStrict,
+  searchParamsFromState,
+  stateFromSearchParams,
+} from './helpers/stats-filters-url';
 
 // ============================================
 // TYPES
@@ -53,101 +59,6 @@ export interface UseStatsFiltersOptions {
   };
 }
 
-// ============================================
-// CONSTANTES
-// ============================================
-
-const VALID_PERIODS: readonly StatsPeriod[] = [
-  'month_current',
-  'month_previous',
-  'season_current',
-  'year_current',
-  'all',
-  'custom',
-];
-
-const VALID_COMPARE_PRESETS: readonly ComparePreset[] = [
-  'year_before',
-  'previous_equivalent',
-  'previous_season',
-];
-
-const DEFAULT_COMPARE_PRESET: ComparePreset = 'year_before';
-
-const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-// ============================================
-// HELPERS
-// ============================================
-
-function parsePeriod(raw: string | null): StatsPeriod {
-  if (raw && (VALID_PERIODS as readonly string[]).includes(raw)) {
-    return raw as StatsPeriod;
-  }
-  return DEFAULT_STATS_PERIOD;
-}
-
-function parseIds(raw: string | null): string[] {
-  if (!raw) return [];
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter((s) => UUID_REGEX.test(s));
-}
-
-function parseDate(raw: string | null): string | undefined {
-  if (raw && DATE_REGEX.test(raw)) return raw;
-  return undefined;
-}
-
-function parseCompareMode(raw: string | null): boolean {
-  return raw === '1';
-}
-
-function parseComparePreset(raw: string | null): ComparePreset | undefined {
-  if (raw && (VALID_COMPARE_PRESETS as readonly string[]).includes(raw)) {
-    return raw as ComparePreset;
-  }
-  return undefined;
-}
-
-function stateFromSearchParams(params: URLSearchParams): StatsFiltersState {
-  const compareMode = parseCompareMode(params.get('compareMode'));
-  const parsedPreset = parseComparePreset(params.get('comparePreset'));
-  // `comparePreset` sans `compareMode=1` n'a pas de sens métier : on l'ignore
-  // pour éviter un état hybride (preset mémorisé mais compa désactivée).
-  return {
-    period: parsePeriod(params.get('period')),
-    from: parseDate(params.get('from')),
-    to: parseDate(params.get('to')),
-    companyIds: parseIds(params.get('companies')),
-    venueIds: parseIds(params.get('venues')),
-    ...(compareMode
-      ? {
-          compareMode: true,
-          comparePreset: parsedPreset ?? DEFAULT_COMPARE_PRESET,
-        }
-      : {}),
-  };
-}
-
-function searchParamsFromState(state: StatsFiltersState): string {
-  const params = new URLSearchParams();
-  if (state.period !== DEFAULT_STATS_PERIOD) params.set('period', state.period);
-  if (state.period === 'custom') {
-    if (state.from) params.set('from', state.from);
-    if (state.to) params.set('to', state.to);
-  }
-  if (state.companyIds.length > 0) params.set('companies', state.companyIds.join(','));
-  if (state.venueIds.length > 0) params.set('venues', state.venueIds.join(','));
-  if (state.compareMode) {
-    params.set('compareMode', '1');
-    if (state.comparePreset) params.set('comparePreset', state.comparePreset);
-  }
-  return params.toString();
-}
 
 // ============================================
 // HOOK
@@ -161,10 +72,13 @@ export function useStatsFilters(options?: UseStatsFiltersOptions): UseStatsFilte
     stateFromSearchParams(new URLSearchParams(searchParams.toString()))
   );
 
-  // Snapshot de la présence de `?period=` dans l'URL au mount : sert à décider
-  // si le défaut workspace peut s'appliquer (URL vide) ou non (URL prime).
-  const urlHadPeriodAtMountRef = useRef<boolean>(
-    new URLSearchParams(searchParams.toString()).has('period')
+  // Snapshot au mount : l'URL contenait-elle un `?period=` VALIDE ? On traite
+  // URL manquante et URL invalide de manière identique (fallback préférence),
+  // pour éviter qu'un lien corrompu prive l'utilisateur de son défaut workspace.
+  const urlHadValidPeriodAtMountRef = useRef<boolean>(
+    parsePeriodStrict(
+      new URLSearchParams(searchParams.toString()).get('period')
+    ) !== null
   );
   const [hasAppliedDefaults, setHasAppliedDefaults] = useState(false);
 
@@ -192,8 +106,8 @@ export function useStatsFilters(options?: UseStatsFiltersOptions): UseStatsFilte
     if (hasAppliedDefaults) return;
     if (!options?.defaults) return;
 
-    // Applique `period` uniquement si l'URL d'origine n'en avait pas.
-    if (!urlHadPeriodAtMountRef.current && options.defaults.period) {
+    // Applique `period` uniquement si l'URL d'origine n'en avait pas de valide.
+    if (!urlHadValidPeriodAtMountRef.current && options.defaults.period) {
       const defaultPeriod = options.defaults.period;
       setFilters((prev) =>
         prev.period === DEFAULT_STATS_PERIOD && prev.period !== defaultPeriod

@@ -40,9 +40,13 @@ export interface UseStatsPageOptions {
 }
 
 export function useStatsPage(options?: UseStatsPageOptions): UseStatsPageReturn {
-  const filtersApi = useStatsFilters(
-    options?.filterDefaults ? { defaults: options.filterDefaults } : undefined
+  // Stabilise la ref pour éviter les effets répétés dans useStatsFilters.
+  const filterDefaults = options?.filterDefaults;
+  const filtersOptions = useMemo<UseStatsFiltersOptions | undefined>(
+    () => (filterDefaults ? { defaults: filterDefaults } : undefined),
+    [filterDefaults]
   );
+  const filtersApi = useStatsFilters(filtersOptions);
   const dataApi = useStatsData(filtersApi.filters);
 
   // Filtres effectifs passés aux drawers. Tant que `bounds` n'est pas résolu
