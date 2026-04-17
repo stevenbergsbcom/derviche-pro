@@ -60,6 +60,8 @@ export interface PublicShow {
   availableSlotsCount: number;
   /** Prochaine date disponible (format français) */
   nextDate: string | null;
+  /** Heure de la prochaine représentation (format HH:MM) */
+  nextTime: string | null;
   /** Lieu de la prochaine représentation */
   nextVenue: string | null;
   /** Période du spectacle (texte libre, ex: "Janvier - Mars 2026") */

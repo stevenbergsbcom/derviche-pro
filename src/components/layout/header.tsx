@@ -144,7 +144,7 @@ export function Header() {
               Catalogue
             </Link>
             <Link
-              href="#contact"
+              href="/#contact"
               className="text-lg font-medium text-muted-foreground hover:text-derviche transition"
             >
               Contact
@@ -219,7 +219,7 @@ export function Header() {
               Catalogue
             </Link>
             <Link
-              href="#contact"
+              href="/#contact"
               className="text-lg font-medium py-2 text-muted-foreground hover:text-derviche transition"
               onClick={() => setMobileMenuOpen(false)}
             >

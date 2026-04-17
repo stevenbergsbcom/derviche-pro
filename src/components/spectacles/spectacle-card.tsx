@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Drama } from 'lucide-react';
+import { formatTimeFr } from '@/lib/utils/format-date';
 
 export type SpectacleStatus = 'available' | 'coming_soon' | 'closed';
 
@@ -14,10 +15,14 @@ export interface Spectacle {
   title: string;
   company: string;
   venues: string[]; // Liste des noms de lieux
+  /** Liste des villes distinctes (utilisée pour le filtre « Ville ») */
+  cities?: string[];
   image: string;
   slug: string;
   genres: string[];
   nextDate: string;
+  /** Heure de la prochaine représentation (HH:MM) — optionnel, affichée après la date. */
+  nextTime?: string | null;
   remainingSlots?: number; // Nombre de créneaux avec places disponibles
   status?: SpectacleStatus; // Statut du spectacle
 }
@@ -114,11 +119,13 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
           isNotBookable ? 'text-muted-foreground' : 'text-gold'
         }`}>
           <Calendar className="w-3 h-3" />
-          {isComingSoon 
-            ? 'Dates à venir' 
-            : isClosed 
+          {isComingSoon
+            ? 'Dates à venir'
+            : isClosed
               ? 'Aucune date disponible'
-              : `Prochaine date : ${spectacle.nextDate}`}
+              : `Prochaine date : ${spectacle.nextDate}${
+                  spectacle.nextTime ? ` à ${formatTimeFr(spectacle.nextTime)}` : ''
+                }`}
         </p>
 
         {/* Titre - 2 lignes max */}
