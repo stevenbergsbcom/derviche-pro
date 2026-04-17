@@ -1,0 +1,65 @@
+---
+title: Créer une réservation
+slug: reservations/creer
+category: reservations
+categoryLabel: Réservations
+categoryIcon: Calendar
+keywords: [réservation, créer, nouveau, walk-in, ajouter, enregistrer, professionnel, guest]
+roles: [super-admin, admin, externe]
+order: 2
+---
+
+Deux cas de figure :
+1. **Le professionnel réserve lui-même** depuis le site public (vous n'avez rien à faire).
+2. **Vous créez la réservation pour lui** — par exemple pour un invité VIP ou une réservation téléphonique.
+
+Cet article couvre le cas 2.
+
+## Depuis la liste des réservations (admin)
+
+1. Ouvrez **Réservations** dans la sidebar.
+2. Cliquez sur le bouton **« Nouvelle réservation »** en haut à droite.
+3. Un panneau latéral s'ouvre avec 3 étapes.
+
+### Étape 1 — Spectacle & créneau
+
+- Sélectionnez le spectacle dans la liste déroulante
+- Sélectionnez le créneau (date + heure + lieu + places restantes)
+- Si aucun créneau n'apparaît, c'est que le spectacle n'en a pas — créez-en un d'abord depuis la fiche du spectacle.
+
+### Étape 2 — Recherche du professionnel
+
+- Tapez le **nom** ou l'**email** — la recherche est instantanée.
+- Si le pro existe : sélectionnez-le, ses infos sont pré-remplies.
+- Si le pro n'existe pas encore :
+  - Cliquez sur **« Créer un nouveau professionnel »** pour le créer dans la base pro
+  - Ou cliquez sur **« Réservation invitée »** (walk-in) pour une résa sans créer de compte
+
+### Étape 3 — Informations et options
+
+- **Nombre de places** (spinner)
+- **Notes internes Derviche** (non visibles par le pro ni par la compagnie)
+- **Demandes spéciales** (visibles dans l'admin et la PWA check-in)
+- **Envoyer l'email de confirmation ?** — case cochée par défaut
+- **Synchroniser avec Google Calendar ?** — case cochée par défaut
+
+Cliquez **« Créer la réservation »**.
+
+## Depuis l'app check-in PWA (walk-in le jour J)
+
+Pour un pro qui arrive sans avoir réservé, ouvrez l'app check-in → bouton flottant gold en bas à droite → formulaire rapide. Voir [Ajouter une réservation de dernière minute](/admin/aide/checkin-pwa/walk-in).
+
+## Ce qui se passe automatiquement
+
+- **Email de confirmation** envoyé au pro (si la case est cochée)
+- **Notification admin** envoyée aux adresses configurées dans Préférences
+- **Événement Google Calendar** créé (si la case est cochée)
+- **Journal des logs** : trace de la création dans Système → Logs (super-admin)
+
+<Callout type="warning">
+**Places disponibles** : le système vérifie la capacité restante du créneau au moment de la création. Si la capacité est atteinte entre votre ouverture du formulaire et la validation, vous recevrez une erreur et devrez réessayer.
+</Callout>
+
+<Callout type="tip">
+Pour une **réservation urgente** juste avant un spectacle, privilégiez la PWA : le processus est réduit à l'essentiel et l'email de confirmation n'est pas envoyé (inutile, le pro est déjà sur place).
+</Callout>

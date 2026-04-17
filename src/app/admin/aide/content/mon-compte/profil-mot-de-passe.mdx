@@ -1,0 +1,71 @@
+---
+title: Modifier mon profil et mon mot de passe
+slug: mon-compte/profil-mot-de-passe
+category: mon-compte
+categoryLabel: Mon compte
+categoryIcon: User
+keywords: [mon compte, profil, nom, email, mot de passe, password, sécurité, connexion]
+roles: [super-admin, admin, externe]
+order: 1
+---
+
+Votre espace **Mon compte** est accessible depuis le **nom d'utilisateur en bas de la sidebar** → lien « Mon compte » (ou icône utilisateur).
+
+## Modifier vos informations personnelles
+
+1. Ouvrez **Mon compte** (`/admin/mon-compte`).
+2. Carte **« Informations personnelles »** : cliquez **« Modifier »**.
+3. Champs modifiables :
+   - **Prénom, nom**
+   - **Email** (votre email de connexion)
+4. Cliquez **« Enregistrer »** ou **« Annuler »** pour abandonner.
+
+<Callout type="warning">
+**Changer d'email** : si vous modifiez votre adresse, **c'est l'ancienne** qui reste votre identifiant de connexion jusqu'à la prochaine déconnexion. Reconnectez-vous avec la nouvelle après sauvegarde.
+</Callout>
+
+## Consulter votre rôle
+
+Carte **« Informations compte »** (lecture seule) :
+- **Rôle** (super-admin, admin, externe) — non modifiable par vous-même
+- **Date de création** du compte
+- **Statut** (actif / inactif)
+
+Pour changer de rôle, demandez à un <RoleBadge role="super-admin" />.
+
+## Changer votre mot de passe
+
+Carte **« Sécurité »** → bouton **« Changer le mot de passe »**.
+
+Un dialog s'ouvre avec :
+- **Mot de passe actuel**
+- **Nouveau mot de passe** (× 2, confirmation)
+
+Règles de force :
+- Minimum 8 caractères
+- Mélange minuscules + majuscules recommandé
+- Un indicateur visuel vous guide pendant la saisie
+
+Cliquez **« Confirmer le changement »**.
+
+<Callout type="tip">
+Un **gestionnaire de mots de passe** (Bitwarden, 1Password, iCloud Trousseau) est fortement recommandé pour un mot de passe long et unique.
+</Callout>
+
+## Mot de passe oublié
+
+Si vous êtes déconnecté :
+1. Rendez-vous sur `/login`.
+2. Cliquez **« Mot de passe oublié »**.
+3. Saisissez votre email → un lien de réinitialisation vous est envoyé.
+
+Le lien expire après **1 heure**.
+
+## Se déconnecter
+
+En bas de la sidebar, icône **« Déconnexion »**.
+
+## Pour aller plus loin
+
+- [Les rôles et qui fait quoi](/admin/aide/101/roles)
+- [Se repérer dans la plateforme](/admin/aide/101/navigation)

@@ -1,0 +1,79 @@
+---
+title: Les emails envoyés automatiquement — vue d'ensemble
+slug: emails/vue-ensemble
+category: emails
+categoryLabel: Emails
+categoryIcon: Mail
+keywords: [emails, envoi, automatique, notifications, transactionnels, rappels, post-accueil, qui déclenche]
+roles: [super-admin, admin, externe]
+order: 1
+---
+
+La plateforme envoie **12 types d'emails** différents. Voici qui, quand, à qui.
+
+## 4 emails transactionnels (déclenchés par une action)
+
+| Email | Envoyé à | Déclencheur |
+|---|---|---|
+| **Confirmation de réservation** | Le pro | Création d'une réservation (publique ou admin) |
+| **Annulation de réservation** | Le pro | Annulation via le bouton « Annuler » avec case cochée |
+| **Modification de créneau** | Le pro | Transfert d'une réservation avec case cochée |
+| **Notification admin** | Emails configurés dans Préférences | Création d'une réservation |
+
+## 3 emails de rappel (envoyés automatiquement par cron)
+
+| Email | Quand | Déclencheur |
+|---|---|---|
+| **Rappel J-7** | 7 jours avant le créneau | Cron quotidien (heure configurable) |
+| **Rappel J-2** | 2 jours avant | Cron quotidien |
+| **Rappel H-4** | 4 heures avant | Cron horaire |
+
+Configuration dans **Préférences → Rappels** (super-admin).
+
+## 4 emails post-accueil (déclenchés manuellement)
+
+Envoyés depuis l'app check-in ou depuis l'admin web après un spectacle :
+
+| Email | Destinataire | Déclencheur |
+|---|---|---|
+| **Merci présence** | Pros présents | Clic bouton dans panneau réservation |
+| **Coup de cœur** | Pros qui ont particulièrement aimé | Idem |
+| **Presse** | Journalistes | Idem |
+| **Suivi absence** | Pros absents | Idem |
+
+Voir [Envoyer les emails post-accueil](/admin/aide/checkin-pwa/emails-post-accueil).
+
+## Personnalisation (super-admin)
+
+Tous les templates sont éditables dans **Préférences → Templates** :
+- Sujet
+- Corps (intro, body, info, salutation)
+- Liens optionnels activables (dossier, teaser, captation, photos, page vitrine)
+- Variables dynamiques : `{{prénom}}`, `{{spectacle}}`, `{{date}}`, `{{heure}}`, `{{lieu}}`, `{{ville}}`, `{{adresse}}`, `{{code_postal}}`, `{{code}}` (réservation), etc.
+
+## Aperçu et test
+
+Avant d'enregistrer une modification de template, **utilisez l'aperçu live** dans le form d'édition — il reflète en temps réel ce que le destinataire verra, avec variables substituées par des données de démo.
+
+## Expéditeur
+
+Par défaut, tous les emails sont envoyés depuis l'adresse configurée dans **Préférences → Email** (`reservation.derviche@gmail.com` par exemple).
+
+Si le spectacle a un **Responsable Derviche** assigné (`derviche_manager_id`), sa signature est utilisée.
+
+## Rate limiting
+
+La plateforme est protégée contre le spam :
+- **20 envois max / heure par IP** sur la route `/api/emails/*`
+- **Quota Resend mensuel** visible dans Système (widget)
+
+Si vous dépassez la limite, l'envoi échoue avec un code 429 — attendez quelques minutes.
+
+<Callout type="tip">
+En cas de campagne massive (ex. relance de 200 pros), utilisez un outil externe type **Mailchimp** ou **Brevo** plutôt que la plateforme.
+</Callout>
+
+## Pour aller plus loin
+
+- [Un pro ne reçoit pas son email](/admin/aide/faq/email-non-recu)
+- [Envoyer les emails post-accueil](/admin/aide/checkin-pwa/emails-post-accueil)

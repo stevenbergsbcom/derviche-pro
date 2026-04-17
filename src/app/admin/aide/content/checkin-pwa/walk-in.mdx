@@ -1,0 +1,72 @@
+---
+title: Ajouter une réservation de dernière minute (walk-in)
+slug: checkin-pwa/walk-in
+category: checkin-pwa
+categoryLabel: Check-in sur place
+categoryIcon: CheckSquare
+keywords: [walk-in, dernière minute, improviste, ajouter, sur place, nouvelle réservation, PWA]
+roles: [super-admin, admin, externe]
+order: 4
+---
+
+Un professionnel arrive sans avoir réservé ? Ajoutez-le en quelques secondes depuis l'app check-in.
+
+## Depuis l'écran 3 (réservations d'un créneau)
+
+1. Ouvrez le créneau concerné.
+2. En bas à droite, un **bouton flottant gold « + »** apparaît.
+3. Tapez-le → un formulaire rapide s'ouvre.
+
+## Les étapes du walk-in
+
+### 1. Recherche du pro
+
+Commencez par **chercher le pro** dans la base :
+
+- **Par email** (exact)
+- **Par nom** (recherche partielle, insensible à la casse)
+
+Si le pro existe → sélectionnez-le → infos pré-remplies.
+
+Si le pro n'existe pas → cliquez **« Créer un nouveau professionnel »**.
+
+### 2. Infos rapides
+
+Pour un nouveau pro, champs minimaux :
+- **Prénom, nom**
+- **Email** (pour lui envoyer le post-accueil)
+- **Compagnie / structure** (facultatif)
+- **Téléphone** (facultatif)
+
+### 3. Notifications
+
+Par défaut, **aucun email** n'est envoyé pour un walk-in (le pro est déjà sur place).
+
+Si vous voulez quand même lui envoyer une confirmation avec le code de réservation, cochez la case.
+
+### 4. Check-in immédiat
+
+Option pour **marquer la réservation directement comme « Présent »** dès sa création — gain de temps : une action au lieu de deux.
+
+Cochez **« Enregistrer + check-in »** et validez.
+
+## Ce qui se passe
+
+- Une **réservation est créée** dans la base, statut « Confirmée »
+- La réservation est **consommée sur la capacité du créneau**
+- Elle apparaît immédiatement dans la liste, à la fin
+- Si vous avez coché le check-in, le statut « Présent » est appliqué
+
+<Callout type="warning">
+**Si la capacité du créneau est atteinte** au moment du walk-in, le système refuse la création. Vous devez d'abord libérer une place (annulation d'une résa, transfert).
+</Callout>
+
+## Bonne pratique — gestion du surbooking
+
+Si vous acceptez régulièrement des walk-ins au-delà de la capacité réelle, voyez plutôt avec un super-admin pour **augmenter la capacité déclarée** du créneau en amont. Mieux vaut connaître la capacité réelle.
+
+## Pour aller plus loin
+
+- [Pointer les présents](/admin/aide/checkin-pwa/pointer-presents)
+- [Envoyer les emails post-accueil](/admin/aide/checkin-pwa/emails-post-accueil)
+- [Gérer un surbooking](/admin/aide/faq/surbooking)

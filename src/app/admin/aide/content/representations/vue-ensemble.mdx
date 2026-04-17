@@ -1,0 +1,63 @@
+---
+title: Gérer les créneaux d'un spectacle (représentations)
+slug: representations/vue-ensemble
+category: representations
+categoryLabel: Représentations
+categoryIcon: CalendarClock
+keywords: [représentations, créneaux, dates, séries, récurrence, capacité, lieu, hosted_by]
+roles: [super-admin, admin]
+order: 1
+---
+
+Les **représentations** (ou **créneaux**) sont les dates/heures précises où un spectacle est joué. Un spectacle = 1 fiche + plusieurs créneaux.
+
+## Accéder aux créneaux d'un spectacle
+
+1. Ouvrez **Spectacles** dans la sidebar.
+2. Cliquez sur un spectacle.
+3. Bouton **« Représentations »** en haut → page dédiée.
+
+## Créer un créneau unique
+
+Bouton **« Nouveau créneau »**. Formulaire :
+- **Date + heure de début / fin**
+- **Lieu** (liste déroulante des lieux existants, ou création rapide)
+- **Capacité** : nombre de places **ou** « Illimité »
+- **Qui assure l'accueil ?** (hosted_by) :
+  - **Derviche** : votre équipe interne
+  - **Compagnie** : la compagnie elle-même
+  - **Externe spécifique** : un membre assigné au spectacle
+- **Synchroniser avec Google Calendar** (coché par défaut)
+
+## Créer une série de créneaux
+
+Bouton **« Série de dates »** → dialog :
+- Date début / fin de la série
+- **Jours de la semaine** (cases à cocher)
+- Heure de chaque créneau
+- Lieu, capacité, hosted_by
+
+Génère tous les créneaux correspondants en un clic.
+
+<Callout type="tip">
+**Tournée récurrente** : utilisez la série de dates pour un spectacle qui se joue tous les jeudis et vendredis pendant 6 semaines.
+</Callout>
+
+## Modifier, dupliquer, supprimer
+
+Chaque ligne a 3 icônes :
+- **Crayon** → édition
+- **Copier** → duplique le créneau (date vide à remplir)
+- **Croix rouge** → suppression (confirmation si réservations)
+
+## Filtres et vue
+
+- **Masquer les créneaux passés** (toggle par défaut actif)
+- Filtre **Mois** et **Lieu**
+- Recherche rapide par date MM-DD
+
+## Pour aller plus loin
+
+- [Créer un spectacle](/admin/aide/spectacles/creer-publier)
+- [Qui assure l'accueil ?](/admin/aide/faq/glossaire#hosted-by-accueil-assuré-par)
+- [Annuler un spectacle entier](/admin/aide/faq/annulation-spectacle)

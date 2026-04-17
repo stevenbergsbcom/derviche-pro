@@ -1,0 +1,74 @@
+---
+title: Créer et publier un spectacle
+slug: spectacles/creer-publier
+category: spectacles
+categoryLabel: Spectacles
+categoryIcon: Star
+keywords: [spectacle, créer, publier, nouveau, ajouter, brouillon, draft, publication]
+roles: [super-admin, admin]
+order: 1
+---
+
+Pour qu'un spectacle apparaisse dans le catalogue public et puisse recevoir des réservations, il doit être **créé** dans la plateforme puis **publié**.
+
+## Créer le spectacle
+
+1. Ouvrez **Spectacles** dans la sidebar.
+2. Cliquez **« Nouveau spectacle »** en haut à droite.
+3. Un formulaire s'ouvre avec plusieurs sections.
+
+### Informations principales
+
+- **Titre** (obligatoire) — apparaît partout
+- **Description courte** — 1 à 2 lignes, affichée sur les cards du catalogue
+- **Description longue** — texte complet de la fiche publique
+- **Image principale** (upload) — format paysage recommandé (16/9)
+- **Compagnie** — sélectionnez dans la liste (créez-la avant si nécessaire depuis [Compagnies](/admin/aide))
+- **Durée** (en minutes)
+
+### Catégorisation
+
+- **Catégories** (multi-sélection) : genres théâtraux, musicaux, etc.
+- **Publics cibles** (multi-sélection) : tout public, jeune public, à partir de X ans…
+
+Les deux listes sont gérées via les boutons **« Gérer les catégories »** et **« Gérer les publics »** — voir [Gérer les catégories](/admin/aide/spectacles/categories-publics).
+
+### Médias et liens externes
+
+Tous ces champs sont **optionnels** :
+
+- **Dossier de presse** (Drive / Dropbox)
+- **Teaser vidéo** (YouTube / Vimeo) — affiché en modale sur la fiche publique
+- **Captation vidéo** (YouTube / Vimeo)
+- **Dossier photo** (Drive)
+- **Page vitrine** (`derviche_site_url`) — URL sur dervichediffusion.com
+
+<Callout type="tip">
+Plus la fiche est riche, plus le professionnel a d'infos pour décider. Les liens externes sont aussi affichés dans les **emails post-accueil** envoyés après le spectacle.
+</Callout>
+
+### Conditions et contacts
+
+- **Période** (texte libre) — ex. « En tournée 2026–2027 »
+- **Dates de relâche** (texte libre)
+- **Politique d'invitation** (`invitation_policy`) — affichée sur la fiche publique dans le bloc « Pour les professionnels »
+- **Responsable Derviche** — sélectionnez un membre de l'équipe. Ses coordonnées apparaissent dans le bloc contact.
+
+### Statut
+
+- **Brouillon (draft)** : invisible du catalogue public, modifiable en interne
+- **Publié** : visible publiquement, réservations possibles
+
+## Publier
+
+Une fois tous les champs remplis, passez le statut à **Publié** et cliquez **Enregistrer**. Le spectacle apparaît **immédiatement** dans le catalogue `/catalogue`.
+
+<Callout type="warning">
+**Attention** : un spectacle publié sans **créneau à venir** apparaîtra dans le catalogue comme « En tournée — pas de date prévue ». Pensez à créer au moins un créneau avant la publication.
+</Callout>
+
+## Étapes suivantes
+
+- [Enrichir la fiche](/admin/aide/spectacles/enrichir)
+- [Mettre en vedette / ordonner](/admin/aide/spectacles/vedette-classement)
+- Créer des créneaux : depuis la fiche, bouton **« Représentations »**

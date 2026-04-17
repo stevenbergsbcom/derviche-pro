@@ -1,0 +1,58 @@
+---
+title: Gérer les professionnels
+slug: professionnels/vue-ensemble
+category: professionnels
+categoryLabel: Professionnels
+categoryIcon: Users
+keywords: [professionnels, pros, base, fiche, colonnes, export, csv, désactiver]
+roles: [super-admin, admin]
+order: 1
+---
+
+Les **professionnels** sont les responsables de salles qui réservent vos spectacles. Cette base centralise toutes leurs informations.
+
+## Accéder à la liste
+
+**Professionnels** dans la sidebar → tableau paginé avec recherche, filtres, colonnes configurables.
+
+## Recherche & filtres
+
+- **Recherche** : nom, email, téléphone
+- **Filtre Statut** : Actif / Inactif
+- **Filtre Ville** (dropdown)
+
+## Colonnes configurables
+
+Cliquez l'icône **« Colonnes »** pour choisir ce que vous voyez : nom, email, téléphone, ville, code postal, pays, structure, fonction, date création, nombre de réservations, etc.
+
+Votre sélection est **sauvegardée** (réutilisée à la prochaine visite).
+
+## Fiche d'un pro
+
+Clic sur une ligne → drawer latéral avec :
+- **Coordonnées complètes**
+- **Historique des réservations** (toutes, avec détail spectacle / créneau / statut)
+- **Toggle Actif / Inactif**
+
+## Désactiver un pro
+
+Un pro **inactif** est masqué de la sélection lors d'une création de réservation (ne pollue pas la recherche). Ses réservations existantes restent intactes.
+
+Cas d'usage : pro qui n'est plus en poste, demande RGPD de désactivation, etc.
+
+## Exporter la base
+
+Bouton **« Exporter CSV »** → fichier avec les colonnes visibles.
+
+<Callout type="warning">
+**Attention RGPD** : un export contient des données personnelles. Stockez-le en lieu sûr et détruisez-le après usage.
+</Callout>
+
+## Supprimer un pro
+
+La suppression est **irréversible** et **supprime aussi ses réservations**. À réserver à une demande formelle de droit à l'oubli.
+
+## Pour aller plus loin
+
+- [Créer une réservation](/admin/aide/reservations/creer)
+- [Exporter les réservations](/admin/aide/reservations/exporter)

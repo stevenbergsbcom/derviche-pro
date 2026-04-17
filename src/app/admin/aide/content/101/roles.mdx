@@ -1,0 +1,66 @@
+---
+title: Les rôles et qui fait quoi
+slug: 101/roles
+category: "101"
+categoryLabel: Bien démarrer
+categoryIcon: Rocket
+keywords: [rôles, permissions, accès, super-admin, admin, externe, compagnie, professionnel, droits]
+roles: [super-admin, admin, externe]
+order: 2
+---
+
+La plateforme compte **5 profils d'utilisateurs**, chacun avec des droits spécifiques.
+
+## Les 3 rôles internes (équipe Derviche)
+
+### <RoleBadge role="super-admin" /> Super-administrateur
+
+**2 à 3 personnes** chez Derviche. Accès complet à toute la plateforme :
+
+- Toutes les fonctions admin (réservations, spectacles, créneaux, lieux, compagnies, professionnels)
+- **Utilisateurs internes** (création, rôles, assignations)
+- **Préférences** (organisation, page d'accueil, classement, apparence, emails, rappels, Google Calendar, pages légales, etc.)
+- **Système** (logs, quota emails, monitoring)
+- **Statistiques**
+
+### <RoleBadge role="admin" /> Administrateur
+
+**3 à 7 personnes**. Gestion opérationnelle quotidienne :
+
+- Réservations, spectacles, créneaux
+- Lieux, compagnies, professionnels, statistiques
+- **Pas d'accès** à : utilisateurs internes, préférences, système
+
+### <RoleBadge role="externe" /> Externe (collaborateur ponctuel)
+
+**10 à 20 personnes** (interprètes, techniciens, accueil). Accès très limité :
+
+- **Application mobile de check-in** (PWA), uniquement sur les spectacles qui lui ont été **assignés**
+- Peut pointer les présents, ajouter des réservations de dernière minute, envoyer les emails post-accueil
+- Aucun accès aux autres sections
+
+## Les 2 rôles externes
+
+### Professionnel (`professional`)
+
+**500 à 1000 personnes**. Les responsables de salles de théâtre qui réservent vos spectacles :
+
+- Parcourent le catalogue public
+- Réservent en ligne, avec ou sans compte
+- Gèrent leurs réservations depuis leur espace perso `/professional/mon-compte`
+
+### Compagnie (`company`)
+
+**15 à 20 personnes**. Un compte par compagnie pour consulter les statistiques de leurs spectacles :
+
+- Voit uniquement **ses propres spectacles** et leurs réservations
+- Peut faire le check-in quand le créneau est marqué « accueil par la compagnie »
+- Ne voit **jamais** les notes internes Derviche
+
+## Changer de rôle ou en ajouter un
+
+Seul un <RoleBadge role="super-admin" /> peut créer un utilisateur interne ou modifier un rôle. Voir [Créer un utilisateur](/admin/aide/utilisateurs/creer) (V2).
+
+<Callout type="tip">
+Si vous êtes <RoleBadge role="externe" /> et qu'un spectacle n'apparaît pas dans votre app check-in, c'est qu'un super-admin ne vous y a pas encore assigné. Demandez-le lui.
+</Callout>

@@ -1,0 +1,63 @@
+---
+title: Se repérer dans la plateforme
+slug: 101/navigation
+category: "101"
+categoryLabel: Bien démarrer
+categoryIcon: Rocket
+keywords: [navigation, sidebar, menu, barre latérale, repérer, interface, layout]
+roles: [super-admin, admin, externe]
+order: 3
+---
+
+La plateforme s'organise autour d'une **barre latérale** à gauche et d'un **contenu principal** qui occupe le reste de l'écran.
+
+## La barre latérale (sidebar)
+
+Elle contient tous les points d'entrée principaux, dans l'ordre :
+
+1. **Tableau de bord** — vue d'ensemble
+2. **Réservations** — la liste des réservations
+3. **Statistiques** — analyses détaillées (admin et super-admin)
+4. **Spectacles** → accès aux Représentations (créneaux)
+5. **Lieux**, **Compagnies**, **Professionnels**, **Utilisateurs** — les bases de données
+6. **Préférences** (super-admin) — s'ouvre en sous-menu avec 12 onglets
+7. **Système** (super-admin) — logs, quotas
+8. **Aide** — cette documentation
+9. **Mon compte** — vos infos personnelles
+10. **Déconnexion**
+
+<Callout type="tip">
+Vous pouvez **réduire la sidebar** en cliquant sur l'icône en haut à gauche. En mode réduit, les libellés disparaissent mais les icônes restent. Un survol affiche une infobulle.
+</Callout>
+
+## Le header
+
+En haut de chaque page :
+- **Bouton hamburger** (mobile) pour ouvrir/fermer la sidebar
+- **Titre de la page courante**
+- 🔔 **Cloche de notifications** (à droite) pour les alertes admin
+
+## Les pages
+
+Chaque page principale suit le même motif :
+- **Titre** et sous-titre en en-tête
+- **Filtres / recherche** en haut
+- **Contenu principal** : liste, tableau, formulaire ou graphique
+- **Actions** accessibles soit par des boutons globaux, soit par ligne (icônes à droite)
+
+## Mobile
+
+La plateforme est pleinement responsive. Sur téléphone :
+- La sidebar devient un panneau qui s'ouvre avec le bouton hamburger
+- Les tableaux deviennent des cartes empilées
+- Les filtres peuvent s'ouvrir dans un panneau latéral (ex. page Catalogue public)
+
+<Callout type="info">
+Pour les **check-ins sur place** le jour du spectacle, utilisez **l'app mobile PWA** plutôt que l'admin web. Elle est optimisée pour un usage tactile rapide. Voir [Installer l'app check-in](/admin/aide/checkin-pwa/installer).
+</Callout>
+
+## Raccourcis utiles
+
+- Cliquez sur le **logo Derviche** en haut de la sidebar pour revenir au tableau de bord.
+- Utilisez la **barre de recherche** dans cette aide pour trouver un article.
+- Sur la page Réservations, vous pouvez arriver directement sur une réservation précise via un lien `?reservationId=XXX` (utile depuis les notifications).

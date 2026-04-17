@@ -1,12 +1,12 @@
 # Derviche Diffusion — Plateforme de réservation pour le spectacle vivant
 
-Application Next.js 16 / Supabase de gestion de réservations professionnelles pour **Derviche Diffusion**, société de diffusion de spectacles vivants représentant des compagnies artistiques auprès des programmateurs de salles.
+Application Next.js 16 / Supabase de gestion de réservations professionnelles pour **Derviche Diffusion**, société de diffusion de spectacles vivants représentant des compagnies artistiques auprès des professionnels de salles.
 
 ## 🎭 À propos
 
 La plateforme s'adresse à 5 publics :
 
-- **Programmateurs** (500–1000) — découverte du catalogue, réservation en ligne
+- **Professionnels** (500–1000) — découverte du catalogue, réservation en ligne
 - **Administrateurs & super-admins Derviche** (5–10) — gestion complète (spectacles, créneaux, réservations, emails, préférences, classement éditorial, statistiques)
 - **Externes Derviche** (10–20) — check-in sur place via PWA
 - **Compagnies** (15–20) — consultation des statistiques de fréquentation de leurs spectacles
@@ -21,9 +21,10 @@ La plateforme s'adresse à 5 publics :
 - **Classement éditorial** — drag&drop pour piloter les vedettes homepage et l'ordre global du catalogue
 - **Page de statistiques** dédiée avec drill-down, comparaison entre périodes, export PDF
 - **12 templates email** éditables depuis l'admin (toggles de liens optionnels, variables substituables, preview live)
-- **Intégration Google Calendar** — ajout automatique aux agendas des programmateurs, monitoring santé
+- **Intégration Google Calendar** — ajout automatique aux agendas des professionnels, monitoring santé
 - **Rate limiting** Upstash Redis sur les routes sensibles (auth, emails, réservations)
 - **RLS Supabase** sur toutes les tables — isolation stricte par rôle
+- **Documentation utilisateur intégrée** à la plateforme (`/admin/aide`) — articles MDX, recherche plein-texte Fuse.js, filtrage par rôle
 
 ## 🚀 Stack technique
 
@@ -295,14 +296,15 @@ security(scope): description   # Sécurité / hardening
 4. Push sur `dev` → preview Vercel déclenchée
 5. **Audit Cursor** (ou équivalent) sur le diff `dev..main`
 6. Corrections des points 🔴 / 🟠 avant merge
-7. Merge sur `main` **avec `--no-ff`** pour garder l'historique de branche lisible :
+7. **📚 Documentation utilisateur** : si la feature touche à `src/app/admin/**`, `src/app/accueil/**`, `src/components/admin/**` ou au comportement public, mettre à jour les articles MDX correspondants dans `src/app/admin/aide/content/`. **Règle absolue** — voir `CLAUDE.md § Documentation utilisateur`
+8. Merge sur `main` **avec `--no-ff`** pour garder l'historique de branche lisible :
    ```bash
    git checkout main && git pull
    git merge --no-ff dev -m "Merge branch 'dev' — description feature"
    git push origin main
    git checkout dev
    ```
-8. Mettre à jour [`docs/STATUT.md`](docs/STATUT.md) en fin de session
+9. Mettre à jour [`docs/STATUT.md`](docs/STATUT.md) en fin de session (cocher « Doc `/admin/aide` à jour ✅ »)
 
 ## 🔗 Liens
 

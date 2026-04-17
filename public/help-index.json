@@ -1,0 +1,773 @@
+{
+  "generatedAt": "2026-04-17T19:10:27.728Z",
+  "count": 34,
+  "articles": [
+    {
+      "slug": "101/bienvenue",
+      "title": "Bienvenue sur Derviche Diffusion",
+      "category": "101",
+      "categoryLabel": "Bien démarrer",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "bienvenue",
+        "onboarding",
+        "démarrer",
+        "premier pas",
+        "introduction",
+        "tour",
+        "découverte"
+      ],
+      "excerpt": "Bienvenue sur la plateforme Derviche Diffusion ! Ce guide de quelques minutes vous permet de découvrir l'essentiel de la plateforme et de vous repérer. À quoi sert cette plateforme ? Derviche Diffusion est la plateforme de gestion des réser",
+      "body": "Bienvenue sur la plateforme Derviche Diffusion ! Ce guide de quelques minutes vous permet de découvrir l'essentiel de la plateforme et de vous repérer. À quoi sert cette plateforme ? Derviche Diffusion est la plateforme de gestion des réservations pour les spectacles que vous diffusez. Elle permet : aux professionnels (salles de théâtre) de découvrir votre catalogue et de réserver des places ; à votre équipe de suivre les réservations, préparer les accueils et envoyer les emails ; aux compagnies de consulter les statistiques de fréquentation de leurs spectacles ; à vous-même d'administrer l'ensemble depuis une seule interface. Les grandes zones de la plateforme Selon votre rôle, vous n'avez pas accès aux mêmes sections. Consultez l'article Les rôles et qui fait quoi pour comprendre ce que vous pouvez faire. Tableau de bord — vue d'ensemble : spectacles actifs, prochaines réservations, graphique d'évolution. Réservations — la liste de toutes les réservations, avec filtres et export. Spectacles — fiches complètes avec médias, catégories, publics cibles. Représentations — créneaux (dates, lieux, capacité) par spectacle. Lieux, Compagnies, Professionnels — les bases de données associées. Statistiques — analyses avancées avec export PDF. Préférences (super-admin) — configuration fine : organisation, page d'accueil, emails, classement éditorial, apparence. Aide — cette documentation, toujours accessible. Votre check-list pour bien démarrer Si c'est votre première connexion, nous recommandons ce parcours : Lisez Les rôles et qui fait quoi pour savoir ce que vous pouvez faire. Consultez Votre tableau de bord pour comprendre les chiffres qui vous sont présentés. Parcourez Se repérer dans la plateforme pour apprendre la navigation. Lisez Créer une réservation — c'est le flux le plus courant. Un souci ? Utilisez la barre de recherche en haut à droite pour trouver un article précis. Consultez la section FAQ / dépannage pour les problèmes les plus courants. Cette documentation e"
+    },
+    {
+      "slug": "101/roles",
+      "title": "Les rôles et qui fait quoi",
+      "category": "101",
+      "categoryLabel": "Bien démarrer",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "rôles",
+        "permissions",
+        "accès",
+        "super-admin",
+        "admin",
+        "externe",
+        "compagnie",
+        "professionnel",
+        "droits"
+      ],
+      "excerpt": "La plateforme compte 5 profils d'utilisateurs, chacun avec des droits spécifiques. Les 3 rôles internes (équipe Derviche) Super-administrateur 2 à 3 personnes chez Derviche. Accès complet à toute la plateforme : Toutes les fonctions admin (",
+      "body": "La plateforme compte 5 profils d'utilisateurs, chacun avec des droits spécifiques. Les 3 rôles internes (équipe Derviche) Super-administrateur 2 à 3 personnes chez Derviche. Accès complet à toute la plateforme : Toutes les fonctions admin (réservations, spectacles, créneaux, lieux, compagnies, professionnels) Utilisateurs internes (création, rôles, assignations) Préférences (organisation, page d'accueil, classement, apparence, emails, rappels, Google Calendar, pages légales, etc.) Système (logs, quota emails, monitoring) Statistiques Administrateur 3 à 7 personnes. Gestion opérationnelle quotidienne : Réservations, spectacles, créneaux Lieux, compagnies, professionnels, statistiques Pas d'accès à : utilisateurs internes, préférences, système Externe (collaborateur ponctuel) 10 à 20 personnes (interprètes, techniciens, accueil). Accès très limité : Application mobile de check-in (PWA), uniquement sur les spectacles qui lui ont été assignés Peut pointer les présents, ajouter des réservations de dernière minute, envoyer les emails post-accueil Aucun accès aux autres sections Les 2 rôles externes Professionnel (professional) 500 à 1000 personnes. Les responsables de salles de théâtre qui réservent vos spectacles : Parcourent le catalogue public Réservent en ligne, avec ou sans compte Gèrent leurs réservations depuis leur espace perso /professional/mon-compte Compagnie (company) 15 à 20 personnes. Un compte par compagnie pour consulter les statistiques de leurs spectacles : Voit uniquement ses propres spectacles et leurs réservations Peut faire le check-in quand le créneau est marqué « accueil par la compagnie » Ne voit jamais les notes internes Derviche Changer de rôle ou en ajouter un Seul un peut créer un utilisateur interne ou modifier un rôle. Voir Créer un utilisateur (V2). Si vous êtes et qu'un spectacle n'apparaît pas dans votre app check-in, c'est qu'un super-admin ne vous y a pas encore assigné. Demandez-le lui."
+    },
+    {
+      "slug": "101/navigation",
+      "title": "Se repérer dans la plateforme",
+      "category": "101",
+      "categoryLabel": "Bien démarrer",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "navigation",
+        "sidebar",
+        "menu",
+        "barre latérale",
+        "repérer",
+        "interface",
+        "layout"
+      ],
+      "excerpt": "La plateforme s'organise autour d'une barre latérale à gauche et d'un contenu principal qui occupe le reste de l'écran. La barre latérale (sidebar) Elle contient tous les points d'entrée principaux, dans l'ordre : Tableau de bord — vue d'en",
+      "body": "La plateforme s'organise autour d'une barre latérale à gauche et d'un contenu principal qui occupe le reste de l'écran. La barre latérale (sidebar) Elle contient tous les points d'entrée principaux, dans l'ordre : Tableau de bord — vue d'ensemble Réservations — la liste des réservations Statistiques — analyses détaillées (admin et super-admin) Spectacles → accès aux Représentations (créneaux) Lieux, Compagnies, Professionnels, Utilisateurs — les bases de données Préférences (super-admin) — s'ouvre en sous-menu avec 12 onglets Système (super-admin) — logs, quotas Aide — cette documentation Mon compte — vos infos personnelles Déconnexion Vous pouvez réduire la sidebar en cliquant sur l'icône en haut à gauche. En mode réduit, les libellés disparaissent mais les icônes restent. Un survol affiche une infobulle. Le header En haut de chaque page : Bouton hamburger (mobile) pour ouvrir/fermer la sidebar Titre de la page courante 🔔 Cloche de notifications (à droite) pour les alertes admin Les pages Chaque page principale suit le même motif : Titre et sous-titre en en-tête Filtres / recherche en haut Contenu principal : liste, tableau, formulaire ou graphique Actions accessibles soit par des boutons globaux, soit par ligne (icônes à droite) Mobile La plateforme est pleinement responsive. Sur téléphone : La sidebar devient un panneau qui s'ouvre avec le bouton hamburger Les tableaux deviennent des cartes empilées Les filtres peuvent s'ouvrir dans un panneau latéral (ex. page Catalogue public) Pour les check-ins sur place le jour du spectacle, utilisez l'app mobile PWA plutôt que l'admin web. Elle est optimisée pour un usage tactile rapide. Voir Installer l'app check-in. Raccourcis utiles Cliquez sur le logo Derviche en haut de la sidebar pour revenir au tableau de bord. Utilisez la barre de recherche dans cette aide pour trouver un article. Sur la page Réservations, vous pouvez arriver directement sur une réservation précise via un lien ?reservationId=XXX (utile depuis les no"
+    },
+    {
+      "slug": "101/dashboard",
+      "title": "Votre tableau de bord",
+      "category": "101",
+      "categoryLabel": "Bien démarrer",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "tableau de bord",
+        "dashboard",
+        "accueil",
+        "stats",
+        "widgets",
+        "aperçu"
+      ],
+      "excerpt": "Le tableau de bord est la première page que vous voyez en vous connectant. Il affiche une synthèse visuelle de l'activité. Les 4 cartes statistiques En haut, quatre cartes résument les chiffres clés : Spectacles actifs — nombre de spectacle",
+      "body": "Le tableau de bord est la première page que vous voyez en vous connectant. Il affiche une synthèse visuelle de l'activité. Les 4 cartes statistiques En haut, quatre cartes résument les chiffres clés : Spectacles actifs — nombre de spectacles publiés sur la plateforme Créneaux à venir — représentations programmées dans le futur Réservations — total + aujourd'hui + cette semaine Taux de remplissage — moyenne pondérée par créneau Ces chiffres respectent votre rôle. Un ne voit que les chiffres de ses spectacles assignés. Le graphique d'évolution Au centre, un graphique (recharts) montre l'évolution des réservations par période. Sélecteur de période en haut à droite du graphique : 7 jours / 30 jours / Saison en cours Survoler une barre pour voir le détail (date + nombre) Les listes à droite Trois blocs vous donnent le contexte immédiat : Top 3 spectacles — les plus réservés sur la période Créneaux 24h — représentations imminentes Réservations récentes — les dernières entrées Les accès rapides (mobile et desktop) Une série de boutons permet de sauter directement vers les pages les plus utilisées : Spectacles Réservations Lieux / Compagnies / Utilisateurs Check-in (nouvel onglet, PWA) Préférences (super-admin) Générateur de QR code pour partager rapidement l'URL de la PWA check-in à votre équipe Le bouton Check-in ouvre l'application dans un nouvel onglet. Gardez l'onglet admin ouvert à côté pour basculer rapidement. Période saisonnière La saison théâtrale configurée dans Préférences → Organisation (V2) définit automatiquement le filtre « Saison ». C'est typiquement septembre → juin."
+    },
+    {
+      "slug": "101/raccourcis",
+      "title": "Raccourcis & astuces",
+      "category": "101",
+      "categoryLabel": "Bien démarrer",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "raccourcis",
+        "astuces",
+        "tips",
+        "productivité",
+        "efficacité",
+        "rapidité"
+      ],
+      "excerpt": "Une collection de gestes rapides pour gagner du temps au quotidien. Navigation Logo sidebar → retour au tableau de bord en un clic. Clic sur « Préférences » (si super-admin) → ouvre le sous-menu et navigue vers l'onglet Organisation. Un seu",
+      "body": "Une collection de gestes rapides pour gagner du temps au quotidien. Navigation Logo sidebar → retour au tableau de bord en un clic. Clic sur « Préférences » (si super-admin) → ouvre le sous-menu et navigue vers l'onglet Organisation. Un seul clic pour arriver quelque part. Mobile : la sidebar se ferme automatiquement après chaque clic pour libérer l'écran. Recherche Barre de recherche de cette aide (en haut à droite de /admin/aide) : recherche tous les articles par titre, mots-clés, contenu. Liste des réservations : la recherche accepte nom, email, téléphone (debouncée pour ne pas surcharger). Liste des spectacles : recherche sur titre et description. Listes et filtres Les filtres sont mémorisés dans l'URL. Vous pouvez partager un lien filtré à un collègue : il arrivera sur la même vue. Colonnes configurables (Réservations, Professionnels, Statistiques) : cliquez l'icône des colonnes pour choisir ce que vous voyez. Votre sélection est conservée. Catalogue public sur mobile : les filtres sont regroupés dans un panneau « Filtres » (bouton en haut). Un badge indique le nombre de filtres actifs. Réservations Ouvrir une résa en 1 clic depuis un email de notification → lien ?reservationId=… qui ouvre directement le panneau d'édition. Transférer une résa vers un autre créneau via l'icône dédiée, avec option d'envoi d'email automatique au pro. Export CSV / Excel respecte les colonnes que vous avez configurées. Check-in PWA Installer l'app sur votre téléphone : voir Installer l'app check-in. Scroller dans l'historique : 30 derniers jours par défaut, bouton pour charger plus. Walk-in (réservation de dernière minute) : bouton flottant gold en bas à droite de la liste. Autres raccourcis utiles Esc ferme n'importe quelle modale ou drawer. Cliquer sur une colonne de tableau (si triable) inverse le tri. Filtre calendrier (période personnalisée) : format MM-JJ → MM-JJ pour sélectionner une plage qui ignore l'année. Astuce productivité : gardez deux onglets ouverts côte à côte — l'a"
+    },
+    {
+      "slug": "checkin-pwa/installer",
+      "title": "Installer l'app check-in sur mobile",
+      "category": "checkin-pwa",
+      "categoryLabel": "Check-in sur place",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "pwa",
+        "application",
+        "mobile",
+        "installer",
+        "installation",
+        "téléphone",
+        "tablette",
+        "accueil",
+        "check-in"
+      ],
+      "excerpt": "L'application Check-in (/accueil) est une PWA (Progressive Web App) — pas d'App Store, elle s'installe directement depuis votre navigateur. Pourquoi installer l'app ? Icône sur l'écran d'accueil, ouverture plein écran (sans barre d'URL) Cha",
+      "body": "L'application Check-in (/accueil) est une PWA (Progressive Web App) — pas d'App Store, elle s'installe directement depuis votre navigateur. Pourquoi installer l'app ? Icône sur l'écran d'accueil, ouverture plein écran (sans barre d'URL) Chargement plus rapide (cache) Interface optimisée tactile Pas besoin de se reconnecter à chaque fois Installation sur iPhone / iPad (Safari) Ouvrez Safari et rendez-vous sur https://derviche-pro.vercel.app/accueil (ou l'URL de votre instance). Connectez-vous avec vos identifiants. Appuyez sur le bouton Partage !Partage (carré avec flèche vers le haut) en bas de l'écran. Faites défiler et appuyez sur « Sur l'écran d'accueil ». Confirmez avec « Ajouter ». L'icône Derviche apparaît sur votre écran d'accueil. Tapez dessus → app en plein écran. Installation sur Android (Chrome) Ouvrez Chrome et rendez-vous sur l'URL d'accueil. Connectez-vous. Une bannière « Installer l'application » apparaît en bas (ou dans le menu ⋮ → « Installer l'application »). Appuyez sur « Installer ». Installation sur Mac / PC (Chrome, Edge, Safari) L'app peut aussi s'installer sur un ordinateur : Ouvrez l'URL dans Chrome / Edge. Dans la barre d'adresse, cliquez sur l'icône « Installer » (✚) ou allez dans ⋮ → « Installer l'application ». Générer un QR code pour partager l'app Dans le tableau de bord admin, bouton « QR Check-in » → affiche un QR code vers /accueil. Vos collaborateurs externes peuvent le scanner pour ouvrir directement l'app sur leur téléphone. Gain de temps sur place : avant le jour J, installez l'app sur tous les téléphones qui vont l'utiliser. Connectez chacun avec son propre compte ( pour les ponctuels, pour l'équipe). Mise à jour de l'app La PWA se met à jour automatiquement au lancement quand une nouvelle version est déployée. Si quelque chose semble cassé, fermez l'app et rouvrez-la pour charger la dernière version. Pour aller plus loin Se repérer dans l'app Pointer les présents"
+    },
+    {
+      "slug": "checkin-pwa/naviguer",
+      "title": "Se repérer dans l'app check-in",
+      "category": "checkin-pwa",
+      "categoryLabel": "Check-in sur place",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "pwa",
+        "naviguer",
+        "navigation",
+        "écrans",
+        "pages",
+        "accueil",
+        "interface",
+        "spectacles",
+        "représentations",
+        "réservations"
+      ],
+      "excerpt": "L'app check-in s'organise en 3 écrans imbriqués : spectacles → représentations → réservations. Écran 1 — Liste des spectacles Dès l'ouverture de l'app, vous voyez les spectacles auxquels vous avez accès : : tous les spectacles publiés : uni",
+      "body": "L'app check-in s'organise en 3 écrans imbriqués : spectacles → représentations → réservations. Écran 1 — Liste des spectacles Dès l'ouverture de l'app, vous voyez les spectacles auxquels vous avez accès : : tous les spectacles publiés : uniquement les spectacles auxquels on vous a assigné Compagnie : uniquement vos propres spectacles Onglets : À venir / Passés. Chaque carte affiche : image, titre, compagnie, nombre de créneaux à venir. Tapez une carte pour ouvrir l'écran 2. Si vous ne voyez aucun spectacle en tant que , c'est qu'on ne vous a pas encore assigné. Demandez à un super-admin d'ajouter des assignations via Utilisateurs. Écran 2 — Représentations d'un spectacle Liste des créneaux du spectacle choisi, groupés par date. Section « Aujourd'hui » en haut si un créneau est prévu dans la journée Onglets : À venir / Passés Bouton « Charger l'historique » pour voir au-delà des 30 derniers jours Chaque carte : date, heure, lieu, capacité (places occupées / totales). Tapez une carte pour ouvrir l'écran 3 et commencer le check-in. Écran 3 — Réservations d'un créneau (check-in) C'est là que se passe la vraie action. En-tête : titre du spectacle, date/heure, lieu, compteurs (confirmées / présentes). Barre de recherche : recherche un pro par nom ou email (debouncé). Liste des réservations (tableau sur tablet, cartes sur téléphone) : Nom, compagnie, email Statut (confirmée, annulée, etc.) Check-in (présent, absent, coup de cœur, presse) Icônes d'actions (transférer, annuler) Navigation retour Sur chaque écran, une flèche de retour en haut à gauche. Le logo Derviche ramène à l'écran 1 (liste des spectacles). Fonctions hors écran Accessibles de manière contextuelle : Recherche globale pro (écran 1) : trouver un pro sur toute la plateforme Historique d'un pro : à partir d'une ligne de réservation → drawer avec ses 20 dernières résas Ajout walk-in : bouton flottant gold (écran 3) Pour aller plus loin Pointer les présents Ajouter une réservation de dernière minute Envoyer les "
+    },
+    {
+      "slug": "checkin-pwa/pointer-presents",
+      "title": "Pointer les présents le jour J",
+      "category": "checkin-pwa",
+      "categoryLabel": "Check-in sur place",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "pointer",
+        "présent",
+        "absent",
+        "coup de cœur",
+        "presse",
+        "check-in",
+        "accueil",
+        "PWA"
+      ],
+      "excerpt": "Le cœur du métier du jour J : pointer qui est arrivé, avec quelle qualité, pour alimenter les emails post-accueil et les statistiques. Les 4 statuts de check-in Sur chaque ligne de réservation, 4 pastilles cliquables : 🟢 Présent (cas stand",
+      "body": "Le cœur du métier du jour J : pointer qui est arrivé, avec quelle qualité, pour alimenter les emails post-accueil et les statistiques. Les 4 statuts de check-in Sur chaque ligne de réservation, 4 pastilles cliquables : 🟢 Présent (cas standard) — le pro est venu ⭐ Coup de cœur — le pro a particulièrement aimé (ouvre des emails de remerciement ciblés) 📰 Presse — le pro est journaliste / critique 🔴 Absent — le pro n'est pas venu Vous ne pouvez sélectionner qu'un seul statut à la fois. Cliquer sur un autre bascule instantanément. Comment pointer Ouvrez le créneau (écran 3 — voir Se repérer dans l'app). À l'arrivée d'un pro, trouvez-le dans la liste (recherche rapide par nom). Cliquez sur la pastille correspondant à son statut. La sauvegarde est immédiate (auto-save, pas de bouton à valider). Un petit icône de chargement apparaît pendant la requête. Les compteurs en-tête (Présentes / Total) se mettent à jour en temps réel. Ce qui déclenche l'email post-accueil Cocher un statut ne déclenche pas automatiquement d'email. Voir Envoyer les emails post-accueil pour les envoyer manuellement (ou depuis le panneau latéral d'une réservation). Corriger une erreur Cliquez sur la même pastille pour l'enlever, ou sur une autre pour basculer. La dernière action gagne. Ajouter une note de check-in Chaque réservation peut avoir : Note d'accueil (visible par la compagnie) Note interne Derviche (jamais visible par la compagnie ni le pro) Ces champs sont éditables depuis l'écran 3 via le panneau qui s'ouvre au clic sur une ligne. Cas particuliers Un pro non prévu arrive → voir Ajouter une réservation de dernière minute. Un pro prévu ne vient pas → cliquez « Absent ». Un email de suivi peut être envoyé derrière, voir Emails post-accueil. Un pro doit partir plus tôt / transférer → icône de transfert sur sa ligne, voir Transférer une réservation. Après le spectacle Les statuts de check-in alimentent automatiquement : Les statistiques (taux de présence par spectacle / par lieu) L'historique "
+    },
+    {
+      "slug": "checkin-pwa/walk-in",
+      "title": "Ajouter une réservation de dernière minute (walk-in)",
+      "category": "checkin-pwa",
+      "categoryLabel": "Check-in sur place",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "walk-in",
+        "dernière minute",
+        "improviste",
+        "ajouter",
+        "sur place",
+        "nouvelle réservation",
+        "PWA"
+      ],
+      "excerpt": "Un professionnel arrive sans avoir réservé ? Ajoutez-le en quelques secondes depuis l'app check-in. Depuis l'écran 3 (réservations d'un créneau) Ouvrez le créneau concerné. En bas à droite, un bouton flottant gold « + » apparaît. Tapez-le →",
+      "body": "Un professionnel arrive sans avoir réservé ? Ajoutez-le en quelques secondes depuis l'app check-in. Depuis l'écran 3 (réservations d'un créneau) Ouvrez le créneau concerné. En bas à droite, un bouton flottant gold « + » apparaît. Tapez-le → un formulaire rapide s'ouvre. Les étapes du walk-in 1. Recherche du pro Commencez par chercher le pro dans la base : Par email (exact) Par nom (recherche partielle, insensible à la casse) Si le pro existe → sélectionnez-le → infos pré-remplies. Si le pro n'existe pas → cliquez « Créer un nouveau professionnel ». 2. Infos rapides Pour un nouveau pro, champs minimaux : Prénom, nom Email (pour lui envoyer le post-accueil) Compagnie / structure (facultatif) Téléphone (facultatif) 3. Notifications Par défaut, aucun email n'est envoyé pour un walk-in (le pro est déjà sur place). Si vous voulez quand même lui envoyer une confirmation avec le code de réservation, cochez la case. 4. Check-in immédiat Option pour marquer la réservation directement comme « Présent » dès sa création — gain de temps : une action au lieu de deux. Cochez « Enregistrer + check-in » et validez. Ce qui se passe Une réservation est créée dans la base, statut « Confirmée » La réservation est consommée sur la capacité du créneau Elle apparaît immédiatement dans la liste, à la fin Si vous avez coché le check-in, le statut « Présent » est appliqué Si la capacité du créneau est atteinte au moment du walk-in, le système refuse la création. Vous devez d'abord libérer une place (annulation d'une résa, transfert). Bonne pratique — gestion du surbooking Si vous acceptez régulièrement des walk-ins au-delà de la capacité réelle, voyez plutôt avec un super-admin pour augmenter la capacité déclarée du créneau en amont. Mieux vaut connaître la capacité réelle. Pour aller plus loin Pointer les présents Envoyer les emails post-accueil Gérer un surbooking"
+    },
+    {
+      "slug": "checkin-pwa/emails-post-accueil",
+      "title": "Envoyer les emails post-accueil",
+      "category": "checkin-pwa",
+      "categoryLabel": "Check-in sur place",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "email",
+        "post-accueil",
+        "remerciement",
+        "coup de cœur",
+        "presse",
+        "absent",
+        "suivi",
+        "mention",
+        "merci"
+      ],
+      "excerpt": "Après un spectacle, vous pouvez envoyer des emails personnalisés aux pros en fonction de leur statut de check-in — merci, coup de cœur, couverture presse, suivi d'absence. Les 4 types d'email post-accueil Merci présence (checkinthankyou) — ",
+      "body": "Après un spectacle, vous pouvez envoyer des emails personnalisés aux pros en fonction de leur statut de check-in — merci, coup de cœur, couverture presse, suivi d'absence. Les 4 types d'email post-accueil Merci présence (checkinthankyou) — standard pour les présents Coup de cœur (checkinloved) — version chaleureuse pour les pros qui ont adoré Presse (checkinpress) — remerciement spécifique journalistes / critiques Absent (checkinfollowupabsent) — suivi si le pro n'est pas venu, avec proposition de prochains créneaux Les 4 templates sont éditables depuis Préférences → Templates (super-admin) — chacun avec sujet, corps et liens optionnels personnalisables. Envoyer depuis l'app check-in Ouvrez le créneau (écran 3). Tapez sur la ligne du pro → un panneau latéral s'ouvre. Section « Emails post-accueil », 4 boutons : Merci présence Coup de cœur Presse Absent Cliquez le bouton adapté → le template correspondant est envoyé immédiatement. Le bouton est grisé si aucun email de destination n'est disponible (ex. walk-in sans email saisi). Anti-doublon Chaque template ne peut être envoyé qu'une seule fois par réservation + type. Si vous cliquez deux fois, le deuxième envoi est ignoré (et un message « Déjà envoyé le JJ/MM à HHhMM » apparaît). Si besoin de renvoyer, un super-admin peut nettoyer l'entrée dans la table checkinfollowupemails — mais cette action est rare. Envoyer depuis l'admin web (édition réservation) Les mêmes 4 boutons sont accessibles dans le panneau d'édition d'une réservation (/admin/reservations), section Emails post-accueil. Liens inclus automatiquement Chaque template peut afficher (si le toggle est activé sur le template ET que l'URL correspondante est renseignée sur le spectacle) : 📂 Dossier de presse 🎬 Teaser vidéo 🎥 Captation 🎭 Lien de réservation (vers la fiche publique) 📷 Dossier photo 🌐 Page dervichediffusion.com (libellé personnalisable par template) Voir Enrichir la fiche spectacle pour remplir ces URLs. Les emails post-accueil sont le bon mom"
+    },
+    {
+      "slug": "compagnies/vue-ensemble",
+      "title": "Gérer les compagnies",
+      "category": "compagnies",
+      "categoryLabel": "Compagnies",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "compagnies",
+        "artistes",
+        "liaison",
+        "utilisateur",
+        "compte",
+        "contact",
+        "logo"
+      ],
+      "excerpt": "Les compagnies sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique. Accéder à la liste Compagnies dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateu",
+      "body": "Les compagnies sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique. Accéder à la liste Compagnies dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateur lié. Créer une compagnie Bouton « Nouvelle compagnie ». Champs : Nom (obligatoire) Ville / Localité Email principal Logo (upload) Contact : nom, email, téléphone Lier un compte utilisateur à une compagnie Une compagnie peut avoir un compte company qui lui permet de : Consulter les statistiques de ses spectacles Faire le check-in si le créneau a hosted_by = 'company' Sur la fiche compagnie, section « Compte utilisateur » : Créer un nouveau compte (email + mot de passe initial) Associer un utilisateur existant (liste déroulante) Retirer l'accès (supprime la liaison sans détruire le compte ni la compagnie) Un utilisateur company doit avoir une compagnie liée. Un trigger en base empêche la suppression de la liaison si le rôle reste company. Modifier une compagnie Clic sur la ligne → édition. Les modifications se répercutent sur toutes les fiches spectacles liées (nom, logo). Supprimer une compagnie Impossible si la compagnie a au moins un spectacle. Archivez ou réassignez d'abord les spectacles. Pour aller plus loin Créer un spectacle (sélection compagnie) Les rôles et qui fait quoi"
+    },
+    {
+      "slug": "emails/vue-ensemble",
+      "title": "Les emails envoyés automatiquement — vue d'ensemble",
+      "category": "emails",
+      "categoryLabel": "Emails",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "emails",
+        "envoi",
+        "automatique",
+        "notifications",
+        "transactionnels",
+        "rappels",
+        "post-accueil",
+        "qui déclenche"
+      ],
+      "excerpt": "La plateforme envoie 12 types d'emails différents. Voici qui, quand, à qui. 4 emails transactionnels (déclenchés par une action) | Email | Envoyé à | Déclencheur | |---|---|---| | Confirmation de réservation | Le pro | Création d'une réserv",
+      "body": "La plateforme envoie 12 types d'emails différents. Voici qui, quand, à qui. 4 emails transactionnels (déclenchés par une action) | Email | Envoyé à | Déclencheur | |---|---|---| | Confirmation de réservation | Le pro | Création d'une réservation (publique ou admin) | | Annulation de réservation | Le pro | Annulation via le bouton « Annuler » avec case cochée | | Modification de créneau | Le pro | Transfert d'une réservation avec case cochée | | Notification admin | Emails configurés dans Préférences | Création d'une réservation | 3 emails de rappel (envoyés automatiquement par cron) | Email | Quand | Déclencheur | |---|---|---| | Rappel J-7 | 7 jours avant le créneau | Cron quotidien (heure configurable) | | Rappel J-2 | 2 jours avant | Cron quotidien | | Rappel H-4 | 4 heures avant | Cron horaire | Configuration dans Préférences → Rappels (super-admin). 4 emails post-accueil (déclenchés manuellement) Envoyés depuis l'app check-in ou depuis l'admin web après un spectacle : | Email | Destinataire | Déclencheur | |---|---|---| | Merci présence | Pros présents | Clic bouton dans panneau réservation | | Coup de cœur | Pros qui ont particulièrement aimé | Idem | | Presse | Journalistes | Idem | | Suivi absence | Pros absents | Idem | Voir Envoyer les emails post-accueil. Personnalisation (super-admin) Tous les templates sont éditables dans Préférences → Templates : Sujet Corps (intro, body, info, salutation) Liens optionnels activables (dossier, teaser, captation, photos, page vitrine) Variables dynamiques : {{prénom}}, {{spectacle}}, {{date}}, {{heure}}, {{lieu}}, {{ville}}, {{adresse}}, {{codepostal}}, {{code}} (réservation), etc. Aperçu et test Avant d'enregistrer une modification de template, utilisez l'aperçu live dans le form d'édition — il reflète en temps réel ce que le destinataire verra, avec variables substituées par des données de démo. Expéditeur Par défaut, tous les emails sont envoyés depuis l'adresse configurée dans Préférences → Email (reservation.dervic"
+    },
+    {
+      "slug": "faq/email-non-recu",
+      "title": "Un pro ne reçoit pas son email — que faire ?",
+      "category": "faq",
+      "categoryLabel": "FAQ & dépannage",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "email",
+        "non reçu",
+        "spam",
+        "resend",
+        "échec",
+        "problème",
+        "bounce",
+        "adresse incorrecte"
+      ],
+      "excerpt": "Un professionnel signale ne pas avoir reçu son email de confirmation ou de rappel. Voici la démarche de diagnostic. 1. Vérifier l'adresse email Ouvrez la réservation en édition. Vérifiez l'adresse email : faute de frappe courante (accent, l",
+      "body": "Un professionnel signale ne pas avoir reçu son email de confirmation ou de rappel. Voici la démarche de diagnostic. 1. Vérifier l'adresse email Ouvrez la réservation en édition. Vérifiez l'adresse email : faute de frappe courante (accent, lettre oubliée, domaine mal tapé). Si l'adresse est fausse : corrigez-la, puis renvoyez manuellement l'email depuis le panneau (bouton « Renvoyer confirmation »). 2. Vérifier le dossier spam du pro Certains emails transactionnels finissent dans les spams, surtout à la première réception depuis Derviche. Demandez au pro de : Vérifier son dossier Spam / Courrier indésirable / Promotions (Gmail) Ajouter noreply@dervichediffusion.com (ou l'adresse d'expédition configurée) à ses contacts Marquer l'email précédent comme « Non spam » si trouvé 3. Consulter les logs (super-admin) Ouvrez Système → Logs puis filtrez : Catégorie : Email Recherche : l'email du pro ou le code de réservation Trois cas possibles : a) Aucun log d'envoi L'email n'a jamais été envoyé. Cause probable : Case « Envoyer l'email » décochée lors de la création Erreur silencieuse au moment de la création → Solution : renvoi manuel depuis le panneau d'édition de la réservation. b) Log d'envoi avec statut « Success » L'email est parti avec succès depuis la plateforme. Il est quelque part : Spam du pro Boîte secondaire Rejeté par le serveur destinataire (voir c) c) Log d'envoi avec statut « Error » ou « Bounce » L'email a été refusé par le serveur du pro : Bounce hard : adresse inexistante → corrigez l'adresse Bounce soft : boîte pleine / serveur temporairement indisponible → renvoyez plus tard Rate limit : vous avez dépassé la limite d'envoi → voir point 4 4. Vérifier le quota Resend Dans Système, le widget Quota Resend montre la consommation mensuelle. Si le quota est atteint : Les nouveaux envois échouent avec un code 429 Un super-admin doit augmenter le plan Resend ou attendre le renouvellement 5. Renvoyer manuellement Depuis le panneau d'édition d'une réservation (admin "
+    },
+    {
+      "slug": "faq/annulation-spectacle",
+      "title": "Annuler un spectacle entier (procédure)",
+      "category": "faq",
+      "categoryLabel": "FAQ & dépannage",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "annulation",
+        "spectacle",
+        "créneau",
+        "annuler",
+        "grève",
+        "maladie",
+        "imprévu",
+        "procédure"
+      ],
+      "excerpt": "Un spectacle doit être annulé en urgence (maladie, intempéries, grève). Voici la procédure à suivre dans le bon ordre. 1. Annuler les créneaux concernés Ouvrez le spectacle → Représentations. Pour chaque créneau à annuler : Icône crayon → o",
+      "body": "Un spectacle doit être annulé en urgence (maladie, intempéries, grève). Voici la procédure à suivre dans le bon ordre. 1. Annuler les créneaux concernés Ouvrez le spectacle → Représentations. Pour chaque créneau à annuler : Icône crayon → ouvrir en édition. Passer le statut à « Annulé » (ou supprimer si le créneau n'a encore aucune résa). 2. Informer les professionnels ayant réservé L'annulation d'un créneau ne déclenche pas automatiquement l'email aux pros. Vous devez les prévenir individuellement ou par lot. Option A — Email individualisé (recommandé) Pour chaque réservation du créneau : Ouvrez-la. Cliquez « Annuler la réservation ». Saisissez un motif d'annulation clair : « Spectacle annulé pour raisons techniques. Nous vous recontactons. » Cochez « Envoyer un email » → déclenche l'email « Annulation de votre réservation » avec le motif. Option B — Email hors plateforme Si vous voulez un message plus personnel : Filtrez la liste des réservations par spectacle + créneau. Exportez en CSV. Ouvrez votre client email et écrivez un message groupé (CCi pour la confidentialité). 3. Proposer un report Si le spectacle est reporté à une nouvelle date : Créez le nouveau créneau dans Représentations. Pour chaque réservation annulée, proposez le transfert plutôt que l'annulation sèche : Plutôt que d'annuler à l'étape 2, utilisez « Transférer vers un autre créneau » directement. Un email « Modification de votre réservation » est envoyé. 4. Notifier la compagnie Envoyez un email hors plateforme à la compagnie (contact défini dans la fiche compagnie). Pas d'envoi automatique côté compagnie. 5. Documenter Ajoutez une note interne Derviche sur le spectacle pour garder la trace (motif, date de décision). Consultez les logs (Système → Logs) pour vérifier que tous les emails sont bien partis. Si vous traitez souvent des annulations, envisagez de créer un template email custom dans Préférences → Templates. Pattern : « Annulation spectacle + report ». Pour aller plus loin Modifier ou an"
+    },
+    {
+      "slug": "faq/surbooking",
+      "title": "Gérer un surbooking",
+      "category": "faq",
+      "categoryLabel": "FAQ & dépannage",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "surbooking",
+        "overbooking",
+        "surréservation",
+        "dépassement",
+        "capacité",
+        "places",
+        "excédent"
+      ],
+      "excerpt": "Votre créneau est complet mais un professionnel supplémentaire se présente ou insiste ? Voici les options. Prévenir le surbooking La meilleure gestion du surbooking est de l'anticiper : définissez une capacité légèrement inférieure à la cap",
+      "body": "Votre créneau est complet mais un professionnel supplémentaire se présente ou insiste ? Voici les options. Prévenir le surbooking La meilleure gestion du surbooking est de l'anticiper : définissez une capacité légèrement inférieure à la capacité réelle (ex. 48 places déclarées pour une salle de 50) pour garder une marge. En temps réel — le jour J Option 1 — Refuser poliment Si la salle est vraiment pleine : Expliquez au pro que la capacité est atteinte Proposez un autre créneau (transfert) ou une date ultérieure Notez son intérêt pour le relancer plus tard Option 2 — Augmenter temporairement la capacité Si la salle a encore quelques places debout ou que vous avez de la marge physique : Ouvrez Spectacles → Représentations du spectacle concerné. Éditez le créneau. Augmentez la capacité (ex. 48 → 52). Ajoutez le pro en walk-in. L'augmentation de capacité n'envoie pas d'alerte automatique. Prévenez le lieu si la jauge physique change. Option 3 — Compter comme « Walk-in en attente » Si vous voulez garder trace sans consommer de place : Créez la réservation sans cocher « check-in Présent » Ajoutez une note interne Derviche : « En attente — place libérée si désistement » Si une place se libère (no-show), cochez Présent Après coup — post-mortem Dans Statistiques, regardez le taux d'annulation / taux de no-show du spectacle. Si le taux est élevé, vous pouvez : Soit surbook volontairement (déclarer plus de places qu'en réalité, mais maîtrisé) Soit rappeler les pros J-2 / H-4 pour confirmer leur venue — les rappels automatiques sont configurables dans Préférences → Rappels. Cas particulier — presse Si un journaliste arrive en surbooking, priorisez-le (coup de cœur presse pour le spectacle). Voyez avec le lieu pour une chaise supplémentaire, ou décalez un pro vers un autre créneau par transfert. Pour aller plus loin Ajouter une résa de dernière minute Transférer une réservation Pointer les présents"
+    },
+    {
+      "slug": "faq/retrouver-ancienne-reservation",
+      "title": "Retrouver une ancienne réservation",
+      "category": "faq",
+      "categoryLabel": "FAQ & dépannage",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "retrouver",
+        "ancienne",
+        "archive",
+        "historique",
+        "passée",
+        "chercher",
+        "filtrer"
+      ],
+      "excerpt": "Vous cherchez une réservation d'il y a 2 mois, 6 mois, 2 ans ? Plusieurs méthodes selon ce que vous savez. 1. Par nom ou email du pro Dans Réservations, utilisez la barre de recherche en haut : Tapez le nom, prénom, email ou téléphone du pr",
+      "body": "Vous cherchez une réservation d'il y a 2 mois, 6 mois, 2 ans ? Plusieurs méthodes selon ce que vous savez. 1. Par nom ou email du pro Dans Réservations, utilisez la barre de recherche en haut : Tapez le nom, prénom, email ou téléphone du pro La recherche s'applique à toutes les réservations, passées comme à venir Si rien n'apparaît, élargissez le filtre Période à « Toutes » ou « Saison » 2. Par code de réservation Chaque réservation a un code unique (format DD-XXYYZZ) affiché dans les emails et sur la confirmation. Si vous avez le code : Collez-le dans la barre de recherche de la page Réservations Le système le reconnaît et filtre la liste 3. Par spectacle / créneau Si vous savez quand : Ouvrez Spectacles → fiche du spectacle. Cliquez « Représentations ». Sélectionnez le créneau. Depuis la PWA check-in (/accueil), ou bien via le filtre Spectacle + Créneau de la page Réservations. 4. Par statut Si vous cherchez une réservation annulée : Filtre Statut : Annulée Combinez avec la période (À venir / Saison / Toutes) Les réservations annulées restent en base — elles ne sont jamais supprimées. Elles sont juste masquées par défaut (filtre Statut par défaut sur « Confirmée »). 5. Via le profil du pro Dans Professionnels, ouvrez la fiche d'un pro. L'onglet Historique liste toutes ses réservations passées (20 dernières, avec bouton pour en charger plus). Depuis la PWA check-in, la même fonctionnalité est accessible en tapant sur une ligne de réservation → drawer historique. 6. Si rien ne marche Si une réservation n'apparaît nulle part alors que vous êtes sûr qu'elle a existé, demandez à un super-admin de consulter les logs système : Système → Logs, catégorie Reservation Filtrez par email ou code Le log d'origine montrera l'ID et l'état à la création Parfois, une réservation peut être masquée par une erreur RLS (rare) ou avoir été supprimée manuellement. Les logs sont la source de vérité. Pour aller plus loin Vue d'ensemble des réservations Exporter les réservations"
+    },
+    {
+      "slug": "faq/glossaire",
+      "title": "Glossaire — les termes à connaître",
+      "category": "faq",
+      "categoryLabel": "FAQ & dépannage",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "glossaire",
+        "lexique",
+        "vocabulaire",
+        "définitions",
+        "termes",
+        "walk-in",
+        "hosted_by",
+        "vedette"
+      ],
+      "excerpt": "Liste des termes spécifiques à la plateforme, par ordre alphabétique. Admin Rôle interne de l'équipe Derviche avec accès à la gestion opérationnelle (réservations, spectacles, créneaux, lieux, compagnies, professionnels, statistiques). N'a ",
+      "body": "Liste des termes spécifiques à la plateforme, par ordre alphabétique. Admin Rôle interne de l'équipe Derviche avec accès à la gestion opérationnelle (réservations, spectacles, créneaux, lieux, compagnies, professionnels, statistiques). N'a pas accès aux préférences, aux utilisateurs internes ni au système. Classement éditorial Mécanisme par lequel Derviche pilote quels spectacles mettre en vedette sur la home et dans quel ordre afficher le catalogue. Deux zones : vedette (slider hero) + ordre global (catalogue). Voir Mettre en vedette. Company Rôle externe utilisé par les compagnies artistiques pour consulter les statistiques de leurs spectacles. Peut faire le check-in si le créneau est marqué hostedby = 'company'. Créneau (slot) Synonyme de représentation. Une date + heure + lieu + capacité d'un spectacle. Un spectacle a plusieurs créneaux (série de tournée). Externe Rôle interne pour les collaborateurs ponctuels (accueil, techniciens). Accès uniquement à l'app check-in PWA, sur les spectacles qui leur sont assignés. Guest / Réservation invitée Réservation créée sans compte pro associé. Le pro donne juste nom + email. Créée par un admin en walk-in ou par le pro lui-même en réservation publique sans inscription. Hosted by (accueil assuré par) Indique qui assure l'accueil d'un créneau : Derviche : l'équipe Derviche (admin ou externe assigné) Company : la compagnie elle-même Externe : un externe spécifique assigné au spectacle Détermine qui a accès à la PWA pour ce créneau précis. Invitation policy Texte libre affiché sur la fiche publique d'un spectacle, dans le bloc « Pour les professionnels ». Explique aux pros les conditions d'invitation (ex. « 2 places offertes par structure »). Professionnel Les responsables de salles de théâtre qui réservent vos spectacles. Rôle professional en base. PWA Progressive Web App. L'app mobile /accueil qui s'installe sur téléphone/tablette sans passer par l'App Store. Utilisée pour le check-in sur place. Voir Installer l'app. Rappels"
+    },
+    {
+      "slug": "lieux/vue-ensemble",
+      "title": "Gérer les lieux (venues)",
+      "category": "lieux",
+      "categoryLabel": "Lieux",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "lieux",
+        "venues",
+        "salles",
+        "capacité",
+        "pmr",
+        "accessibilité",
+        "parking",
+        "transports",
+        "adresse"
+      ],
+      "excerpt": "Les lieux (ou venues) sont les salles de théâtre où se déroulent les spectacles. Chaque créneau est lié à un lieu. Accéder à la liste Lieux dans la sidebar → liste complète avec recherche et tri alphabétique. Créer un lieu Bouton « Nouveau ",
+      "body": "Les lieux (ou venues) sont les salles de théâtre où se déroulent les spectacles. Chaque créneau est lié à un lieu. Accéder à la liste Lieux dans la sidebar → liste complète avec recherche et tri alphabétique. Créer un lieu Bouton « Nouveau lieu ». Champs : Nom (obligatoire) Adresse (rue, code postal, ville) Capacité (nombre de places) Accessibilité PMR (oui / non) Parking (oui / non + description libre) Transports (métro / bus / parking / autre — texte libre) Les infos d'accessibilité et transports apparaissent sur la fiche publique du spectacle (bloc « Informations pratiques »). Modifier un lieu Clic sur la ligne → édition. Les modifications se répercutent sur tous les créneaux existants liés à ce lieu (ex. si vous corrigez l'adresse, les emails futurs auront la bonne adresse). Supprimer un lieu Un lieu ne peut pas être supprimé s'il est utilisé par au moins un créneau. Supprimez ou déplacez d'abord les créneaux concernés. Créer un lieu rapidement depuis un créneau Pas besoin de passer par cette page si vous créez un créneau pour un lieu inédit : le dialog de création de créneau propose « Créer un nouveau lieu » directement. Pour aller plus loin Créer un créneau"
+    },
+    {
+      "slug": "mon-compte/profil-mot-de-passe",
+      "title": "Modifier mon profil et mon mot de passe",
+      "category": "mon-compte",
+      "categoryLabel": "Mon compte",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "mon compte",
+        "profil",
+        "nom",
+        "email",
+        "mot de passe",
+        "password",
+        "sécurité",
+        "connexion"
+      ],
+      "excerpt": "Votre espace Mon compte est accessible depuis le nom d'utilisateur en bas de la sidebar → lien « Mon compte » (ou icône utilisateur). Modifier vos informations personnelles Ouvrez Mon compte (/admin/mon-compte). Carte « Informations personn",
+      "body": "Votre espace Mon compte est accessible depuis le nom d'utilisateur en bas de la sidebar → lien « Mon compte » (ou icône utilisateur). Modifier vos informations personnelles Ouvrez Mon compte (/admin/mon-compte). Carte « Informations personnelles » : cliquez « Modifier ». Champs modifiables : Prénom, nom Email (votre email de connexion) Cliquez « Enregistrer » ou « Annuler » pour abandonner. Changer d'email : si vous modifiez votre adresse, c'est l'ancienne qui reste votre identifiant de connexion jusqu'à la prochaine déconnexion. Reconnectez-vous avec la nouvelle après sauvegarde. Consulter votre rôle Carte « Informations compte » (lecture seule) : Rôle (super-admin, admin, externe) — non modifiable par vous-même Date de création du compte Statut (actif / inactif) Pour changer de rôle, demandez à un . Changer votre mot de passe Carte « Sécurité » → bouton « Changer le mot de passe ». Un dialog s'ouvre avec : Mot de passe actuel Nouveau mot de passe (× 2, confirmation) Règles de force : Minimum 8 caractères Mélange minuscules + majuscules recommandé Un indicateur visuel vous guide pendant la saisie Cliquez « Confirmer le changement ». Un gestionnaire de mots de passe (Bitwarden, 1Password, iCloud Trousseau) est fortement recommandé pour un mot de passe long et unique. Mot de passe oublié Si vous êtes déconnecté : Rendez-vous sur /login. Cliquez « Mot de passe oublié ». Saisissez votre email → un lien de réinitialisation vous est envoyé. Le lien expire après 1 heure. Se déconnecter En bas de la sidebar, icône « Déconnexion ». Pour aller plus loin Les rôles et qui fait quoi Se repérer dans la plateforme"
+    },
+    {
+      "slug": "notifications/cloche",
+      "title": "La cloche de notifications admin",
+      "category": "notifications",
+      "categoryLabel": "Notifications",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "cloche",
+        "notifications",
+        "alertes",
+        "badge",
+        "non lues",
+        "réservation",
+        "nouveauté"
+      ],
+      "excerpt": "La cloche en haut à droite du header admin affiche les événements importants en temps réel : nouvelles réservations, annulations, modifications. L'icône cloche 🔔 Cloche vide : aucune notification non lue 🔔 + badge rouge : X notifications ",
+      "body": "La cloche en haut à droite du header admin affiche les événements importants en temps réel : nouvelles réservations, annulations, modifications. L'icône cloche 🔔 Cloche vide : aucune notification non lue 🔔 + badge rouge : X notifications non lues (le chiffre affiche le count) Cliquez la cloche → un panneau latéral s'ouvre avec la liste paginée. Les types d'événements notifiés Selon la configuration (Préférences → Notifications, super-admin) : Nouvelle réservation (publique ou admin) Annulation de réservation Modification de créneau (transfert) Nouveau professionnel créé Nouveau spectacle créé ou publié Alerte seuil de capacité (ex. créneau à 90 %) Erreur Google Calendar (sync cassée) Alerte quota Resend (à 80 % du quota) Agir sur une notification Chaque notification a un bouton d'action contextuel : Réservation → navigue vers la résa en édition (ouvre le panneau) Créneau → navigue vers le spectacle / représentation Erreur → ouvre la page Système Pro → ouvre la fiche du pro Marquer comme lue Clic sur la notification → automatiquement marquée comme lue Bouton « Tout marquer lu » en haut du panneau Bouton « Supprimer » sur chaque ligne pour l'effacer définitivement Emails d'alerte parallèles Indépendamment de la cloche, certains événements peuvent déclencher un email aux adresses configurées dans Préférences → Notifications. Cela permet à une équipe non connectée en permanence d'être au courant. Pourquoi je ne reçois pas de notifications ? Vérifier le rôle : seuls et voient la cloche. Vérifier la configuration : un super-admin doit avoir activé les types d'événements dans Préférences → Notifications. Vérifier que vous êtes dans la liste des destinataires (pour les emails parallèles). Ne laissez pas la cloche s'accumuler : des dizaines de notifications non lues rendent les vraies urgences invisibles. Passez 30 secondes par jour à les trier. Pour aller plus loin Les emails envoyés automatiquement Configurer les notifications (V2)"
+    },
+    {
+      "slug": "preferences/vue-ensemble",
+      "title": "Vue d'ensemble des préférences",
+      "category": "preferences",
+      "categoryLabel": "Préférences",
+      "roles": [
+        "super-admin"
+      ],
+      "keywords": [
+        "préférences",
+        "paramètres",
+        "configuration",
+        "organisation",
+        "thème",
+        "templates",
+        "rappels",
+        "légal"
+      ],
+      "excerpt": "Section réservée aux . Rassemble toute la configuration fine de la plateforme, organisée en 12 onglets accessibles depuis le sous-menu « Préférences » dans la sidebar. Les 12 onglets | Onglet | Rôle | |---|---| | Organisation | Nom, email, ",
+      "body": "Section réservée aux . Rassemble toute la configuration fine de la plateforme, organisée en 12 onglets accessibles depuis le sous-menu « Préférences » dans la sidebar. Les 12 onglets | Onglet | Rôle | |---|---| | Organisation | Nom, email, téléphone, adresse, site web, saison | | Page d'accueil | 6 blocs : hero, avantages, spectacles, impact, contact, footer | | Classement | Spectacles en vedette + ordre global (drag&drop) — voir | | Apparence | Logos, favicon, thème (couleurs custom) | | Email | Configuration expéditeur (Resend), test connexion | | Templates | 12 modèles d'email éditables (sujet, corps, options) | | Notifications | Quels événements déclenchent une cloche admin + emails alertes | | Rappels | Configuration J-7 / J-2 / H-4 (heure d'envoi, activation) | | Calendar | Statut Google Calendar + reconnection OAuth | | RGPD | Politique de confidentialité éditable | | Légal | Mentions légales, CGU, politique confidentialité | | Statistiques | Colonnes visibles par défaut, période par défaut | Navigation Depuis la sidebar admin, clic sur « Préférences » déploie le sous-menu. Clic sur un onglet → navigation directe + l'onglet reste surligné. Sauvegarde Chaque onglet a son propre bouton « Enregistrer » en bas de page (sauf Classement qui sauvegarde automatiquement après chaque drag&drop). Si vous modifiez un onglet et tentez de changer d'onglet sans enregistrer, une fenêtre de confirmation vous prévient : « Modifications non sauvegardées ». Accès restreint Les ne voient pas le sous-menu Préférences dans la sidebar. Seul un peut modifier ces paramètres. Documentation détaillée par onglet Les articles détaillés de chaque onglet seront ajoutés en V2 (Organisation, Page d'accueil, Apparence, Email, Templates, Notifications, Rappels, Calendar, RGPD, Légal, Statistiques). Pour l'instant, les onglets avec documentation dédiée : Classement éditorial Les rappels automatiques (vue d'ensemble emails) Pour aller plus loin Les emails envoyés automatiquement Mettre en vedette"
+    },
+    {
+      "slug": "professionnels/vue-ensemble",
+      "title": "Gérer les professionnels",
+      "category": "professionnels",
+      "categoryLabel": "Professionnels",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "professionnels",
+        "pros",
+        "base",
+        "fiche",
+        "colonnes",
+        "export",
+        "csv",
+        "désactiver"
+      ],
+      "excerpt": "Les professionnels sont les responsables de salles qui réservent vos spectacles. Cette base centralise toutes leurs informations. Accéder à la liste Professionnels dans la sidebar → tableau paginé avec recherche, filtres, colonnes configura",
+      "body": "Les professionnels sont les responsables de salles qui réservent vos spectacles. Cette base centralise toutes leurs informations. Accéder à la liste Professionnels dans la sidebar → tableau paginé avec recherche, filtres, colonnes configurables. Recherche & filtres Recherche : nom, email, téléphone Filtre Statut : Actif / Inactif Filtre Ville (dropdown) Colonnes configurables Cliquez l'icône « Colonnes » pour choisir ce que vous voyez : nom, email, téléphone, ville, code postal, pays, structure, fonction, date création, nombre de réservations, etc. Votre sélection est sauvegardée (réutilisée à la prochaine visite). Fiche d'un pro Clic sur une ligne → drawer latéral avec : Coordonnées complètes Historique des réservations (toutes, avec détail spectacle / créneau / statut) Toggle Actif / Inactif Désactiver un pro Un pro inactif est masqué de la sélection lors d'une création de réservation (ne pollue pas la recherche). Ses réservations existantes restent intactes. Cas d'usage : pro qui n'est plus en poste, demande RGPD de désactivation, etc. Exporter la base Bouton « Exporter CSV » → fichier avec les colonnes visibles. Attention RGPD : un export contient des données personnelles. Stockez-le en lieu sûr et détruisez-le après usage. Supprimer un pro La suppression est irréversible et supprime aussi ses réservations. À réserver à une demande formelle de droit à l'oubli. Pour aller plus loin Créer une réservation Exporter les réservations"
+    },
+    {
+      "slug": "representations/vue-ensemble",
+      "title": "Gérer les créneaux d'un spectacle (représentations)",
+      "category": "representations",
+      "categoryLabel": "Représentations",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "représentations",
+        "créneaux",
+        "dates",
+        "séries",
+        "récurrence",
+        "capacité",
+        "lieu",
+        "hosted_by"
+      ],
+      "excerpt": "Les représentations (ou créneaux) sont les dates/heures précises où un spectacle est joué. Un spectacle = 1 fiche + plusieurs créneaux. Accéder aux créneaux d'un spectacle Ouvrez Spectacles dans la sidebar. Cliquez sur un spectacle. Bouton ",
+      "body": "Les représentations (ou créneaux) sont les dates/heures précises où un spectacle est joué. Un spectacle = 1 fiche + plusieurs créneaux. Accéder aux créneaux d'un spectacle Ouvrez Spectacles dans la sidebar. Cliquez sur un spectacle. Bouton « Représentations » en haut → page dédiée. Créer un créneau unique Bouton « Nouveau créneau ». Formulaire : Date + heure de début / fin Lieu (liste déroulante des lieux existants, ou création rapide) Capacité : nombre de places ou « Illimité » Qui assure l'accueil ? (hostedby) : Derviche : votre équipe interne Compagnie : la compagnie elle-même Externe spécifique : un membre assigné au spectacle Synchroniser avec Google Calendar (coché par défaut) Créer une série de créneaux Bouton « Série de dates » → dialog : Date début / fin de la série Jours de la semaine (cases à cocher) Heure de chaque créneau Lieu, capacité, hostedby Génère tous les créneaux correspondants en un clic. Tournée récurrente : utilisez la série de dates pour un spectacle qui se joue tous les jeudis et vendredis pendant 6 semaines. Modifier, dupliquer, supprimer Chaque ligne a 3 icônes : Crayon → édition Copier → duplique le créneau (date vide à remplir) Croix rouge → suppression (confirmation si réservations) Filtres et vue Masquer les créneaux passés (toggle par défaut actif) Filtre Mois et Lieu Recherche rapide par date MM-DD Pour aller plus loin Créer un spectacle Qui assure l'accueil ? Annuler un spectacle entier"
+    },
+    {
+      "slug": "reservations/vue-ensemble",
+      "title": "Vue d'ensemble de la liste des réservations",
+      "category": "reservations",
+      "categoryLabel": "Réservations",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "réservations",
+        "liste",
+        "filtres",
+        "recherche",
+        "colonnes",
+        "pagination",
+        "tri",
+        "cartes"
+      ],
+      "excerpt": "La page Réservations (/admin/reservations) est la plus utilisée de la plateforme. Elle centralise toutes les réservations avec recherche, filtres et export. Les 4 cartes statistiques en haut Dès l'ouverture de la page, 4 chiffres clés sont ",
+      "body": "La page Réservations (/admin/reservations) est la plus utilisée de la plateforme. Elle centralise toutes les réservations avec recherche, filtres et export. Les 4 cartes statistiques en haut Dès l'ouverture de la page, 4 chiffres clés sont mis en avant : Total réservations (sur la période filtrée) Taux de confirmation Taux de présence (après check-in) Répartition par statut Ces chiffres se recalculent à chaque changement de filtre. Recherche et filtres En haut de la liste : Barre de recherche : nom du pro, email, téléphone. La recherche est déclenchée après une courte pause (≈ 300 ms). Filtre Spectacle (dropdown) Filtre Lieu (dropdown — n'affiche que les lieux ayant au moins une réservation) Filtre Statut : Confirmée, En attente, Annulée, Transférée Filtre Période : À venir, Passées, Saison, ou plage personnalisée (format MM-JJ → MM-JJ) Les filtres sont mémorisés dans l'URL. Vous pouvez copier le lien et le partager à un collègue : il arrivera exactement sur la même vue filtrée. Colonnes du tableau Par défaut, les colonnes sont : Pro, Spectacle, Créneau (date/heure), Lieu, Statut, Confirmée, Présente, Actions. Cliquez sur l'icône des colonnes (en haut à droite du tableau) pour ouvrir le dialogue de personnalisation et afficher/masquer les colonnes qui vous intéressent. Votre choix est sauvegardé. Tri et pagination Cliquez sur une colonne pour trier. Pagination par défaut : 50 lignes par page. Configurable. Actions sur une ligne Pour chaque réservation, les actions disponibles dépendent du contexte et de votre rôle : Éditer (crayon) — ouvre un panneau latéral avec toutes les informations Transférer — changer le créneau, avec option d'email au pro Annuler — avec motif optionnel et option d'email Check-in — pointer présent / absent / coup de cœur / presse Cas particuliers : voit uniquement les réservations des spectacles qui lui sont assignés. Deep link depuis un email : ?reservationId=… ouvre directement le panneau d'édition à l'arrivée sur la page. Vue mobile : les l"
+    },
+    {
+      "slug": "reservations/creer",
+      "title": "Créer une réservation",
+      "category": "reservations",
+      "categoryLabel": "Réservations",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "réservation",
+        "créer",
+        "nouveau",
+        "walk-in",
+        "ajouter",
+        "enregistrer",
+        "professionnel",
+        "guest"
+      ],
+      "excerpt": "Deux cas de figure : Le professionnel réserve lui-même depuis le site public (vous n'avez rien à faire). Vous créez la réservation pour lui — par exemple pour un invité VIP ou une réservation téléphonique. Cet article couvre le cas 2. Depui",
+      "body": "Deux cas de figure : Le professionnel réserve lui-même depuis le site public (vous n'avez rien à faire). Vous créez la réservation pour lui — par exemple pour un invité VIP ou une réservation téléphonique. Cet article couvre le cas 2. Depuis la liste des réservations (admin) Ouvrez Réservations dans la sidebar. Cliquez sur le bouton « Nouvelle réservation » en haut à droite. Un panneau latéral s'ouvre avec 3 étapes. Étape 1 — Spectacle & créneau Sélectionnez le spectacle dans la liste déroulante Sélectionnez le créneau (date + heure + lieu + places restantes) Si aucun créneau n'apparaît, c'est que le spectacle n'en a pas — créez-en un d'abord depuis la fiche du spectacle. Étape 2 — Recherche du professionnel Tapez le nom ou l'email — la recherche est instantanée. Si le pro existe : sélectionnez-le, ses infos sont pré-remplies. Si le pro n'existe pas encore : Cliquez sur « Créer un nouveau professionnel » pour le créer dans la base pro Ou cliquez sur « Réservation invitée » (walk-in) pour une résa sans créer de compte Étape 3 — Informations et options Nombre de places (spinner) Notes internes Derviche (non visibles par le pro ni par la compagnie) Demandes spéciales (visibles dans l'admin et la PWA check-in) Envoyer l'email de confirmation ? — case cochée par défaut Synchroniser avec Google Calendar ? — case cochée par défaut Cliquez « Créer la réservation ». Depuis l'app check-in PWA (walk-in le jour J) Pour un pro qui arrive sans avoir réservé, ouvrez l'app check-in → bouton flottant gold en bas à droite → formulaire rapide. Voir Ajouter une réservation de dernière minute. Ce qui se passe automatiquement Email de confirmation envoyé au pro (si la case est cochée) Notification admin envoyée aux adresses configurées dans Préférences Événement Google Calendar créé (si la case est cochée) Journal des logs : trace de la création dans Système → Logs (super-admin) Places disponibles : le système vérifie la capacité restante du créneau au moment de la création. Si la capaci"
+    },
+    {
+      "slug": "reservations/modifier-annuler",
+      "title": "Modifier ou annuler une réservation",
+      "category": "reservations",
+      "categoryLabel": "Réservations",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "modifier",
+        "annuler",
+        "édition",
+        "éditer",
+        "suppression",
+        "changement",
+        "résa",
+        "reservation"
+      ],
+      "excerpt": "Modifier une réservation Dans la liste Réservations, cliquez sur l'icône crayon d'une ligne. Un panneau latéral s'ouvre avec toutes les informations. Vous pouvez modifier : Informations du professionnel : nom, email, téléphone, structure No",
+      "body": "Modifier une réservation Dans la liste Réservations, cliquez sur l'icône crayon d'une ligne. Un panneau latéral s'ouvre avec toutes les informations. Vous pouvez modifier : Informations du professionnel : nom, email, téléphone, structure Nombre de places Notes internes Derviche (jamais visibles par le pro ni la compagnie) Demandes spéciales (visibles PWA / admin / compagnie) Statut check-in (présent / absent / coup de cœur / presse) Cliquez « Enregistrer ». Un toast confirme la sauvegarde. Pas d'envoi d'email automatique pour une simple modification de données du pro. Si vous changez de créneau, voir Transférer une réservation qui déclenche un email dédié. Annuler une réservation Dans la liste, cliquez sur l'icône d'annulation (croix rouge) — ou depuis le panneau d'édition, bouton « Annuler la réservation ». Une boîte de dialogue demande confirmation. Options disponibles : Motif d'annulation (optionnel, libre) — stocké pour l'historique Envoyer un email d'annulation au pro ? — case cochée par défaut Supprimer l'événement Google Calendar ? — case cochée par défaut (si un événement existe) Cliquez « Confirmer l'annulation ». L'annulation met la réservation au statut « Annulée » mais ne la supprime pas de la base. Elle reste visible dans l'historique du pro et des stats (avec son motif). Réactiver une réservation annulée Actuellement, il n'existe pas de bouton « Réactiver ». Deux options : Créer une nouvelle réservation pour le même pro/créneau (si places disponibles) Demander à un de modifier le statut directement en base (rare) Pour aller plus loin Transférer une réservation Exporter les réservations Un pro ne reçoit pas son email"
+    },
+    {
+      "slug": "reservations/transferer",
+      "title": "Transférer une réservation vers un autre créneau",
+      "category": "reservations",
+      "categoryLabel": "Réservations",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "transférer",
+        "transfert",
+        "changer",
+        "créneau",
+        "date",
+        "reporter",
+        "déplacer"
+      ],
+      "excerpt": "Un professionnel ne peut plus venir à la date initialement prévue ? Transférez sa réservation vers un autre créneau sans la recréer. Depuis la liste des réservations Ouvrez la réservation (icône crayon). Dans le panneau d'édition, section C",
+      "body": "Un professionnel ne peut plus venir à la date initialement prévue ? Transférez sa réservation vers un autre créneau sans la recréer. Depuis la liste des réservations Ouvrez la réservation (icône crayon). Dans le panneau d'édition, section Créneau, cliquez « Changer de créneau ». Un drawer s'ouvre avec la liste des créneaux disponibles du même spectacle (uniquement futurs, avec places restantes). Sélectionnez le nouveau créneau. Options : Envoyer un email de modification au pro ? (coché par défaut) Mettre à jour l'événement Google Calendar ? (coché par défaut) Cliquez « Confirmer le transfert ». Depuis l'app check-in PWA Dans la liste des réservations d'un créneau, icône flèche de transfert sur la ligne → même drawer. Ce qui se passe La réservation reste la même entité (code de réservation inchangé) Elle est déplacée sur le nouveau créneau L'ancien créneau retrouve ses places (décompte automatique) Le nouveau créneau consomme les places (vérif capacité) Un email « Modification de votre réservation » est envoyé au pro (si case cochée) Google Calendar : l'ancien événement est modifié (pas supprimé/recréé) Le transfert est uniquement possible au sein du même spectacle. Pour changer de spectacle, il faut annuler l'ancienne résa et en créer une nouvelle. Si vous devez transférer plusieurs réservations d'un coup (ex. un créneau annulé), filtrez la liste par créneau, puis utilisez l'action par ligne une par une. Un batch n'est pas disponible en V1. Cas particuliers Si le nouveau créneau est complet : le transfert est refusé avec un message d'erreur. Libérez d'abord une place. Si vous êtes : vous ne pouvez transférer que vers des créneaux de spectacles auxquels vous êtes assigné. Pour aller plus loin Annuler un spectacle entier Gérer un surbooking"
+    },
+    {
+      "slug": "reservations/exporter",
+      "title": "Exporter les réservations",
+      "category": "reservations",
+      "categoryLabel": "Réservations",
+      "roles": [
+        "super-admin",
+        "admin",
+        "externe"
+      ],
+      "keywords": [
+        "export",
+        "exporter",
+        "csv",
+        "excel",
+        "télécharger",
+        "download",
+        "extraction",
+        "listes"
+      ],
+      "excerpt": "Vous pouvez exporter la liste des réservations filtrées en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur. Comment exporter Ouvrez Réservations. Appliquez vos filtres (spectacle, lieu, période, statut, recherch",
+      "body": "Vous pouvez exporter la liste des réservations filtrées en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur. Comment exporter Ouvrez Réservations. Appliquez vos filtres (spectacle, lieu, période, statut, recherche…) : l'export reprend exactement la même vue. Cliquez sur le bouton « Exporter » en haut à droite. Choisissez le format : CSV — universel, léger, ouvrable partout Excel (.xlsx) — mise en forme préservée, prêt pour Excel / Google Sheets / LibreOffice Le fichier se télécharge immédiatement dans votre navigateur. Colonnes exportées L'export reprend les colonnes visibles du tableau. Pour ajouter / retirer des colonnes : Cliquez sur l'icône des colonnes (en haut du tableau). Cochez / décochez les colonnes. Votre sélection est sauvegardée pour les prochaines fois. Colonnes disponibles : Pro (nom, prénom, email, téléphone, structure, fonction, ville, code postal, pays) Spectacle, Compagnie Créneau (date, heure, lieu) Statut (Confirmée, Annulée, etc.) Check-in (présent, coup de cœur, presse, absent) Nombre de places Notes internes Derviche (⚠ ne jamais partager en dehors de l'équipe) Demandes spéciales Code de réservation Dates (création, modification) Protection des données personnelles : un fichier exporté contient des emails, téléphones et parfois adresses. Stockez-le en lieu sûr et supprimez-le dès qu'il n'est plus nécessaire (RGPD). Export rapide d'un spectacle : filtrez par spectacle + « À venir » + exportez → vous obtenez la liste des invités à imprimer pour l'accueil sur place. Pour aller plus loin Personnaliser les colonnes Page Statistiques (V2) — exports plus riches avec graphiques PDF"
+    },
+    {
+      "slug": "spectacles/creer-publier",
+      "title": "Créer et publier un spectacle",
+      "category": "spectacles",
+      "categoryLabel": "Spectacles",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "spectacle",
+        "créer",
+        "publier",
+        "nouveau",
+        "ajouter",
+        "brouillon",
+        "draft",
+        "publication"
+      ],
+      "excerpt": "Pour qu'un spectacle apparaisse dans le catalogue public et puisse recevoir des réservations, il doit être créé dans la plateforme puis publié. Créer le spectacle Ouvrez Spectacles dans la sidebar. Cliquez « Nouveau spectacle » en haut à dr",
+      "body": "Pour qu'un spectacle apparaisse dans le catalogue public et puisse recevoir des réservations, il doit être créé dans la plateforme puis publié. Créer le spectacle Ouvrez Spectacles dans la sidebar. Cliquez « Nouveau spectacle » en haut à droite. Un formulaire s'ouvre avec plusieurs sections. Informations principales Titre (obligatoire) — apparaît partout Description courte — 1 à 2 lignes, affichée sur les cards du catalogue Description longue — texte complet de la fiche publique Image principale (upload) — format paysage recommandé (16/9) Compagnie — sélectionnez dans la liste (créez-la avant si nécessaire depuis Compagnies) Durée (en minutes) Catégorisation Catégories (multi-sélection) : genres théâtraux, musicaux, etc. Publics cibles (multi-sélection) : tout public, jeune public, à partir de X ans… Les deux listes sont gérées via les boutons « Gérer les catégories » et « Gérer les publics » — voir Gérer les catégories. Médias et liens externes Tous ces champs sont optionnels : Dossier de presse (Drive / Dropbox) Teaser vidéo (YouTube / Vimeo) — affiché en modale sur la fiche publique Captation vidéo (YouTube / Vimeo) Dossier photo (Drive) Page vitrine (dervichesiteurl) — URL sur dervichediffusion.com Plus la fiche est riche, plus le professionnel a d'infos pour décider. Les liens externes sont aussi affichés dans les emails post-accueil envoyés après le spectacle. Conditions et contacts Période (texte libre) — ex. « En tournée 2026–2027 » Dates de relâche (texte libre) Politique d'invitation (invitation_policy) — affichée sur la fiche publique dans le bloc « Pour les professionnels » Responsable Derviche — sélectionnez un membre de l'équipe. Ses coordonnées apparaissent dans le bloc contact. Statut Brouillon (draft) : invisible du catalogue public, modifiable en interne Publié : visible publiquement, réservations possibles Publier Une fois tous les champs remplis, passez le statut à Publié et cliquez Enregistrer. Le spectacle apparaît immédiatement dans le catalog"
+    },
+    {
+      "slug": "spectacles/enrichir",
+      "title": "Enrichir la fiche spectacle (teaser, dossier, photos, page vitrine)",
+      "category": "spectacles",
+      "categoryLabel": "Spectacles",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "enrichir",
+        "teaser",
+        "vidéo",
+        "dossier",
+        "presse",
+        "captation",
+        "photos",
+        "page vitrine",
+        "médias",
+        "dervichediffusion"
+      ],
+      "excerpt": "Une fiche spectacle riche se remarque dans le catalogue et améliore l'efficacité des emails post-accueil. Les champs média Sur la fiche d'édition d'un spectacle, section Médias & liens : Image principale L'image qui apparaît dans les cards ",
+      "body": "Une fiche spectacle riche se remarque dans le catalogue et améliore l'efficacité des emails post-accueil. Les champs média Sur la fiche d'édition d'un spectacle, section Médias & liens : Image principale L'image qui apparaît dans les cards du catalogue, sur la fiche publique, dans le slider du hero, dans l'app check-in et dans les emails. Format paysage 16/9 recommandé, 1600×900 px minimum pour rester nette. Teaser vidéo URL YouTube ou Vimeo. Quand elle est renseignée, un bouton « Voir le teaser » apparaît sur la fiche publique — la vidéo s'ouvre en modale sans quitter la page. Utilisez le lien partage standard : https://youtube.com/watch?v=... ou https://vimeo.com/.... Captation vidéo Lien vers une captation intégrale (souvent Vimeo privé). Utile pour les professionnels qui veulent voir le spectacle avant de réserver. Apparaît dans les emails post-accueil si le toggle correspondant est activé sur le template. Dossier de presse Lien public vers un Google Drive, Dropbox ou fichier PDF. Même logique que la captation : bouton optionnel dans les emails post-accueil. Dossier photo Lien vers la banque d'images du spectacle. Utile pour les journalistes et les supports de communication. Page vitrine (dervichediffusion.com) URL de la page marketing sur le site vitrine de Derviche Diffusion. Quand elle est renseignée et que le toggle « Lien dervichediffusion.com » est activé sur un template email, le bouton CTA principal pointe vers cette page plutôt que vers la fiche publique interne. Pour les 4 templates post-accueil, le lien vitrine s'ajoute comme lien supplémentaire (avec libellé personnalisable par template) — pas en remplacement du CTA. Voir Les emails envoyés automatiquement (V2). Politique d'invitation Champ libre qui apparaît dans un bloc sur la fiche publique, destiné aux professionnels : Exemple : « Invitation de 2 places offerte aux professionnels. Contactez Sophie pour plus. » Responsable Derviche Sélectionnez un membre de l'équipe dans la liste (issu des utilisa"
+    },
+    {
+      "slug": "spectacles/vedette-classement",
+      "title": "Mettre en vedette et ordonner les spectacles",
+      "category": "spectacles",
+      "categoryLabel": "Spectacles",
+      "roles": [
+        "super-admin"
+      ],
+      "keywords": [
+        "vedette",
+        "classement",
+        "mise en avant",
+        "featured",
+        "ordre",
+        "priorité",
+        "drag",
+        "drop",
+        "carousel",
+        "hero",
+        "slider"
+      ],
+      "excerpt": "Derviche peut piloter quels spectacles mettre en avant sur la page d'accueil publique et dans quel ordre afficher le catalogue. Cette fonction est accessible via Préférences → Classement (super-admin uniquement). Les 2 zones de classement Z",
+      "body": "Derviche peut piloter quels spectacles mettre en avant sur la page d'accueil publique et dans quel ordre afficher le catalogue. Cette fonction est accessible via Préférences → Classement (super-admin uniquement). Les 2 zones de classement Zone 1 — Spectacles en vedette (slider hero) Petite liste drag&drop des spectacles qui apparaissent dans le slider d'images en haut de la page d'accueil publique. Ajouter un spectacle en vedette : bouton « + Ajouter », popover de sélection avec recherche Réordonner : drag & drop vertical Retirer : croix à droite de chaque ligne Comportement public : Si aucun spectacle n'est en vedette → le slider est masqué (le reste du hero reste visible) Si plusieurs → les spectacles défilent automatiquement toutes les 5 secondes Le slider n'est visible qu'en desktop / tablette (≥ 768px). Sur mobile, seuls le titre et les CTAs du hero s'affichent — inutile de s'inquiéter du format mobile de vos vedettes. Zone 2 — Ordre global (catalogue + carousel home) Liste drag&drop de tous les spectacles non supprimés. Définit l'ordre d'affichage : Dans le catalogue public (/catalogue) — appliqué après le tri par statut (disponibles d'abord) Dans le carousel « Spectacles à découvrir » de la page d'accueil Filtres pour s'y retrouver : Recherche par titre / compagnie Filtre statut : Tous / Publié / Brouillon / Archivé Drag désactivé pendant un filtre actif — un bandeau ambre vous le rappelle. Effacez le filtre pour réordonner. Alternative au drag&drop : champ Rang numérique sur chaque ligne, éditable au clavier. Plus petit = plus haut. Tie-break Si deux spectacles ont le même rang (ou n'en ont aucun), le tri se fait par titre alphabétique. Réinitialiser l'ordre Bouton « Réinitialiser l'ordre » en bas de la zone 2 → tous les rangs passent à vide, le tri redevient alphabétique pur. Sauvegarde automatique Chaque action est enregistrée immédiatement (pas de bouton « Enregistrer »). Un toast de confirmation apparaît à chaque drop / blur / toggle vedette. En cas d'er"
+    },
+    {
+      "slug": "statistiques/vue-ensemble",
+      "title": "Lire le dashboard statistiques",
+      "category": "statistiques",
+      "categoryLabel": "Statistiques",
+      "roles": [
+        "super-admin",
+        "admin"
+      ],
+      "keywords": [
+        "statistiques",
+        "stats",
+        "kpi",
+        "graphique",
+        "comparaison",
+        "export",
+        "pdf",
+        "drill-down",
+        "période"
+      ],
+      "excerpt": "La page Statistiques (/admin/statistiques) centralise les analyses de fréquentation et de performance. Accessible aux et . KPIs en tête 4 cartes mises à jour selon les filtres : Total réservations Réservations confirmées + % Réservations pr",
+      "body": "La page Statistiques (/admin/statistiques) centralise les analyses de fréquentation et de performance. Accessible aux et . KPIs en tête 4 cartes mises à jour selon les filtres : Total réservations Réservations confirmées + % Réservations présentes (après check-in) + taux de présence Taux de remplissage moyen des créneaux Filtres principaux Période : Aujourd'hui / 7j / 30j / Saison / plage personnalisée (MM-JJ → MM-JJ) Compagnies (multi-select) Lieux (multi-select) Comparaison : toggle + preset (période précédente / année précédente) Tableaux avec drill-down Deux tableaux : Spectacles : titre, rés., confirmées, présentes, taux remplissage Lieux : nom, capacité, rés., taux remplissage Clic sur une ligne → drawer latéral avec : Détail des représentations (spectacle) ou des spectacles qui s'y sont joués (lieu) Évolution par jour Export PDF focalisé Graphique d'évolution Courbe des réservations sur la période, avec comparaison optionnelle en overlay. Choix de granularité : jour / semaine / mois. Export Export global : tableau complet en Excel ou CSV (format par défaut dans Préférences → Statistiques) Export focalisé PDF : depuis un drawer spectacle ou lieu → rapport dédié avec graphique Personnaliser les colonnes Un peut choisir dans Préférences → Statistiques quelles colonnes sont visibles par défaut (pour tous les utilisateurs) et la taille de pagination. Comparaison entre périodes Activez le toggle « Comparer » → les deltas apparaissent en badges colorés à côté des chiffres (🟢 positif / 🔴 négatif). Usage courant : comparer la saison en cours avec la saison précédente pour mesurer la progression, ou un mois avec le même mois de l'année d'avant. Pour aller plus loin Exporter les réservations"
+    },
+    {
+      "slug": "systeme/vue-ensemble",
+      "title": "Système — logs, quotas, monitoring",
+      "category": "systeme",
+      "categoryLabel": "Système",
+      "roles": [
+        "super-admin"
+      ],
+      "keywords": [
+        "système",
+        "logs",
+        "journal",
+        "quota",
+        "resend",
+        "rate limiting",
+        "monitoring",
+        "purge",
+        "maintenance"
+      ],
+      "excerpt": "Section réservée aux . Centralise la supervision technique : journaux d'événements, quotas de services externes, outils de maintenance. Widgets en tête de page Quota Resend (emails) Jauge de consommation mensuelle des envois d'emails : Nomb",
+      "body": "Section réservée aux . Centralise la supervision technique : journaux d'événements, quotas de services externes, outils de maintenance. Widgets en tête de page Quota Resend (emails) Jauge de consommation mensuelle des envois d'emails : Nombre d'emails envoyés aujourd'hui / cette semaine / ce mois Limite du plan Resend (free = 3000/mois, pro = plus) Alerte visuelle si consommation > 80 % Si le quota est atteint, les nouveaux envois échouent avec un code 429. Pensez à upgrader le plan Resend en amont ou attendre le renouvellement mensuel. Rate limiting Statistiques des blocages de requêtes (protection anti-spam) : Blocages aujourd'hui Blocages sur 7 jours Badge « Activité suspecte » si > 10/jour Répartition par route (auth, emails, reservations) Dernière IP masquée (anonymisée RGPD) Google Calendar (santé) Dernière synchronisation réussie, erreurs récentes, lien de re-authentification si le token OAuth a expiré. Journal des logs Tableau paginé (50 par page) avec filtres : Catégorie : Email / Calendar / Reservation / System / Show Niveau : Info / Warning / Error Status : Success / Error Cliquer sur une ligne → drawer avec le contexte détaillé (userId, payload, message d'erreur stack). Utile pour : Diagnostiquer un email non reçu Traquer une erreur Calendar Vérifier qu'une action de modification a bien été enregistrée Maintenance Purge notifications lues : bouton pour nettoyer les anciennes notifications admin (évite l'accumulation) Purge logs anciens : cron automatique qui supprime les logs > 90 jours Les logs > 90 jours sont purgés automatiquement par le cron /api/cron/purge-logs (nuit). Inutile de le faire à la main. Accès restreint Seul voit cet onglet dans la sidebar. Pour aller plus loin Un pro ne reçoit pas son email (consultation des logs) Vue d'ensemble des préférences (ajuster rate limits)"
+    },
+    {
+      "slug": "utilisateurs/vue-ensemble",
+      "title": "Gérer les utilisateurs internes",
+      "category": "utilisateurs",
+      "categoryLabel": "Utilisateurs",
+      "roles": [
+        "super-admin"
+      ],
+      "keywords": [
+        "utilisateurs",
+        "comptes",
+        "admin",
+        "super-admin",
+        "externe",
+        "création",
+        "assignation",
+        "spectacles",
+        "désactivation"
+      ],
+      "excerpt": "Section réservée aux . Permet de gérer tous les comptes de l'équipe interne Derviche. Accéder à la page Utilisateurs dans la sidebar (visible uniquement pour super-admin). Créer un utilisateur Bouton « Nouvel utilisateur » → formulaire : No",
+      "body": "Section réservée aux . Permet de gérer tous les comptes de l'équipe interne Derviche. Accéder à la page Utilisateurs dans la sidebar (visible uniquement pour super-admin). Créer un utilisateur Bouton « Nouvel utilisateur » → formulaire : Nom, prénom, email Rôle : Super-admin / Admin / Externe Mot de passe initial — à partager au nouvel utilisateur qui le changera Si rôle = Externe : une section « Assignations spectacles » apparaît, multi-sélection. L'externe ne verra dans la PWA check-in que ces spectacles. Voir Les rôles et qui fait quoi pour le détail des permissions de chaque rôle. Modifier un utilisateur Clic ligne → édition. Vous pouvez changer nom, email, rôle, assignations (pour un externe). Vous ne pouvez pas modifier votre propre rôle (sécurité) Vous ne pouvez pas supprimer votre propre compte Vous ne pouvez pas supprimer le dernier super-admin Désactiver temporairement Toggle « Actif » sur la fiche. Un compte désactivé ne peut plus se connecter mais ses données restent intactes. Utile pour un collaborateur en pause. Assigner un externe à des spectacles Depuis la fiche d'un utilisateur Externe : Section « Spectacles assignés » Ajouter / retirer via sélection L'externe verra uniquement ces spectacles dans la PWA check-in. Supprimer un utilisateur Suppression définitive + irréversible. À confirmer par dialog. Les réservations créées par cet utilisateur restent dans l'historique (anonymisées au besoin). Pour aller plus loin Les rôles et qui fait quoi Check-in PWA — installer l'app"
+    }
+  ]
+}

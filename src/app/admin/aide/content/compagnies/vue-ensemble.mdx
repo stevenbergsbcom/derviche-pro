@@ -1,0 +1,55 @@
+---
+title: Gérer les compagnies
+slug: compagnies/vue-ensemble
+category: compagnies
+categoryLabel: Compagnies
+categoryIcon: Building2
+keywords: [compagnies, artistes, liaison, utilisateur, compte, contact, logo]
+roles: [super-admin, admin]
+order: 1
+---
+
+Les **compagnies** sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique.
+
+## Accéder à la liste
+
+**Compagnies** dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateur lié.
+
+## Créer une compagnie
+
+Bouton **« Nouvelle compagnie »**. Champs :
+- **Nom** (obligatoire)
+- **Ville** / **Localité**
+- **Email** principal
+- **Logo** (upload)
+- **Contact** : nom, email, téléphone
+
+## Lier un compte utilisateur à une compagnie
+
+Une compagnie peut avoir un **compte `company`** qui lui permet de :
+- Consulter les statistiques de ses spectacles
+- Faire le check-in si le créneau a `hosted_by = 'company'`
+
+Sur la fiche compagnie, section **« Compte utilisateur »** :
+- **Créer un nouveau compte** (email + mot de passe initial)
+- **Associer un utilisateur existant** (liste déroulante)
+- **Retirer l'accès** (supprime la liaison sans détruire le compte ni la compagnie)
+
+<Callout type="warning">
+Un utilisateur `company` **doit** avoir une compagnie liée. Un trigger en base empêche la suppression de la liaison si le rôle reste `company`.
+</Callout>
+
+## Modifier une compagnie
+
+Clic sur la ligne → édition. Les modifications se répercutent sur toutes les fiches spectacles liées (nom, logo).
+
+## Supprimer une compagnie
+
+<Callout type="warning">
+Impossible si la compagnie a **au moins un spectacle**. Archivez ou réassignez d'abord les spectacles.
+</Callout>
+
+## Pour aller plus loin
+
+- [Créer un spectacle](/admin/aide/spectacles/creer-publier) (sélection compagnie)
+- [Les rôles et qui fait quoi](/admin/aide/101/roles)

@@ -1,0 +1,60 @@
+---
+title: Gérer les utilisateurs internes
+slug: utilisateurs/vue-ensemble
+category: utilisateurs
+categoryLabel: Utilisateurs
+categoryIcon: ShieldCheck
+keywords: [utilisateurs, comptes, admin, super-admin, externe, création, assignation, spectacles, désactivation]
+roles: [super-admin]
+order: 1
+---
+
+Section **réservée aux <RoleBadge role="super-admin" />**. Permet de gérer tous les comptes de l'équipe interne Derviche.
+
+## Accéder à la page
+
+**Utilisateurs** dans la sidebar (visible uniquement pour super-admin).
+
+## Créer un utilisateur
+
+Bouton **« Nouvel utilisateur »** → formulaire :
+- **Nom, prénom, email**
+- **Rôle** : Super-admin / Admin / Externe
+- **Mot de passe initial** — à partager au nouvel utilisateur qui le changera
+
+Si rôle = **Externe** : une section **« Assignations spectacles »** apparaît, multi-sélection. L'externe ne verra dans la PWA check-in que ces spectacles.
+
+<Callout type="info">
+Voir [Les rôles et qui fait quoi](/admin/aide/101/roles) pour le détail des permissions de chaque rôle.
+</Callout>
+
+## Modifier un utilisateur
+
+Clic ligne → édition. Vous pouvez changer nom, email, **rôle**, assignations (pour un externe).
+
+<Callout type="warning">
+- Vous **ne pouvez pas** modifier votre propre rôle (sécurité)
+- Vous **ne pouvez pas** supprimer votre propre compte
+- Vous **ne pouvez pas** supprimer le dernier super-admin
+</Callout>
+
+## Désactiver temporairement
+
+Toggle **« Actif »** sur la fiche. Un compte désactivé ne peut plus se connecter mais ses données restent intactes. Utile pour un collaborateur en pause.
+
+## Assigner un externe à des spectacles
+
+Depuis la fiche d'un utilisateur **Externe** :
+- Section **« Spectacles assignés »**
+- Ajouter / retirer via sélection
+
+L'externe verra **uniquement** ces spectacles dans la PWA check-in.
+
+## Supprimer un utilisateur
+
+Suppression **définitive** + irréversible. À confirmer par dialog. Les réservations créées par cet utilisateur restent dans l'historique (anonymisées au besoin).
+
+## Pour aller plus loin
+
+- [Les rôles et qui fait quoi](/admin/aide/101/roles)
+- [Check-in PWA — installer l'app](/admin/aide/checkin-pwa/installer)

@@ -1,0 +1,46 @@
+---
+title: Gérer les lieux (venues)
+slug: lieux/vue-ensemble
+category: lieux
+categoryLabel: Lieux
+categoryIcon: MapPin
+keywords: [lieux, venues, salles, capacité, pmr, accessibilité, parking, transports, adresse]
+roles: [super-admin, admin]
+order: 1
+---
+
+Les **lieux** (ou **venues**) sont les salles de théâtre où se déroulent les spectacles. Chaque créneau est lié à un lieu.
+
+## Accéder à la liste
+
+**Lieux** dans la sidebar → liste complète avec recherche et tri alphabétique.
+
+## Créer un lieu
+
+Bouton **« Nouveau lieu »**. Champs :
+- **Nom** (obligatoire)
+- **Adresse** (rue, code postal, ville)
+- **Capacité** (nombre de places)
+- **Accessibilité PMR** (oui / non)
+- **Parking** (oui / non + description libre)
+- **Transports** (métro / bus / parking / autre — texte libre)
+
+Les infos d'accessibilité et transports apparaissent sur la fiche publique du spectacle (bloc « Informations pratiques »).
+
+## Modifier un lieu
+
+Clic sur la ligne → édition. Les modifications se répercutent sur **tous les créneaux** existants liés à ce lieu (ex. si vous corrigez l'adresse, les emails futurs auront la bonne adresse).
+
+## Supprimer un lieu
+
+<Callout type="warning">
+Un lieu **ne peut pas être supprimé** s'il est utilisé par au moins un créneau. Supprimez ou déplacez d'abord les créneaux concernés.
+</Callout>
+
+## Créer un lieu rapidement depuis un créneau
+
+Pas besoin de passer par cette page si vous créez un créneau pour un lieu inédit : le dialog de création de créneau propose **« Créer un nouveau lieu »** directement.
+
+## Pour aller plus loin
+
+- [Créer un créneau](/admin/aide/representations/vue-ensemble)

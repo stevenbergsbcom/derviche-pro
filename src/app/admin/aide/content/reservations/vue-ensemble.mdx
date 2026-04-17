@@ -1,0 +1,70 @@
+---
+title: Vue d'ensemble de la liste des réservations
+slug: reservations/vue-ensemble
+category: reservations
+categoryLabel: Réservations
+categoryIcon: Calendar
+keywords: [réservations, liste, filtres, recherche, colonnes, pagination, tri, cartes]
+roles: [super-admin, admin, externe]
+order: 1
+---
+
+La page **Réservations** (`/admin/reservations`) est la plus utilisée de la plateforme. Elle centralise toutes les réservations avec recherche, filtres et export.
+
+## Les 4 cartes statistiques en haut
+
+Dès l'ouverture de la page, 4 chiffres clés sont mis en avant :
+
+- **Total réservations** (sur la période filtrée)
+- **Taux de confirmation**
+- **Taux de présence** (après check-in)
+- **Répartition par statut**
+
+Ces chiffres se recalculent à chaque changement de filtre.
+
+## Recherche et filtres
+
+En haut de la liste :
+
+- **Barre de recherche** : nom du pro, email, téléphone. La recherche est déclenchée après une courte pause (≈ 300 ms).
+- **Filtre Spectacle** (dropdown)
+- **Filtre Lieu** (dropdown — n'affiche que les lieux ayant au moins une réservation)
+- **Filtre Statut** : Confirmée, En attente, Annulée, Transférée
+- **Filtre Période** : À venir, Passées, Saison, ou plage personnalisée (format MM-JJ → MM-JJ)
+
+<Callout type="tip">
+Les filtres sont **mémorisés dans l'URL**. Vous pouvez copier le lien et le partager à un collègue : il arrivera exactement sur la même vue filtrée.
+</Callout>
+
+## Colonnes du tableau
+
+Par défaut, les colonnes sont : Pro, Spectacle, Créneau (date/heure), Lieu, Statut, Confirmée, Présente, Actions.
+
+**Cliquez sur l'icône des colonnes** (en haut à droite du tableau) pour ouvrir le dialogue de personnalisation et afficher/masquer les colonnes qui vous intéressent. Votre choix est sauvegardé.
+
+## Tri et pagination
+
+- Cliquez sur une colonne pour trier.
+- Pagination par défaut : 50 lignes par page. Configurable.
+
+## Actions sur une ligne
+
+Pour chaque réservation, les actions disponibles dépendent du contexte et de votre rôle :
+
+- **Éditer** (crayon) — ouvre un panneau latéral avec toutes les informations
+- **Transférer** — changer le créneau, avec option d'email au pro
+- **Annuler** — avec motif optionnel et option d'email
+- **Check-in** — pointer présent / absent / coup de cœur / presse
+
+## Cas particuliers
+
+- **<RoleBadge role="externe" />** : voit uniquement les réservations des spectacles qui lui sont assignés.
+- **Deep link** depuis un email : `?reservationId=…` ouvre directement le panneau d'édition à l'arrivée sur la page.
+- **Vue mobile** : les lignes deviennent des cartes empilées, plus lisibles au doigt.
+
+## Pour aller plus loin
+
+- [Créer une réservation](/admin/aide/reservations/creer)
+- [Modifier ou annuler](/admin/aide/reservations/modifier-annuler)
+- [Transférer vers un autre créneau](/admin/aide/reservations/transferer)
+- [Exporter](/admin/aide/reservations/exporter)
