@@ -85,7 +85,9 @@ export function EmailPreviewModal({
             Aperçu — {templateName}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">
-            Rendu avec des données fictives. Les variables sont remplacées par des exemples.
+            Rendu avec des données fictives. Les variables et liens conditionnels
+            supposent que les URLs sont renseignées sur le spectacle ; en réel,
+            un lien absent retombe sur la fiche publique interne.
           </p>
         </DialogHeader>
 

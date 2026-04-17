@@ -32,6 +32,8 @@ export const templateFormSchema = z.object({
   // Dossier photo (S170)
   show_photo_folder_link: z.boolean(),
   photo_folder_link_text: z.string().max(200),
+  // CTA dervichediffusion.com — toggle uniquement (libellé = cta_text)
+  show_derviche_site_link: z.boolean(),
 });
 
 export type TemplateFormValues = z.infer<typeof templateFormSchema>;

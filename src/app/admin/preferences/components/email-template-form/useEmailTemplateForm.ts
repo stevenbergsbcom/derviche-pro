@@ -77,6 +77,8 @@ export function useEmailTemplateForm({
       // Dossier photo (S170)
       show_photo_folder_link: template.show_photo_folder_link ?? false,
       photo_folder_link_text: template.photo_folder_link_text ?? 'Consulter le dossier photo',
+      // CTA dervichediffusion.com — libellé = cta_text
+      show_derviche_site_link: template.show_derviche_site_link ?? false,
     },
   });
 
@@ -93,6 +95,7 @@ export function useEmailTemplateForm({
   const showCaptationLink   = useWatch({ control, name: 'show_captation_link' });
   const showBookingLink     = useWatch({ control, name: 'show_booking_link' });
   const showPhotoFolderLink = useWatch({ control, name: 'show_photo_folder_link' });
+  const showDervicheSiteLink = useWatch({ control, name: 'show_derviche_site_link' });
   const showReservationCode = useWatch({ control, name: 'show_reservation_code' });
   const isConfirmation      = template.template_key === 'reservation_confirmation';
   const isSimpleStyle       = template.is_simple_style === true;
@@ -187,6 +190,8 @@ export function useEmailTemplateForm({
       // Dossier photo (S170)
       show_photo_folder_link: v.show_photo_folder_link ?? false,
       photo_folder_link_text: v.photo_folder_link_text ?? '',
+      // CTA dervichediffusion.com — libellé = cta_text
+      show_derviche_site_link: v.show_derviche_site_link ?? false,
     };
   };
 
@@ -229,6 +234,7 @@ export function useEmailTemplateForm({
     showCaptationLink,
     showBookingLink,
     showPhotoFolderLink,
+    showDervicheSiteLink,
     showReservationCode,
     // Derived
     isConfirmation,

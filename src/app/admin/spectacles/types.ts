@@ -39,6 +39,8 @@ export interface ShowForDisplay {
   captationUrl?: string;
   /** URL du dossier photo — S170 */
   photoFolderUrl?: string;
+  /** URL de la page marketing dervichediffusion.com */
+  dervisheSiteUrl?: string;
 }
 
 /**

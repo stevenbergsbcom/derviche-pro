@@ -67,6 +67,7 @@ interface ReservationFull {
       slug: string;
       duration_minutes: number | null;
       derviche_manager_id: string | null;
+      derviche_site_url: string | null;
       companies: { name: string } | null;
     };
     venues: { name: string; city: string } | null;
@@ -176,6 +177,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             slug,
             duration_minutes,
             derviche_manager_id,
+            derviche_site_url,
             companies:company_id ( name )
           ),
           venues ( name, city )
@@ -248,6 +250,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         venueName: venue?.name ?? '',
         venueCity: venue?.city ?? '',
         numPlaces: reservation.num_places,
+        dervisheSiteUrl: show.derviche_site_url ?? null,
         managerName,
         managerEmail,
         managerPhone,

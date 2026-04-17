@@ -32,6 +32,7 @@ export const DEFAULT_FORM_DATA: SpectacleFormData = {
   captationAvailable: false,
   captationUrl: '',
   photoFolderUrl: '',
+  dervisheSiteUrl: '',
 };
 
 /**

@@ -56,6 +56,7 @@ export function transformShowToDisplay(
     captationAvailable: show.captation_available,
     captationUrl: show.captation_url || undefined,
     photoFolderUrl: show.photo_folder_url || undefined,
+    dervisheSiteUrl: show.derviche_site_url || undefined,
   };
 }
 

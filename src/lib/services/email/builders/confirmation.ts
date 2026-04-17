@@ -20,6 +20,7 @@ import {
   buildCtaBlock,
   buildFooterRow,
   orgContactFromConfig,
+  isSafeUrl,
 } from '../html-helpers';
 
 export function buildConfirmationHtml(
@@ -28,7 +29,16 @@ export function buildConfirmationHtml(
   template: EmailTemplate,
   appUrl: string
 ): string {
-  const showUrl     = `${appUrl}/spectacle/${data.showSlug}`;
+  const internalShowUrl = `${appUrl}/spectacle/${data.showSlug}`;
+  // Si le template active show_derviche_site_link ET que l'URL marketing est
+  // valide (http/https), le CTA pointe vers dervichediffusion.com au lieu de
+  // la fiche publique interne. Le libellé reste `cta_text` dans les deux cas.
+  const useDervicheSite =
+    template.show_derviche_site_link && isSafeUrl(data.dervisheSiteUrl);
+  // `isSafeUrl` agit comme type guard, mais le narrowing ne survit pas à
+  // travers `useDervicheSite` (variable intermédiaire). Le `!` est donc
+  // requis pour TS — il est sûr grâce au `&&` qui précède.
+  const ctaUrl = useDervicheSite ? data.dervisheSiteUrl! : internalShowUrl;
   const placesLabel = data.numPlaces > 1 ? `${data.numPlaces} places` : '1 place';
 
   const rawVars: EmailTemplateVariables = {
@@ -49,7 +59,8 @@ export function buildConfirmationHtml(
   const resolvedBody        = textToHtml(resolveTemplateVariables(template.body_text,  htmlVars));
   const resolvedInfo        = resolveTemplateVariables(template.info_text,  htmlVars);
   const resolvedSalutation  = resolveTemplateVariables(template.salutation, rawVars);
-  const resolvedCtaText     = resolveTemplateVariables(template.cta_text,   rawVars);
+  // Libellé unique du CTA : cta_text s'applique peu importe l'URL (interne vs externe).
+  const resolvedCtaText     = resolveTemplateVariables(template.cta_text, rawVars);
 
   const safeOrgName      = escapeHtml(config.organizationName);
   const safeHeaderTitle  = escapeHtml(resolvedHeaderTitle);
@@ -133,7 +144,7 @@ export function buildConfirmationHtml(
           </td>
         </tr>
 
-        ${buildCtaBlock(safeCtaText, showUrl)}
+        ${buildCtaBlock(safeCtaText, ctaUrl)}
         ${bodyBlock}
         ${buildInfoBlock(resolvedInfo)}
         ${buildContactBlock(template, data.managerName, data.managerEmail, data.managerPhone)}

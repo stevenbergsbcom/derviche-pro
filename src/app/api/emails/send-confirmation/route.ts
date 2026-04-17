@@ -144,17 +144,25 @@ export async function POST(request: Request): Promise<NextResponse> {
     let confirmManagerName: string | null = null;
     let confirmManagerEmail: string | null = null;
     let confirmManagerPhone: string | null = null;
+    let confirmDervisheSiteUrl: string | null = null;
 
     try {
       const { data: showData } = await adminClient
         .from('reservations')
-        .select('slots!inner(shows!inner(derviche_manager_id))')
+        .select('slots!inner(shows!inner(derviche_manager_id, derviche_site_url))')
         .eq('id', payload.reservationId)
         .maybeSingle();
 
-      const managerId = (showData as unknown as {
-        slots: { shows: { derviche_manager_id: string | null } };
-      } | null)?.slots?.shows?.derviche_manager_id;
+      const showRecord = (showData as unknown as {
+        slots: {
+          shows: {
+            derviche_manager_id: string | null;
+            derviche_site_url: string | null;
+          };
+        };
+      } | null)?.slots?.shows;
+      const managerId = showRecord?.derviche_manager_id;
+      confirmDervisheSiteUrl = showRecord?.derviche_site_url ?? null;
 
       if (managerId) {
         const { data: mgr } = await adminClient
@@ -175,6 +183,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const result = await sendReservationConfirmationEmail({
       ...payload,
+      dervisheSiteUrl: confirmDervisheSiteUrl,
       managerName:  confirmManagerName,
       managerEmail: confirmManagerEmail,
       managerPhone: confirmManagerPhone,

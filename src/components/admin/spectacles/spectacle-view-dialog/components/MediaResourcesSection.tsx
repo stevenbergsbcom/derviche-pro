@@ -3,7 +3,7 @@
  * Derviche Diffusion - Session 110
  */
 
-import { Video, FolderOpen, Film, ExternalLink } from 'lucide-react';
+import { Video, FolderOpen, Film, ExternalLink, Globe } from 'lucide-react';
 import { isSafeUrl } from '@/lib/services/email/html-helpers';
 import type { MediaResourcesSectionProps } from '../types';
 
@@ -39,6 +39,7 @@ export function MediaResourcesSection({
   captationAvailable,
   captationUrl,
   photoFolderUrl,
+  dervisheSiteUrl,
 }: MediaResourcesSectionProps) {
   return (
     <div className="border rounded-lg p-4 mb-4 bg-muted/10">
@@ -91,6 +92,23 @@ export function MediaResourcesSection({
                 href={photoFolderUrl} 
                 label="Ouvrir le dossier photo"
                 ariaLabel="Ouvrir le dossier photo (nouvel onglet)"
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Non renseigné</p>
+            )}
+          </div>
+        </div>
+
+        {/* Page dervichediffusion.com */}
+        <div className="flex items-start gap-2">
+          <Globe className="w-4 h-4 text-muted-foreground mt-0.5" aria-hidden="true" />
+          <div>
+            <p className="text-xs text-muted-foreground">Page dervichediffusion.com</p>
+            {isSafeUrl(dervisheSiteUrl) ? (
+              <ExternalLinkItem
+                href={dervisheSiteUrl}
+                label="Voir la page"
+                ariaLabel="Voir la page dervichediffusion.com (nouvel onglet)"
               />
             ) : (
               <p className="text-sm text-muted-foreground italic">Non renseigné</p>

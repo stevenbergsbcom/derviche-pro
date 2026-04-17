@@ -58,6 +58,7 @@ const MOCK_CONFIRMATION: ReservationConfirmationEmailData = {
   venueName: 'Théâtre de la Ville',
   venueCity: 'Bordeaux',
   numPlaces: 2,
+  dervisheSiteUrl: 'https://dervichediffusion.com/spectacles/le-bal-des-ames',
   managerName: 'Sophie Lefèvre',
   managerEmail: 'reservation.derviche@gmail.com',
   managerPhone: '06 12 34 56 78',
@@ -221,6 +222,8 @@ function buildTemplateFromParams(
     // Dossier photo (S170)
     show_photo_folder_link: q.get('show_photo_folder_link') === 'true',
     photo_folder_link_text: q.get('photo_folder_link_text') ?? 'Consulter le dossier photo',
+    // CTA dervichediffusion.com — toggle uniquement
+    show_derviche_site_link: q.get('show_derviche_site_link') === 'true',
   };
 }
 
@@ -356,6 +359,8 @@ export async function GET(
         // Dossier photo (S170)
         show_photo_folder_link: dbTemplate.show_photo_folder_link ?? false,
         photo_folder_link_text: dbTemplate.photo_folder_link_text ?? 'Consulter le dossier photo',
+        // CTA dervichediffusion.com
+        show_derviche_site_link: dbTemplate.show_derviche_site_link ?? false,
       };
     }
 

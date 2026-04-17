@@ -80,6 +80,7 @@ export function EmailTemplateForm({
     showCaptationLink,
     showBookingLink,
     showPhotoFolderLink,
+    showDervicheSiteLink,
     showReservationCode,
     // Derived
     isConfirmation,
@@ -227,19 +228,50 @@ export function EmailTemplateForm({
 
         {/* CTA text — masqué pour les templates style sobre */}
         {!isSimpleStyle && (
-          <div className="space-y-1.5">
-            <Label htmlFor={`cta_text-${template.template_key}`}>
-              Texte du bouton d&apos;action
-            </Label>
-            <Input
-              id={`cta_text-${template.template_key}`}
-              {...register('cta_text')}
-              disabled={!canEdit}
-              placeholder="Ex: Voir le spectacle →"
-            />
-            <p className="text-xs text-muted-foreground">
-              Laisser vide pour masquer le bouton.
-            </p>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor={`cta_text-${template.template_key}`}>
+                Texte du bouton d&apos;action
+              </Label>
+              <Input
+                id={`cta_text-${template.template_key}`}
+                {...register('cta_text')}
+                disabled={!canEdit}
+                placeholder="Ex: Voir le spectacle →"
+              />
+              <p className="text-xs text-muted-foreground">
+                Laisser vide pour masquer le bouton.
+              </p>
+            </div>
+
+            {/* Toggle : rediriger vers dervichediffusion.com — spécifique au
+                template de confirmation (seul builder qui lit ce flag). */}
+            {isConfirmation && (
+              <div className="flex items-start gap-3 rounded-md border border-dashed p-3">
+                <Switch
+                  id={`show_derviche_site_link-${template.template_key}`}
+                  checked={showDervicheSiteLink}
+                  onCheckedChange={(checked) =>
+                    setValue('show_derviche_site_link', checked, { shouldDirty: true })
+                  }
+                  disabled={!canEdit}
+                />
+                <div className="flex-1 space-y-0.5">
+                  <Label
+                    htmlFor={`show_derviche_site_link-${template.template_key}`}
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Rediriger vers dervichediffusion.com
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Si activé et l&apos;URL est renseignée sur le spectacle, le
+                    bouton pointe vers la page du site vitrine au lieu de la
+                    fiche publique interne. Le libellé reste celui défini
+                    ci-dessus.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

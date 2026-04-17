@@ -17,6 +17,7 @@ export function MediaSection({
   captationAvailable,
   captationUrl,
   photoFolderUrl,
+  dervisheSiteUrl,
   imageUrl,
   isSubmitting,
   onFolderUrlChange,
@@ -24,6 +25,7 @@ export function MediaSection({
   onCaptationAvailableChange,
   onCaptationUrlChange,
   onPhotoFolderUrlChange,
+  onDervisheSiteUrlChange,
   onImageChange,
 }: MediaSectionProps) {
   return (
@@ -62,6 +64,22 @@ export function MediaSection({
           onChange={(e) => onTeaserUrlChange(e.target.value)}
           placeholder="https://vimeo.com/... ou https://youtube.com/..."
         />
+      </div>
+
+      {/* URL page dervichediffusion.com */}
+      <div className="space-y-2">
+        <Label htmlFor="dervisheSiteUrl">Page sur dervichediffusion.com</Label>
+        <Input
+          id="dervisheSiteUrl"
+          type="url"
+          value={dervisheSiteUrl}
+          onChange={(e) => onDervisheSiteUrlChange(e.target.value)}
+          placeholder="https://dervichediffusion.com/spectacles/..."
+        />
+        <p className="text-xs text-muted-foreground">
+          Utilisée comme CTA dans l&apos;email de confirmation (si activé par
+          template) et affichée sur la fiche publique.
+        </p>
       </div>
 
       {/* Captation - Encadré */}
