@@ -11,7 +11,6 @@ import {
   Users,
   UserCog,
   UserCheck,
-  Settings,
   ServerCog,
   BarChart3,
 } from 'lucide-react';
@@ -89,13 +88,9 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     tooltip: 'Gérer les utilisateurs',
     allowedRoles: FULL_ACCESS_ROLES, // Masqué pour externe
   },
-  {
-    label: 'Préférences',
-    href: '/admin/preferences',
-    icon: Settings,
-    tooltip: 'Paramètres',
-    allowedRoles: ['super-admin'], // Visible uniquement pour super-admin
-  },
+  // Item « Préférences » retiré : rendu manuellement via <PreferencesSubmenu/>
+  // dans admin-sidebar/index.tsx (sous-menu collapsible avec 11 sous-items).
+  // Le filtrage rôle super-admin est géré par le composant lui-même.
   {
     label: 'Système',
     href: '/admin/systeme',
