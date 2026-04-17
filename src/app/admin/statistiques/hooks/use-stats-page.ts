@@ -13,7 +13,11 @@
 
 import { useMemo } from 'react';
 import type { StatsFilters } from '@/lib/services/admin-stats';
-import { useStatsFilters, type UseStatsFiltersReturn } from './use-stats-filters';
+import {
+  useStatsFilters,
+  type UseStatsFiltersOptions,
+  type UseStatsFiltersReturn,
+} from './use-stats-filters';
 import { useStatsData, type UseStatsDataReturn } from './use-stats-data';
 import { useShowDetail, type UseShowDetailReturn } from './use-show-detail';
 import { useVenueDetail, type UseVenueDetailReturn } from './use-venue-detail';
@@ -30,8 +34,15 @@ export interface UseStatsPageReturn
 /** Filtres neutres utilisés pendant la résolution des bornes (pas de fetch). */
 const EMPTY_FILTERS: StatsFilters = { from: '', to: '' };
 
-export function useStatsPage(): UseStatsPageReturn {
-  const filtersApi = useStatsFilters();
+export interface UseStatsPageOptions {
+  /** Défauts workspace (issus des préférences admin). Transmis à useStatsFilters. */
+  filterDefaults?: UseStatsFiltersOptions['defaults'];
+}
+
+export function useStatsPage(options?: UseStatsPageOptions): UseStatsPageReturn {
+  const filtersApi = useStatsFilters(
+    options?.filterDefaults ? { defaults: options.filterDefaults } : undefined
+  );
   const dataApi = useStatsData(filtersApi.filters);
 
   // Filtres effectifs passés aux drawers. Tant que `bounds` n'est pas résolu

@@ -15,7 +15,10 @@ import { Suspense } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AdminPageHeader } from '@/components/admin';
 import { AlertTriangle } from 'lucide-react';
-import { STATS_PERIOD_LABELS } from '@/lib/services/admin-stats';
+import {
+  DEFAULT_PAGE_SIZE,
+  STATS_PERIOD_LABELS,
+} from '@/lib/services/admin-stats';
 import { useStatsSettings } from '@/hooks/app-settings';
 import { useStatsDrawers, useStatsExport, useStatsPage } from './hooks';
 import { PAGE_SUBTITLE, PAGE_TITLE } from './constants';
@@ -30,8 +33,21 @@ import {
 } from './components';
 
 function StatistiquesContent() {
-  const page = useStatsPage();
   const statsSettings = useStatsSettings();
+
+  // Défauts préférences workspace (Phase 4B). Peuvent être `undefined` tant
+  // que les settings ne sont pas chargés — les hooks reçoivent alors juste
+  // le fallback hardcoded.
+  const filterDefaults = statsSettings.data
+    ? {
+        period: statsSettings.data.stats_default_period,
+        comparePreset: statsSettings.data.stats_default_compare_preset,
+      }
+    : undefined;
+
+  const page = useStatsPage(
+    filterDefaults ? { filterDefaults } : undefined
+  );
   const exportApi = useStatsExport({
     data: page.data,
     state: page.filters,
@@ -48,11 +64,13 @@ function StatistiquesContent() {
   // comparaison est activée côté filtres.
   const compareMode = page.filters.compareMode ?? false;
 
-  // Colonnes masquées provenant des préférences admin (Phase 4A).
-  // Fallback `[]` pendant le chargement pour éviter un flash de colonnes
-  // puis disparition.
+  // Préférences admin (Phase 4A + 4B). Fallback pendant le chargement.
   const hiddenColumnsShows = statsSettings.data?.stats_hidden_columns_shows ?? [];
   const hiddenColumnsVenues = statsSettings.data?.stats_hidden_columns_venues ?? [];
+  const pageSize =
+    statsSettings.data?.stats_default_page_size ?? DEFAULT_PAGE_SIZE;
+  const defaultExportFormat =
+    statsSettings.data?.stats_default_export_format ?? 'excel';
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -68,6 +86,7 @@ function StatistiquesContent() {
         {...(page.filters.comparePreset
           ? { comparePreset: page.filters.comparePreset }
           : {})}
+        defaultExportFormat={defaultExportFormat}
         activeFiltersCount={page.activeFiltersCount}
         isLoading={page.isLoading}
         isExporting={exportApi.isExporting}
@@ -96,6 +115,7 @@ function StatistiquesContent() {
         isLoading={page.isLoading}
         showCompareColumn={compareMode}
         hiddenColumns={hiddenColumnsShows}
+        pageSize={pageSize}
         onRowClick={drawers.openShow}
       />
 
@@ -104,6 +124,7 @@ function StatistiquesContent() {
         isLoading={page.isLoading}
         showCompareColumn={compareMode}
         hiddenColumns={hiddenColumnsVenues}
+        pageSize={pageSize}
         onRowClick={drawers.openVenue}
       />
 

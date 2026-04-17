@@ -24,6 +24,8 @@ export interface StatsFiltersProps {
   venueIds: string[];
   compareMode: boolean;
   comparePreset?: ComparePreset;
+  /** Format d'export sélectionné par défaut dans le split button. */
+  defaultExportFormat?: ExportFormat;
   activeFiltersCount: number;
   isLoading?: boolean;
   isExporting?: boolean;
@@ -46,6 +48,7 @@ export function StatsFilters(props: StatsFiltersProps) {
     venueIds,
     compareMode,
     comparePreset,
+    defaultExportFormat,
     activeFiltersCount,
     isLoading,
     isExporting,
@@ -102,6 +105,7 @@ export function StatsFilters(props: StatsFiltersProps) {
         <ExportMenu
           onExport={onExport}
           disabled={isLoading}
+          {...(defaultExportFormat ? { defaultFormat: defaultExportFormat } : {})}
           {...(isExporting !== undefined ? { isExporting } : {})}
         />
       </div>

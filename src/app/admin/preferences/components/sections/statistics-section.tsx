@@ -74,8 +74,6 @@ const EXPORT_OPTIONS: { value: StatsSettings['stats_default_export_format']; lab
   { value: 'pdf', label: 'PDF' },
 ];
 
-const FUTURE_NOTE = 'Sera appliqué dans une prochaine version.';
-
 // ============================================
 // COMPONENT
 // ============================================
@@ -156,7 +154,7 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
       <SettingsCard
         icon={BarChart3}
         title="Préférences statistiques"
-        description="Colonnes masquées appliquées à /admin/statistiques. Les autres défauts (période, taille de page, preset de comparaison, format d'export) sont enregistrés ici et seront appliqués dans une prochaine version."
+        description="Ces défauts sont appliqués lors de l'ouverture de /admin/statistiques. Une URL partagée avec des filtres explicites prime sur ces défauts."
         isLoading={isLoading}
         isSaving={isSaving}
         canEdit={canEdit}
@@ -185,7 +183,6 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{FUTURE_NOTE}</p>
           </div>
 
           {/* Taille de page */}
@@ -209,7 +206,6 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
               />
               <span className="text-sm text-muted-foreground">lignes</span>
             </div>
-            <p className="text-xs text-muted-foreground">{FUTURE_NOTE}</p>
           </div>
 
           {/* Preset de comparaison */}
@@ -236,7 +232,6 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{FUTURE_NOTE}</p>
           </div>
 
           {/* Format d'export */}
@@ -264,7 +259,6 @@ export function StatisticsSection({ canEdit, onDirtyChange }: StatisticsSectionP
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{FUTURE_NOTE}</p>
           </div>
         </div>
 

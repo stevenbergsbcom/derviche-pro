@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { ComparePreset, StatsPeriod } from '@/lib/services/admin-stats';
 import { DEFAULT_STATS_PERIOD } from '@/lib/services/admin-stats';
@@ -38,6 +38,19 @@ export interface UseStatsFiltersReturn {
   setComparePreset: (preset: ComparePreset) => void;
   reset: () => void;
   activeFiltersCount: number;
+}
+
+/**
+ * Défauts workspace issus des préférences admin. Appliqués seulement si
+ * l'URL ne précise pas le paramètre correspondant (bookmarks préservés).
+ * Les settings étant chargés de manière async, l'option peut être `undefined`
+ * au premier rendu et devenir définie plus tard.
+ */
+export interface UseStatsFiltersOptions {
+  defaults?: {
+    period?: StatsPeriod;
+    comparePreset?: ComparePreset;
+  };
 }
 
 // ============================================
@@ -140,13 +153,20 @@ function searchParamsFromState(state: StatsFiltersState): string {
 // HOOK
 // ============================================
 
-export function useStatsFilters(): UseStatsFiltersReturn {
+export function useStatsFilters(options?: UseStatsFiltersOptions): UseStatsFiltersReturn {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<StatsFiltersState>(() =>
     stateFromSearchParams(new URLSearchParams(searchParams.toString()))
   );
+
+  // Snapshot de la présence de `?period=` dans l'URL au mount : sert à décider
+  // si le défaut workspace peut s'appliquer (URL vide) ou non (URL prime).
+  const urlHadPeriodAtMountRef = useRef<boolean>(
+    new URLSearchParams(searchParams.toString()).has('period')
+  );
+  const [hasAppliedDefaults, setHasAppliedDefaults] = useState(false);
 
   // Synchroniser les filtres vers l'URL (sans recharger la page)
   useEffect(() => {
@@ -165,6 +185,25 @@ export function useStatsFilters(): UseStatsFiltersReturn {
     const next = stateFromSearchParams(new URLSearchParams(searchParams.toString()));
     setFilters((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   }, [searchParams]);
+
+  // Application des défauts préférences (workspace) une fois qu'ils sont
+  // disponibles. N'écrase jamais un paramètre déjà présent dans l'URL au mount.
+  useEffect(() => {
+    if (hasAppliedDefaults) return;
+    if (!options?.defaults) return;
+
+    // Applique `period` uniquement si l'URL d'origine n'en avait pas.
+    if (!urlHadPeriodAtMountRef.current && options.defaults.period) {
+      const defaultPeriod = options.defaults.period;
+      setFilters((prev) =>
+        prev.period === DEFAULT_STATS_PERIOD && prev.period !== defaultPeriod
+          ? { ...prev, period: defaultPeriod, from: undefined, to: undefined }
+          : prev
+      );
+    }
+    setHasAppliedDefaults(true);
+    // `comparePreset` : appliqué paresseusement via setCompareMode (voir plus bas).
+  }, [options?.defaults, hasAppliedDefaults]);
 
   const setPeriod = useCallback((period: StatsPeriod) => {
     setFilters((prev) => {
@@ -188,27 +227,35 @@ export function useStatsFilters(): UseStatsFiltersReturn {
     setFilters((prev) => ({ ...prev, venueIds: ids }));
   }, []);
 
-  const setCompareMode = useCallback((enabled: boolean) => {
-    setFilters((prev) => {
-      if (!enabled) {
-        // On nettoie aussi le preset lorsqu'on désactive la comparaison.
-        const next: StatsFiltersState = {
-          period: prev.period,
-          ...(prev.from !== undefined ? { from: prev.from } : {}),
-          ...(prev.to !== undefined ? { to: prev.to } : {}),
-          companyIds: prev.companyIds,
-          venueIds: prev.venueIds,
+  const defaultComparePresetFromOptions = options?.defaults?.comparePreset;
+  const setCompareMode = useCallback(
+    (enabled: boolean) => {
+      setFilters((prev) => {
+        if (!enabled) {
+          // On nettoie aussi le preset lorsqu'on désactive la comparaison.
+          const next: StatsFiltersState = {
+            period: prev.period,
+            ...(prev.from !== undefined ? { from: prev.from } : {}),
+            ...(prev.to !== undefined ? { to: prev.to } : {}),
+            companyIds: prev.companyIds,
+            venueIds: prev.venueIds,
+          };
+          return next;
+        }
+        // Active la comparaison ; priorité au preset déjà mémorisé, sinon
+        // préférence workspace, sinon hardcoded.
+        return {
+          ...prev,
+          compareMode: true,
+          comparePreset:
+            prev.comparePreset ??
+            defaultComparePresetFromOptions ??
+            DEFAULT_COMPARE_PRESET,
         };
-        return next;
-      }
-      // Active la comparaison ; applique un preset par défaut si absent.
-      return {
-        ...prev,
-        compareMode: true,
-        comparePreset: prev.comparePreset ?? DEFAULT_COMPARE_PRESET,
-      };
-    });
-  }, []);
+      });
+    },
+    [defaultComparePresetFromOptions]
+  );
 
   const setComparePreset = useCallback((preset: ComparePreset) => {
     setFilters((prev) => ({

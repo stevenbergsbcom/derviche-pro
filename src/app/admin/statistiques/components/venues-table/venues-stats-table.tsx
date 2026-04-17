@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
@@ -27,6 +27,8 @@ export interface VenuesStatsTableProps {
   showCompareColumn?: boolean;
   /** Clés des colonnes à masquer (hors `venueName` + colonne Évolution). */
   hiddenColumns?: string[];
+  /** Taille de page (pagination). Défaut : DEFAULT_PAGE_SIZE. */
+  pageSize?: number;
   onRowClick?: (row: VenueStatsWithDelta) => void;
 }
 
@@ -35,21 +37,27 @@ export function VenuesStatsTable({
   isLoading,
   showCompareColumn,
   hiddenColumns = [],
+  pageSize = DEFAULT_PAGE_SIZE,
   onRowClick,
 }: VenuesStatsTableProps) {
   const [sortKey, setSortKey] = useState<VenuesSortKey>('confirmedCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [page, setPage] = useState(1);
 
+  // Reset à la page 1 si la taille de page change (ex. préférence async arrivée).
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
   const sorted = useMemo(
     () => sortVenues(rows, sortKey, sortDirection),
     [rows, sortKey, sortDirection],
   );
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / DEFAULT_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const start = (currentPage - 1) * DEFAULT_PAGE_SIZE;
-  const pageRows = sorted.slice(start, start + DEFAULT_PAGE_SIZE);
+  const start = (currentPage - 1) * pageSize;
+  const pageRows = sorted.slice(start, start + pageSize);
 
   const handleSort = (key: VenuesSortKey) => {
     if (key === sortKey) {
