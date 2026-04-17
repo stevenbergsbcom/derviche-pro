@@ -75,3 +75,20 @@ export { createShow, updateShow, deleteShow } from './mutations';
 // ============================================
 
 export { generateSlug, generateUniqueSlug } from './slug';
+
+// ============================================
+// FONCTIONS - RANKING (migration 111)
+// ============================================
+
+export {
+  fetchShowsForRanking,
+  reorderShows,
+  setShowFeatured,
+  setShowDisplayOrder,
+  resetGlobalOrder,
+} from './ranking';
+export type {
+  ShowRanking,
+  RankingListResult,
+  RankingMutationResult,
+} from './ranking';

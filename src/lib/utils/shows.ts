@@ -51,6 +51,9 @@ export function transformShowToSpectacle(show: PublicShow): Spectacle {
     nextTime: status === 'available' ? show.nextTime : null,
     remainingSlots: show.availableSlotsCount,
     status,
+    // Migration 111 — Classement éditorial
+    isFeatured: show.isFeatured,
+    displayOrder: show.displayOrder,
   };
 }
 

@@ -30,6 +30,7 @@ import {
   GoogleCalendarSection,
   LegalSection,
   StatisticsSection,
+  ClassementSection,
 } from './sections';
 
 // ============================================
@@ -111,6 +112,7 @@ function PreferencesInnerContent({
   const handleRgpdDirty           = useCallback((d: boolean) => onDirtyChange('rgpd',            d), [onDirtyChange]);
   const handleLegalDirty          = useCallback((d: boolean) => onDirtyChange('legal',           d), [onDirtyChange]);
   const handleStatisticsDirty     = useCallback((d: boolean) => onDirtyChange('statistiques',    d), [onDirtyChange]);
+  const handleClassementDirty     = useCallback((d: boolean) => onDirtyChange('classement',      d), [onDirtyChange]);
 
   return (
     <>
@@ -122,6 +124,9 @@ function PreferencesInnerContent({
         )}
         {activeTab === 'homepage' && (
           <HomepageSection      canEdit={canEdit} onDirtyChange={handleHomepageDirty} />
+        )}
+        {activeTab === 'classement' && (
+          <ClassementSection    canEdit={canEdit} onDirtyChange={handleClassementDirty} />
         )}
         {activeTab === 'appearance' && (
           <AppearanceSection    canEdit={canEdit} onDirtyChange={handleAppearanceDirty} />

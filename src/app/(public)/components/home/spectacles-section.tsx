@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -27,9 +27,22 @@ const CARDS_VISIBLE = {
   desktop: 4,
 };
 
+/** Seuil (px) de déplacement avant de déclencher un changement de slide au drag. */
+const DRAG_THRESHOLD = 50;
+/** Seuil (px) au-delà duquel on considère que l'utilisateur a fait un drag (et non un clic). */
+const CLICK_CANCEL_THRESHOLD = 8;
+
 export function SpectaclesSection({ spectaclesSettings, spectacles }: SpectaclesSectionProps) {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [cardsVisible, setCardsVisible] = useState(CARDS_VISIBLE.desktop);
+
+  // Drag / grab state
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const pointerStartX = useRef<number | null>(null);
+  const pointerIdRef = useRef<number | null>(null);
+  const dragMovedRef = useRef(false);
 
   // Détecter la taille d'écran pour le carousel
   useEffect(() => {
@@ -48,16 +61,17 @@ export function SpectaclesSection({ spectaclesSettings, spectacles }: Spectacles
     return () => window.removeEventListener('resize', updateCardsVisible);
   }, []);
 
-  // Carousel automatique
+  // Carousel automatique (en pause pendant le drag)
   useEffect(() => {
     if (spectacles.length === 0) return;
+    if (isDragging) return;
     const maxIndex = Math.max(0, spectacles.length - cardsVisible);
     const interval = setInterval(() => {
       setCarouselIndex((prev) => (prev >= maxIndex ? 0 : prev + 1));
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [cardsVisible, spectacles.length]);
+  }, [cardsVisible, spectacles.length, isDragging]);
 
   // Reset carousel index si nécessaire
   useEffect(() => {
@@ -75,6 +89,78 @@ export function SpectaclesSection({ spectaclesSettings, spectacles }: Spectacles
     const maxIndex = Math.max(0, spectacles.length - cardsVisible);
     setCarouselIndex((prev) => Math.min(maxIndex, prev + 1));
   };
+
+  // ===========================================
+  // Drag / grab handlers (pointer events)
+  // ===========================================
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Ignore les clics droits / middle / stylet secondaire
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    pointerStartX.current = e.clientX;
+    pointerIdRef.current = e.pointerId;
+    dragMovedRef.current = false;
+    setIsDragging(true);
+    setDragOffset(0);
+    // Capture pour recevoir les pointermove/up même hors du track
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* no-op */
+    }
+  }, []);
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (pointerStartX.current === null) return;
+      const dx = e.clientX - pointerStartX.current;
+      if (Math.abs(dx) > CLICK_CANCEL_THRESHOLD) dragMovedRef.current = true;
+      setDragOffset(dx);
+    },
+    [],
+  );
+
+  const endDrag = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (pointerStartX.current === null) return;
+      const dx = e.clientX - pointerStartX.current;
+      const maxIndex = Math.max(0, spectacles.length - cardsVisible);
+      if (dx <= -DRAG_THRESHOLD) {
+        setCarouselIndex((prev) => Math.min(maxIndex, prev + 1));
+      } else if (dx >= DRAG_THRESHOLD) {
+        setCarouselIndex((prev) => Math.max(0, prev - 1));
+      }
+      try {
+        if (pointerIdRef.current !== null) {
+          e.currentTarget.releasePointerCapture(pointerIdRef.current);
+        }
+      } catch {
+        /* no-op */
+      }
+      pointerStartX.current = null;
+      pointerIdRef.current = null;
+      setIsDragging(false);
+      setDragOffset(0);
+    },
+    [spectacles.length, cardsVisible],
+  );
+
+  // Empêche le clic sur carte d'ouvrir le lien si on a drag (>CLICK_CANCEL_THRESHOLD px)
+  const handleClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (dragMovedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Reset différé pour couvrir un éventuel 2ᵉ click sur mobile (touch→click délai)
+      window.setTimeout(() => {
+        dragMovedRef.current = false;
+      }, 0);
+    }
+  }, []);
+
+  // Bloque le drag natif (ghost image / drag-and-drop HTML5) des `<a>` et `<img>`
+  const handleNativeDragStart = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }, []);
 
   if (spectacles.length === 0) return null;
 
@@ -103,9 +189,20 @@ export function SpectaclesSection({ spectaclesSettings, spectacles }: Spectacles
         {/* Carousel Spectacles */}
         <div className="relative overflow-hidden">
           <div
-            className="flex transition-transform duration-500 ease-in-out"
+            ref={trackRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onClickCapture={handleClickCapture}
+            onDragStart={handleNativeDragStart}
+            className={`flex touch-pan-y select-none ${
+              isDragging
+                ? 'cursor-grabbing transition-none'
+                : 'cursor-grab transition-transform duration-500 ease-in-out'
+            }`}
             style={{
-              transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'})))`,
+              transform: `translateX(calc(-${carouselIndex} * (100% / ${cardsVisible} + ${cardsVisible > 1 ? '0.375rem' : '0rem'}) + ${dragOffset}px))`,
               gap: cardsVisible === 1 ? '0' : '1.5rem',
             }}
           >

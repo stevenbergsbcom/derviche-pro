@@ -18,8 +18,13 @@ import { logger } from '@/lib/logger';
 import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { logSystem } from '@/lib/services/logs';
 
+// Zod v4 `z.uuid()` valide strictement le variant bit (pos 19 doit être 8-b),
+// ce qui rejette certains UUID existants en DB. On utilise une regex souple :
+// le type Postgres `uuid` garantit déjà le format.
+const UUID_LOOSE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const bodySchema = z.object({
-  userId: z.string().uuid(),
+  userId: z.string().regex(UUID_LOOSE, 'userId invalide'),
   accessToken: z.string().min(1),
 });
 

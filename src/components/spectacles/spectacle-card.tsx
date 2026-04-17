@@ -25,6 +25,10 @@ export interface Spectacle {
   nextTime?: string | null;
   remainingSlots?: number; // Nombre de créneaux avec places disponibles
   status?: SpectacleStatus; // Statut du spectacle
+  /** Migration 111 — Classement éditorial */
+  isFeatured?: boolean;
+  /** Migration 111 — Ordre d'affichage (asc, null = fin de liste) */
+  displayOrder?: number | null;
 }
 
 interface SpectacleCardProps {

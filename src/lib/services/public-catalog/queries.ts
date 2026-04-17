@@ -33,6 +33,7 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
     const todayISO = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
     // 1. Récupérer les spectacles publiés avec leur compagnie
+    //    Tri éditorial : display_order ASC (NULLS LAST) puis title ASC en tie-break
     const { data: shows, error: showsError } = await supabase
       .from('shows')
       .select(`
@@ -47,10 +48,13 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         status,
         price_type,
         max_reservations_per_booking,
+        is_featured,
+        display_order,
         companies!inner(name)
       `)
       .eq('status', 'published')
       .is('deleted_at', null)
+      .order('display_order', { ascending: true, nullsFirst: false })
       .order('title', { ascending: true });
 
     if (showsError) {
@@ -208,6 +212,9 @@ export async function getPublicCatalog(): Promise<PublicCatalogResult> {
         teaserUrl: null,
         dervisheSiteUrl: null,
         dervisheManager: null,
+        // Migration 111 — Classement éditorial
+        isFeatured: (show as { is_featured?: boolean | null }).is_featured ?? false,
+        displayOrder: (show as { display_order?: number | null }).display_order ?? null,
       };
     });
 
@@ -247,6 +254,8 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
         invitation_policy,
         teaser_url,
         derviche_site_url,
+        is_featured,
+        display_order,
         companies!inner(name),
         profiles!derviche_manager_id(first_name, last_name, phone, email)
       `)
@@ -389,6 +398,9 @@ export async function getPublicShowBySlug(slug: string): Promise<PublicShowResul
       teaserUrl: show.teaser_url ?? null,
       dervisheSiteUrl: show.derviche_site_url ?? null,
       dervisheManager,
+      // Migration 111 — Classement éditorial
+      isFeatured: (show as { is_featured?: boolean | null }).is_featured ?? false,
+      displayOrder: (show as { display_order?: number | null }).display_order ?? null,
     };
 
     return { data: publicShow, error: null };

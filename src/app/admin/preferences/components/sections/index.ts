@@ -13,3 +13,4 @@ export { EmailTemplatesSection } from './templates-section';
 export { GoogleCalendarSection } from './google-calendar-section';
 export { LegalSection } from './legal-section';
 export { StatisticsSection } from './statistics-section';
+export { ClassementSection } from './classement';
