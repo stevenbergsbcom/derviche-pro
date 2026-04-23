@@ -7,9 +7,10 @@
 
 import { logger } from '@/lib/logger';
 import type { ReservationStatus, CheckinStatus } from '@/types/database';
-import type { 
-  AdminReservation, 
+import type {
+  AdminReservation,
   AdminReservationSlot,
+  BookedBy,
   ReservationRowWithRelations,
   SlotRowWithRelations,
   AvailableSlot,
@@ -31,6 +32,80 @@ function detectMissingFields(row: ReservationRowWithRelations): string[] {
   if (!row.guest_email) missingFields.push('email');
   
   return missingFields;
+}
+
+/**
+ * Dérive le `BookedBy` décrivant qui a créé la réservation, en examinant
+ * les jointures `created_by` / `booked_by` + le champ `source`.
+ *
+ * Règles (ordre de priorité) :
+ *  1. Rôle explicite admin/super-admin/externe sur `created_by.user_roles`
+ *     → kind: 'admin'
+ *  2. `source === 'admin'` avec `created_by` présent (fallback RLS) :
+ *     un viewer `admin` ne peut pas lire les lignes `user_roles` des
+ *     `super-admin` (policy `user_roles_select_admin`, migration 005).
+ *     Dans ce cas `role` est undefined mais on sait que c'est un
+ *     back-office → kind: 'admin' avec role générique.
+ *     → kind: 'admin'
+ *  3. `created_by` pointe vers un profil avec `company_id` renseigné
+ *     → kind: 'company' (cf. migration 113)
+ *  4. `booked_by` est renseigné (pro connecté qui a réservé pour lui-même)
+ *     → kind: 'pro'
+ *  5. Sinon → kind: 'anonymous'
+ *
+ * NB : Supabase renvoie parfois `user_roles` / `company` en array (1:N
+ * PostgREST) alors qu'on a une relation 1:1 → on normalise.
+ */
+function deriveBookedBy(row: ReservationRowWithRelations): BookedBy {
+  const createdBy = row.created_by ?? null;
+  const bookedBy = row.booked_by ?? null;
+
+  // Extraire le rôle (handle array OR object)
+  const roleRaw = createdBy?.user_roles;
+  const role = Array.isArray(roleRaw) ? roleRaw[0]?.role : roleRaw?.role;
+
+  // Extraire la compagnie (handle array OR object)
+  const companyRaw = createdBy?.company;
+  const company = Array.isArray(companyRaw) ? companyRaw[0] : companyRaw;
+
+  // 1. Admin / super-admin / externe — rôle explicite lisible
+  if (role && (role === 'super-admin' || role === 'admin' || role === 'externe')) {
+    return {
+      kind: 'admin',
+      firstName: createdBy?.first_name ?? null,
+      lastName: createdBy?.last_name ?? null,
+      role,
+    };
+  }
+
+  // 2. Fallback back-office : source='admin' + created_by existe mais
+  //    user_roles non lisible (RLS). Classe en admin avec role générique
+  //    « back-office » pour éviter un faux-positif company/pro.
+  if (row.source === 'admin' && createdBy) {
+    return {
+      kind: 'admin',
+      firstName: createdBy.first_name ?? null,
+      lastName: createdBy.last_name ?? null,
+      role: 'back-office',
+    };
+  }
+
+  // 3. Compagnie — migration 113
+  if (company && company.id && company.name) {
+    return { kind: 'company', id: company.id, name: company.name };
+  }
+
+  // 4. Pro connecté (user_id set, pas d'admin/compagnie ci-dessus)
+  if (bookedBy) {
+    return {
+      kind: 'pro',
+      firstName: bookedBy.first_name ?? null,
+      lastName: bookedBy.last_name ?? null,
+    };
+  }
+
+  // 5. Visiteur anonyme
+  return { kind: 'anonymous' };
 }
 
 /**
@@ -126,16 +201,9 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
       sentBy: e.sent_by,
     })),
 
-    // Traçabilité compagnie (migration 113) : si la résa a été saisie par
-    // un utilisateur `company` depuis le catalogue public, on expose la
-    // compagnie liée. Sinon `null`.
-    bookedByCompany: (() => {
-      const company = row.created_by?.company;
-      // Supabase peut typer company comme tableau (relation many), on gère
-      // les deux cas par sécurité.
-      const c = Array.isArray(company) ? company[0] : company;
-      return c && c.id && c.name ? { id: c.id, name: c.name } : null;
-    })(),
+    // Traçabilité « qui a créé cette réservation » — discriminated union
+    // couvrant les 4 scénarios (anonymous / pro / company / admin).
+    bookedBy: deriveBookedBy(row),
 
     // Timestamps
     createdAt: row.created_at,

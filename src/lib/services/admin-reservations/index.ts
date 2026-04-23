@@ -35,6 +35,7 @@ export type {
   // Entités
   AdminReservation,
   AdminReservationSlot,
+  BookedBy,
   
   // Filtres et pagination
   AdminReservationFilters,

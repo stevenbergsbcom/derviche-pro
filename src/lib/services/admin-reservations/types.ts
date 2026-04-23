@@ -11,6 +11,22 @@ import type { ReservationStatus, CheckinStatus } from '@/types/database';
 // TYPES ENTITÉS
 // ============================================
 
+/**
+ * Discriminated union décrivant qui a créé une réservation.
+ * Le `kind` permet au rendu UI de choisir le libellé approprié.
+ */
+export type BookedBy =
+  | { kind: 'anonymous' }
+  | { kind: 'pro'; firstName: string | null; lastName: string | null }
+  | { kind: 'company'; id: string; name: string }
+  | {
+      kind: 'admin';
+      firstName: string | null;
+      lastName: string | null;
+      /** `super-admin` | `admin` | `externe` — affiché tel quel entre parenthèses. */
+      role: string;
+    };
+
 /** Informations du slot enrichies pour l'admin */
 export interface AdminReservationSlot {
   id: string;
@@ -79,12 +95,15 @@ export interface AdminReservation {
   checkinFollowupEmails: { id: string; templateKey: string; sentAt: string; sentBy: string | null }[];
 
   /**
-   * Compagnie ayant saisi cette réservation depuis le catalogue public
-   * (migration 113). Non-null uniquement si `created_by_user_id` pointe
-   * vers un profile `company`. Utilisé par la liste admin pour afficher
-   * un badge « Saisie par _[Compagnie]_ ».
+   * Traçabilité « qui a créé cette réservation ». Discriminated union
+   * couvrant les 4 scénarios possibles :
+   *  - anonymous : visiteur non connecté (user_id = NULL, created_by = NULL, source = public)
+   *  - pro       : professionnel connecté à son compte (user_id set, source = public)
+   *  - company   : compagnie connectée ayant saisi pour un pro (migration 113)
+   *  - admin     : admin/super-admin/externe depuis le back-office ou la PWA walk-in
+   * Alimenté par les jointures `created_by` + `booked_by` dans les SELECT queries.
    */
-  bookedByCompany: { id: string; name: string } | null;
+  bookedBy: BookedBy;
 
   // Timestamps
   createdAt: string;
@@ -311,6 +330,8 @@ export interface ReservationRowWithRelations {
   guest_afc_number: string | null;
   num_places: number;
   status: string;
+  /** Origine de la création : 'public' (site public) ou 'admin' (back-office / PWA walk-in). */
+  source: string | null;
   special_requests: string | null;
   checkin_status: string | null;
   checkin_comment: string | null;
@@ -324,10 +345,28 @@ export interface ReservationRowWithRelations {
   cancellation_reason: string | null;
   google_calendar_event_id: string | null;
   checkin_followup_emails?: { id: string; template_key: string; sent_at: string; sent_by: string | null }[] | null;
-  /** Profil de la personne qui a saisi la résa (migration 113) — jointure via created_by_user_id. */
+  /**
+   * Profil de la personne qui a CRÉÉ la résa — jointure via created_by_user_id.
+   * Couvre :
+   *  - compagnie (via `company_id` + `company` joint)   → migration 113
+   *  - admin/super-admin/externe (via `user_roles.role`) → back-office / walk-in
+   */
   created_by?: {
+    first_name: string | null;
+    last_name: string | null;
     company_id: string | null;
     company?: { id: string; name: string } | null;
+    /** Relation 1:1 avec `user_roles` — Supabase peut renvoyer l'objet ou un array selon le typage. */
+    user_roles?: { role: string } | { role: string }[] | null;
+  } | null;
+  /**
+   * Profil du PROFESSIONNEL propriétaire de la résa — jointure via user_id.
+   * Non-null uniquement si le pro était connecté à son compte au moment de
+   * la résa (source='public', pas guest anonyme, pas compagnie).
+   */
+  booked_by?: {
+    first_name: string | null;
+    last_name: string | null;
   } | null;
   slots?: SlotRowWithRelations | null;
 }
