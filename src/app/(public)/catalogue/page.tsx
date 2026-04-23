@@ -192,14 +192,17 @@ export default function CataloguePage() {
         return true;
       })
       .sort((a, b) => {
-        // Tri : statut → display_order (migration 111) → titre
+        // Tri (cohérent avec le slider du hero et /admin/preferences?tab=classement) :
+        //   1. display_order asc (l'ordre admin PRIME toujours, quel que soit le statut)
+        //   2. statut en tie-break (available → coming_soon → closed) si les deux ont display_order NULL
+        //   3. titre en dernier tie-break
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
         const statusDiff =
           (statusOrder[a.status ?? 'closed'] ?? 2) -
           (statusOrder[b.status ?? 'closed'] ?? 2);
         if (statusDiff !== 0) return statusDiff;
-        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        if (aOrder !== bOrder) return aOrder - bOrder;
         return a.title.localeCompare(b.title, 'fr');
       });
   }, [spectacles, genreFilter, moisFilter, lieuFilter, villeFilter, onlyAvailable, searchQuery]);

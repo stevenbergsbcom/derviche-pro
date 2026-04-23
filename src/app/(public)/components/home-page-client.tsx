@@ -60,12 +60,15 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
   // Hook Supabase pour les données
   const { shows: publicShows, isLoading, error, refresh } = usePublicCatalog();
 
-  // Transformer les PublicShow en Spectacle (disponibles en premier, comme le catalogue)
+  // Transformer les PublicShow en Spectacle.
   //
-  // Tri :
-  //  1. par statut (available → coming_soon → closed, closed exclus)
-  //  2. par display_order asc (migration 111, null = fin de liste)
-  //  3. par titre en tie-break
+  // Tri (cohérent avec le slider du hero et /admin/preferences?tab=classement) :
+  //  1. par display_order asc (migration 111) — l'ordre explicite défini
+  //     par l'admin PRIME toujours, quel que soit le statut
+  //  2. par statut en tie-break (available → coming_soon) si les deux ont
+  //     display_order NULL — fallback sensé quand l'admin n'a pas encore
+  //     classé ces spectacles
+  //  3. par titre en dernier tie-break
   const spectacles = useMemo(() => {
     const statusOrder: Record<SpectacleStatus, number> = {
       available: 0,
@@ -76,13 +79,13 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
       .map(transformShowToSpectacle)
       .filter((s) => s.status !== 'closed')
       .sort((a, b) => {
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
         const statusDiff =
           (statusOrder[a.status ?? 'closed'] ?? 2) -
           (statusOrder[b.status ?? 'closed'] ?? 2);
         if (statusDiff !== 0) return statusDiff;
-        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        if (aOrder !== bOrder) return aOrder - bOrder;
         return a.title.localeCompare(b.title, 'fr');
       });
   }, [publicShows]);
