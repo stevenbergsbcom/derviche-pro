@@ -24,11 +24,17 @@ interface UseCurrentUserRoleReturn {
   isLoading: boolean;
   /** Erreur éventuelle */
   error: string | null;
-  /** 
+  /**
    * L'utilisateur a-t-il un rôle admin (super-admin, admin, externe) ?
    * SÉCURITÉ: Retourne true si authentifié + erreur fetch rôle (fail-secure)
    */
   isAdminRole: boolean;
+  /**
+   * L'utilisateur a-t-il le rôle `company` ? Utilisé côté catalogue public
+   * pour afficher un bandeau info et forcer le mode « réservation au nom
+   * d'un professionnel » (cf. migration 113).
+   */
+  isCompanyRole: boolean;
   /** L'utilisateur est-il connecté ? */
   isAuthenticated: boolean;
   /** Erreur lors du fetch du rôle (utile pour afficher un message) */
@@ -145,6 +151,9 @@ export function useCurrentUserRole(): UseCurrentUserRoleReturn {
     // SÉCURITÉ (fail-secure): Si authentifié + erreur fetch rôle, on considère comme admin
     // Cela bloque l'accès au formulaire public par précaution
     isAdminRole: (role !== null && ADMIN_ROLES.includes(role)) || (user !== null && hasRoleFetchError),
+    // `company` n'est jamais en erreur fail-secure ici : on ne veut pas
+    // qu'une erreur de fetch déclenche le bandeau company par erreur.
+    isCompanyRole: role === 'company',
     isAuthenticated: user !== null,
     hasRoleFetchError,
     refresh: fetchUserRole,

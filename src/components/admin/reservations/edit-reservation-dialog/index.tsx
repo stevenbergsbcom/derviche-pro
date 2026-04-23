@@ -8,7 +8,7 @@
 
 'use client';
 
-import { Loader2, Ban } from 'lucide-react';
+import { Loader2, Ban, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 import {
@@ -139,7 +139,27 @@ export function EditReservationDialog({
         )}
         
         <AnomalyBanner hasAnomaly={reservation.hasDataAnomaly} />
-        
+
+        {/* Traçabilité : réservation saisie par une compagnie depuis le
+            catalogue public (migration 113). Ton info neutre. */}
+        {reservation.bookedByCompany && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+            <div className="flex items-start gap-2">
+              <Building2 className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <span className="font-medium text-blue-900">
+                  Saisie depuis le catalogue public par la compagnie{' '}
+                  <strong>{reservation.bookedByCompany.name}</strong>
+                </span>
+                <p className="text-blue-900/70 text-xs mt-0.5">
+                  Cette réservation a été effectuée par la compagnie au nom
+                  du professionnel (typiquement suite à un appel téléphonique).
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <ValidationErrors errors={validationErrors} />
 
         {/* Checkin & Emails */}

@@ -59,6 +59,14 @@ export function ReservationCard({ reservation, visibleColumns, onEdit }: Reserva
                 {isColumnVisible('lastName') && reservation.lastName}
               </h3>
             )}
+            {reservation.bookedByCompany && (
+              <p
+                className="text-[11px] text-muted-foreground italic truncate"
+                title={`Réservation saisie par la compagnie ${reservation.bookedByCompany.name}`}
+              >
+                Saisie par {reservation.bookedByCompany.name}
+              </p>
+            )}
             {isColumnVisible('email') && (
               <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
                 <Mail className="w-3 h-3 shrink-0" />

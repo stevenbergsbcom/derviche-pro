@@ -4,7 +4,7 @@ slug: compagnies/vue-ensemble
 category: compagnies
 categoryLabel: Compagnies
 categoryIcon: Building2
-keywords: [compagnies, artistes, liaison, utilisateur, compte, contact, logo, tableau de bord, représentations passées, historique, switch, lazy, actualiser]
+keywords: [compagnies, artistes, liaison, utilisateur, compte, contact, logo, tableau de bord, représentations passées, historique, switch, lazy, actualiser, téléphone, réserver pour un professionnel, saisir, catalogue public]
 roles: [super-admin, admin]
 order: 1
 ---
@@ -59,6 +59,32 @@ Le **tableau de bord compagnie** a aussi été densifié en S198 :
 - « Mes spectacles » passe en grille 2 colonnes avec miniature d'image, compteurs, badge statut et alerte ambrée si aucune date n'est planifiée.
 - « Prochaines représentations » passe en lignes denses avec une pastille d'urgence temporelle à gauche : 🔥 rouge pour aujourd'hui/demain, 📅 bleu cette semaine, ⏰ gris plus tard.
 - Un **switch « Voir les passées »** dans l'en-tête de cette même section permet de basculer sur l'historique complet des représentations passées (tri du plus récent au plus ancien). Le chargement est **lazy** : la requête ne se déclenche qu'au premier toggle. Une fois chargées, les passées restent en cache tant que la compagnie reste sur la page — le bouton **Actualiser** (en haut à droite du tableau de bord) invalide ce cache pour reprendre en compte d'éventuelles annulations / transferts.
+
+## Réserver pour un professionnel au téléphone
+
+Il arrive qu'un professionnel appelle directement la compagnie pour réserver une place. Dans ce cas, la compagnie peut ouvrir le **catalogue public** et saisir la réservation au nom du pro.
+
+**Comportement automatique** (depuis S199) : si la compagnie est encore connectée à son compte `company` quand elle ouvre `/spectacle/[slug]`, un **bandeau bleu d'information** s'affiche en tête du formulaire :
+
+> Réservation pour un professionnel — Vous êtes connecté en tant que _[Nom Compagnie]_. Cette réservation sera enregistrée au nom du professionnel dont vous saisissez les coordonnées ci-dessous, sans lien avec votre compte compagnie.
+
+Concrètement, côté base de données :
+- La réservation est créée en **mode guest** (`user_id = NULL`) — elle n'apparaît donc pas dans « Mes réservations » du compte compagnie.
+- L'identifiant de la compagnie qui a saisi est conservé dans `created_by_user_id` à des fins de traçabilité.
+- L'email de confirmation part au **professionnel**, pas à la compagnie.
+- Côté admin (liste et fiche détail), un indicatif discret « **Saisie par _[Compagnie]_** » apparaît sur la réservation.
+
+Le bouton de confirmation change aussi de libellé : **« Réserver pour ce professionnel »** au lieu de « Confirmer ma réservation ».
+
+<Callout type="info">
+Le formulaire n'est **pas pré-rempli** avec les coordonnées du compte compagnie — c'est voulu, pour éviter toute confusion. Saisissez les coordonnées du pro.
+</Callout>
+
+<Callout type="warning">
+Si vous voulez réserver **pour vous-même** (membre de la troupe qui vient au spectacle d'une autre compagnie), **déconnectez-vous** d'abord de votre compte compagnie ou utilisez un compte professionnel distinct.
+</Callout>
+
+**Retrouver une réservation saisie** : elle apparaît dans `/company/reservations` si elle concerne un spectacle de votre compagnie (visibilité RLS classique). Si vous avez saisi une résa pour un spectacle d'une autre compagnie, elle ne remonte pas dans votre espace — dans ce cas, contactez l'équipe Derviche.
 
 ## Pour aller plus loin
 

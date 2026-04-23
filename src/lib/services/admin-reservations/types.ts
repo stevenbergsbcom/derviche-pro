@@ -78,6 +78,14 @@ export interface AdminReservation {
   // Emails post-checkin
   checkinFollowupEmails: { id: string; templateKey: string; sentAt: string; sentBy: string | null }[];
 
+  /**
+   * Compagnie ayant saisi cette réservation depuis le catalogue public
+   * (migration 113). Non-null uniquement si `created_by_user_id` pointe
+   * vers un profile `company`. Utilisé par la liste admin pour afficher
+   * un badge « Saisie par _[Compagnie]_ ».
+   */
+  bookedByCompany: { id: string; name: string } | null;
+
   // Timestamps
   createdAt: string;
   updatedAt: string;
@@ -316,6 +324,11 @@ export interface ReservationRowWithRelations {
   cancellation_reason: string | null;
   google_calendar_event_id: string | null;
   checkin_followup_emails?: { id: string; template_key: string; sent_at: string; sent_by: string | null }[] | null;
+  /** Profil de la personne qui a saisi la résa (migration 113) — jointure via created_by_user_id. */
+  created_by?: {
+    company_id: string | null;
+    company?: { id: string; name: string } | null;
+  } | null;
   slots?: SlotRowWithRelations | null;
 }
 

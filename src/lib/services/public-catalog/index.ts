@@ -5,3 +5,4 @@
 
 export * from './types';
 export * from './queries';
+export { getUserCompanyInfo, type UserCompanyInfo } from './get-user-company-info';

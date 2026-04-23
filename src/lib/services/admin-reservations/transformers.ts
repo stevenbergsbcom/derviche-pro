@@ -126,6 +126,17 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
       sentBy: e.sent_by,
     })),
 
+    // Traçabilité compagnie (migration 113) : si la résa a été saisie par
+    // un utilisateur `company` depuis le catalogue public, on expose la
+    // compagnie liée. Sinon `null`.
+    bookedByCompany: (() => {
+      const company = row.created_by?.company;
+      // Supabase peut typer company comme tableau (relation many), on gère
+      // les deux cas par sécurité.
+      const c = Array.isArray(company) ? company[0] : company;
+      return c && c.id && c.name ? { id: c.id, name: c.name } : null;
+    })(),
+
     // Timestamps
     createdAt: row.created_at,
     updatedAt: row.updated_at,

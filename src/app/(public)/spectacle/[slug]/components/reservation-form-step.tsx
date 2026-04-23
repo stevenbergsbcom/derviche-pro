@@ -24,6 +24,12 @@ interface ReservationFormStepProps {
   submitError: string | null;
   onFormDataChange: (updates: Partial<ReservationFormData>) => void;
   onSubmit: (e: React.FormEvent) => void;
+  /**
+   * Mode « saisie par une compagnie pour un professionnel » (migration 113).
+   * Modifie uniquement le libellé du CTA pour lever l'ambiguïté visuelle —
+   * les champs guest restent les mêmes.
+   */
+  isCompanyMode?: boolean;
 }
 
 // ============================================
@@ -38,6 +44,7 @@ export function ReservationFormStep({
   submitError,
   onFormDataChange,
   onSubmit,
+  isCompanyMode = false,
 }: ReservationFormStepProps) {
   return (
     <>
@@ -238,6 +245,8 @@ export function ReservationFormStep({
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Réservation en cours...
             </>
+          ) : isCompanyMode ? (
+            'Réserver pour ce professionnel'
           ) : (
             'Confirmer ma réservation'
           )}

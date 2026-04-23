@@ -41,7 +41,19 @@ export function renderTableCell(col: ReservationColumn, r: AdminReservation): Re
     case 'venue':
       return <span className="text-sm">{r.slot?.venue?.name || '-'}</span>;
     case 'lastName':
-      return <span className="font-medium">{r.lastName}</span>;
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium">{r.lastName}</span>
+          {r.bookedByCompany && (
+            <span
+              className="text-[11px] text-muted-foreground italic"
+              title={`Réservation saisie depuis le catalogue public par la compagnie ${r.bookedByCompany.name} (téléphone / demande pro)`}
+            >
+              Saisie par {r.bookedByCompany.name}
+            </span>
+          )}
+        </div>
+      );
     case 'firstName':
       return r.firstName;
     case 'email':
