@@ -61,6 +61,7 @@ export default function AdminUtilisateursPage() {
     handleFormSubmit,
     handleToggleStatus,
     canDeleteUser,
+    canEditUser,
     canToggleStatus,
     formatName,
   } = useUtilisateursPage();
@@ -124,6 +125,7 @@ export default function AdminUtilisateursPage() {
           onDelete={handleDeleteClick}
           onToggleStatus={handleToggleStatus}
           canDelete={canDeleteUser}
+          canEdit={canEditUser}
           canToggleStatus={canToggleStatus}
         />
 
@@ -140,12 +142,14 @@ export default function AdminUtilisateursPage() {
           onDelete={handleDeleteClick}
           onToggleStatus={handleToggleStatus}
           canDelete={canDeleteUser}
+          canEdit={canEditUser}
           canToggleStatus={canToggleStatus}
         />
 
         {/* Modales */}
         <UsersModals
           formatName={formatName}
+          currentUserRole={currentUserRole}
           isFormDialogOpen={isFormDialogOpen}
           onFormDialogChange={handleFormDialogChange}
           editingUser={editingUser}
@@ -158,6 +162,7 @@ export default function AdminUtilisateursPage() {
           onViewToEdit={handleViewToEdit}
           onViewToDelete={handleViewToDelete}
           canDeleteViewing={viewingUser ? canDeleteUser(viewingUser) : true}
+          canEditViewing={viewingUser ? canEditUser(viewingUser) : true}
           userToDelete={userToDelete}
           onDeleteDialogChange={handleDeleteDialogChange}
           onConfirmDelete={handleConfirmDelete}

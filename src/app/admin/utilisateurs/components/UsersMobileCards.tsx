@@ -29,6 +29,7 @@ export function UsersMobileCards({
   onDelete,
   onToggleStatus,
   canDelete,
+  canEdit,
   canToggleStatus,
 }: UsersMobileCardsProps) {
 
@@ -50,7 +51,10 @@ export function UsersMobileCards({
         const isCurrent = isCurrentUser(user, currentUserId);
         const isDisabled = isUserDisabled(user);
         const userCanDelete = canDelete(user);
+        const userCanEdit = canEdit(user);
         const userCanToggle = canToggleStatus(user);
+        const isProtectedSuperAdmin =
+          user.role === 'super-admin' && currentUserRole !== 'super-admin';
 
         return (
           <Card key={user.id} className={isDisabled ? 'opacity-60' : ''}>
@@ -117,16 +121,40 @@ export function UsersMobileCards({
                 </Button>
 
                 {/* Modifier */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => onEdit(user)}
-                  aria-label={`${LABELS.EDIT} ${formatName(user)}`}
-                >
-                  <Pencil className="w-4 h-4 mr-2" aria-hidden="true" />
-                  {LABELS.EDIT}
-                </Button>
+                {userCanEdit ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => onEdit(user)}
+                    aria-label={`${LABELS.EDIT} ${formatName(user)}`}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" aria-hidden="true" />
+                    {LABELS.EDIT}
+                  </Button>
+                ) : (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full cursor-not-allowed opacity-50"
+                          disabled
+                          aria-label={LABELS.EDIT}
+                        >
+                          <Pencil className="w-4 h-4 mr-2" aria-hidden="true" />
+                          {LABELS.EDIT}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isProtectedSuperAdmin
+                        ? 'Seul un super-administrateur peut modifier un compte super-admin.'
+                        : MESSAGES.ACTION_NOT_ALLOWED}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
 
                 {/* Toggle Status - visible uniquement pour Super Admin */}
                 {currentUserRole === 'super-admin' && (
@@ -176,18 +204,27 @@ export function UsersMobileCards({
                     {LABELS.DELETE}
                   </Button>
                 ) : (
-                  <span className="flex-1" title={MESSAGES.SELF_DELETE_ERROR}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-destructive/50 cursor-not-allowed"
-                      disabled
-                      aria-label={MESSAGES.SELF_DELETE_ERROR}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
-                      {LABELS.DELETE}
-                    </Button>
-                  </span>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="flex-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full text-destructive/50 cursor-not-allowed"
+                          disabled
+                          aria-label={LABELS.DELETE}
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                          {LABELS.DELETE}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isProtectedSuperAdmin
+                        ? 'Seul un super-administrateur peut supprimer un compte super-admin.'
+                        : MESSAGES.SELF_DELETE_ERROR}
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
             </CardContent>

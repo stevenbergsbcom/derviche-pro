@@ -27,7 +27,15 @@ export function RoleSelector({
   onChange,
   disabled,
   warningMessage,
+  viewerRole,
 }: RoleSelectorProps) {
+  // Masquer l'option `super-admin` si le viewer n'est pas lui-même super-admin.
+  // Défense côté UI ; le serveur re-valide dans /api/admin/users[POST|PATCH].
+  const availableRoles = MANAGED_ROLES.filter((r) => {
+    if (r === 'super-admin' && viewerRole !== 'super-admin') return false;
+    return true;
+  });
+
   return (
     <div className="space-y-2">
       <Label htmlFor="role">
@@ -46,7 +54,7 @@ export function RoleSelector({
           <SelectValue placeholder="Sélectionner un rôle" />
         </SelectTrigger>
         <SelectContent>
-          {MANAGED_ROLES.map((r) => (
+          {availableRoles.map((r) => (
             <SelectItem key={r} value={r}>
               {r === 'company' && <Building2 className="w-3 h-3 inline mr-1" />}
               {translateRole(r)}

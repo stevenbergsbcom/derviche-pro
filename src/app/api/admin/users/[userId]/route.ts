@@ -12,6 +12,7 @@ import { logSystem } from '@/lib/services/logs';
 import {
   requireAuth,
   errorResponse,
+  forbiddenResponse,
   notFoundResponse,
   serverErrorResponse,
   successResponse,
@@ -86,6 +87,27 @@ export async function DELETE(
     if (fetchError || !targetUser) {
       logger.warn('API /admin/users/[userId] DELETE - Utilisateur non trouvé', { userId, error: fetchError?.message });
       return notFoundResponse('Utilisateur non trouvé');
+    }
+
+    // 4.1 SÉCURITÉ : seul un super-admin peut supprimer un super-admin.
+    // Defense-in-depth : même si l'UI filtre la liste, on re-valide ici.
+    const targetRoles = targetUser.user_roles;
+    let targetRole: string | undefined;
+    if (Array.isArray(targetRoles) && targetRoles.length > 0) {
+      targetRole = (targetRoles[0] as { role?: string })?.role;
+    } else if (targetRoles && typeof targetRoles === 'object' && !Array.isArray(targetRoles)) {
+      targetRole = (targetRoles as { role?: string }).role;
+    }
+
+    if (targetRole === 'super-admin' && auth.role !== 'super-admin') {
+      logger.warn('API /admin/users/[userId] DELETE - Tentative suppression super-admin par non-super-admin', {
+        userId,
+        actorId: auth.userId,
+        actorRole: auth.role,
+      });
+      return forbiddenResponse(
+        'Seul un super-administrateur peut supprimer un compte super-admin',
+      );
     }
 
     // 5. Soft delete : mettre à jour deleted_at
@@ -333,6 +355,25 @@ export async function PATCH(
       if (!MANAGED_ROLES.includes(newRole)) {
         logger.warn('API /admin/users/[userId] PATCH - Rôle invalide', { userId, newRole });
         return errorResponse('Rôle invalide');
+      }
+
+      // SÉCURITÉ : seul un super-admin peut assigner/retirer le rôle super-admin.
+      // Un admin qui tenterait de s'auto-promouvoir (ou de promouvoir qqn d'autre)
+      // via une requête PATCH directe serait bloqué ici (defense-in-depth côté
+      // serveur ; le dropdown côté client masque déjà l'option).
+      if (auth.role !== 'super-admin') {
+        if (newRole === 'super-admin' || currentRole === 'super-admin') {
+          logger.warn('API /admin/users/[userId] PATCH - Tentative assignation super-admin par non-super-admin', {
+            userId,
+            actorId: auth.userId,
+            actorRole: auth.role,
+            newRole,
+            currentRole,
+          });
+          return forbiddenResponse(
+            'Seul un super-administrateur peut attribuer ou retirer le rôle super-admin',
+          );
+        }
       }
 
       // Mettre à jour le rôle

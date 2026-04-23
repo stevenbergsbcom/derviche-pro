@@ -81,6 +81,7 @@ export interface UserActionsProps {
   onDelete: (user: ManagedUser) => void;
   onToggleStatus: (user: ManagedUser) => void;
   canDelete: (user: ManagedUser) => boolean;
+  canEdit: (user: ManagedUser) => boolean;
   canToggleStatus: (user: ManagedUser) => boolean;
 }
 
@@ -97,6 +98,7 @@ export interface UsersTableProps {
   onDelete: (user: ManagedUser) => void;
   onToggleStatus: (user: ManagedUser) => void;
   canDelete: (user: ManagedUser) => boolean;
+  canEdit: (user: ManagedUser) => boolean;
   canToggleStatus: (user: ManagedUser) => boolean;
 }
 
@@ -106,6 +108,10 @@ export type UsersMobileCardsProps = UsersTableProps;
 /** Props pour le composant UsersModals */
 export interface UsersModalsProps {
   formatName: (user: ManagedUser) => string;
+  /** Rôle du viewer courant — transmis au RoleSelector pour masquer super-admin aux admins */
+  currentUserRole: InternalRole | null;
+  /** Permission d'édition du user en cours de visualisation (pour le bouton « Modifier ») */
+  canEditViewing: boolean;
   isFormDialogOpen: boolean;
   onFormDialogChange: (open: boolean) => void;
   editingUser: ManagedUser | null;
@@ -164,6 +170,7 @@ export interface UseUtilisateursPageReturn {
   handleFormSubmit: (formData: UserFormData, isEditing: boolean) => Promise<void>;
   handleToggleStatus: (user: ManagedUser) => Promise<void>;
   canDeleteUser: (user: ManagedUser) => boolean;
+  canEditUser: (user: ManagedUser) => boolean;
   canToggleStatus: (user: ManagedUser) => boolean;
   formatName: (user: ManagedUser) => string;
 }

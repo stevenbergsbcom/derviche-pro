@@ -36,6 +36,7 @@ export function UsersTable({
   onDelete,
   onToggleStatus,
   canDelete,
+  canEdit,
   canToggleStatus,
 }: UsersTableProps) {
 
@@ -63,7 +64,12 @@ export function UsersTable({
               const isCurrent = isCurrentUser(user, currentUserId);
               const isDisabled = isUserDisabled(user);
               const userCanDelete = canDelete(user);
+              const userCanEdit = canEdit(user);
               const userCanToggle = canToggleStatus(user);
+              // Un admin (non super-admin) voit les super-admins mais ne
+              // peut rien leur faire → tooltip partagé pour expliquer.
+              const isProtectedSuperAdmin =
+                user.role === 'super-admin' && currentUserRole !== 'super-admin';
 
               return (
                 <TableRow key={user.id} className={isDisabled ? 'opacity-60' : ''}>
@@ -137,15 +143,38 @@ export function UsersTable({
                       </Button>
 
                       {/* Modifier */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onEdit(user)}
-                        aria-label={`${LABELS.EDIT} ${formatName(user)}`}
-                      >
-                        <Pencil className="w-4 h-4" aria-hidden="true" />
-                      </Button>
+                      {userCanEdit ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => onEdit(user)}
+                          aria-label={`${LABELS.EDIT} ${formatName(user)}`}
+                        >
+                          <Pencil className="w-4 h-4" aria-hidden="true" />
+                        </Button>
+                      ) : (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 cursor-not-allowed opacity-50"
+                                disabled
+                                aria-label={LABELS.EDIT}
+                              >
+                                <Pencil className="w-4 h-4" aria-hidden="true" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isProtectedSuperAdmin
+                              ? 'Seul un super-administrateur peut modifier un compte super-admin.'
+                              : MESSAGES.ACTION_NOT_ALLOWED}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
 
                       {/* Toggle Status - visible uniquement pour Super Admin */}
                       {currentUserRole === 'super-admin' && (
@@ -193,17 +222,26 @@ export function UsersTable({
                           <Trash2 className="w-4 h-4" aria-hidden="true" />
                         </Button>
                       ) : (
-                        <span title={MESSAGES.SELF_DELETE_ERROR}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive/50 cursor-not-allowed"
-                            disabled
-                            aria-label={LABELS.DELETE}
-                          >
-                            <Trash2 className="w-4 h-4" aria-hidden="true" />
-                          </Button>
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive/50 cursor-not-allowed"
+                                disabled
+                                aria-label={LABELS.DELETE}
+                              >
+                                <Trash2 className="w-4 h-4" aria-hidden="true" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {isProtectedSuperAdmin
+                              ? 'Seul un super-administrateur peut supprimer un compte super-admin.'
+                              : MESSAGES.SELF_DELETE_ERROR}
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </TableCell>

@@ -39,8 +39,13 @@ export interface UserViewDialogProps {
     onEdit: () => void;
     /** Callback pour supprimer l'utilisateur */
     onDelete: () => void | Promise<void>;
-    /** Si true, autorise la suppression (false = utilisateur connecté) */
+    /** Si true, autorise la suppression (false = utilisateur connecté ou super-admin vu par admin) */
     canDelete?: boolean;
+    /**
+     * Si false, désactive le bouton « Modifier » (cas : un admin regarde un
+     * super-admin — lecture OK mais pas d'édition). Défaut : true.
+     */
+    canEdit?: boolean;
 }
 
 /** Spectacle assigné à un externe (via hosted_by_id sur les slots) */
@@ -243,6 +248,7 @@ export function UserViewDialog({
     onEdit,
     onDelete,
     canDelete = true,
+    canEdit = true,
 }: UserViewDialogProps) {
     if (!user) return null;
 
@@ -402,12 +408,26 @@ export function UserViewDialog({
                     <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
                         Fermer
                     </Button>
-                    <Button
-                        onClick={onEdit}
-                        className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
-                    >
-                        Modifier
-                    </Button>
+                    {canEdit ? (
+                        <Button
+                            onClick={onEdit}
+                            className="w-full sm:w-auto bg-derviche hover:bg-derviche-light"
+                        >
+                            Modifier
+                        </Button>
+                    ) : (
+                        <span
+                            className="w-full sm:w-auto"
+                            title="Seul un super-administrateur peut modifier un compte super-admin"
+                        >
+                            <Button
+                                disabled
+                                className="w-full sm:w-auto bg-derviche opacity-50 cursor-not-allowed"
+                            >
+                                Modifier
+                            </Button>
+                        </span>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>

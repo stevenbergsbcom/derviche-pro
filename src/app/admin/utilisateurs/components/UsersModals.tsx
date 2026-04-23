@@ -15,6 +15,8 @@ import { MESSAGES } from '../constants';
 export function UsersModals({
   // Formatage
   formatName,
+  // Viewer (pour filtrer les rôles dans le dropdown)
+  currentUserRole,
   // Form Dialog
   isFormDialogOpen,
   onFormDialogChange,
@@ -29,6 +31,7 @@ export function UsersModals({
   onViewToEdit,
   onViewToDelete,
   canDeleteViewing,
+  canEditViewing,
   // Delete Dialog
   userToDelete,
   onDeleteDialogChange,
@@ -47,6 +50,7 @@ export function UsersModals({
         onCreate={onCreateUser}
         isSubmitting={isSubmitting}
         error={formError}
+        viewerRole={currentUserRole}
       />
 
       {/* Vue détaillée */}
@@ -56,6 +60,7 @@ export function UsersModals({
         onEdit={onViewToEdit}
         onDelete={onViewToDelete}
         canDelete={canDeleteViewing}
+        canEdit={canEditViewing}
       />
 
       {/* Confirmation de suppression */}

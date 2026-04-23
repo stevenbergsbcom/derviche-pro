@@ -28,7 +28,7 @@ import type {
   UseUtilisateursPageReturn,
 } from '../types';
 
-import { canDeleteUser, canToggleUserStatus } from '../helpers';
+import { canDeleteUser, canEditUser, canToggleUserStatus } from '../helpers';
 import { MESSAGES } from '../constants';
 
 export function useUtilisateursPage(): UseUtilisateursPageReturn {
@@ -151,8 +151,12 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
   // ============================================
 
   const checkCanDeleteUser = useCallback((user: ManagedUser): boolean => {
-    return canDeleteUser(user, currentUserId);
-  }, [currentUserId]);
+    return canDeleteUser(user, currentUserId, currentUserRole);
+  }, [currentUserId, currentUserRole]);
+
+  const checkCanEditUser = useCallback((user: ManagedUser): boolean => {
+    return canEditUser(user, currentUserRole);
+  }, [currentUserRole]);
 
   const checkCanToggleStatus = useCallback((user: ManagedUser): boolean => {
     return canToggleUserStatus(user, currentUserId, currentUserRole);
@@ -353,6 +357,7 @@ export function useUtilisateursPage(): UseUtilisateursPageReturn {
     handleFormSubmit,
     handleToggleStatus,
     canDeleteUser: checkCanDeleteUser,
+    canEditUser: checkCanEditUser,
     canToggleStatus: checkCanToggleStatus,
     formatName,
   };

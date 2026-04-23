@@ -16,7 +16,7 @@ import { createClient } from '@/lib/supabase/server';
 import { isValidManagedRole } from '@/lib/services/internal-users';
 import { logger } from '@/lib/logger';
 import { logSystem } from '@/lib/services/logs';
-import { requireAuth, errorResponse, serverErrorResponse } from '@/lib/api';
+import { requireAuth, errorResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api';
 import type { ManagedRole } from '@/lib/services/internal-users';
 
 // ============================================
@@ -142,6 +142,20 @@ export async function POST(request: Request): Promise<NextResponse<CreateUserRes
     }
 
     const { email, password, first_name, last_name, phone, role, company_id, must_change_password } = validation.data;
+
+    // SÉCURITÉ : seul un super-admin peut créer un compte super-admin.
+    // Defense-in-depth : le dropdown côté client masque déjà l'option pour
+    // les admins, mais on re-valide ici contre les requêtes directes.
+    if (role === 'super-admin' && auth.role !== 'super-admin') {
+      logger.warn('API /admin/users - Tentative création super-admin par non-super-admin', {
+        actorId: auth.userId,
+        actorRole: auth.role,
+        email,
+      });
+      return forbiddenResponse(
+        'Seul un super-administrateur peut créer un compte super-admin',
+      );
+    }
 
     const supabaseAdmin = createAdminClient();
 
