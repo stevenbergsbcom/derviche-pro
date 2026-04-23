@@ -48,6 +48,7 @@ export function UserFormDialog({
   onCreate,
   isSubmitting = false,
   error = null,
+  viewerRole = null,
 }: UserFormDialogProps) {
   // Hook pour gérer toute la logique
   const {
@@ -157,6 +158,7 @@ export function UserFormDialog({
             warningMessage={
               isEditingCompanyUser ? HELP_MESSAGES.companyRoleWarning : undefined
             }
+            viewerRole={viewerRole}
           />
 
           {/* Sélecteur de compagnie (si rôle = company) */}

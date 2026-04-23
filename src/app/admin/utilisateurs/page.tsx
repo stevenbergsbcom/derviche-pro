@@ -146,6 +146,7 @@ export default function AdminUtilisateursPage() {
         {/* Modales */}
         <UsersModals
           formatName={formatName}
+          currentUserRole={currentUserRole}
           isFormDialogOpen={isFormDialogOpen}
           onFormDialogChange={handleFormDialogChange}
           editingUser={editingUser}

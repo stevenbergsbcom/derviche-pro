@@ -73,6 +73,11 @@ export interface UserFormDialogProps {
   isSubmitting?: boolean;
   /** Message d'erreur à afficher */
   error?: string | null;
+  /**
+   * Rôle du viewer courant — utilisé par le RoleSelector pour masquer
+   * l'option `super-admin` quand l'acteur n'est pas super-admin.
+   */
+  viewerRole?: string | null;
 }
 
 // ============================================
@@ -167,6 +172,12 @@ export interface RoleSelectorProps {
   disabled: boolean;
   /** Message d'avertissement (ex: utilisateur company) */
   warningMessage?: string;
+  /**
+   * Rôle du viewer (admin/super-admin/externe…). Si absent ou ≠ super-admin,
+   * l'option `super-admin` est masquée du dropdown. Seul un super-admin peut
+   * attribuer le rôle super-admin (defense-in-depth côté serveur aussi).
+   */
+  viewerRole?: string | null;
 }
 
 /**

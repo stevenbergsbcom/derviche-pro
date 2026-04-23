@@ -106,6 +106,8 @@ export type UsersMobileCardsProps = UsersTableProps;
 /** Props pour le composant UsersModals */
 export interface UsersModalsProps {
   formatName: (user: ManagedUser) => string;
+  /** Rôle du viewer courant — transmis au RoleSelector pour masquer super-admin aux admins */
+  currentUserRole: InternalRole | null;
   isFormDialogOpen: boolean;
   onFormDialogChange: (open: boolean) => void;
   editingUser: ManagedUser | null;

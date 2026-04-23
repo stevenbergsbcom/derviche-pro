@@ -15,6 +15,8 @@ import { MESSAGES } from '../constants';
 export function UsersModals({
   // Formatage
   formatName,
+  // Viewer (pour filtrer les rôles dans le dropdown)
+  currentUserRole,
   // Form Dialog
   isFormDialogOpen,
   onFormDialogChange,
@@ -47,6 +49,7 @@ export function UsersModals({
         onCreate={onCreateUser}
         isSubmitting={isSubmitting}
         error={formError}
+        viewerRole={currentUserRole}
       />
 
       {/* Vue détaillée */}
