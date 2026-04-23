@@ -190,6 +190,22 @@ export async function PATCH(
       currentRole = (userRoles as { role?: string }).role;
     }
 
+    // SÉCURITÉ (garde global) : un admin non super-admin ne peut faire AUCUNE
+    // mutation sur un compte super-admin (ni profil, ni rôle, ni company_id).
+    // Doit être placé AVANT tout UPDATE pour ne pas fuiter de modification
+    // partielle (cf. audit Cursor A.2).
+    if (currentRole === 'super-admin' && auth.role !== 'super-admin') {
+      logger.warn('API /admin/users/[userId] PATCH - Tentative modification super-admin par non-super-admin', {
+        userId,
+        actorId: auth.userId,
+        actorRole: auth.role,
+        currentRole,
+      });
+      return forbiddenResponse(
+        'Seul un super-administrateur peut modifier un compte super-admin',
+      );
+    }
+
     // 4. Mettre à jour le profil
     const { first_name, last_name, phone, role: newRole } = body;
     
@@ -357,23 +373,19 @@ export async function PATCH(
         return errorResponse('Rôle invalide');
       }
 
-      // SÉCURITÉ : seul un super-admin peut assigner/retirer le rôle super-admin.
-      // Un admin qui tenterait de s'auto-promouvoir (ou de promouvoir qqn d'autre)
-      // via une requête PATCH directe serait bloqué ici (defense-in-depth côté
-      // serveur ; le dropdown côté client masque déjà l'option).
-      if (auth.role !== 'super-admin') {
-        if (newRole === 'super-admin' || currentRole === 'super-admin') {
-          logger.warn('API /admin/users/[userId] PATCH - Tentative assignation super-admin par non-super-admin', {
-            userId,
-            actorId: auth.userId,
-            actorRole: auth.role,
-            newRole,
-            currentRole,
-          });
-          return forbiddenResponse(
-            'Seul un super-administrateur peut attribuer ou retirer le rôle super-admin',
-          );
-        }
+      // SÉCURITÉ : seul un super-admin peut PROMOUVOIR quelqu'un en super-admin.
+      // Le cas « retirer le rôle super-admin » est déjà bloqué plus haut par le
+      // garde global (currentRole === 'super-admin' refusé pour tout admin).
+      if (newRole === 'super-admin' && auth.role !== 'super-admin') {
+        logger.warn('API /admin/users/[userId] PATCH - Tentative promotion super-admin par non-super-admin', {
+          userId,
+          actorId: auth.userId,
+          actorRole: auth.role,
+          newRole,
+        });
+        return forbiddenResponse(
+          'Seul un super-administrateur peut attribuer le rôle super-admin',
+        );
       }
 
       // Mettre à jour le rôle
