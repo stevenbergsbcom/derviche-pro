@@ -91,16 +91,28 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
   }, [publicShows]);
 
   // Spectacles vedette pour le Hero Slider (migration 111).
-  // Trié par display_order puis titre. Filtré aussi sur présence d'image
-  // (HeroSection ne sait rien afficher sans image de background).
-  // Si la liste est vide → HeroSection masqué entièrement plus bas.
+  // Filtré sur isFeatured + présence d'une image (HeroSection ne sait rien
+  // afficher sans image de background). Le tri est **strictement identique**
+  // à celui du carousel/catalogue (display_order → status → title) pour
+  // garantir un ordre déterministe cohérent entre les 3 zones quand deux
+  // vedettes ont le même display_order. Si la liste est vide → HeroSection
+  // masque son slider.
   const featuredSpectacles = useMemo(() => {
+    const statusOrder: Record<SpectacleStatus, number> = {
+      available: 0,
+      coming_soon: 1,
+      closed: 2,
+    };
     return spectacles
       .filter((s) => s.isFeatured && s.image && !s.image.includes('placeholder'))
       .sort((a, b) => {
         const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
         const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
         if (aOrder !== bOrder) return aOrder - bOrder;
+        const statusDiff =
+          (statusOrder[a.status ?? 'closed'] ?? 2) -
+          (statusOrder[b.status ?? 'closed'] ?? 2);
+        if (statusDiff !== 0) return statusDiff;
         return a.title.localeCompare(b.title, 'fr');
       });
   }, [spectacles]);
