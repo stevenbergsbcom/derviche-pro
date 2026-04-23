@@ -60,12 +60,15 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
   // Hook Supabase pour les données
   const { shows: publicShows, isLoading, error, refresh } = usePublicCatalog();
 
-  // Transformer les PublicShow en Spectacle (disponibles en premier, comme le catalogue)
+  // Transformer les PublicShow en Spectacle.
   //
-  // Tri :
-  //  1. par statut (available → coming_soon → closed, closed exclus)
-  //  2. par display_order asc (migration 111, null = fin de liste)
-  //  3. par titre en tie-break
+  // Tri (cohérent avec le slider du hero et /admin/preferences?tab=classement) :
+  //  1. par display_order asc (migration 111) — l'ordre explicite défini
+  //     par l'admin PRIME toujours, quel que soit le statut
+  //  2. par statut en tie-break (available → coming_soon) si les deux ont
+  //     display_order NULL — fallback sensé quand l'admin n'a pas encore
+  //     classé ces spectacles
+  //  3. par titre en dernier tie-break
   const spectacles = useMemo(() => {
     const statusOrder: Record<SpectacleStatus, number> = {
       available: 0,
@@ -76,28 +79,40 @@ export function HomePageClient({ settings, organization }: HomePageClientProps) 
       .map(transformShowToSpectacle)
       .filter((s) => s.status !== 'closed')
       .sort((a, b) => {
+        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
+        if (aOrder !== bOrder) return aOrder - bOrder;
         const statusDiff =
           (statusOrder[a.status ?? 'closed'] ?? 2) -
           (statusOrder[b.status ?? 'closed'] ?? 2);
         if (statusDiff !== 0) return statusDiff;
-        const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
-        if (aOrder !== bOrder) return aOrder - bOrder;
         return a.title.localeCompare(b.title, 'fr');
       });
   }, [publicShows]);
 
   // Spectacles vedette pour le Hero Slider (migration 111).
-  // Trié par display_order puis titre. Filtré aussi sur présence d'image
-  // (HeroSection ne sait rien afficher sans image de background).
-  // Si la liste est vide → HeroSection masqué entièrement plus bas.
+  // Filtré sur isFeatured + présence d'une image (HeroSection ne sait rien
+  // afficher sans image de background). Le tri est **strictement identique**
+  // à celui du carousel/catalogue (display_order → status → title) pour
+  // garantir un ordre déterministe cohérent entre les 3 zones quand deux
+  // vedettes ont le même display_order. Si la liste est vide → HeroSection
+  // masque son slider.
   const featuredSpectacles = useMemo(() => {
+    const statusOrder: Record<SpectacleStatus, number> = {
+      available: 0,
+      coming_soon: 1,
+      closed: 2,
+    };
     return spectacles
       .filter((s) => s.isFeatured && s.image && !s.image.includes('placeholder'))
       .sort((a, b) => {
         const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER;
         const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER;
         if (aOrder !== bOrder) return aOrder - bOrder;
+        const statusDiff =
+          (statusOrder[a.status ?? 'closed'] ?? 2) -
+          (statusOrder[b.status ?? 'closed'] ?? 2);
+        if (statusDiff !== 0) return statusDiff;
         return a.title.localeCompare(b.title, 'fr');
       });
   }, [spectacles]);
