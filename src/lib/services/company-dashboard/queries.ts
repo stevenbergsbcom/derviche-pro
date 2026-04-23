@@ -168,10 +168,20 @@ export async function getCompanyShowsWithStats(companyId: string): Promise<{ dat
   }
 }
 
+export type SlotRangeMode = 'upcoming' | 'past';
+
 /**
- * Récupère les prochains créneaux d'une compagnie
+ * Récupère les créneaux d'une compagnie, soit à venir (`upcoming`), soit passés (`past`).
+ *
+ * - `upcoming` : tri chronologique ascendant, limité à `limit` (défaut 5)
+ * - `past`     : tri chronologique **descendant** (plus récent d'abord),
+ *                limit optionnelle (0 = toutes)
  */
-export async function getUpcomingSlots(companyId: string, limit: number = 5): Promise<{ data: UpcomingSlot[]; error: string | null }> {
+export async function getUpcomingSlots(
+  companyId: string,
+  limit: number = 5,
+  range: SlotRangeMode = 'upcoming',
+): Promise<{ data: UpcomingSlot[]; error: string | null }> {
   try {
     const supabase = createClient();
     const today = new Date().toISOString().split('T')[0];
@@ -190,18 +200,35 @@ export async function getUpcomingSlots(companyId: string, limit: number = 5): Pr
     const showIds = shows.map(s => s.id);
     const showsMap = new Map(shows.map(s => [s.id, s]));
 
-    // 2. Récupérer les prochains créneaux
-    const { data: slots, error: slotsError } = await supabase
+    // 2. Récupérer les créneaux selon le mode
+    //    - upcoming : date >= today, tri ASC, limité à `limit`
+    //    - past     : date <  today, tri DESC (plus récent d'abord), limit
+    //                 ignorée si === 0 (toutes les représentations passées)
+    let slotsQuery = supabase
       .from('slots')
       .select(`
         *,
         venues:venue_id (id, name, city)
       `)
-      .in('show_id', showIds)
-      .gte('date', today)
-      .order('date', { ascending: true })
-      .order('time', { ascending: true })
-      .limit(limit);
+      .in('show_id', showIds);
+
+    if (range === 'upcoming') {
+      slotsQuery = slotsQuery
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .order('time', { ascending: true });
+    } else {
+      slotsQuery = slotsQuery
+        .lt('date', today)
+        .order('date', { ascending: false })
+        .order('time', { ascending: false });
+    }
+
+    if (limit > 0) {
+      slotsQuery = slotsQuery.limit(limit);
+    }
+
+    const { data: slots, error: slotsError } = await slotsQuery;
 
     if (slotsError) {
       logger.error('Erreur récupération créneaux à venir', { error: slotsError.message });

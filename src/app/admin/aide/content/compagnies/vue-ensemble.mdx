@@ -4,7 +4,7 @@ slug: compagnies/vue-ensemble
 category: compagnies
 categoryLabel: Compagnies
 categoryIcon: Building2
-keywords: [compagnies, artistes, liaison, utilisateur, compte, contact, logo]
+keywords: [compagnies, artistes, liaison, utilisateur, compte, contact, logo, tableau de bord, représentations passées, historique, switch, lazy, actualiser]
 roles: [super-admin, admin]
 order: 1
 ---
@@ -54,6 +54,11 @@ Impossible si la compagnie a **au moins un spectacle**. Archivez ou réassignez 
 Quand la compagnie se connecte avec son compte `company`, elle accède à `/company/reservations` — la liste de ses réservations. Depuis S198, cette liste est **regroupée par représentation** : chaque créneau (spectacle + date + heure + lieu) devient une carte avec son propre sous-tableau de réservations. Pratique pour scanner rapidement les listes d'invités d'une tournée.
 
 Les notes internes Derviche restent **invisibles** pour la compagnie, même avec cette nouvelle présentation — seules les notes d'accueil et les notes lieu apparaissent.
+
+Le **tableau de bord compagnie** a aussi été densifié en S198 :
+- « Mes spectacles » passe en grille 2 colonnes avec miniature d'image, compteurs, badge statut et alerte ambrée si aucune date n'est planifiée.
+- « Prochaines représentations » passe en lignes denses avec une pastille d'urgence temporelle à gauche : 🔥 rouge pour aujourd'hui/demain, 📅 bleu cette semaine, ⏰ gris plus tard.
+- Un **switch « Voir les passées »** dans l'en-tête de cette même section permet de basculer sur l'historique complet des représentations passées (tri du plus récent au plus ancien). Le chargement est **lazy** : la requête ne se déclenche qu'au premier toggle. Une fois chargées, les passées restent en cache tant que la compagnie reste sur la page — le bouton **Actualiser** (en haut à droite du tableau de bord) invalide ce cache pour reprendre en compte d'éventuelles annulations / transferts.
 
 ## Pour aller plus loin
 

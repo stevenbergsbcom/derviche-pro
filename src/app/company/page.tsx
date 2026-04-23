@@ -1,11 +1,13 @@
 'use client';
 
+import { useCallback, useState } from 'react';
+import Image from 'next/image';
 import { useCompanyDashboard } from '@/hooks';
 import { CompanyStatsCards, CompanyUpcomingSlots } from '@/components/company';
 import type { CompanyShowWithStats } from '@/lib/services/company-dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw, Film, ArrowRight } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Film, ArrowRight, Drama } from 'lucide-react';
 import Link from 'next/link';
 
 // ============================================
@@ -33,13 +35,75 @@ function ErrorState({ error, onRetry }: { error: string; onRetry: () => void }) 
 }
 
 // ============================================
-// COMPOSANT LISTE DES SPECTACLES
-// Compact : rarement plus de 2 items — pas de grille, liste horizontale dense
+// COMPOSANT LISTE DES SPECTACLES (grille 2 colonnes desktop)
+// Chaque spectacle = mini-card avec miniature + compteurs + badge statut
+// + alerte visuelle si aucun créneau à venir (S198 UX)
 // ============================================
 
 interface ShowsListProps {
     shows: CompanyShowWithStats[] | undefined;
     isLoading: boolean;
+}
+
+function getStatusBadge(status: string): { label: string; className: string } {
+    switch (status) {
+        case 'published':
+            return { label: 'Publié', className: 'bg-green-100 text-green-700 border-green-200' };
+        case 'draft':
+            return { label: 'Brouillon', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+        default:
+            return { label: 'Archivé', className: 'bg-gray-100 text-gray-600 border-gray-200' };
+    }
+}
+
+function ShowMiniCard({ show }: { show: CompanyShowWithStats }) {
+    const hasImage = !!show.image_url && !show.image_url.includes('placeholder');
+    const status = getStatusBadge(show.status);
+    const hasActivity = show.total_slots > 0 || show.total_reservations > 0;
+
+    return (
+        <div className="flex gap-3 p-3 rounded-lg border bg-card hover:bg-muted/40 transition-colors">
+            {/* Miniature */}
+            <div className="shrink-0 w-14 h-14 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                {hasImage ? (
+                    <Image
+                        src={show.image_url as string}
+                        alt=""
+                        width={56}
+                        height={56}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <Drama className="w-5 h-5 text-muted-foreground/60" aria-hidden="true" />
+                )}
+            </div>
+
+            {/* Contenu */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-medium text-sm text-derviche-dark truncate">
+                        {show.title}
+                    </h4>
+                    <span
+                        className={`shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded border uppercase tracking-wider ${status.className}`}
+                    >
+                        {status.label}
+                    </span>
+                </div>
+
+                {hasActivity ? (
+                    <p className="text-xs text-muted-foreground mt-1">
+                        {show.total_slots} repré{show.total_slots > 1 ? 's' : ''} · {show.total_reservations} résa{show.total_reservations > 1 ? 's' : ''}
+                    </p>
+                ) : (
+                    <p className="text-xs text-amber-700 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3 shrink-0" aria-hidden="true" />
+                        Aucune date planifiée
+                    </p>
+                )}
+            </div>
+        </div>
+    );
 }
 
 function ShowsList({ shows, isLoading }: ShowsListProps) {
@@ -52,12 +116,18 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
                         Mes spectacles
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                    <div className="flex flex-wrap gap-px divide-y">
+                <CardContent>
+                    <div className="grid gap-3 sm:grid-cols-2">
                         {[1, 2].map((i) => (
-                            <div key={i} className="w-full px-4 py-3 animate-pulse">
-                                <div className="h-4 w-48 bg-muted rounded mb-1" />
-                                <div className="h-3 w-32 bg-muted rounded" />
+                            <div
+                                key={i}
+                                className="flex gap-3 p-3 rounded-lg border animate-pulse"
+                            >
+                                <div className="w-14 h-14 bg-muted rounded-md shrink-0" />
+                                <div className="flex-1 space-y-2 pt-1">
+                                    <div className="h-4 w-32 bg-muted rounded" />
+                                    <div className="h-3 w-40 bg-muted rounded" />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -84,7 +154,7 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
         );
     }
 
-    const displayedShows = shows.slice(0, 5);
+    const displayedShows = shows.slice(0, 6);
 
     return (
         <Card className="py-5 gap-3">
@@ -94,7 +164,7 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
                         <Film className="w-5 h-5 text-gold" />
                         Mes spectacles
                     </CardTitle>
-                    {shows.length > 5 && (
+                    {shows.length > 6 && (
                         <Link href="/company/spectacles">
                             <Button variant="ghost" size="sm" className="gap-1 text-xs text-gold hover:text-gold/80">
                                 Voir tous
@@ -104,32 +174,11 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
                     )}
                 </div>
             </CardHeader>
-            <CardContent className="p-0">
-                {/* Affichage en ligne horizontale : chaque spectacle sur une seule ligne dense */}
-                <div className="divide-y">
+            <CardContent>
+                {/* Grille 2 colonnes desktop, 1 colonne mobile */}
+                <div className="grid gap-3 sm:grid-cols-2">
                     {displayedShows.map((show) => (
-                        <div
-                            key={show.id}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors"
-                        >
-                            <div className="flex items-center gap-3 min-w-0">
-                                <h4 className="font-medium text-sm text-derviche-dark truncate">
-                                    {show.title}
-                                </h4>
-                                <span className="text-xs text-muted-foreground shrink-0">
-                                    {show.total_slots} repré{show.total_slots > 1 ? 's' : ''} · {show.total_reservations} résa{show.total_reservations > 1 ? 's' : ''}
-                                </span>
-                            </div>
-                            <span className={`text-xs font-medium shrink-0 ml-3 ${
-                                show.status === 'published' ? 'text-green-600' :
-                                show.status === 'draft' ? 'text-yellow-600' :
-                                'text-muted-foreground'
-                            }`}>
-                                {show.status === 'published' ? 'Publié' :
-                                 show.status === 'draft' ? 'Brouillon' :
-                                 'Archivé'}
-                            </span>
-                        </div>
+                        <ShowMiniCard key={show.id} show={show} />
                     ))}
                 </div>
             </CardContent>
@@ -146,7 +195,26 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
 // ============================================
 
 export default function CompanyDashboardPage() {
-    const { data, isLoading, error, refresh } = useCompanyDashboard();
+    const {
+        data,
+        isLoading,
+        error,
+        refresh,
+        pastSlots,
+        isPastLoading,
+        pastError,
+        loadPastSlots,
+    } = useCompanyDashboard();
+
+    /** Bascule de la section Représentations : false = à venir, true = passées. */
+    const [showPast, setShowPast] = useState(false);
+
+    /** Wrapper stable pour éviter de re-déclencher le `useEffect` lazy
+     *  du composant à chaque rendu (audit Cursor D2). Le cache du hook
+     *  rend les appels supplémentaires no-op, mais on évite le bruit. */
+    const handleLoadPastSlots = useCallback(() => {
+        void loadPastSlots();
+    }, [loadPastSlots]);
 
     if (error && !isLoading) {
         return <ErrorState error={error} onRetry={() => void refresh()} />;
@@ -193,10 +261,17 @@ export default function CompanyDashboardPage() {
             {/* Spectacles — compact, pleine largeur */}
             <ShowsList shows={data?.shows} isLoading={isLoading} />
 
-            {/* Prochains créneaux — pleine largeur, peut être très long */}
+            {/* Représentations (à venir par défaut, switch pour voir les passées)
+                — pleine largeur, peut être très long */}
             <CompanyUpcomingSlots
                 slots={data?.upcomingSlots || []}
                 isLoading={isLoading}
+                pastSlots={pastSlots}
+                isPastLoading={isPastLoading}
+                pastError={pastError}
+                onLoadPastSlots={handleLoadPastSlots}
+                showPast={showPast}
+                onShowPastChange={setShowPast}
             />
         </div>
     );
