@@ -26,7 +26,7 @@ import {
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import type { AdminReservation } from '@/lib/services/admin-reservations';
 import { ReservationStatusBadge, ReservationCheckinBadge } from './reservation-badges';
-import { formatDateFr, formatDateTimeFr } from './reservation-helpers';
+import { formatDateFr, formatDateTimeFr, formatBookedByLabel } from './reservation-helpers';
 
 // ============================================
 // COMPOSANT RESERVATION CARD (MOBILE)
@@ -59,12 +59,9 @@ export function ReservationCard({ reservation, visibleColumns, onEdit }: Reserva
                 {isColumnVisible('lastName') && reservation.lastName}
               </h3>
             )}
-            {reservation.bookedByCompany && (
-              <p
-                className="text-[11px] text-muted-foreground italic truncate"
-                title={`Réservation saisie par la compagnie ${reservation.bookedByCompany.name}`}
-              >
-                Saisie par {reservation.bookedByCompany.name}
+            {showName && (
+              <p className="text-[11px] text-muted-foreground italic truncate">
+                {formatBookedByLabel(reservation.bookedBy)}
               </p>
             )}
             {isColumnVisible('email') && (

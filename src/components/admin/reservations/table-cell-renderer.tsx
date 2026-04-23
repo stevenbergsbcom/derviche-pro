@@ -9,7 +9,7 @@ import React from 'react';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import type { AdminReservation } from '@/lib/services/admin-reservations';
 import { ReservationStatusBadge, ReservationCheckinBadge } from './reservation-badges';
-import { formatDateFr, formatDateTimeFr } from './reservation-helpers';
+import { formatDateFr, formatDateTimeFr, formatBookedByLabel } from './reservation-helpers';
 
 /** Rendu d'une cellule du tableau selon la colonne */
 export function renderTableCell(col: ReservationColumn, r: AdminReservation): React.ReactNode {
@@ -44,14 +44,9 @@ export function renderTableCell(col: ReservationColumn, r: AdminReservation): Re
       return (
         <div className="flex flex-col">
           <span className="font-medium">{r.lastName}</span>
-          {r.bookedByCompany && (
-            <span
-              className="text-[11px] text-muted-foreground italic"
-              title={`Réservation saisie depuis le catalogue public par la compagnie ${r.bookedByCompany.name} (téléphone / demande pro)`}
-            >
-              Saisie par {r.bookedByCompany.name}
-            </span>
-          )}
+          <span className="text-[11px] text-muted-foreground italic">
+            {formatBookedByLabel(r.bookedBy)}
+          </span>
         </div>
       );
     case 'firstName':

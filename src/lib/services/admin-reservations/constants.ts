@@ -22,11 +22,20 @@ export const RESERVATION_SELECT_QUERY = `
     sent_by
   ),
   created_by:created_by_user_id (
+    first_name,
+    last_name,
     company_id,
     company:company_id (
       id,
       name
+    ),
+    user_roles (
+      role
     )
+  ),
+  booked_by:user_id (
+    first_name,
+    last_name
   ),
   slots!inner (
     id,
@@ -65,11 +74,20 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
     sent_by
   ),
   created_by:created_by_user_id (
+    first_name,
+    last_name,
     company_id,
     company:company_id (
       id,
       name
+    ),
+    user_roles (
+      role
     )
+  ),
+  booked_by:user_id (
+    first_name,
+    last_name
   ),
   slots (
     id,

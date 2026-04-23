@@ -4,6 +4,7 @@
  */
 
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
+import type { BookedBy } from '@/lib/services/admin-reservations';
 import {
   formatDateShortWeekday as formatDateFr,
   formatDateTimeFr,
@@ -127,4 +128,55 @@ export function getColumnSortState(col: SortableColumn, currentSort: SortOption 
   if (currentSort === mapping.asc) return 'asc';
   if (currentSort === mapping.desc) return 'desc';
   return null;
+}
+
+// ============================================
+// HELPER — LIBELLÉ « QUI A SAISI » (bookedBy)
+// ============================================
+
+/**
+ * Construit le libellé affiché en italique sous le nom du client dans la
+ * liste des réservations — cf. discussion session 200 (traçabilité 4 cas).
+ *
+ * Exemples de rendu :
+ *  - « Réservée en ligne (invité) »
+ *  - « Réservée en ligne par J. Dupont »
+ *  - « Saisie par la compagnie A Kan la dériv' »
+ *  - « Saisie par S. Berg (admin) »
+ *
+ * Si `firstName` est absent, on tombe sur « [LastName] » seul. Si les deux
+ * sont absents, on renvoie « un utilisateur inconnu » pour ne pas laisser
+ * un espace vide gênant dans l'UI.
+ */
+export function formatBookedByLabel(bookedBy: BookedBy): string {
+  switch (bookedBy.kind) {
+    case 'anonymous':
+      return 'Réservée en ligne (invité)';
+    case 'pro': {
+      const name = formatShortName(bookedBy.firstName, bookedBy.lastName);
+      return `Réservée en ligne par ${name}`;
+    }
+    case 'company':
+      return `Saisie par la compagnie ${bookedBy.name}`;
+    case 'admin': {
+      const name = formatShortName(bookedBy.firstName, bookedBy.lastName);
+      return `Saisie par ${name} (${bookedBy.role})`;
+    }
+    default: {
+      // Exhaustiveness check — si un nouveau kind est ajouté au type
+      // `BookedBy`, TypeScript forcera l'ajout d'un case ici.
+      const _exhaustive: never = bookedBy;
+      return String(_exhaustive);
+    }
+  }
+}
+
+/** `Jean Dupont` → `J. Dupont`. Fallback gracieux si l'un des deux manque. */
+function formatShortName(firstName: string | null, lastName: string | null): string {
+  const f = firstName?.trim();
+  const l = lastName?.trim();
+  if (f && l) return `${f.charAt(0).toUpperCase()}. ${l}`;
+  if (l) return l;
+  if (f) return f;
+  return 'un utilisateur inconnu';
 }
