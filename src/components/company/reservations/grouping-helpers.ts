@@ -29,7 +29,8 @@ const UNKNOWN_KEY = 'unknown';
  * (déjà chronologique grâce au tri service `slot_date_asc`).
  *
  * - Les réservations orphelines (slot null) sont regroupées sous la clé
- *   « unknown » en fin de liste pour ne pas casser le rendu.
+ *   « unknown », à la position de la première occurrence dans la liste
+ *   triée (Map JS préserve l'ordre d'insertion — pas forcément la fin).
  */
 export function groupReservationsBySlot(
   reservations: CompanyReservation[],

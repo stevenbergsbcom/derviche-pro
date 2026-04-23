@@ -30,6 +30,7 @@ export function formatRole(role: string): string {
     case 'externe': return 'Externe DD';
     case 'professional': return 'Professionnel·le';
     case 'company': return 'Compagnie';
+    case '__unknown__': return 'Rôle indisponible';
     default: return role;
   }
 }

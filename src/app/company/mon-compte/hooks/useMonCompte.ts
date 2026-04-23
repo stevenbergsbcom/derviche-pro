@@ -62,7 +62,10 @@ export function useMonCompte() {
       if (roleResult.error) {
         logger.error('[CompanyMonCompte] Erreur chargement rôle', roleResult.error);
       }
-      const role = roleResult.data?.role ?? 'company';
+      // Si la requête user_roles échoue, on affiche « Rôle indisponible »
+      // plutôt que d'assumer 'company' (l'UI ne doit pas mentir en cas
+      // d'anomalie DB).
+      const role = roleResult.data?.role ?? '__unknown__';
 
       const loaded: UserProfile = {
         id: profile.id,
@@ -194,6 +197,19 @@ export function useMonCompte() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: passwordData.currentPassword }),
       });
+
+      // Guard contre les réponses non-JSON (429, 500, HTML…) — évite
+      // un crash de `.json()` et donne un message clair selon le status.
+      if (!verifyResponse.ok) {
+        if (verifyResponse.status === 429) {
+          setPasswordError(
+            'Trop de tentatives. Réessayez dans quelques minutes.',
+          );
+        } else {
+          setPasswordError(`Erreur de vérification (HTTP ${verifyResponse.status})`);
+        }
+        return;
+      }
 
       const verifyResult = (await verifyResponse.json()) as {
         success: boolean;
