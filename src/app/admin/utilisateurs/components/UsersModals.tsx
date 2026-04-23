@@ -31,6 +31,7 @@ export function UsersModals({
   onViewToEdit,
   onViewToDelete,
   canDeleteViewing,
+  canEditViewing,
   // Delete Dialog
   userToDelete,
   onDeleteDialogChange,
@@ -59,6 +60,7 @@ export function UsersModals({
         onEdit={onViewToEdit}
         onDelete={onViewToDelete}
         canDelete={canDeleteViewing}
+        canEdit={canEditViewing}
       />
 
       {/* Confirmation de suppression */}

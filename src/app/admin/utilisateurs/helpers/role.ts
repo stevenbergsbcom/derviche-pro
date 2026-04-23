@@ -14,14 +14,39 @@ export function getRoleBadgeClass(role: ManagedRole): string {
 }
 
 /**
- * Vérifie si un utilisateur peut être supprimé
- * (on ne peut pas se supprimer soi-même)
+ * Vérifie si un utilisateur peut être supprimé par le viewer courant.
+ *
+ * Règles :
+ *  - On ne peut pas se supprimer soi-même
+ *  - Un admin (non super-admin) ne peut pas supprimer un super-admin
+ *    → la lecture est autorisée (migration 115) mais pas la suppression
+ *    (bloquée aussi côté API /api/admin/users/[userId] DELETE — defense-in-depth)
  */
 export function canDeleteUser(
-  user: ManagedUser, 
-  currentUserId: string | null
+  user: ManagedUser,
+  currentUserId: string | null,
+  currentUserRole: InternalRole | null = null,
 ): boolean {
-  return currentUserId !== user.id;
+  if (currentUserId === user.id) return false;
+  if (user.role === 'super-admin' && currentUserRole !== 'super-admin') return false;
+  return true;
+}
+
+/**
+ * Vérifie si un utilisateur peut être ÉDITÉ (profil / rôle) par le viewer.
+ *
+ * Règles :
+ *  - Un admin (non super-admin) ne peut pas modifier un super-admin
+ *    (on ne veut pas qu'un admin rétrograde un super-admin, ou touche à ses infos)
+ *  - Tout autre cas : autorisé (les contrôles fins sur le changement de rôle
+ *    `super-admin` sont déjà dans l'API PATCH + dans le RoleSelector côté UI)
+ */
+export function canEditUser(
+  user: ManagedUser,
+  currentUserRole: InternalRole | null,
+): boolean {
+  if (user.role === 'super-admin' && currentUserRole !== 'super-admin') return false;
+  return true;
 }
 
 /**

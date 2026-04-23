@@ -6,6 +6,7 @@
 export {
   getRoleBadgeClass,
   canDeleteUser,
+  canEditUser,
   canToggleUserStatus,
   isUserDisabled,
   isCurrentUser,
