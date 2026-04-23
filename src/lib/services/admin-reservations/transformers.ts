@@ -39,17 +39,22 @@ function detectMissingFields(row: ReservationRowWithRelations): string[] {
  * les jointures `created_by` / `booked_by` + le champ `source`.
  *
  * Règles (ordre de priorité) :
- *  1. `created_by` pointe vers un profil avec rôle admin/super-admin/externe
- *     OU `source === 'admin'` avec un `created_by` présent
+ *  1. Rôle explicite admin/super-admin/externe sur `created_by.user_roles`
  *     → kind: 'admin'
- *  2. `created_by` pointe vers un profil avec `company_id` renseigné
+ *  2. `source === 'admin'` avec `created_by` présent (fallback RLS) :
+ *     un viewer `admin` ne peut pas lire les lignes `user_roles` des
+ *     `super-admin` (policy `user_roles_select_admin`, migration 005).
+ *     Dans ce cas `role` est undefined mais on sait que c'est un
+ *     back-office → kind: 'admin' avec role générique.
+ *     → kind: 'admin'
+ *  3. `created_by` pointe vers un profil avec `company_id` renseigné
  *     → kind: 'company' (cf. migration 113)
- *  3. `booked_by` est renseigné (pro connecté qui a réservé pour lui-même)
+ *  4. `booked_by` est renseigné (pro connecté qui a réservé pour lui-même)
  *     → kind: 'pro'
- *  4. Sinon → kind: 'anonymous'
+ *  5. Sinon → kind: 'anonymous'
  *
- * NB : Supabase renvoie parfois `user_roles` en array (1:N PostgREST) alors
- * qu'on a une relation 1:1 → on normalise.
+ * NB : Supabase renvoie parfois `user_roles` / `company` en array (1:N
+ * PostgREST) alors qu'on a une relation 1:1 → on normalise.
  */
 function deriveBookedBy(row: ReservationRowWithRelations): BookedBy {
   const createdBy = row.created_by ?? null;
@@ -63,8 +68,7 @@ function deriveBookedBy(row: ReservationRowWithRelations): BookedBy {
   const companyRaw = createdBy?.company;
   const company = Array.isArray(companyRaw) ? companyRaw[0] : companyRaw;
 
-  // 1. Admin / super-admin / externe — back-office ou PWA walk-in
-  //    Priorité : rôle admin explicite OU source='admin' si pas d'autre info
+  // 1. Admin / super-admin / externe — rôle explicite lisible
   if (role && (role === 'super-admin' || role === 'admin' || role === 'externe')) {
     return {
       kind: 'admin',
@@ -74,12 +78,24 @@ function deriveBookedBy(row: ReservationRowWithRelations): BookedBy {
     };
   }
 
-  // 2. Compagnie — migration 113
+  // 2. Fallback back-office : source='admin' + created_by existe mais
+  //    user_roles non lisible (RLS). Classe en admin avec role générique
+  //    « back-office » pour éviter un faux-positif company/pro.
+  if (row.source === 'admin' && createdBy) {
+    return {
+      kind: 'admin',
+      firstName: createdBy.first_name ?? null,
+      lastName: createdBy.last_name ?? null,
+      role: 'back-office',
+    };
+  }
+
+  // 3. Compagnie — migration 113
   if (company && company.id && company.name) {
     return { kind: 'company', id: company.id, name: company.name };
   }
 
-  // 3. Pro connecté (user_id set, pas d'admin/compagnie ci-dessus)
+  // 4. Pro connecté (user_id set, pas d'admin/compagnie ci-dessus)
   if (bookedBy) {
     return {
       kind: 'pro',
@@ -88,7 +104,7 @@ function deriveBookedBy(row: ReservationRowWithRelations): BookedBy {
     };
   }
 
-  // 4. Visiteur anonyme
+  // 5. Visiteur anonyme
   return { kind: 'anonymous' };
 }
 

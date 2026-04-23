@@ -11,8 +11,29 @@ import type { AdminReservation } from '@/lib/services/admin-reservations';
 import { ReservationStatusBadge, ReservationCheckinBadge } from './reservation-badges';
 import { formatDateFr, formatDateTimeFr, formatBookedByLabel } from './reservation-helpers';
 
-/** Rendu d'une cellule du tableau selon la colonne */
-export function renderTableCell(col: ReservationColumn, r: AdminReservation): React.ReactNode {
+/**
+ * Rendu d'une cellule du tableau selon la colonne.
+ *
+ * @param visibleColumns Liste des colonnes visibles — permet au rendu de
+ *   placer la ligne italique « qui a saisi » sous la première colonne Nom/Prénom
+ *   visible (audit F.3 : si l'admin masque `lastName` mais affiche `firstName`,
+ *   la traçabilité doit basculer sous `firstName`).
+ */
+export function renderTableCell(
+  col: ReservationColumn,
+  r: AdminReservation,
+  visibleColumns?: ReservationColumn[],
+): React.ReactNode {
+  // La ligne italique « qui a saisi » apparaît sous la PREMIÈRE colonne
+  // de nom/prénom visible, pour ne pas disparaître si l'admin a masqué
+  // `lastName` (audit F.3). Par défaut elle reste sous `lastName`.
+  const showBookedByUnder: ReservationColumn | null = (() => {
+    if (!visibleColumns || visibleColumns.length === 0) return 'lastName';
+    if (visibleColumns.includes('lastName')) return 'lastName';
+    if (visibleColumns.includes('firstName')) return 'firstName';
+    return null;
+  })();
+
   switch (col) {
     case 'date':
       return r.slot ? (
@@ -44,13 +65,24 @@ export function renderTableCell(col: ReservationColumn, r: AdminReservation): Re
       return (
         <div className="flex flex-col">
           <span className="font-medium">{r.lastName}</span>
+          {showBookedByUnder === 'lastName' && (
+            <span className="text-[11px] text-muted-foreground italic">
+              {formatBookedByLabel(r.bookedBy)}
+            </span>
+          )}
+        </div>
+      );
+    case 'firstName':
+      return showBookedByUnder === 'firstName' ? (
+        <div className="flex flex-col">
+          <span>{r.firstName}</span>
           <span className="text-[11px] text-muted-foreground italic">
             {formatBookedByLabel(r.bookedBy)}
           </span>
         </div>
+      ) : (
+        r.firstName
       );
-    case 'firstName':
-      return r.firstName;
     case 'email':
       return <span className="text-sm">{r.email}</span>;
     case 'phone':

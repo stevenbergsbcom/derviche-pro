@@ -190,7 +190,7 @@ export function ReservationsContent({
                           key={col}
                           className="p-2 align-middle whitespace-nowrap"
                         >
-                          {renderTableCell(col, r)}
+                          {renderTableCell(col, r, columns)}
                         </td>
                       ))}
                     </tr>
