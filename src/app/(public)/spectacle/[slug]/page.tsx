@@ -112,6 +112,8 @@ export default function SpectacleDetailPage() {
                   activeStepNumber={booking.activeStepNumber}
                   isAdminRole={booking.isAdminRole}
                   isRoleLoading={booking.isRoleLoading}
+                  isCompanyMode={booking.isCompanyMode}
+                  companyName={booking.companyName}
                   isComingSoon={booking.isComingSoon}
                   currentMonth={booking.currentMonth}
                   calendarDays={booking.calendarDays}

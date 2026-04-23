@@ -21,6 +21,13 @@ export const RESERVATION_SELECT_QUERY = `
     sent_at,
     sent_by
   ),
+  created_by:created_by_user_id (
+    company_id,
+    company:company_id (
+      id,
+      name
+    )
+  ),
   slots!inner (
     id,
     date,
@@ -56,6 +63,13 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
     template_key,
     sent_at,
     sent_by
+  ),
+  created_by:created_by_user_id (
+    company_id,
+    company:company_id (
+      id,
+      name
+    )
   ),
   slots (
     id,

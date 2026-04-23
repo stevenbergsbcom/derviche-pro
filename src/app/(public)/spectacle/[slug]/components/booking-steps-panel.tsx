@@ -13,6 +13,7 @@ import type { TimeSlot, Step, ReservationFormData } from '../types';
 import type { PublicShow } from '@/lib/services/public-catalog';
 import {
   AdminBlockBanner,
+  CompanyBookingBanner,
   StepsIndicator,
   CalendarStep,
   TimeStep,
@@ -35,6 +36,10 @@ interface BookingStepsPanelProps {
   isAdminRole: boolean;
   /** Chargement du role en cours */
   isRoleLoading: boolean;
+  /** Mode compagnie : la réservation sera faite au nom d'un pro (migration 113). */
+  isCompanyMode: boolean;
+  /** Nom de la compagnie connectée (null si non chargée ou non applicable). */
+  companyName: string | null;
   /** Spectacle bientot reservable (pas encore de creneaux) */
   isComingSoon: boolean;
 
@@ -79,6 +84,8 @@ export function BookingStepsPanel({
   activeStepNumber,
   isAdminRole,
   isRoleLoading,
+  isCompanyMode,
+  companyName,
   isComingSoon,
   currentMonth,
   calendarDays,
@@ -105,6 +112,14 @@ export function BookingStepsPanel({
     <div className="p-6 md:p-8">
       {/* Bandeau d'alerte pour les admins */}
       <AdminBlockBanner isAdminRole={isAdminRole} isRoleLoading={isRoleLoading} />
+
+      {/* Bandeau info pour les compagnies connectées (mutuellement exclusif
+          avec le bandeau admin — un compte est admin OU company, jamais les
+          deux). Signale que la réservation sera faite en mode guest au nom
+          d'un professionnel (cf. migration 113). */}
+      {isCompanyMode && !isAdminRole && (
+        <CompanyBookingBanner companyName={companyName} isLoading={isRoleLoading} />
+      )}
 
       {/* Fil d'Ariane */}
       <StepsIndicator activeStepNumber={activeStepNumber} />
@@ -162,6 +177,7 @@ export function BookingStepsPanel({
             submitError={submitError}
             onFormDataChange={onFormDataChange}
             onSubmit={onSubmit}
+            isCompanyMode={isCompanyMode}
           />
         )}
       </div>

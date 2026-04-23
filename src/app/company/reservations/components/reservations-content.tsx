@@ -1,23 +1,17 @@
 /**
  * Composant ReservationsContent pour la page des réservations compagnie
- * Affiche : états loading/error/empty + table desktop + cards mobile
- * Structure identique à admin/reservations
- * Derviche Diffusion - Session 119
+ * Affiche : états loading/error/empty + vue groupée par représentation
+ * Derviche Diffusion - Session S198 (vue groupée)
  */
 
 'use client';
 
-import { memo } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { memo, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Users, Calendar, MapPin, User } from 'lucide-react';
-import {
-  type SortOption,
-  COLUMN_HEADERS,
-  SortableHeader,
-  renderTableCell,
-} from '@/components/company/reservations';
+import { Loader2, AlertTriangle, Users } from 'lucide-react';
+import { type SortOption } from '@/components/company/reservations';
+import { SlotGroup } from '@/components/company/reservations/slot-group';
+import { groupReservationsBySlot } from '@/components/company/reservations/grouping-helpers';
 import type { CompanyReservationColumn } from '@/hooks/useUserPreferences';
 import type { CompanyReservation } from '@/lib/services/company-reservations';
 
@@ -38,46 +32,11 @@ export interface ReservationsContentProps {
   error: string | null;
   /** Nombre de filtres actifs */
   activeFiltersCount: number;
-  
+
   // Handlers
   onRetry: () => void;
   onResetFilters: () => void;
   onSortChange: (sortBy: SortOption | undefined) => void;
-}
-
-// ============================================
-// CONSTANTES
-// ============================================
-
-/** Configuration des badges de statut */
-const STATUS_BADGE_CONFIG = {
-  confirmed: { label: 'Confirmée', variant: 'default' as const },
-  cancelled: { label: 'Annulée', variant: 'destructive' as const },
-  no_show: { label: 'No-show', variant: 'secondary' as const },
-} as const;
-
-/** Configuration des badges de check-in */
-const CHECKIN_BADGE_CONFIG: Record<string, { label: string; className: string }> = {
-  present_loved: { label: 'A aimé', className: 'bg-green-100 text-green-800' },
-  present_press: { label: 'Presse', className: 'bg-blue-100 text-blue-800' },
-  present_neutral: { label: 'Neutre', className: 'bg-gray-100 text-gray-800' },
-  absent: { label: 'Absent', className: 'bg-red-100 text-red-800' },
-} as const;
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Formate une date ISO en format court français
- */
-function formatShortDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '-';
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('fr-FR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
 }
 
 // ============================================
@@ -130,94 +89,6 @@ function EmptyState({ activeFiltersCount, onResetFilters }: EmptyStateProps) {
 }
 
 // ============================================
-// COMPOSANT : CARTE MOBILE
-// ============================================
-
-interface ReservationCardProps {
-  reservation: CompanyReservation;
-}
-
-function ReservationCard({ reservation }: ReservationCardProps) {
-  const status = STATUS_BADGE_CONFIG[reservation.status] || { 
-    label: reservation.status, 
-    variant: 'secondary' as const 
-  };
-  const checkin = reservation.checkinStatus 
-    ? CHECKIN_BADGE_CONFIG[reservation.checkinStatus] 
-    : null;
-
-  return (
-    <Card className={`${reservation.status === 'cancelled' ? 'opacity-60' : ''}`}>
-      <CardContent className="p-4 space-y-3">
-        {/* Ligne 1: Nom + badges */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <User className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
-            <span className="font-medium">
-              {reservation.firstName} {reservation.lastName}
-            </span>
-          </div>
-          <div className="flex gap-1 shrink-0">
-            <Badge variant={status.variant} className="text-xs">
-              {status.label}
-            </Badge>
-            {checkin && (
-              <Badge className={`text-xs ${checkin.className}`}>
-                {checkin.label}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Ligne 2: Spectacle */}
-        <div className="text-sm text-muted-foreground">
-          <strong className="text-foreground">{reservation.slot?.show?.title || '-'}</strong>
-        </div>
-
-        {/* Ligne 3: Date + Lieu */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" aria-hidden="true" />
-            {formatShortDate(reservation.slot?.date)}
-          </div>
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5" aria-hidden="true" />
-            {reservation.slot?.venue?.name || '-'}
-          </div>
-        </div>
-
-        {/* Ligne 4: Infos contact */}
-        <div className="text-xs text-muted-foreground space-y-0.5">
-          {reservation.organization && (
-            <p>{reservation.organization}</p>
-          )}
-          <p>{reservation.email}</p>
-          <p>{reservation.numPlaces} place{reservation.numPlaces > 1 ? 's' : ''}</p>
-        </div>
-
-        {/* Ligne 5: Demandes + notes (si renseignées) */}
-        {(reservation.specialRequests || reservation.checkinNotes || reservation.checkinVenueNotes || reservation.cancellationReason) && (
-          <div className="text-xs text-muted-foreground space-y-0.5 border-t border-border pt-2">
-            {reservation.specialRequests && (
-              <p><span className="font-medium text-foreground">Demandes :</span> {reservation.specialRequests}</p>
-            )}
-            {reservation.checkinNotes && (
-              <p><span className="font-medium text-foreground">Note check-in :</span> {reservation.checkinNotes}</p>
-            )}
-            {reservation.checkinVenueNotes && (
-              <p><span className="font-medium text-foreground">Note lieu :</span> {reservation.checkinVenueNotes}</p>
-            )}
-            {reservation.cancellationReason && (
-              <p><span className="font-medium text-foreground">Motif annulation :</span> {reservation.cancellationReason}</p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ============================================
 // COMPOSANT PRINCIPAL
 // ============================================
 
@@ -232,6 +103,10 @@ function ReservationsContentComponent({
   onResetFilters,
   onSortChange,
 }: ReservationsContentProps) {
+  // Groupement par représentation (slot) — côté client, zéro impact service.
+  // Ordre chronologique préservé car le service trie déjà par slot_date_asc.
+  const groups = useMemo(() => groupReservationsBySlot(reservations), [reservations]);
+
   // États spéciaux
   if (isLoading) {
     return <LoadingState />;
@@ -243,74 +118,26 @@ function ReservationsContentComponent({
 
   if (reservations.length === 0) {
     return (
-      <EmptyState 
-        activeFiltersCount={activeFiltersCount} 
-        onResetFilters={onResetFilters} 
+      <EmptyState
+        activeFiltersCount={activeFiltersCount}
+        onResetFilters={onResetFilters}
       />
     );
   }
 
   return (
-    <>
-      {/* Vue Cards (mobile) */}
-      <div className="space-y-3 lg:hidden">
-        {reservations.map((reservation) => (
-          <ReservationCard
-            key={reservation.id}
-            reservation={reservation}
-          />
-        ))}
-      </div>
-
-      {/* Vue Tableau (desktop) */}
-      <div className="hidden lg:block w-full overflow-hidden">
-        <Card className="py-0">
-          <CardContent className="p-0">
-            {/* overflow-x-auto uniquement — sticky thead + overflow-x-auto impossible en CSS pur (stacking context) */}
-              <div className="overflow-x-auto">
-              <table 
-                className="w-full caption-bottom text-sm"
-                aria-label="Tableau des réservations"
-              >
-                <thead className="[&_tr]:border-b bg-muted/80 border-b-2 border-border">
-                  <tr className="border-b transition-colors">
-                    {columns.map((col) => (
-                      <SortableHeader
-                        key={col}
-                        column={col}
-                        label={COLUMN_HEADERS[col]}
-                        currentSort={currentSort}
-                        onSort={onSortChange}
-                        className={col === 'numPlaces' ? 'text-center' : ''}
-                      />
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="[&_tr:last-child]:border-0">
-                  {reservations.map((r, index) => (
-                    <tr
-                      key={r.id}
-                      className={`border-b transition-colors hover:bg-muted/70 ${
-                        r.status === 'cancelled' ? 'opacity-60' : ''
-                      } ${index % 2 === 1 ? 'bg-muted/50' : ''}`}
-                    >
-                      {columns.map((col) => (
-                        <td
-                          key={col}
-                          className="p-2 align-middle whitespace-nowrap"
-                        >
-                          {renderTableCell(col, r)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+    <div className="space-y-4">
+      {groups.map((group) => (
+        <SlotGroup
+          key={group.key}
+          slot={group.slot}
+          reservations={group.items}
+          columns={columns}
+          currentSort={currentSort}
+          onSortChange={onSortChange}
+        />
+      ))}
+    </div>
   );
 }
 

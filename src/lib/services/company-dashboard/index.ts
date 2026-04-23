@@ -23,5 +23,6 @@ export {
   getCompanyShowsWithStats,
   getUpcomingSlots,
 } from './queries';
+export type { SlotRangeMode } from './queries';
 
 export { getCompanyDashboard } from './dashboard';

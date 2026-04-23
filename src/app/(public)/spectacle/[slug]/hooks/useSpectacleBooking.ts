@@ -13,6 +13,7 @@ import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
 import { createReservation, enrichUserProfile } from '@/lib/services/reservations';
 import { checkDuplicateReservation } from '@/lib/services/reservations-duplicate';
 import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import { getUserCompanyInfo, type UserCompanyInfo } from '@/lib/services/public-catalog';
 import { createClient } from '@/lib/supabase/client';
 import { formatDuration } from '@/lib/utils/shows';
 
@@ -45,6 +46,17 @@ export interface UseSpectacleBookingReturn {
   /** Role admin */
   isAdminRole: boolean;
   isRoleLoading: boolean;
+
+  /**
+   * Mode "réservation pour un professionnel" : actif quand le user connecté
+   * a le rôle `company`. Force l'affichage du bandeau info, désactive le
+   * pré-remplissage du formulaire et l'enrichissement de profil post-résa.
+   * Le backend (migration 113) force `user_id = NULL` + trace dans
+   * `created_by_user_id` en parallèle.
+   */
+  isCompanyMode: boolean;
+  /** Nom de la compagnie connectée (null tant que non chargé / non applicable). */
+  companyName: string | null;
 
   /** Etape courante */
   currentStep: Step;
@@ -118,8 +130,33 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
   // Hook Supabase pour charger le spectacle
   const { show, isLoading, notFound, error, refresh } = usePublicShow(slug);
 
-  // Hook pour detecter si l'utilisateur est un admin
-  const { isAdminRole, isLoading: isRoleLoading } = useCurrentUserRole();
+  // Hook pour detecter si l'utilisateur est un admin / une compagnie
+  const {
+    isAdminRole,
+    isCompanyRole,
+    isLoading: isRoleLoading,
+    user: currentUser,
+  } = useCurrentUserRole();
+
+  // Info compagnie (nom affiché dans le bandeau). Chargée uniquement quand
+  // on détecte un rôle `company` — évite un round-trip inutile autrement.
+  const [companyInfo, setCompanyInfo] = useState<UserCompanyInfo | null>(null);
+
+  useEffect(() => {
+    if (!isCompanyRole || !currentUser) {
+      setCompanyInfo(null);
+      return;
+    }
+    let cancelled = false;
+    void getUserCompanyInfo(currentUser.id).then((res) => {
+      if (!cancelled && res.data) setCompanyInfo(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isCompanyRole, currentUser]);
+
+  const isCompanyMode = isCompanyRole && !isAdminRole;
 
   // Convertir les slots Supabase en TimeSlots pour le calendrier
   const timeSlots = useMemo(() => {
@@ -183,8 +220,12 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
   }, [slug]);
 
   // Pre-remplissage du formulaire depuis le profil si l'utilisateur est connecte
+  // En mode compagnie (migration 113), on NE pré-remplit PAS : le formulaire
+  // doit rester vierge pour que la compagnie saisisse les coordonnées du
+  // professionnel pour qui elle réserve.
   useEffect(() => {
     if (currentStep !== 'form') return;
+    if (isCompanyMode) return;
 
     const prefillFromProfile = async () => {
       const supabase = createClient();
@@ -222,7 +263,7 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     };
 
     void prefillFromProfile();
-  }, [currentStep]);
+  }, [currentStep, isCompanyMode]);
 
   // Verifier si le spectacle est "bientot reservable"
   const isComingSoon =
@@ -416,8 +457,13 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
           email: formData.email,
         }).toString();
 
-      // Enrichir le profil si l'utilisateur est connecte (non-bloquant)
-      void enrichUserProfile(formData);
+      // Enrichir le profil si l'utilisateur est connecte (non-bloquant).
+      // ⚠ En mode compagnie (migration 113), on saute cet enrichissement :
+      // les données saisies appartiennent au professionnel, pas au compte
+      // compagnie — les écrire dans le profil compagnie serait incorrect.
+      if (!isCompanyMode) {
+        void enrichUserProfile(formData);
+      }
 
       // Envoyer l'email de confirmation (non-bloquant, keepalive pour survivre à la navigation)
       if (result.data) {
@@ -459,7 +505,7 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
       setSubmitError(message);
       setIsSubmitting(false);
     }
-  }, [selectedSlot, selectedDate, show, participantCount, formData, slug, router]);
+  }, [selectedSlot, selectedDate, show, participantCount, formData, slug, router, isCompanyMode]);
 
   // S184 : Gerer la soumission du formulaire avec detection de doublons
   const handleFormSubmit = useCallback(
@@ -520,6 +566,8 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     isMounted,
     isAdminRole,
     isRoleLoading,
+    isCompanyMode,
+    companyName: companyInfo?.name ?? null,
     currentStep,
     activeStepNumber,
     currentMonth,

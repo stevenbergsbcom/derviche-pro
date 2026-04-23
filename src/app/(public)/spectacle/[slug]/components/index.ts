@@ -5,6 +5,7 @@
 
 export { ImagePlaceholder } from './image-placeholder';
 export { AdminBlockBanner } from './admin-block-banner';
+export { CompanyBookingBanner } from './company-booking-banner';
 export { StepsIndicator } from './steps-indicator';
 export { CalendarStep } from './calendar-step';
 export { TimeStep } from './time-step';

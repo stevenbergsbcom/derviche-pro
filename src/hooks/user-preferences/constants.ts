@@ -120,12 +120,14 @@ export const DEFAULT_PROFESSIONAL_VISIBLE_COLUMNS: ProfessionalColumn[] = Object
 // CONSTANTES COMPAGNIE - COLONNES RESERVATIONS
 // ============================================
 
-/** Configuration des colonnes compagnie avec labels */
+/** Configuration des colonnes compagnie avec labels.
+ *  S198 : toutes les colonnes visibles par défaut — l'utilisateur décoche
+ *  celles qu'il ne veut pas dans le dialog de sélection des colonnes. */
 export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn, { label: string; defaultVisible: boolean }> = {
   // Infos reservation
   date: { label: 'Date', defaultVisible: true },
   spectacle: { label: 'Spectacle', defaultVisible: true },
-  venue: { label: 'Lieu', defaultVisible: false },
+  venue: { label: 'Lieu', defaultVisible: true },
   numPlaces: { label: 'Places', defaultVisible: true },
   status: { label: 'Statut', defaultVisible: true },
   checkinStatus: { label: 'Check-in', defaultVisible: true },
@@ -134,21 +136,21 @@ export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn
   lastName: { label: 'Nom', defaultVisible: true },
   firstName: { label: 'Prénom', defaultVisible: true },
   email: { label: 'Email', defaultVisible: true },
-  phone: { label: 'Téléphone', defaultVisible: false },
-  emailSecondary: { label: 'Email secondaire', defaultVisible: false },
-  phoneSecondary: { label: 'Tél. secondaire', defaultVisible: false },
+  phone: { label: 'Téléphone', defaultVisible: true },
+  emailSecondary: { label: 'Email secondaire', defaultVisible: true },
+  phoneSecondary: { label: 'Tél. secondaire', defaultVisible: true },
 
   // Infos professionnelles
-  organization: { label: 'Structure', defaultVisible: false },
-  function: { label: 'Fonction', defaultVisible: false },
-  afcNumber: { label: 'N° AFC', defaultVisible: false },
-  address: { label: 'Adresse', defaultVisible: false },
+  organization: { label: 'Structure', defaultVisible: true },
+  function: { label: 'Fonction', defaultVisible: true },
+  afcNumber: { label: 'N° AFC', defaultVisible: true },
+  address: { label: 'Adresse', defaultVisible: true },
 
   // Notes et metadonnees (SANS notes internes)
-  specialRequests: { label: 'Demandes', defaultVisible: false },
-  checkinNotes: { label: 'Notes accueil', defaultVisible: false },
-  checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
-  createdAt: { label: 'Créé le', defaultVisible: false },
+  specialRequests: { label: 'Demandes', defaultVisible: true },
+  checkinNotes: { label: 'Notes accueil', defaultVisible: true },
+  checkinVenueNotes: { label: 'Notes lieu', defaultVisible: true },
+  createdAt: { label: 'Créé le', defaultVisible: true },
 };
 
 /** Ordre d'affichage par defaut des colonnes compagnie */

@@ -106,12 +106,42 @@ export async function getAllCompanyReservationsForExport(
       }
     }
 
-    // Tri par date de représentation puis nom
-    // Note: slot_date col dénormalisée (migration 080) — .order({ referencedTable }) ne trie pas la table parente
-    query = query
-      .order('slot_date', { ascending: true })
-      .order('slot_time', { ascending: true })
-      .order('guest_last_name', { ascending: true });
+    // Tri aligné sur l'UI (filters.sortBy) — le fichier exporté reflète
+    // exactement l'ordre choisi à l'écran.
+    // Note: slot_date/slot_time dénormalisées (migration 080) — .order({ referencedTable })
+    // ne trie pas la table parente en Supabase JS.
+    // ⚠ Garder cette logique SYNCHRONE avec `list.ts` L116-144.
+    const sortBy = filters.sortBy || 'slot_date_asc';
+    switch (sortBy) {
+      case 'slot_date_asc':
+        query = query
+          .order('slot_date', { ascending: true })
+          .order('slot_time', { ascending: true })
+          .order('guest_last_name', { ascending: true });
+        break;
+      case 'slot_date_desc':
+        query = query
+          .order('slot_date', { ascending: false })
+          .order('slot_time', { ascending: false })
+          .order('guest_last_name', { ascending: true });
+        break;
+      case 'created_at_asc':
+        query = query.order('created_at', { ascending: true });
+        break;
+      case 'created_at_desc':
+        query = query.order('created_at', { ascending: false });
+        break;
+      case 'name_asc':
+        query = query
+          .order('guest_last_name', { ascending: true })
+          .order('guest_first_name', { ascending: true });
+        break;
+      case 'name_desc':
+        query = query
+          .order('guest_last_name', { ascending: false })
+          .order('guest_first_name', { ascending: false });
+        break;
+    }
 
     const { data, error } = await query;
 
