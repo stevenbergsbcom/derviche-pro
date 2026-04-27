@@ -18,6 +18,7 @@
 
 import { logger } from '@/lib/logger';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
+import { parisDateTimeToUtcMs } from '@/lib/utils/timezone';
 import type { EligibleReservation, ReminderConfig } from './types';
 import { getServiceClient } from './queries-utils';
 
@@ -32,6 +33,17 @@ import { getServiceClient } from './queries-utils';
  */
 function buildReservationCode(reservationId: string): string {
   return `DD-${reservationId.replace(/-/g, '').substring(0, 6).toUpperCase()}`;
+}
+
+/**
+ * Décale une date ISO `YYYY-MM-DD` de N jours (positif ou négatif).
+ * Utilisé pour élargir la fenêtre SQL côté `slots.date` afin de ne pas
+ * rater les slots de bord (ex: 01h00 Paris = veille 23h00 UTC).
+ */
+function shiftIsoDate(isoDate: string, days: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
 }
 
 /**
@@ -148,8 +160,15 @@ export async function getEligibleReservations(
   // Note : Supabase ne supporte pas nativement les filtres sur colonnes calculées
   // (date::timestamp + time::interval). On filtre d'abord par date approximative
   // côté SQL, puis on raffine côté JS pour la précision à la minute près.
-  const startDate = windowStart.split('T')[0]; // 'YYYY-MM-DD'
-  const endDate   = windowEnd.split('T')[0];   // 'YYYY-MM-DD'
+  //
+  // ⚠️ Élargissement défensif de la fenêtre SQL :
+  //   - `slots.date` est une wall-clock Paris (DATE sans tz)
+  //   - `windowStart`/`windowEnd` sont en UTC
+  //   - Un slot le mardi 01h00 Paris (= lundi 23h00 UTC) doit être détecté
+  //     même si la fenêtre UTC tombe sur le lundi
+  //   - On élargit donc d'1 jour de chaque côté ; le filtre précis est en JS.
+  const startDate = shiftIsoDate(windowStart.split('T')[0], -1);
+  const endDate   = shiftIsoDate(windowEnd.split('T')[0],    1);
 
   const { data: rawData, error: queryError } = await supabase
     .from('reservations')
@@ -218,12 +237,13 @@ export async function getEligibleReservations(
 
     if (!slot || !show || !venue) continue;
 
-    // Calculer le timestamp exact du créneau (UTC)
-    // Ex: date = "2026-03-10", time = "14:00:00" → "2026-03-10T14:00:00.000Z"
-    // On traite slots.date + slots.time comme du temps local Paris
-    // En attendant l'implémentation timezone complète, on compare en UTC naïf
-    const slotTimestamp = new Date(`${slot.date}T${slot.time}`).getTime();
-    if (isNaN(slotTimestamp)) continue;
+    // Calculer le timestamp UTC exact du créneau, en interprétant
+    // `slot.date` + `slot.time` comme une wall-clock Paris (CEST/CET).
+    // Avant le fix S199 : `new Date(...)` sans Z était traité comme UTC sur
+    // serveur Vercel → décalage 2h en été, 1h en hiver → rappels jamais
+    // déclenchés à la bonne heure (`eligible: 0` constant).
+    const slotTimestamp = parisDateTimeToUtcMs(slot.date, slot.time);
+    if (Number.isNaN(slotTimestamp)) continue;
 
     // Vérifier que le créneau est bien dans la fenêtre
     if (slotTimestamp < windowStartTs || slotTimestamp > windowEndTs) continue;
