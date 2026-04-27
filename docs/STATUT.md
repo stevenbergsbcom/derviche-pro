@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S197 — Documentation utilisateur intégrée `/admin/aide` — 17 avril 2026
+> Dernière mise à jour : Session S198 — Refacto routes email (factory helpers) — 23 avril 2026
 
 ---
 
@@ -1444,20 +1444,78 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S198 — Refacto routes email (factory helpers) ✅
+
+**Refacto de maintenabilité** : les 5 routes `/api/emails/send-*` (~2153 lignes dupliquées à 80 %) sont refactorées autour d'une couche helpers partagée `@/lib/services/email-routes`. Aucun changement de contrat API (mêmes payloads, mêmes réponses, même sécurité).
+
+**Nouveaux fichiers (8)** — `src/lib/services/email-routes/` (574 lignes) :
+- `index.ts` — barrel export des helpers publics
+- `types.ts` — types communs (`AdminClient`, `EmailRecipient`, `ManagerInfo`, `AuthorizeContext`, `EmailRouteAuthOptions`)
+- `rate-limit.ts` — `withEmailRateLimit(request, routeLabel)` wrappe rate-limit + log système
+- `reservation-loader.ts` — `resolveRecipient()`, `loadManager()`, `loadUserRole()`
+- `authorization.ts` — `authorizeEmailRouteAccess()` centralise les checks owner / full-admin / externe (hosted_by_id) / company (show.company_id)
+- `admin-notifications.ts` — `sendAdminNotificationsForEvent()` mutualise le pattern settings + manager + custom recipient (3 routes)
+- `calendar-sync.ts` — `maybeCreateCalendarEvent() / maybeUpdateCalendarEvent() / maybeDeleteCalendarEvent()` (non-bloquant)
+
+**Routes refactorisées (5)** :
+
+| Route | Avant | Après | Gain |
+|---|---|---|---|
+| `send-confirmation/route.ts` | 438 l | 278 l | -37 % |
+| `send-cancellation/route.ts` | 443 l | 322 l | -27 % |
+| `send-modification/route.ts` | 479 l | 356 l | -26 % |
+| `send-confirmation-by-id/route.ts` | 414 l | 319 l | -23 % |
+| `send-checkin-followup/route.ts` | 379 l | 313 l | -17 % |
+| **Total routes** | **2153** | **1588** | **-26 %** |
+
+**Bénéfice principal** : duplication éliminée. Avant, un bug de sécurité dans l'autorisation externe devait être corrigé dans 4 routes ; maintenant, un seul point de maintenance (`authorization.ts`). Idem pour les notifs manager/custom (3 → 1), les checks calendar (3 → 1), le chargement manager (5 → 1).
+
+**Changements de comportement mineurs (intentionnels)** :
+- `send-confirmation-by-id` et `send-checkin-followup` renvoient désormais **404** (au lieu de 403) lorsqu'un appelant non admin saisit un UUID de réservation inexistant. Le comportement est désormais aligné sur `send-cancellation` et `send-modification` qui chargeaient déjà la réservation avant de valider le rôle. Les réservations étant identifiées par UUID (non énumérable), l'information fuitée est négligeable.
+- `send-confirmation` consolide 3 requêtes DB redondantes en 1 seule requête de chargement (mêmes colonnes sélectionnées globalement).
+
+**Migration vers `createAdminClient`** : les 5 routes utilisaient un `createClient` inline avec check manuel de `SUPABASE_SERVICE_ROLE_KEY`. Elles passent maintenant par `createAdminClient()` (`@/lib/supabase/server-admin`) qui est déjà utilisé partout ailleurs dans le projet. Si la clé est absente, la fonction lève — capturée par le `try/catch` global qui renvoie 500 (comportement équivalent).
+
+**Audit post-livraison (Cursor)** :
+- 🟠 Fixé : `profiles` en tableau (Supabase renvoie parfois un array pour une relation 1-1) non normalisé pour `phone` dans `send-cancellation`, `send-modification`, `send-confirmation-by-id`. Impact : téléphone absent dans la notif admin email lorsque Supabase renvoie `profiles` en tableau. Corrigé via un nouveau helper `resolveProfile(reservation)` exporté depuis `@/lib/services/email-routes`.
+- 🟡 Fixé : `venueCity` dans la construction de l'événement Google Calendar pour `send-confirmation` n'appliquait pas le fallback `venue?.city ?? payload.venueCity` (seule la branche notif admin le faisait). Aligné pour robustesse.
+- 🟡 Fixé : commentaire d'en-tête de `rate-limit.ts` annonçait « 4 routes email protégées par rate-limit » alors que les 5 routes le sont. Corrigé → « 5 routes ».
+- 🟡 Ajout : commentaire explicatif dans `send-confirmation-by-id` sur l'asymétrie intentionnelle (notif in-app en fin de flux, contrairement à `send-confirmation` qui la crée avant l'envoi email). Comportement préservé de l'existant, mais rendu explicite.
+- **Non régressions confirmées** (Cursor) : ordre full-admin → owner → externe → company dans `authorizeEmailRouteAccess`, check strict `hostedById && hostedById === userId` (pas de faux positif null === null), check company avec les deux IDs non-null obligatoires, rate-limit appliqué sur les 5 routes, 404 vs 403 aligné sur l'intention.
+
+**Vérifications** :
+- ✅ `npm run lint` (--max-warnings 0)
+- ✅ `npm run type-check`
+- ✅ `npm run build` (88 pages, compilation OK) — post-fix audit
+
+**Hors scope** :
+- Tests unitaires (aucun dans le projet)
+- Modifications dans `src/lib/services/email/` (builders HTML déjà bien structurés)
+- Extraction des schémas Zod en module partagé (chaque route a son schéma propre, peu de recouvrement réel)
+- Réalignement du moment où la notif in-app est créée dans `send-confirmation-by-id` (préserverait les invariants mais changerait le comportement — reporté)
+
+---
+
 ## Backlog / TODO
 
-### Prochaine session : S198 — à définir
+### Prochaine session : S199 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
 |---|----------------|-----------|--------|
 | 1 | **V2 Documentation** : 46 articles MDX restants + captures d'écran + Sheet contextuel depuis pages admin | Moyenne | UX |
 | 2 | Barrel exports manquants (21 dossiers) | Faible | DX |
-| 3 | Factorisation hooks (useAdminReservations / useCompanyReservations) | Moyenne | Maintenabilité |
-| 4 | Factory email routes (5 routes dupliquées) | Moyenne | Maintenabilité |
-| 5 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
-| 6 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
-| 7 | Hook pre-push / GitHub Action d'enforcement automatique de la règle MAJ doc | Faible | Fiabilité |
+| 3 | Refacto audit #4 — `GenericViewDialog` (user/company/professional view dialogs) | Moyenne | Maintenabilité |
+| 4 | Refacto audit #2 — split `useSpectacleBooking` (609 l → 3 sous-hooks) | Élevée | Testabilité |
+| 5 | Refacto audit #3 — split `admin/reservations/page.tsx` (534 l, 30 états) | Moyenne | Maintenabilité |
+| 6 | Refacto audit #5 — split `useAdminReservations` (queries / actions / stats / export) | Élevée | Clarté |
+| 7 | Factory `useCrudResource<T>` (remplace `useSpectacleCrud`, `useSlotCrud`, `useCompaniesCrud`) | Moyenne | Maintenabilité |
+| 8 | Factory `useAppSetting(key, schema)` (remplace 10 hooks settings) | Faible | DX |
+| 9 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
+| 10 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
+| 11 | Hook pre-push / GitHub Action d'enforcement automatique de la règle MAJ doc | Faible | Fiabilité |
+
+> **Note** : le backlog ci-dessus a été réorganisé après l'audit de refacto S198. L'ancien item « Factory email routes » (#4) est terminé.
 
 ### Template fin de session (obligatoire)
 

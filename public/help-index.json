@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-23T08:12:54.469Z",
+  "generatedAt": "2026-04-23T13:50:00.420Z",
   "count": 34,
   "articles": [
     {
@@ -246,10 +246,20 @@
         "utilisateur",
         "compte",
         "contact",
-        "logo"
+        "logo",
+        "tableau de bord",
+        "représentations passées",
+        "historique",
+        "switch",
+        "lazy",
+        "actualiser",
+        "téléphone",
+        "réserver pour un professionnel",
+        "saisir",
+        "catalogue public"
       ],
       "excerpt": "Les compagnies sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique. Accéder à la liste Compagnies dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateu",
-      "body": "Les compagnies sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique. Accéder à la liste Compagnies dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateur lié. Créer une compagnie Bouton « Nouvelle compagnie ». Champs : Nom (obligatoire) Ville / Localité Email principal Logo (upload) Contact : nom, email, téléphone Lier un compte utilisateur à une compagnie Une compagnie peut avoir un compte company qui lui permet de : Consulter les statistiques de ses spectacles Faire le check-in si le créneau a hosted_by = 'company' Sur la fiche compagnie, section « Compte utilisateur » : Créer un nouveau compte (email + mot de passe initial) Associer un utilisateur existant (liste déroulante) Retirer l'accès (supprime la liaison sans détruire le compte ni la compagnie) Un utilisateur company doit avoir une compagnie liée. Un trigger en base empêche la suppression de la liaison si le rôle reste company. Modifier une compagnie Clic sur la ligne → édition. Les modifications se répercutent sur toutes les fiches spectacles liées (nom, logo). Supprimer une compagnie Impossible si la compagnie a au moins un spectacle. Archivez ou réassignez d'abord les spectacles. Ce que voit la compagnie dans son espace Quand la compagnie se connecte avec son compte company, elle accède à /company/reservations — la liste de ses réservations. Depuis S198, cette liste est regroupée par représentation : chaque créneau (spectacle + date + heure + lieu) devient une carte avec son propre sous-tableau de réservations. Pratique pour scanner rapidement les listes d'invités d'une tournée. Les notes internes Derviche restent invisibles pour la compagnie, même avec cette nouvelle présentation — seules les notes d'accueil et les notes lieu apparaissent. Le tableau de bord compagnie a aussi été densifié en S198 : « Mes spectacles » passe en grille 2 colonnes avec miniature d'image, compteurs, badge statut et alerte ambrée si aucun"
+      "body": "Les compagnies sont les troupes artistiques qui créent les spectacles que vous diffusez. Chaque spectacle est lié à une compagnie unique. Accéder à la liste Compagnies dans la sidebar → liste avec logo, nom, nombre de spectacles, utilisateur lié. Créer une compagnie Bouton « Nouvelle compagnie ». Champs : Nom (obligatoire) Ville / Localité Email principal Logo (upload) Contact : nom, email, téléphone Lier un compte utilisateur à une compagnie Une compagnie peut avoir un compte company qui lui permet de : Consulter les statistiques de ses spectacles Faire le check-in si le créneau a hostedby = 'company' Sur la fiche compagnie, section « Compte utilisateur » : Créer un nouveau compte (email + mot de passe initial) Associer un utilisateur existant (liste déroulante) Retirer l'accès (supprime la liaison sans détruire le compte ni la compagnie) Un utilisateur company doit avoir une compagnie liée. Un trigger en base empêche la suppression de la liaison si le rôle reste company. Modifier une compagnie Clic sur la ligne → édition. Les modifications se répercutent sur toutes les fiches spectacles liées (nom, logo). Supprimer une compagnie Impossible si la compagnie a au moins un spectacle. Archivez ou réassignez d'abord les spectacles. Ce que voit la compagnie dans son espace Quand la compagnie se connecte avec son compte company, elle accède à /company/reservations — la liste de ses réservations. Depuis S198, cette liste est regroupée par représentation : chaque créneau (spectacle + date + heure + lieu) devient une carte avec son propre sous-tableau de réservations. Pratique pour scanner rapidement les listes d'invités d'une tournée. Les notes internes Derviche restent invisibles pour la compagnie, même avec cette nouvelle présentation — seules les notes d'accueil et les notes lieu apparaissent. Le tableau de bord compagnie a aussi été densifié en S198 : « Mes spectacles » passe en grille 2 colonnes avec miniature d'image, compteurs, badge statut et alerte ambrée si aucune"
     },
     {
       "slug": "emails/vue-ensemble",

@@ -12,37 +12,40 @@
  * - Rate limiting : 20 req / 1h par IP (anti-spam emails)
  * - Validation du payload entrant (Zod)
  * - Vérification que l'utilisateur connecté est bien lié à la réservation
- *   (propriétaire, ou admin/super-admin)
+ *   (propriétaire, admin, super-admin, ou externe assigné au spectacle)
  * - La clé API Resend reste côté serveur
- * - Vérification des préférences de notification admin avant envoi
+ *
+ * Refacto S198 : factorisation via `@/lib/services/email-routes`.
  */
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server-admin';
 import {
   sendReservationCancellationEmail,
-  sendAdminNotificationEmail,
   type ReservationCancellationEmailData,
-  type AdminNotificationEmailData,
 } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
-import { deleteCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
-import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
-import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
-import type { UserRole } from '@/types/database';
 import {
   errorResponse,
   successResponse,
   unauthorizedResponse,
-  forbiddenResponse,
   notFoundResponse,
   serverErrorResponse,
 } from '@/lib/api';
+import {
+  withEmailRateLimit,
+  resolveRecipient,
+  resolveProfile,
+  loadManager,
+  loadUserRole,
+  authorizeEmailRouteAccess,
+  sendAdminNotificationsForEvent,
+  maybeDeleteCalendarEvent,
+} from '@/lib/services/email-routes';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -52,8 +55,6 @@ const sendCancellationSchema = z.object({
   reservationId: z.string().uuid('ID de réservation invalide'),
   syncCalendar: z.boolean().optional().default(true),
 });
-
-type SendCancellationPayload = z.infer<typeof sendCancellationSchema>;
 
 // ============================================
 // TYPES INTERNES
@@ -83,6 +84,7 @@ interface ReservationWithDetails {
   slots: {
     date: string;
     time: string;
+    hosted_by_id: string | null;
     venues: {
       name: string;
       city: string;
@@ -98,6 +100,8 @@ interface ReservationWithDetails {
   };
 }
 
+const ROUTE = '[API /emails/send-cancellation]';
+
 // ============================================
 // ROUTE HANDLER
 // ============================================
@@ -105,50 +109,33 @@ interface ReservationWithDetails {
 export async function POST(request: Request): Promise<NextResponse> {
   try {
     // 0. Rate limiting (anti-spam emails)
-    const rl = await checkRateLimit('emails', request);
-    if (!rl.success) {
-      void logSystem('rate_limit_blocked', 'warning', {
-        route: '/api/emails/send-cancellation',
-        identifier: rl.identifier,
-        limit: rl.limit,
-      });
-      return rateLimitResponse(rl);
-    }
+    const limited = await withEmailRateLimit(request, '/api/emails/send-cancellation');
+    if (limited) return limited;
 
     // 1. Parser et valider le body
     const rawBody: unknown = await request.json();
     const parseResult = sendCancellationSchema.safeParse(rawBody);
 
     if (!parseResult.success) {
-      logger.warn('[API /emails/send-cancellation] Payload invalide', {
-        errors: parseResult.error.flatten(),
-      });
+      logger.warn(`${ROUTE} Payload invalide`, { errors: parseResult.error.flatten() });
       return errorResponse('Données invalides');
     }
+    const payload = parseResult.data;
 
-    const payload: SendCancellationPayload = parseResult.data;
-
-    // 2. Vérifier l'authentification de l'utilisateur
+    // 2. Authentification de l'utilisateur courant
     const userClient = await createServerClient();
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser();
     if (authError || !user) {
-      logger.warn('[API /emails/send-cancellation] Utilisateur non authentifié');
+      logger.warn(`${ROUTE} Utilisateur non authentifié`);
       return unauthorizedResponse();
     }
 
-    // 3. Initialiser le client service role pour récupérer toutes les données
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      logger.error('[API /emails/send-cancellation] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return serverErrorResponse('Configuration serveur manquante');
-    }
+    // 3. Admin client + chargement de la réservation
+    const adminClient = createAdminClient();
 
-    const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // 4. Récupérer la réservation avec tous les détails nécessaires
     const { data: reservationRaw, error: reservationError } = await adminClient
       .from('reservations')
       .select(`
@@ -186,9 +173,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             title,
             slug,
             derviche_manager_id,
-            companies:company_id (
-              name
-            )
+            companies:company_id ( name )
           )
         )
       `)
@@ -196,103 +181,58 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     if (reservationError || !reservationRaw) {
-      logger.warn('[API /emails/send-cancellation] Réservation introuvable', {
+      logger.warn(`${ROUTE} Réservation introuvable`, {
         reservationId: payload.reservationId,
       });
       return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = reservationRaw as unknown as ReservationWithDetails;
+    const slots = reservation.slots;
+    const show = slots.shows;
+    const venue = slots.venues;
+    const company = show.companies;
 
-    // 5. Vérifier que l'utilisateur est autorisé (propriétaire ou admin)
-    const { data: userRoleData } = await adminClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = userRoleData?.role as UserRole | undefined;
-    const isFullAdmin = userRole === 'super-admin' || userRole === 'admin';
-    const isOwner = reservation.user_id === user.id;
-
-    if (!isFullAdmin && !isOwner && userRole !== 'externe') {
-      logger.warn('[API /emails/send-cancellation] Accès refusé', {
-        reservationId: payload.reservationId,
+    // 4. Autorisation — owner / full-admin / externe assigné
+    const userRole = await loadUserRole(adminClient, user.id);
+    const authError2 = await authorizeEmailRouteAccess(
+      adminClient,
+      {
         userId: user.id,
-      });
-      return forbiddenResponse('Accès refusé');
-    }
+        userRole,
+        reservationUserId: reservation.user_id,
+        hostedById: slots.hosted_by_id,
+      },
+      { allowOwner: true, allowFullAdmin: true, allowExterne: true },
+      ROUTE,
+    );
+    if (authError2) return authError2;
 
-    // 5b. Si externe : vérifier qu'il est assigné au spectacle via slots.hosted_by_id
-    if (userRole === 'externe' && !isOwner) {
-      const slotsData = reservation.slots as ReservationWithDetails['slots'];
-      const hostedById = (slotsData as unknown as { hosted_by_id: string | null }).hosted_by_id;
-
-      if (hostedById !== user.id) {
-        logger.warn('[API /emails/send-cancellation] Externe non assigné à ce spectacle', {
-          userId: user.id,
-          reservationId: payload.reservationId,
-        });
-        return forbiddenResponse('Accès refusé');
-      }
-    }
-
-    // 6. Vérifier que la réservation est bien annulée
+    // 5. Vérifier que la réservation est bien annulée
     if (reservation.status !== 'cancelled') {
-      logger.warn('[API /emails/send-cancellation] Réservation non annulée', {
+      logger.warn(`${ROUTE} Réservation non annulée`, {
         reservationId: payload.reservationId,
         status: reservation.status,
       });
-      return errorResponse('La réservation n\'est pas annulée', 422);
+      return errorResponse("La réservation n'est pas annulée", 422);
     }
 
-    // 7. Déterminer l'email et le nom du destinataire
-    const profileData = Array.isArray(reservation.profiles)
-      ? reservation.profiles[0]
-      : reservation.profiles;
-
-    const recipientEmail = reservation.guest_email ?? profileData?.email;
-    const recipientFirstName = reservation.guest_first_name ?? profileData?.first_name ?? '';
-    const recipientLastName = reservation.guest_last_name ?? profileData?.last_name ?? '';
-    const recipientFullName =
-      `${recipientFirstName} ${recipientLastName}`.trim() || 'Cher professionnel';
-
-    if (!recipientEmail) {
-      logger.warn('[API /emails/send-cancellation] Aucun email destinataire trouvé', {
+    // 6. Résoudre le destinataire
+    const recipient = resolveRecipient(reservation);
+    if (!recipient) {
+      logger.warn(`${ROUTE} Aucun email destinataire trouvé`, {
         reservationId: payload.reservationId,
       });
       return errorResponse('Email destinataire introuvable', 422);
     }
 
-    // 8. Récupérer les infos du manager Derviche (depuis shows.derviche_manager_id)
-    const slots = reservation.slots as ReservationWithDetails['slots'];
-    const show = slots.shows;
-    const venue = slots.venues;
-    const company = show.companies;
+    // 7. Manager Derviche
+    const manager = await loadManager(adminClient, show.derviche_manager_id);
 
-    let managerName: string | null = null;
-    let managerEmail: string | null = null;
-    let managerPhone: string | null = null;
-
-    if (show.derviche_manager_id) {
-      const { data: managerProfile } = await adminClient
-        .from('profiles')
-        .select('first_name, last_name, email, phone')
-        .eq('id', show.derviche_manager_id)
-        .maybeSingle();
-
-      if (managerProfile) {
-        managerName =
-          `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() || null;
-        managerEmail = managerProfile.email ?? null;
-        managerPhone = (managerProfile as { phone?: string | null }).phone ?? null;
-      }
-    }
-
-    // 9. Envoyer l'email d'annulation au professionnel
+    // 8. Envoi de l'email d'annulation au professionnel
     const cancellationData: ReservationCancellationEmailData = {
-      to: recipientEmail,
-      guestFullName: recipientFullName,
+      to: recipient.email,
+      guestFullName: recipient.fullName,
       reservationId: reservation.id,
       showTitle: show.title,
       showSlug: show.slug,
@@ -305,56 +245,35 @@ export async function POST(request: Request): Promise<NextResponse> {
       venuePostalCode: venue?.postal_code ?? null,
       numPlaces: reservation.num_places,
       cancellationReason: reservation.cancellation_reason,
-      managerName,
-      managerEmail,
-      managerPhone,
+      managerName: manager.name,
+      managerEmail: manager.email,
+      managerPhone: manager.phone,
     };
 
     const emailResult = await sendReservationCancellationEmail(cancellationData);
 
     if (!emailResult.success) {
-      logger.error('[API /emails/send-cancellation] Échec envoi email pro', {
+      logger.error(`${ROUTE} Échec envoi email pro`, {
         reservationId: payload.reservationId,
         error: emailResult.error,
       });
-      // On continue pour tenter les notifications admin
+      // On continue pour tenter les notifications admin.
     }
 
-    // 10. Vérifier les préférences de notification + envoyer aux destinataires configurés
-    const isBooleanSettingTrue = (val: unknown): boolean =>
-      val === true || val === 'true' || String(val) === 'true';
+    // 9. Notifications email admin (manager + custom recipient, non-bloquant)
+    // Normalisation défensive : Supabase peut renvoyer `profiles` en tableau
+    // pour une relation 1-1 selon le typage du select embed.
+    const profilePhone = resolveProfile(reservation)?.phone ?? null;
 
-    const { data: notifSettings } = await adminClient
-      .from('app_settings')
-      .select('key, value')
-      .in('key', [
-        'email_notification_cancellation',
-        'email_notification_send_to_manager',
-        'email_notification_custom_recipient',
-      ]);
-
-    const settingsMap = Object.fromEntries(
-      (notifSettings ?? []).map((s) => [s.key, s.value])
-    );
-
-    const notifEnabled = isBooleanSettingTrue(settingsMap.email_notification_cancellation);
-    const sendToManager = isBooleanSettingTrue(settingsMap.email_notification_send_to_manager ?? true);
-    const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
-      ? settingsMap.email_notification_custom_recipient.trim()
-      : '';
-
-    // 11. Notifier les destinataires configurés
-    if (notifEnabled && (sendToManager || customRecipient)) {
-      const profileData = reservation.profiles;
-      const guestPhone =
-        reservation.guest_phone ?? profileData?.phone ?? null;
-
-      const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
+    await sendAdminNotificationsForEvent({
+      adminClient,
+      eventSettingKey: 'email_notification_cancellation',
+      baseNotifData: {
         eventType: 'cancellation',
-        guestFullName: recipientFullName,
-        guestEmail: recipientEmail,
+        guestFullName: recipient.fullName,
+        guestEmail: recipient.email,
         guestStructure: reservation.guest_structure,
-        guestPhone,
+        guestPhone: reservation.guest_phone ?? profilePhone,
         guestFunction: reservation.guest_function,
         guestAfcNumber: reservation.guest_afc_number,
         userId: reservation.user_id,
@@ -370,66 +289,29 @@ export async function POST(request: Request): Promise<NextResponse> {
         specialRequests: reservation.special_requests,
         reservationId: reservation.id,
         cancellationReason: reservation.cancellation_reason,
-      };
+      },
+      managerEmail: manager.email,
+      managerName: manager.name,
+      routeLabel: ROUTE,
+    });
 
-      if (sendToManager && managerEmail) {
-        await sendAdminNotificationEmail({
-          ...baseNotifData,
-          to: managerEmail,
-          adminName: managerName ?? managerEmail,
-        }).catch((err) => {
-          logger.error('[API /emails/send-cancellation] Erreur notif manager', { managerEmail, err });
-        });
-      }
-
-      if (customRecipient) {
-        await sendAdminNotificationEmail({
-          ...baseNotifData,
-          to: customRecipient,
-          adminName: 'Administrateur',
-        }).catch((err) => {
-          logger.error('[API /emails/send-cancellation] Erreur notif adresse personnalisée', { customRecipient, err });
-        });
-      }
-    }
-
-    // 12. Supprimer l'événement Google Calendar (non-bloquant)
+    // 10. Suppression Google Calendar (non-bloquant)
     if (payload.syncCalendar) {
-      try {
-        const isBoolTrue = (v: unknown) => v === true || v === 'true';
-
-        const { data: calPref } = await adminClient
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'google_calendar_enabled')
-          .maybeSingle();
-
-        if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
-          const { data: notifPref } = await adminClient
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'google_calendar_notify_on_cancellation')
-            .maybeSingle();
-
-          await deleteCalendarEvent(
-            reservation.google_calendar_event_id,
-            isBoolTrue(notifPref?.value)
-          );
-        }
-      } catch (calErr) {
-        logger.error('[API /emails/send-cancellation] Exception Calendar (non-bloquant)', { calErr });
-      }
+      await maybeDeleteCalendarEvent({
+        adminClient,
+        googleCalendarEventId: reservation.google_calendar_event_id,
+        routeLabel: ROUTE,
+      });
     }
 
-    // 13. Créer la notification admin en base (badge sidebar)
-    // Non-bloquant : createAdminNotification gère ses propres erreurs
+    // 11. Notification admin in-app (badge sidebar) — non-bloquant
     await createAdminNotification({
       type: 'cancellation',
       reservation_id: reservation.id,
-      professional_name: recipientFullName,
+      professional_name: recipient.fullName,
       show_title: show.title,
       slot_date: `${slots.date}T${slots.time}`,
-      message: `${recipientFullName} a annulé sa réservation pour « ${show.title} »`,
+      message: `${recipient.fullName} a annulé sa réservation pour « ${show.title} »`,
     });
 
     return successResponse({
@@ -437,7 +319,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       messageId: emailResult.messageId,
     });
   } catch (err) {
-    logger.error('[API /emails/send-cancellation] Exception', { err });
+    logger.error(`${ROUTE} Exception`, { err });
     return serverErrorResponse();
   }
 }
