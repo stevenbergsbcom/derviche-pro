@@ -2,9 +2,9 @@
  * API Route - Envoi d'email de modification de créneau
  * POST /api/emails/send-modification
  *
- * Stratégie : le client envoie le reservationId + le newSlotId.
- * Le serveur récupère l'ancien créneau (depuis la réservation avant update),
- * le nouveau créneau, et envoie l'email au pro + notif manager si activée.
+ * Stratégie : le client envoie reservationId + oldSlotId.
+ * Le serveur récupère l'ancien créneau (snapshot), le nouveau créneau
+ * (déjà en DB), et envoie l'email au pro + notifs admin si activées.
  *
  * L'envoi est non-bloquant : un échec email ne fait pas échouer la modification.
  *
@@ -12,37 +12,40 @@
  * - Rate limiting : 20 req / 1h par IP (anti-spam emails)
  * - Validation du payload entrant (Zod)
  * - Vérification que l'utilisateur connecté est propriétaire de la réservation
- *   (ou admin/super-admin)
+ *   (ou admin/super-admin/externe assigné)
  * - La clé API Resend reste côté serveur
- * - Vérification des préférences de notification admin avant envoi
+ *
+ * Refacto S198 : factorisation via `@/lib/services/email-routes`.
  */
 
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server-admin';
 import {
   sendReservationModificationEmail,
-  sendAdminNotificationEmail,
   type ReservationModificationEmailData,
-  type AdminNotificationEmailData,
 } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
-import { updateCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
-import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
-import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
-import { logSystem } from '@/lib/services/logs';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
-import type { UserRole } from '@/types/database';
 import {
   errorResponse,
   successResponse,
   unauthorizedResponse,
-  forbiddenResponse,
   notFoundResponse,
   serverErrorResponse,
 } from '@/lib/api';
+import {
+  withEmailRateLimit,
+  resolveRecipient,
+  resolveProfile,
+  loadManager,
+  loadUserRole,
+  authorizeEmailRouteAccess,
+  sendAdminNotificationsForEvent,
+  maybeUpdateCalendarEvent,
+} from '@/lib/services/email-routes';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -53,8 +56,6 @@ const sendModificationSchema = z.object({
   oldSlotId: z.string().uuid('ID de créneau invalide'),
   syncCalendar: z.boolean().optional().default(true),
 });
-
-type SendModificationPayload = z.infer<typeof sendModificationSchema>;
 
 // ============================================
 // TYPES INTERNES
@@ -84,6 +85,7 @@ interface ReservationWithDetails {
     id: string;
     date: string;
     time: string;
+    hosted_by_id: string | null;
     venues: {
       name: string;
       city: string;
@@ -108,57 +110,42 @@ interface SlotDetails {
   venues: { name: string; city: string } | null;
 }
 
+const ROUTE = '[API /emails/send-modification]';
+
 // ============================================
 // ROUTE HANDLER
 // ============================================
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    // 0. Rate limiting (anti-spam emails)
-    const rl = await checkRateLimit('emails', request);
-    if (!rl.success) {
-      void logSystem('rate_limit_blocked', 'warning', {
-        route: '/api/emails/send-modification',
-        identifier: rl.identifier,
-        limit: rl.limit,
-      });
-      return rateLimitResponse(rl);
-    }
+    // 0. Rate limiting
+    const limited = await withEmailRateLimit(request, '/api/emails/send-modification');
+    if (limited) return limited;
 
-    // 1. Parser et valider le body
+    // 1. Validation payload
     const rawBody: unknown = await request.json();
     const parseResult = sendModificationSchema.safeParse(rawBody);
 
     if (!parseResult.success) {
-      logger.warn('[API /emails/send-modification] Payload invalide', {
-        errors: parseResult.error.flatten(),
-      });
+      logger.warn(`${ROUTE} Payload invalide`, { errors: parseResult.error.flatten() });
       return errorResponse('Données invalides');
     }
+    const payload = parseResult.data;
 
-    const payload: SendModificationPayload = parseResult.data;
-
-    // 2. Vérifier l'authentification
+    // 2. Authentification
     const userClient = await createServerClient();
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser();
     if (authError || !user) {
-      logger.warn('[API /emails/send-modification] Utilisateur non authentifié');
+      logger.warn(`${ROUTE} Utilisateur non authentifié`);
       return unauthorizedResponse();
     }
 
-    // 3. Client service role
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      logger.error('[API /emails/send-modification] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return serverErrorResponse('Configuration serveur manquante');
-    }
+    // 3. Admin client + chargement réservation (avec NOUVEAU créneau)
+    const adminClient = createAdminClient();
 
-    const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // 4. Récupérer la réservation avec le NOUVEAU créneau (déjà mis à jour en DB)
     const { data: reservationRaw, error: reservationError } = await adminClient
       .from('reservations')
       .select(`
@@ -198,9 +185,7 @@ export async function POST(request: Request): Promise<NextResponse> {
             duration_minutes,
             derviche_manager_id,
             derviche_site_url,
-            companies:company_id (
-              name
-            )
+            companies:company_id ( name )
           )
         )
       `)
@@ -208,48 +193,34 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     if (reservationError || !reservationRaw) {
-      logger.warn('[API /emails/send-modification] Réservation introuvable', {
+      logger.warn(`${ROUTE} Réservation introuvable`, {
         reservationId: payload.reservationId,
       });
       return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = reservationRaw as unknown as ReservationWithDetails;
+    const slots = reservation.slots;
+    const show = slots.shows;
+    const newVenue = slots.venues;
+    const company = show.companies;
 
-    // 5. Vérifier l'autorisation (propriétaire ou admin)
-    const { data: userRoleData } = await adminClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = userRoleData?.role as UserRole | undefined;
-    const isFullAdmin = userRole === 'super-admin' || userRole === 'admin';
-    const isOwner = reservation.user_id === user.id;
-
-    if (!isFullAdmin && !isOwner && userRole !== 'externe') {
-      logger.warn('[API /emails/send-modification] Accès refusé', {
-        reservationId: payload.reservationId,
+    // 4. Autorisation — owner / full-admin / externe assigné
+    const userRole = await loadUserRole(adminClient, user.id);
+    const accessDenied = await authorizeEmailRouteAccess(
+      adminClient,
+      {
         userId: user.id,
-      });
-      return forbiddenResponse('Accès refusé');
-    }
+        userRole,
+        reservationUserId: reservation.user_id,
+        hostedById: slots.hosted_by_id,
+      },
+      { allowOwner: true, allowFullAdmin: true, allowExterne: true },
+      ROUTE,
+    );
+    if (accessDenied) return accessDenied;
 
-    // 5b. Si externe : vérifier qu'il est assigné au spectacle via slots.hosted_by_id
-    if (userRole === 'externe' && !isOwner) {
-      const slotsData = reservation.slots as ReservationWithDetails['slots'];
-      const hostedById = (slotsData as unknown as { hosted_by_id: string | null }).hosted_by_id;
-
-      if (hostedById !== user.id) {
-        logger.warn('[API /emails/send-modification] Externe non assigné à ce spectacle', {
-          userId: user.id,
-          reservationId: payload.reservationId,
-        });
-        return forbiddenResponse('Accès refusé');
-      }
-    }
-
-    // 6. Récupérer l'ANCIEN créneau (avant modification)
+    // 5. Ancien créneau (snapshot)
     const { data: oldSlotRaw, error: oldSlotError } = await adminClient
       .from('slots')
       .select('id, date, time, venues(name, city)')
@@ -257,63 +228,28 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     if (oldSlotError || !oldSlotRaw) {
-      logger.warn('[API /emails/send-modification] Ancien créneau introuvable', {
-        oldSlotId: payload.oldSlotId,
-      });
+      logger.warn(`${ROUTE} Ancien créneau introuvable`, { oldSlotId: payload.oldSlotId });
       return notFoundResponse('Ancien créneau introuvable');
     }
 
     const oldSlot = oldSlotRaw as unknown as SlotDetails;
 
-    // 7. Déterminer le destinataire
-    const profileData = Array.isArray(reservation.profiles)
-      ? reservation.profiles[0]
-      : reservation.profiles;
-
-    const recipientEmail = reservation.guest_email ?? profileData?.email;
-    const recipientFirstName = reservation.guest_first_name ?? profileData?.first_name ?? '';
-    const recipientLastName = reservation.guest_last_name ?? profileData?.last_name ?? '';
-    const recipientFullName =
-      `${recipientFirstName} ${recipientLastName}`.trim() || 'Cher professionnel';
-
-    if (!recipientEmail) {
-      logger.warn('[API /emails/send-modification] Aucun email destinataire', {
+    // 6. Destinataire
+    const recipient = resolveRecipient(reservation);
+    if (!recipient) {
+      logger.warn(`${ROUTE} Aucun email destinataire`, {
         reservationId: payload.reservationId,
       });
       return errorResponse('Email destinataire introuvable', 422);
     }
 
-    // 8. Récupérer le manager Derviche
-    const slots = reservation.slots as ReservationWithDetails['slots'];
-    const show = slots.shows;
-    const newVenue = slots.venues;
-    const company = show.companies;
+    // 7. Manager
+    const manager = await loadManager(adminClient, show.derviche_manager_id);
 
-    let managerName: string | null = null;
-    let managerEmail: string | null = null;
-    let managerPhone: string | null = null;
-
-    // Requête unique pour toutes les infos du manager
-    if (show.derviche_manager_id) {
-      const { data: managerProfile } = await adminClient
-        .from('profiles')
-        .select('first_name, last_name, email, phone')
-        .eq('id', show.derviche_manager_id)
-        .maybeSingle();
-
-      if (managerProfile) {
-        managerName =
-          `${managerProfile.first_name ?? ''} ${managerProfile.last_name ?? ''}`.trim() || null;
-        managerEmail = managerProfile.email ?? null;
-        managerPhone = (managerProfile as { phone?: string | null }).phone ?? null;
-      }
-    }
-
-    // 9. Envoyer l'email de modification au professionnel
-
+    // 8. Envoi de l'email de modification
     const modificationData: ReservationModificationEmailData = {
-      to: recipientEmail,
-      guestFullName: recipientFullName,
+      to: recipient.email,
+      guestFullName: recipient.fullName,
       reservationId: reservation.id,
       showTitle: show.title,
       showSlug: show.slug,
@@ -328,53 +264,34 @@ export async function POST(request: Request): Promise<NextResponse> {
       venuePostalCode: newVenue?.postal_code ?? null,
       numPlaces: reservation.num_places,
       dervisheSiteUrl: show.derviche_site_url ?? null,
-      managerName:  managerName,
-      managerEmail: managerEmail,
-      managerPhone: managerPhone,
+      managerName: manager.name,
+      managerEmail: manager.email,
+      managerPhone: manager.phone,
     };
 
     const emailResult = await sendReservationModificationEmail(modificationData);
 
     if (!emailResult.success) {
-      logger.error('[API /emails/send-modification] Échec envoi email pro', {
+      logger.error(`${ROUTE} Échec envoi email pro`, {
         reservationId: payload.reservationId,
         error: emailResult.error,
       });
     }
 
-    // 10. Vérifier les préférences de notification + notifier les destinataires configurés
-    const isBooleanSettingTrue = (val: unknown): boolean =>
-      val === true || val === 'true' || String(val) === 'true';
+    // 9. Notifications email admin (manager + custom recipient, non-bloquant)
+    // Normalisation défensive : Supabase peut renvoyer `profiles` en tableau
+    // pour une relation 1-1 selon le typage du select embed.
+    const profilePhone = resolveProfile(reservation)?.phone ?? null;
 
-    const { data: notifSettings } = await adminClient
-      .from('app_settings')
-      .select('key, value')
-      .in('key', [
-        'email_notification_modification',
-        'email_notification_send_to_manager',
-        'email_notification_custom_recipient',
-      ]);
-
-    const settingsMap = Object.fromEntries(
-      (notifSettings ?? []).map((s) => [s.key, s.value])
-    );
-
-    const notifEnabled = isBooleanSettingTrue(settingsMap.email_notification_modification);
-    const sendToManager = isBooleanSettingTrue(settingsMap.email_notification_send_to_manager ?? true);
-    const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
-      ? settingsMap.email_notification_custom_recipient.trim()
-      : '';
-
-    if (notifEnabled && (sendToManager || customRecipient)) {
-      const guestPhone =
-        reservation.guest_phone ?? reservation.profiles?.phone ?? null;
-
-      const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
+    await sendAdminNotificationsForEvent({
+      adminClient,
+      eventSettingKey: 'email_notification_modification',
+      baseNotifData: {
         eventType: 'modification',
-        guestFullName: recipientFullName,
-        guestEmail: recipientEmail,
+        guestFullName: recipient.fullName,
+        guestEmail: recipient.email,
         guestStructure: reservation.guest_structure,
-        guestPhone,
+        guestPhone: reservation.guest_phone ?? profilePhone,
         guestFunction: reservation.guest_function,
         guestAfcNumber: reservation.guest_afc_number,
         userId: reservation.user_id,
@@ -389,83 +306,46 @@ export async function POST(request: Request): Promise<NextResponse> {
         numPlaces: reservation.num_places,
         specialRequests: reservation.special_requests,
         reservationId: reservation.id,
-      };
+      },
+      managerEmail: manager.email,
+      managerName: manager.name,
+      routeLabel: ROUTE,
+    });
 
-      if (sendToManager && managerEmail) {
-        await sendAdminNotificationEmail({
-          ...baseNotifData,
-          to: managerEmail,
-          adminName: managerName ?? managerEmail,
-        }).catch((err) => {
-          logger.error('[API /emails/send-modification] Erreur notif manager', { managerEmail, err });
-        });
-      }
-
-      if (customRecipient) {
-        await sendAdminNotificationEmail({
-          ...baseNotifData,
-          to: customRecipient,
-          adminName: 'Administrateur',
-        }).catch((err) => {
-          logger.error('[API /emails/send-modification] Erreur notif adresse personnalisée', { customRecipient, err });
-        });
-      }
-    }
-
-    // 11. Mettre à jour l'événement Google Calendar (non-bloquant)
+    // 10. Mise à jour Google Calendar (non-bloquant)
     if (payload.syncCalendar) {
-      try {
-        const isBoolTrue = (v: unknown) => v === true || v === 'true';
-
-        const { data: calPref } = await adminClient
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'google_calendar_enabled')
-          .maybeSingle();
-
-        if (isBoolTrue(calPref?.value) && reservation.google_calendar_event_id) {
-          const { data: notifPref } = await adminClient
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'google_calendar_notify_on_modification')
-            .maybeSingle();
-
-          await updateCalendarEvent(
-            reservation.google_calendar_event_id,
-            {
-              showTitle:             show.title,
-              guestFullName:         recipientFullName,
-              guestStructure:        reservation.guest_structure,
-              guestEmail:            recipientEmail,
-              reservationId:         reservation.id,
-              guestComment:          reservation.special_requests,
-              managerName,
-              managerPhone,
-              managerEmail,
-              numPlaces:             reservation.num_places,
-              slotDate:              slots.date,
-              slotTime:              slots.time,
-              durationMinutes:       show.duration_minutes,
-              venueName:             newVenue?.name ?? '',
-              venueCity:             newVenue?.city ?? '',
-              sendEmailNotification: isBoolTrue(notifPref?.value),
-            }
-          );
-        }
-      } catch (calErr) {
-        logger.error('[API /emails/send-modification] Exception Calendar (non-bloquant)', { calErr });
-      }
+      await maybeUpdateCalendarEvent({
+        adminClient,
+        googleCalendarEventId: reservation.google_calendar_event_id,
+        eventData: {
+          showTitle: show.title,
+          guestFullName: recipient.fullName,
+          guestStructure: reservation.guest_structure,
+          guestEmail: recipient.email,
+          reservationId: reservation.id,
+          guestComment: reservation.special_requests,
+          managerName: manager.name,
+          managerPhone: manager.phone,
+          managerEmail: manager.email,
+          numPlaces: reservation.num_places,
+          slotDate: slots.date,
+          slotTime: slots.time,
+          durationMinutes: show.duration_minutes,
+          venueName: newVenue?.name ?? '',
+          venueCity: newVenue?.city ?? '',
+        },
+        routeLabel: ROUTE,
+      });
     }
 
-    // 12. Créer la notification admin en base (badge sidebar)
-    // Non-bloquant : createAdminNotification gère ses propres erreurs
+    // 11. Notification admin in-app (badge sidebar) — non-bloquant
     await createAdminNotification({
       type: 'modification',
       reservation_id: reservation.id,
-      professional_name: recipientFullName,
+      professional_name: recipient.fullName,
       show_title: show.title,
       slot_date: `${slots.date}T${slots.time}`,
-      message: `${recipientFullName} a modifié son créneau pour « ${show.title} »`,
+      message: `${recipient.fullName} a modifié son créneau pour « ${show.title} »`,
     });
 
     return successResponse({
@@ -473,7 +353,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       messageId: emailResult.messageId,
     });
   } catch (err) {
-    logger.error('[API /emails/send-modification] Exception', { err });
+    logger.error(`${ROUTE} Exception`, { err });
     return serverErrorResponse();
   }
 }

@@ -6,9 +6,11 @@
  * le serveur récupère toutes les données nécessaires depuis la DB.
  *
  * Sécurité :
- * - Authentification requise (admin, super-admin ou externe)
+ * - Authentification requise (admin, super-admin ou externe assigné)
  * - Vérification rôle en base via service role
  * - Ne retourne jamais les détails techniques d'erreur au client
+ *
+ * Refacto S198 : factorisation via `@/lib/services/email-routes`.
  */
 
 import type { NextResponse } from 'next/server';
@@ -17,23 +19,25 @@ import {
   errorResponse,
   successResponse,
   unauthorizedResponse,
-  forbiddenResponse,
   notFoundResponse,
   serverErrorResponse,
 } from '@/lib/api';
-import { createClient } from '@supabase/supabase-js';
 import { createClient as createServerClient } from '@/lib/supabase/server';
-import {
-  sendReservationConfirmationEmail,
-  sendAdminNotificationEmail,
-  type AdminNotificationEmailData,
-} from '@/lib/services/email';
+import { createAdminClient } from '@/lib/supabase/server-admin';
+import { sendReservationConfirmationEmail } from '@/lib/services/email';
 import { createAdminNotification } from '@/lib/services/notifications';
-import { createCalendarEvent } from '@/lib/services/google-calendar';
 import { logger } from '@/lib/logger';
-import { NEXT_PUBLIC_SUPABASE_URL } from '@/lib/env';
 import { formatDateFr, formatTimeFr } from '@/lib/utils/format-date';
-import type { UserRole } from '@/types/database';
+import {
+  withEmailRateLimit,
+  resolveRecipient,
+  resolveProfile,
+  loadManager,
+  loadUserRole,
+  authorizeEmailRouteAccess,
+  sendAdminNotificationsForEvent,
+  maybeCreateCalendarEvent,
+} from '@/lib/services/email-routes';
 
 // ============================================
 // VALIDATION SCHEMA
@@ -61,10 +65,16 @@ interface ReservationFull {
   guest_afc_number: string | null;
   special_requests: string | null;
   user_id: string | null;
-  profiles: { email: string; first_name: string | null; last_name: string | null; phone: string | null } | null;
+  profiles: {
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+  } | null;
   slots: {
     date: string;
     time: string;
+    hosted_by_id: string | null;
     shows: {
       title: string;
       slug: string;
@@ -82,85 +92,42 @@ interface ReservationFull {
   };
 }
 
+const ROUTE = '[API /emails/send-confirmation-by-id]';
+
 // ============================================
 // ROUTE HANDLER
 // ============================================
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    // 1. Valider le body
+    // 0. Rate limiting
+    const limited = await withEmailRateLimit(
+      request,
+      '/api/emails/send-confirmation-by-id',
+    );
+    if (limited) return limited;
+
+    // 1. Validation payload
     const rawBody: unknown = await request.json();
     const parseResult = schema.safeParse(rawBody);
-
     if (!parseResult.success) {
       return errorResponse('Données invalides');
     }
-
     const { reservationId, syncCalendar, skipEmail } = parseResult.data;
 
-    // 2. Vérifier l'authentification
+    // 2. Authentification
     const userClient = await createServerClient();
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-
+    const {
+      data: { user },
+      error: authError,
+    } = await userClient.auth.getUser();
     if (authError || !user) {
       return unauthorizedResponse();
     }
 
-    // 3. Client service role
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-      logger.error('[API /emails/send-confirmation-by-id] SUPABASE_SERVICE_ROLE_KEY manquant');
-      return serverErrorResponse('Configuration serveur manquante');
-    }
+    // 3. Admin client + chargement de la réservation
+    const adminClient = createAdminClient();
 
-    const adminClient = createClient(NEXT_PUBLIC_SUPABASE_URL, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    // 4. Vérifier le rôle de l'utilisateur (admin, super-admin ou externe)
-    const { data: userRoleData } = await adminClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const userRole = userRoleData?.role as UserRole | undefined;
-    const isAuthorized =
-      userRole === 'super-admin' ||
-      userRole === 'admin' ||
-      userRole === 'externe';
-
-    if (!isAuthorized) {
-      return forbiddenResponse('Accès refusé');
-    }
-
-    // 5a. Si externe : vérifier qu'il est bien assigné au spectacle de cette réservation
-    if (userRole === 'externe') {
-      // Récupérer le show_id de la réservation via son slot
-      const { data: slotData } = await adminClient
-        .from('reservations')
-        .select('slots!inner ( show_id, hosted_by_id )')
-        .eq('id', reservationId)
-        .maybeSingle();
-
-      type SlotCheck = { show_id: string; hosted_by_id: string | null };
-      const rawSlot = (slotData as unknown as { slots: SlotCheck | SlotCheck[] }).slots;
-      const slot: SlotCheck | null = rawSlot
-        ? (Array.isArray(rawSlot) ? rawSlot[0] : rawSlot)
-        : null;
-
-      const isAssigned = slot?.hosted_by_id === user.id;
-
-      if (!isAssigned) {
-        logger.warn('[API /emails/send-confirmation-by-id] Externe non assigné à ce spectacle', {
-          userId: user.id,
-          reservationId,
-        });
-        return forbiddenResponse('Accès refusé');
-      }
-    }
-
-    // 5b. Récupérer la réservation complète
     const { data: raw, error: reservationError } = await adminClient
       .from('reservations')
       .select(`
@@ -184,6 +151,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         slots!inner (
           date,
           time,
+          hosted_by_id,
           shows!inner (
             title,
             slug,
@@ -199,59 +167,51 @@ export async function POST(request: Request): Promise<NextResponse> {
       .maybeSingle();
 
     if (reservationError || !raw) {
-      logger.warn('[API /emails/send-confirmation-by-id] Réservation introuvable', { reservationId });
+      logger.warn(`${ROUTE} Réservation introuvable`, { reservationId });
       return notFoundResponse('Réservation introuvable');
     }
 
     const reservation = raw as unknown as ReservationFull;
-
-    // 6. Déterminer le destinataire
-    const profileData = Array.isArray(reservation.profiles)
-      ? reservation.profiles[0]
-      : reservation.profiles;
-
-    const recipientEmail = reservation.guest_email ?? profileData?.email;
-    const recipientFirstName = reservation.guest_first_name ?? profileData?.first_name ?? '';
-    const recipientLastName = reservation.guest_last_name ?? profileData?.last_name ?? '';
-    const recipientFullName =
-      `${recipientFirstName} ${recipientLastName}`.trim() || 'Cher professionnel';
-
-    if (!recipientEmail) {
-      logger.warn('[API /emails/send-confirmation-by-id] Aucun email destinataire', { reservationId });
-      return errorResponse('Email destinataire introuvable', 422);
-    }
-
-    const slots = reservation.slots as ReservationFull['slots'];
+    const slots = reservation.slots;
     const show = slots.shows;
     const venue = slots.venues;
     const company = show.companies;
 
-    // 7. Récupérer le manager Derviche
-    let managerName: string | null = null;
-    let managerEmail: string | null = null;
-    let managerPhone: string | null = null;
+    // 4. Autorisation — full-admin ou externe assigné uniquement
+    //    (pas d'owner : cette route est spécifiquement pour les actions admin)
+    const userRole = await loadUserRole(adminClient, user.id);
+    const accessDenied = await authorizeEmailRouteAccess(
+      adminClient,
+      {
+        userId: user.id,
+        userRole,
+        reservationUserId: reservation.user_id,
+        hostedById: slots.hosted_by_id,
+      },
+      { allowFullAdmin: true, allowExterne: true },
+      ROUTE,
+    );
+    if (accessDenied) return accessDenied;
 
-    if (show.derviche_manager_id) {
-      const { data: mgr } = await adminClient
-        .from('profiles')
-        .select('first_name, last_name, email, phone')
-        .eq('id', show.derviche_manager_id)
-        .maybeSingle();
-
-      if (mgr) {
-        managerName = `${mgr.first_name ?? ''} ${mgr.last_name ?? ''}`.trim() || null;
-        managerEmail = mgr.email ?? null;
-        managerPhone = (mgr as unknown as { phone?: string | null }).phone ?? null;
-      }
+    // 5. Destinataire
+    const recipient = resolveRecipient(reservation);
+    if (!recipient) {
+      logger.warn(`${ROUTE} Aucun email destinataire`, { reservationId });
+      return errorResponse('Email destinataire introuvable', 422);
     }
 
-    // 8. Envoyer l'email de confirmation au professionnel (sauf si skipEmail)
-    let emailResult: { success: boolean; messageId?: string; error?: string } = { success: true };
+    // 6. Manager
+    const manager = await loadManager(adminClient, show.derviche_manager_id);
+
+    // 7. Envoi de l'email de confirmation (sauf si skipEmail)
+    let emailResult: { success: boolean; messageId?: string; error?: string } = {
+      success: true,
+    };
 
     if (!skipEmail) {
       emailResult = await sendReservationConfirmationEmail({
-        to: recipientEmail,
-        guestFullName: recipientFullName,
+        to: recipient.email,
+        guestFullName: recipient.fullName,
         reservationCode: reservation.id.slice(0, 8).toUpperCase(),
         reservationId: reservation.id,
         showTitle: show.title,
@@ -266,149 +226,102 @@ export async function POST(request: Request): Promise<NextResponse> {
         numPlaces: reservation.num_places,
         dervisheSiteUrl: show.derviche_site_url ?? null,
         userId: reservation.user_id,
-        managerName,
-        managerEmail,
-        managerPhone,
+        managerName: manager.name,
+        managerEmail: manager.email,
+        managerPhone: manager.phone,
       });
 
       if (!emailResult.success) {
-        logger.error('[API /emails/send-confirmation-by-id] Échec envoi', { reservationId, error: emailResult.error });
+        logger.error(`${ROUTE} Échec envoi`, {
+          reservationId,
+          error: emailResult.error,
+        });
       }
 
-      // 9. Notifier les destinataires configurés (si préférence activée)
-      try {
-        const isBoolTrue = (v: unknown) => v === true || v === 'true' || String(v) === 'true';
+      // 8. Notifications email admin (non-bloquant)
+      // Normalisation défensive : `profiles` peut être un tableau.
+      const profilePhone = resolveProfile(reservation)?.phone ?? null;
 
-        const { data: notifSettings } = await adminClient
-          .from('app_settings')
-          .select('key, value')
-          .in('key', [
-            'email_notification_new_reservation',
-            'email_notification_send_to_manager',
-            'email_notification_custom_recipient',
-          ]);
-
-        const settingsMap = Object.fromEntries(
-          (notifSettings ?? []).map((s) => [s.key, s.value])
-        );
-
-        const notifEnabled = isBoolTrue(settingsMap.email_notification_new_reservation);
-        const sendToManager = isBoolTrue(settingsMap.email_notification_send_to_manager ?? true);
-        const customRecipient = typeof settingsMap.email_notification_custom_recipient === 'string'
-          ? settingsMap.email_notification_custom_recipient.trim()
-          : '';
-
-        if (notifEnabled && (sendToManager || customRecipient)) {
-          // Téléphone : guest prioritaire, sinon profil compte pro.
-          const guestPhone =
-            reservation.guest_phone ??
-            (profileData as { phone?: string | null } | null | undefined)?.phone ??
-            null;
-
-          const baseNotifData: Omit<AdminNotificationEmailData, 'to' | 'adminName'> = {
-            eventType: 'new_reservation',
-            guestFullName: recipientFullName,
-            guestEmail: recipientEmail,
-            guestStructure: reservation.guest_structure,
-            guestPhone,
-            guestFunction: reservation.guest_function,
-            guestAfcNumber: reservation.guest_afc_number,
-            userId: reservation.user_id,
-            showTitle: show.title,
-            companyName: company?.name ?? '',
-            slotDateFormatted: formatDateFr(slots.date),
-            slotTimeFormatted: formatTimeFr(slots.time),
-            venueName: venue?.name ?? '',
-            venueCity: venue?.city ?? '',
-            venueAddress: venue?.address ?? null,
-            venuePostalCode: venue?.postal_code ?? null,
-            numPlaces: reservation.num_places,
-            specialRequests: reservation.special_requests,
-            reservationId: reservation.id,
-          };
-
-          if (sendToManager && managerEmail) {
-            await sendAdminNotificationEmail({
-              ...baseNotifData,
-              to: managerEmail,
-              adminName: managerName ?? managerEmail,
-            }).catch((err) => {
-              logger.error('[API /emails/send-confirmation-by-id] Erreur notif manager', { err });
-            });
-          }
-
-          if (customRecipient) {
-            await sendAdminNotificationEmail({
-              ...baseNotifData,
-              to: customRecipient,
-              adminName: 'Administrateur',
-            }).catch((err) => {
-              logger.error('[API /emails/send-confirmation-by-id] Erreur notif adresse personnalisée', { err });
-            });
-          }
-        }
-      } catch (notifErr) {
-        logger.error('[API /emails/send-confirmation-by-id] Exception notif (non-bloquant)', { notifErr });
-      }
+      await sendAdminNotificationsForEvent({
+        adminClient,
+        eventSettingKey: 'email_notification_new_reservation',
+        baseNotifData: {
+          eventType: 'new_reservation',
+          guestFullName: recipient.fullName,
+          guestEmail: recipient.email,
+          guestStructure: reservation.guest_structure,
+          guestPhone: reservation.guest_phone ?? profilePhone,
+          guestFunction: reservation.guest_function,
+          guestAfcNumber: reservation.guest_afc_number,
+          userId: reservation.user_id,
+          showTitle: show.title,
+          companyName: company?.name ?? '',
+          slotDateFormatted: formatDateFr(slots.date),
+          slotTimeFormatted: formatTimeFr(slots.time),
+          venueName: venue?.name ?? '',
+          venueCity: venue?.city ?? '',
+          venueAddress: venue?.address ?? null,
+          venuePostalCode: venue?.postal_code ?? null,
+          numPlaces: reservation.num_places,
+          specialRequests: reservation.special_requests,
+          reservationId: reservation.id,
+        },
+        managerEmail: manager.email,
+        managerName: manager.name,
+        routeLabel: ROUTE,
+      });
     }
 
-    // 10. Créer l'événement Google Calendar (non-bloquant)
+    // 9. Création Google Calendar (non-bloquant) — uniquement si on a bien
+    //    envoyé un email (pas en cas de skipEmail).
     if (syncCalendar && !skipEmail) {
-      try {
-        const isBoolTrue = (v: unknown) => v === true || v === 'true';
-
-        const { data: calPref } = await adminClient
-          .from('app_settings')
-          .select('value')
-          .eq('key', 'google_calendar_enabled')
-          .maybeSingle();
-
-        if (isBoolTrue(calPref?.value)) {
-          const calResult = await createCalendarEvent({
-            showTitle: show.title,
-            guestFullName: recipientFullName,
-            guestStructure: reservation.guest_structure,
-            guestEmail: recipientEmail,
-            reservationId: reservation.id,
-            guestComment: reservation.special_requests,
-            managerName,
-            managerPhone,
-            managerEmail,
-            numPlaces: reservation.num_places,
-            slotDate: slots.date,
-            slotTime: slots.time,
-            durationMinutes: show.duration_minutes,
-            venueName: venue?.name ?? '',
-            venueCity: venue?.city ?? '',
-            sendEmailNotification: true,
-          });
-
-          if (calResult.success) {
-            await adminClient
-              .from('reservations')
-              .update({ google_calendar_event_id: calResult.eventId })
-              .eq('id', reservation.id);
-          }
-        }
-      } catch (calErr) {
-        logger.error('[API /emails/send-confirmation-by-id] Exception Calendar (non-bloquant)', { calErr });
-      }
+      await maybeCreateCalendarEvent({
+        adminClient,
+        reservationId: reservation.id,
+        eventData: {
+          showTitle: show.title,
+          guestFullName: recipient.fullName,
+          guestStructure: reservation.guest_structure,
+          guestEmail: recipient.email,
+          reservationId: reservation.id,
+          guestComment: reservation.special_requests,
+          managerName: manager.name,
+          managerPhone: manager.phone,
+          managerEmail: manager.email,
+          numPlaces: reservation.num_places,
+          slotDate: slots.date,
+          slotTime: slots.time,
+          durationMinutes: show.duration_minutes,
+          venueName: venue?.name ?? '',
+          venueCity: venue?.city ?? '',
+          sendEmailNotification: true,
+        },
+        routeLabel: ROUTE,
+      });
     }
 
-    // 11. Notification admin en base (badge)
+    // 10. Notification admin in-app (badge sidebar) — non-bloquant
+    // NB : contrairement à `send-confirmation` qui crée la notif AVANT
+    // l'envoi email (pour garantir la trace même si Resend échoue),
+    // cette route historique la crée EN FIN de flux. Comportement
+    // préservé tel quel lors de la refacto S198 ; il est aussi créé
+    // lorsque skipEmail=true — c'est le comportement attendu côté admin
+    // (badge présent même si aucun mail n'est envoyé).
     await createAdminNotification({
       type: 'new_reservation',
       reservation_id: reservation.id,
-      professional_name: recipientFullName,
+      professional_name: recipient.fullName,
       show_title: show.title,
       slot_date: `${slots.date}T${slots.time}`,
-      message: `${recipientFullName} a réservé ${reservation.num_places} place(s) pour « ${show.title} »`,
+      message: `${recipient.fullName} a réservé ${reservation.num_places} place(s) pour « ${show.title} »`,
     });
 
-    return successResponse({ success: emailResult.success, messageId: emailResult.messageId });
-
+    return successResponse({
+      success: emailResult.success,
+      messageId: emailResult.messageId,
+    });
   } catch (err) {
-    logger.error('[API /emails/send-confirmation-by-id] Exception', { err });
+    logger.error(`${ROUTE} Exception`, { err });
     return serverErrorResponse();
   }
 }
