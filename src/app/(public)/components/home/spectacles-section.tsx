@@ -100,21 +100,37 @@ export function SpectaclesSection({ spectaclesSettings, spectacles }: Spectacles
     pointerStartX.current = e.clientX;
     pointerIdRef.current = e.pointerId;
     dragMovedRef.current = false;
-    setIsDragging(true);
     setDragOffset(0);
-    // Capture pour recevoir les pointermove/up même hors du track
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {
-      /* no-op */
-    }
+    // ⚠️ NE PAS appeler setPointerCapture ici.
+    // Spec W3C : « when a pointer is captured, the click event will only be
+    // dispatched to the capturing element (and any of its ancestors). »
+    // Si on capturait dès le pointerdown, un simple clic sur une card
+    // enverrait le `click` au carrousel parent au lieu du <Link> enfant —
+    // la navigation Next.js ne se déclenche jamais (bouton « Réserver ma
+    // place » non cliquable au clic gauche, mais OK en clic-droit > nouvel
+    // onglet car le menu contextuel ne dépend pas de l'event bubbling).
+    // → On capture seulement à partir du moment où le drag est confirmé,
+    //   dans handlePointerMove (cf. CLICK_CANCEL_THRESHOLD).
   }, []);
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (pointerStartX.current === null) return;
       const dx = e.clientX - pointerStartX.current;
-      if (Math.abs(dx) > CLICK_CANCEL_THRESHOLD) dragMovedRef.current = true;
+      if (Math.abs(dx) > CLICK_CANCEL_THRESHOLD) {
+        // Premier franchissement du seuil → on confirme le drag.
+        if (!dragMovedRef.current) {
+          dragMovedRef.current = true;
+          setIsDragging(true);
+          // Capture pour recevoir les pointermove/up même hors du track
+          // pendant le drag réel — sans casser le click pour les non-drags.
+          try {
+            e.currentTarget.setPointerCapture(e.pointerId);
+          } catch {
+            /* no-op */
+          }
+        }
+      }
       setDragOffset(dx);
     },
     [],
