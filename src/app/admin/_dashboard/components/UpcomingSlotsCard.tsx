@@ -30,12 +30,14 @@ function UpcomingSlotsCardComponent({
             {hasFullAccess ? 'Les 10 prochains créneaux' : 'Vos 10 prochains créneaux'}
           </CardDescription>
         </div>
-        <Link href="/admin/spectacles">
-          <Button variant="ghost" size="sm">
+        {/* Pattern asChild : évite <button> imbriqué dans <a> (HTML invalide
+            qui casse silencieusement le clic gauche sur certains navigateurs). */}
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/admin/spectacles">
             Voir tout
             <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </CardHeader>
       <CardContent>
         {isLoading ? (
