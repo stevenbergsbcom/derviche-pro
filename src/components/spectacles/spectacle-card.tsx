@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Drama } from 'lucide-react';
 import { formatTimeFr } from '@/lib/utils/format-date';
+import { cn } from '@/lib/utils';
 
 export type SpectacleStatus = 'available' | 'coming_soon' | 'closed';
 
@@ -154,19 +155,33 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
 
         {/* Bouton - pousse vers le bas avec mt-auto */}
         <div className="mt-auto">
-          <Button
-            className={`w-full font-medium ${isNotBookable
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                : 'bg-derviche-dark hover:bg-derviche text-white'
-              }`}
-            disabled={isNotBookable}
-          >
-            {isComingSoon 
-              ? 'Bientôt disponible' 
-              : isClosed 
-                ? 'Indisponible' 
-                : 'Réserver ma place'}
-          </Button>
+          {isNotBookable ? (
+            // Card non cliquable (rendue hors d'un <Link>) — vrai <button> désactivé
+            // pour conserver la sémantique d'accessibilité (focus, aria-disabled).
+            <Button
+              className="w-full font-medium bg-muted text-muted-foreground cursor-not-allowed"
+              disabled
+            >
+              {isComingSoon ? 'Bientôt disponible' : 'Indisponible'}
+            </Button>
+          ) : (
+            // Card wrappée dans un <Link> en aval. On NE PEUT PAS imbriquer
+            // un <button> dans un <a> (HTML invalide → Chrome n'event-bubble
+            // pas correctement le click → bouton « non cliquable » côté user
+            // mais OK en clic-droit > nouvel onglet). On rend donc un <span>
+            // stylé à l'identique ; le Link parent reçoit le click.
+            <span
+              role="button"
+              aria-label="Réserver ma place"
+              className={cn(
+                'inline-flex w-full h-9 items-center justify-center gap-2 rounded-md',
+                'px-4 py-2 text-sm font-medium transition-colors',
+                'bg-derviche-dark text-white group-hover:bg-derviche',
+              )}
+            >
+              Réserver ma place
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>

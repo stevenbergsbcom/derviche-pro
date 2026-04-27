@@ -165,12 +165,14 @@ function ShowsList({ shows, isLoading }: ShowsListProps) {
                         Mes spectacles
                     </CardTitle>
                     {shows.length > 6 && (
-                        <Link href="/company/spectacles">
-                            <Button variant="ghost" size="sm" className="gap-1 text-xs text-gold hover:text-gold/80">
+                        // Pattern asChild : évite <button> imbriqué dans <a>
+                        // (HTML invalide qui casse le clic gauche sur certains navigateurs).
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs text-gold hover:text-gold/80" asChild>
+                            <Link href="/company/spectacles">
                                 Voir tous
                                 <ArrowRight className="w-3 h-3" />
-                            </Button>
-                        </Link>
+                            </Link>
+                        </Button>
                     )}
                 </div>
             </CardHeader>
