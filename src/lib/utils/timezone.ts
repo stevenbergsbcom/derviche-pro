@@ -36,6 +36,23 @@ const PARIS_TZ = 'Europe/Paris';
  *
  *   parisDateTimeToUtcMs('2026-01-15', '19:00:00')
  *   // En CET (hiver UTC+1) : 18:00:00 UTC du 2026-01-15
+ *
+ * ## Edge cases DST (transitions été/hiver)
+ *
+ * **Trou DST (dernier dimanche de mars)** : 02:00-02:59 Paris n'existe pas
+ * (l'horloge saute directement à 03:00). Pour `time = '02:30'` ce jour-là,
+ * la fonction retourne une valeur déterministe (équivalent à 03:30 CEST),
+ * mais cette wall-clock est métier-invalide. La codebase n'autorise pas la
+ * création de slots à ces heures-là (les spectacles commencent typiquement
+ * entre 14h et 22h Paris), donc le risque opérationnel est nul.
+ *
+ * **Recouvrement DST (dernier dimanche d'octobre)** : 02:00-02:59 Paris
+ * existe deux fois (CEST puis CET). La fonction est déterministe — elle
+ * retourne l'instant CEST (première occurrence) à cause du parsage initial
+ * en « naive UTC ». Là encore, hors plage usuelle des slots.
+ *
+ * Si un jour le besoin métier inclut des slots dans ces plages, prévoir
+ * un paramètre explicite `disambiguation: 'first' | 'second' | 'reject'`.
  */
 export function parisDateTimeToUtcMs(date: string, time: string): number {
   if (!date || !time) return NaN;
