@@ -149,10 +149,24 @@ export async function sendReminderEmail(
     };
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : 'Exception inconnue';
-    logger.error('[reminders/send] Exception', {
+    logger.error('[reminders/send] Exception — libération du slot', {
       type,
       reservationId: data.reservationId,
       error: errMsg,
+    });
+    // Libérer le claim pour permettre un retry au prochain cron.
+    // Sans ça, la ligne sent_notifications resterait en `email_provider_id =
+    // 'pending'` et la réservation serait définitivement exclue d'`eligible`
+    // (cf. queries-fetch.ts L122-140 : alreadySentIds inclut tous les types,
+    // 'pending' ou non).
+    // releaseReminderClaim est lui-même résilient (try/catch interne), donc
+    // un échec ici n'aggrave pas la situation.
+    await releaseReminderClaim(data.reservationId, type).catch((releaseErr) => {
+      logger.error('[reminders/send] Échec libération du slot après exception', {
+        type,
+        reservationId: data.reservationId,
+        error: releaseErr instanceof Error ? releaseErr.message : String(releaseErr),
+      });
     });
     return {
       reservationId: data.reservationId,

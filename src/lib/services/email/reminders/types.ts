@@ -131,7 +131,14 @@ export interface EligibleReservation {
   slot_date_formatted: string;
   /** Heure formatée du créneau (ex: "14h30") */
   slot_time_formatted: string;
-  /** Timestamp UTC de début du créneau (pour filtrage) */
+  /**
+   * Wall-clock Paris du créneau, format `YYYY-MM-DDTHH:MM:SS` (sans offset).
+   * ⚠️ Ce N'EST PAS un timestamp UTC — c'est la concaténation brute des
+   * colonnes `slots.date` + `slots.time` (heure de Paris).
+   * Pour comparer à un instant UTC, utiliser `parisDateTimeToUtcMs(date, time)`
+   * depuis `@/lib/utils/timezone`. Champ informatif uniquement à ce jour
+   * (le filtrage est fait dans queries-fetch.ts via le timestamp UTC dérivé).
+   */
   slot_start_at: string;
   /** Nom du lieu */
   venue_name: string;
