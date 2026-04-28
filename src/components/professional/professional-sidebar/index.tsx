@@ -119,9 +119,11 @@ function ProfessionalSidebarComponent() {
       {/* Footer avec utilisateur */}
       <SidebarFooter className="border-t border-sidebar-border">
         <SidebarMenu>
-          {/* Lien "Voir le site" */}
+          {/* Lien externe — libellé adapté pour les pros :
+              renvoie vers le catalogue public, donc « Tous nos spectacles »
+              est plus parlant que le label par défaut « Voir la plateforme ». */}
           <SidebarMenuItem>
-            <SidebarExternalLink />
+            <SidebarExternalLink label="Tous nos spectacles" />
           </SidebarMenuItem>
 
           {/* Informations utilisateur */}
