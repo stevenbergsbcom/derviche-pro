@@ -138,12 +138,19 @@ export async function middleware(request: NextRequest) {
     }
 
     // Routes publiques (accessibles sans authentification)
+    // ⚠️ Le groupe `(public)` Next.js n'a AUCUN effet sur le middleware —
+    // toute nouvelle route publique doit être ajoutée explicitement ici
+    // (en path exact ou en préfixe ci-dessous).
     const publicRoutes = [
         '/',
         '/login',
         '/register',
         '/forgot-password',
         '/reset-password',
+        // Pages légales — obligatoirement accessibles à tous (même non connectés)
+        '/mentions-legales',
+        '/politique-confidentialite',
+        '/cgu',
     ];
 
     // Routes publiques avec préfixe (pour les sous-routes)
