@@ -6,7 +6,7 @@
  * calendrier, selection de creneau, participants, formulaire et soumission.
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { usePublicShow } from '@/hooks/usePublicShow';
 import { useCurrentUserRole } from '@/hooks/useCurrentUserRole';
@@ -25,6 +25,7 @@ import {
   getLastDayOfMonth,
   isSameDay,
   createDateKey,
+  isTimeSlotInPast,
 } from '../utils/calendar';
 
 // ============================================
@@ -96,6 +97,9 @@ export interface UseSpectacleBookingReturn {
   duplicateInfo: DuplicateCheckResult | null;
   showDuplicateDialog: boolean;
 
+  /** Confirmation « créneau passé » (heure du slot < maintenant). */
+  showPastSlotDialog: boolean;
+
   /** Handlers */
   handleDayClick: (date: Date | null) => void;
   handleSlotSelect: (slot: TimeSlot) => void;
@@ -106,6 +110,8 @@ export interface UseSpectacleBookingReturn {
   handleFormSubmit: (e: React.FormEvent) => Promise<void>;
   handleConfirmDuplicate: () => Promise<void>;
   handleCancelDuplicate: () => void;
+  handleConfirmPastSlot: () => Promise<void>;
+  handleCancelPastSlot: () => void;
   goToPreviousMonth: () => void;
   goToNextMonth: () => void;
   onImageError: () => void;
@@ -193,6 +199,13 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
   const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
+  // Confirmation « créneau passé » : si l'heure du slot sélectionné est
+  // antérieure à maintenant, on demande une confirmation explicite avant
+  // d'envoyer la réservation. Le ref évite de rouvrir la dialog après un
+  // confirm — il est reset à false dès qu'on change de slot.
+  const [showPastSlotDialog, setShowPastSlotDialog] = useState(false);
+  const pastSlotConfirmedRef = useRef(false);
+
   // Fix d'hydratation
   useEffect(() => {
     setIsMounted(true);
@@ -217,6 +230,8 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     setImageError(false);
     setSubmitError(null);
     setFormData(INITIAL_FORM_DATA);
+    setShowPastSlotDialog(false);
+    pastSlotConfirmedRef.current = false;
   }, [slug]);
 
   // Pre-remplissage du formulaire depuis le profil si l'utilisateur est connecte
@@ -361,6 +376,9 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
       if (isAdminRole) return;
       setSelectedSlot(slot);
       setCurrentStep('participants');
+      // Reset de la confirmation « créneau passé » : si l'utilisateur change
+      // de slot après avoir confirmé un autre, on redemande la confirmation.
+      pastSlotConfirmedRef.current = false;
     },
     [isAdminRole]
   );
@@ -507,7 +525,30 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     }
   }, [selectedSlot, selectedDate, show, participantCount, formData, slug, router, isCompanyMode]);
 
+  // Étape post « créneau passé » : check doublon puis soumission. Extraite
+  // dans une fonction dédiée pour que le handler de confirmation de créneau
+  // passé puisse la réutiliser sans avoir l'événement React d'origine.
+  const proceedAfterPastSlotCheck = useCallback(async () => {
+    if (!selectedSlot || !selectedDate) return;
+
+    const email = formData.email.trim();
+    if (email) {
+      setIsSubmitting(true);
+      const dupResult = await checkDuplicateReservation(selectedSlot.id, email);
+      setIsSubmitting(false);
+
+      if (dupResult.hasDuplicate) {
+        setDuplicateInfo(dupResult);
+        setShowDuplicateDialog(true);
+        return;
+      }
+    }
+
+    await submitReservation();
+  }, [selectedSlot, selectedDate, formData.email, submitReservation]);
+
   // S184 : Gerer la soumission du formulaire avec detection de doublons
+  // + confirmation explicite si l'heure du slot est passée.
   const handleFormSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -517,22 +558,17 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
 
       setSubmitError(null);
 
-      const email = formData.email.trim();
-      if (email) {
-        setIsSubmitting(true);
-        const dupResult = await checkDuplicateReservation(selectedSlot.id, email);
-        setIsSubmitting(false);
-
-        if (dupResult.hasDuplicate) {
-          setDuplicateInfo(dupResult);
-          setShowDuplicateDialog(true);
-          return;
-        }
+      // Confirmation « créneau passé » : si l'heure du slot est antérieure
+      // à maintenant ET que l'utilisateur n'a pas encore confirmé, on
+      // affiche la modale et on attend son choix avant de continuer.
+      if (!pastSlotConfirmedRef.current && isTimeSlotInPast(selectedSlot)) {
+        setShowPastSlotDialog(true);
+        return;
       }
 
-      await submitReservation();
+      await proceedAfterPastSlotCheck();
     },
-    [selectedSlot, selectedDate, isSubmitting, formData.email, submitReservation]
+    [selectedSlot, selectedDate, isSubmitting, proceedAfterPastSlotCheck]
   );
 
   // S184 : Confirmer la creation malgre le doublon
@@ -546,6 +582,25 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
   const handleCancelDuplicate = useCallback(() => {
     setShowDuplicateDialog(false);
     setDuplicateInfo(null);
+  }, []);
+
+  // Confirmation « créneau passé » : l'utilisateur a vu la modale et confirme
+  // qu'il veut bien réserver malgré que l'horaire soit dépassé. On marque le
+  // ref et on enchaîne sur le check doublon + submit.
+  // Garde anti double-clic : si le ref est déjà à `true`, on a déjà traité
+  // un click précédent — on ignore les suivants (Radix peut maintenir le
+  // bouton actif pendant la transition de fermeture de la modale).
+  const handleConfirmPastSlot = useCallback(async () => {
+    if (pastSlotConfirmedRef.current) return;
+    pastSlotConfirmedRef.current = true;
+    setShowPastSlotDialog(false);
+    await proceedAfterPastSlotCheck();
+  }, [proceedAfterPastSlotCheck]);
+
+  // Annulation de la confirmation : on ferme la modale, le ref reste à false
+  // (l'utilisateur retombera sur la confirmation au prochain submit).
+  const handleCancelPastSlot = useCallback(() => {
+    setShowPastSlotDialog(false);
   }, []);
 
   const onImageError = useCallback(() => {
@@ -590,6 +645,7 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     setShowAuthModal,
     duplicateInfo,
     showDuplicateDialog,
+    showPastSlotDialog,
     handleDayClick,
     handleSlotSelect,
     handleBack,
@@ -599,6 +655,8 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
     handleFormSubmit,
     handleConfirmDuplicate,
     handleCancelDuplicate,
+    handleConfirmPastSlot,
+    handleCancelPastSlot,
     goToPreviousMonth,
     goToNextMonth,
     onImageError,

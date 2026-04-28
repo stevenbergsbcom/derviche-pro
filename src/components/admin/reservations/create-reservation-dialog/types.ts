@@ -110,6 +110,11 @@ export interface ShowSlotSectionProps extends FormSectionProps {
   numPlaces: number;
   onNumPlacesChange: (num: number) => void;
   maxPlaces: number;
+  /**
+   * True si le slot sélectionné a une heure antérieure à maintenant.
+   * Utilisé pour afficher un bandeau d'avertissement.
+   */
+  slotIsPast?: boolean;
 }
 
 /**

@@ -80,6 +80,29 @@ export function parisDateTimeToUtcMs(date: string, time: string): number {
 }
 
 /**
+ * Indique si la wall-clock Paris d'un slot est strictement antérieure à
+ * l'instant courant. Utilisé pour avertir l'utilisateur qu'il s'apprête à
+ * réserver un créneau dont l'horaire est déjà passé.
+ *
+ * @param date - Date du slot au format `YYYY-MM-DD`
+ * @param time - Heure du slot au format `HH:MM` ou `HH:MM:SS`
+ * @returns `true` si l'instant représenté est dans le passé, `false` sinon.
+ *          `false` également si l'entrée est invalide (fail-safe : on
+ *          n'affiche pas l'avertissement par défaut en cas d'erreur).
+ *
+ * @example
+ *   // Maintenant : 2026-04-28 16:00 Paris
+ *   isSlotTimePast('2026-04-28', '10:00') // → true (le slot était à 10h ce matin)
+ *   isSlotTimePast('2026-04-28', '20:00') // → false (le slot est à 20h ce soir)
+ *   isSlotTimePast('2026-04-29', '10:00') // → false (slot demain)
+ */
+export function isSlotTimePast(date: string, time: string): boolean {
+  const slotMs = parisDateTimeToUtcMs(date, time);
+  if (Number.isNaN(slotMs)) return false;
+  return slotMs < Date.now();
+}
+
+/**
  * Donne la wall-clock (mur d'horloge) d'un instant UTC dans une timezone donnée,
  * sous forme de timestamp UTC fictif. C'est un détour technique pour calculer
  * l'offset entre UTC et la timezone à un instant donné, sans dépendre d'une lib.

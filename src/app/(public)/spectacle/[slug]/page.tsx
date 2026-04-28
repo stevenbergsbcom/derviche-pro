@@ -155,6 +155,9 @@ export default function SpectacleDetailPage() {
         email={booking.formData.email}
         onConfirmDuplicate={booking.handleConfirmDuplicate}
         onCancelDuplicate={booking.handleCancelDuplicate}
+        showPastSlotDialog={booking.showPastSlotDialog}
+        onConfirmPastSlot={booking.handleConfirmPastSlot}
+        onCancelPastSlot={booking.handleCancelPastSlot}
       />
 
       <Footer />

@@ -10,6 +10,7 @@ import { AuthDialog } from '@/components/auth';
 import type { AuthSuccessData } from '@/components/auth';
 import { DuplicateReservationDialog } from '@/components/shared';
 import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import { PastSlotConfirmDialog } from './past-slot-confirm-dialog';
 
 // ============================================
 // PROPS
@@ -28,6 +29,11 @@ interface BookingDialogsProps {
   email: string;
   onConfirmDuplicate: () => void;
   onCancelDuplicate: () => void;
+
+  /** Modale de confirmation « créneau passé » */
+  showPastSlotDialog: boolean;
+  onConfirmPastSlot: () => void;
+  onCancelPastSlot: () => void;
 }
 
 // ============================================
@@ -44,6 +50,9 @@ export function BookingDialogs({
   email,
   onConfirmDuplicate,
   onCancelDuplicate,
+  showPastSlotDialog,
+  onConfirmPastSlot,
+  onCancelPastSlot,
 }: BookingDialogsProps) {
   return (
     <>
@@ -57,6 +66,16 @@ export function BookingDialogs({
         existingReservation={duplicateInfo?.existingReservation}
         onConfirm={onConfirmDuplicate}
         onCancel={onCancelDuplicate}
+      />
+
+      {/* Modale de confirmation « créneau passé » */}
+      <PastSlotConfirmDialog
+        open={showPastSlotDialog}
+        onOpenChange={(open) => {
+          if (!open) onCancelPastSlot();
+        }}
+        onConfirm={onConfirmPastSlot}
+        onCancel={onCancelPastSlot}
       />
 
       {/* Modale d'authentification */}

@@ -27,6 +27,16 @@ import type { CreateReservationDialogProps } from './types';
 import { useCreateReservationForm } from './hooks';
 import { NotificationSwitches } from '@/components/admin/reservations/notification-switches';
 import { DuplicateReservationDialog } from '@/components/shared';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Composants de section
 import {
@@ -78,6 +88,12 @@ export function CreateReservationDialog({
     handleConfirmDuplicate,
     handleCancelDuplicate,
 
+    // Confirmation « créneau passé »
+    showPastSlotDialog,
+    selectedSlotIsPast,
+    handleConfirmPastSlot,
+    handleCancelPastSlot,
+
     // Handlers
     handleShowChange,
     handleFieldChange,
@@ -124,6 +140,7 @@ export function CreateReservationDialog({
             onNumPlacesChange={(num) => handleFieldChange('numPlaces', num)}
             maxPlaces={maxPlaces}
             disabled={isSaving}
+            slotIsPast={selectedSlotIsPast}
           />
 
           {/* S189 : Recherche professionnel (optionnel) */}
@@ -223,6 +240,30 @@ export function CreateReservationDialog({
       onConfirm={handleConfirmDuplicate}
       onCancel={handleCancelDuplicate}
     />
+
+    {/* Confirmation « créneau passé » : si l'admin a sélectionné un slot
+        dont l'heure est antérieure à maintenant, on demande confirmation
+        avant de créer la réservation. Le code DB autorise ce cas. */}
+    <AlertDialog
+      open={showPastSlotDialog}
+      onOpenChange={(open) => { if (!open) handleCancelPastSlot(); }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cette représentation a déjà commencé</AlertDialogTitle>
+          <AlertDialogDescription>
+            L&apos;horaire du créneau sélectionné est passé. Voulez-vous tout
+            de même créer la réservation&nbsp;?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={handleCancelPastSlot}>Annuler</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmPastSlot}>
+            Oui, créer la réservation
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }

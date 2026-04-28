@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Users, MapPin, Loader2, AlertTriangle } from 'lucide-react';
+import { Calendar, Users, MapPin, Loader2, AlertTriangle, Clock } from 'lucide-react';
+import { isTimeSlotInPast } from '../utils/calendar';
 
 import type { TimeSlot, ReservationFormData } from '../types';
 
@@ -46,8 +47,35 @@ export function ReservationFormStep({
   onSubmit,
   isCompanyMode = false,
 }: ReservationFormStepProps) {
+  const slotInPast = selectedSlot ? isTimeSlotInPast(selectedSlot) : false;
+
   return (
     <>
+      {/* Bandeau « créneau passé » — affiché si l'heure du slot est antérieure
+          à maintenant. Le code DB autorise déjà la réservation pour la date
+          du jour même si l'heure est passée ; ce bandeau prévient
+          l'utilisateur pour éviter une réservation par erreur. */}
+      {slotInPast && (
+        <div
+          role="alert"
+          className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4"
+        >
+          <div className="flex items-start gap-3">
+            <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="text-sm text-foreground">
+              <p className="font-medium mb-1">
+                Cette représentation a déjà commencé
+              </p>
+              <p className="text-muted-foreground">
+                L&apos;horaire du créneau sélectionné est passé. Vous pouvez
+                tout de même confirmer la réservation — une confirmation vous
+                sera demandée avant l&apos;envoi.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Recapitulatif */}
       {selectedSlot && (
         <Card className="bg-muted mb-6">

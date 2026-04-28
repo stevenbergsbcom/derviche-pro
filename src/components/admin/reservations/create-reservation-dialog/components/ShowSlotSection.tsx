@@ -5,7 +5,7 @@
 
 'use client';
 
-import { Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { Calendar, Loader2, AlertTriangle, Clock } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,6 +33,7 @@ export function ShowSlotSection({
   onNumPlacesChange,
   maxPlaces,
   disabled,
+  slotIsPast = false,
 }: ShowSlotSectionProps) {
   return (
     <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
@@ -40,6 +41,25 @@ export function ShowSlotSection({
         <Calendar className="w-4 h-4" aria-hidden="true" />
         {LABELS.sectionShowSlot}
       </h4>
+
+      {/* Bandeau « créneau passé » : affiché quand le slot sélectionné a
+          une heure antérieure à maintenant. La création reste possible —
+          c'est juste une confirmation visuelle. */}
+      {slotIsPast && (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-md border border-warning/30 bg-warning/10 p-3"
+        >
+          <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" aria-hidden="true" />
+          <div className="text-sm">
+            <p className="font-medium">Cette représentation a déjà commencé</p>
+            <p className="text-muted-foreground">
+              L&apos;horaire du créneau sélectionné est passé. Une confirmation
+              vous sera demandée avant la création de la réservation.
+            </p>
+          </div>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 gap-4">
         {/* Sélection spectacle */}
