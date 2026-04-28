@@ -230,14 +230,42 @@ function buildManageReservationBlock(ctx: ManageReservationContext): string {
   );
   const message = textToHtml(messageRaw);
 
-  const subject = `Modification réservation ${ctx.data.reservationCode}`;
+  // Sujet et corps du mail pré-rempli envoyé par un guest qui veut modifier
+  // ou annuler sa réservation. Le code de réservation a été retiré sur
+  // demande client (non utilisé dans la logique métier actuelle) — le sujet
+  // identifie désormais la résa par le titre du spectacle, et le corps
+  // détaille les coordonnées du pro pour faciliter le suivi côté manager.
+  const subject = `Modification de ma réservation — ${ctx.data.showTitle}`;
+
+  // Helper local : ajoute une ligne « - Label : valeur » seulement si la
+  // valeur est non vide (les champs guest_* sont tous optionnels).
+  const optionalLine = (label: string, value?: string | null): string => {
+    const trimmed = value?.trim();
+    return trimmed ? `- ${label} : ${trimmed}\n` : '';
+  };
+
+  const placesLabel =
+    ctx.data.numPlaces > 1 ? `${ctx.data.numPlaces} places` : '1 place';
+  const venueLabel = ctx.data.venueCity
+    ? `${ctx.data.venueName} (${ctx.data.venueCity})`
+    : ctx.data.venueName;
+
   const body =
     `Bonjour,\n\n` +
-    `Je souhaite modifier ou annuler ma réservation :\n` +
-    `- Code : ${ctx.data.reservationCode}\n` +
+    `Je souhaite modifier ou annuler ma réservation :\n\n` +
+    `Réservation\n` +
     `- Spectacle : ${ctx.data.showTitle}\n` +
-    `- Date : ${ctx.data.slotDateFormatted} à ${ctx.data.slotTimeFormatted}\n\n` +
-    `Merci,\n${ctx.data.guestFullName}`;
+    `- Date : ${ctx.data.slotDateFormatted} à ${ctx.data.slotTimeFormatted}\n` +
+    `- Lieu : ${venueLabel}\n` +
+    `- Places : ${placesLabel}\n\n` +
+    `Mes coordonnées\n` +
+    `- Nom : ${ctx.data.guestFullName}\n` +
+    `- Email : ${ctx.data.to}\n` +
+    optionalLine('Téléphone', ctx.data.guestPhone) +
+    optionalLine('Structure', ctx.data.guestStructure) +
+    optionalLine('Fonction', ctx.data.guestFunction) +
+    optionalLine('N° AFC', ctx.data.guestAfcNumber) +
+    `\nMerci,\n${ctx.data.guestFullName}`;
 
   const mailto =
     `mailto:${encodeURIComponent(contactEmail)}` +

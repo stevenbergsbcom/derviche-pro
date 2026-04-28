@@ -49,6 +49,15 @@ export interface ReservationConfirmationEmailData extends ManagerContact {
    * non-null = compte pro → bloc gérer = bouton vers /professional/reservations.
    */
   userId: string | null;
+  /**
+   * Coordonnées détaillées du pro — enrichissent le corps du mailto
+   * pré-rempli vers le manager (cas guest sans compte). Tous optionnels :
+   * les champs vides sont automatiquement omis du body généré.
+   */
+  guestPhone?: string | null;
+  guestStructure?: string | null;
+  guestFunction?: string | null;
+  guestAfcNumber?: string | null;
 }
 
 export interface ReservationCancellationEmailData extends ManagerContact {
