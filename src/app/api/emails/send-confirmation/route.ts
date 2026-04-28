@@ -192,6 +192,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const manager = await loadManager(adminClient, show.derviche_manager_id);
 
     // 7. Envoyer l'email de confirmation
+    // Les coordonnées guest (phone, structure, function, afcNumber) sont
+    // passées pour enrichir le body du mailto pré-rempli généré dans le
+    // bloc « Gérer ma réservation » (cas guest sans compte).
     const result = await sendReservationConfirmationEmail({
       ...payload,
       venueAddress: venue?.address ?? null,
@@ -201,6 +204,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       managerName: manager.name,
       managerEmail: manager.email,
       managerPhone: manager.phone,
+      guestPhone: reservation.guest_phone,
+      guestStructure: reservation.guest_structure,
+      guestFunction: reservation.guest_function,
+      guestAfcNumber: reservation.guest_afc_number,
     });
 
     if (!result.success) {

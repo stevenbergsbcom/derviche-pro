@@ -229,6 +229,12 @@ export async function POST(request: Request): Promise<NextResponse> {
         managerName: manager.name,
         managerEmail: manager.email,
         managerPhone: manager.phone,
+        // Coordonnées détaillées du pro pour enrichir le mailto de gestion
+        // de la réservation (cf. buildManageReservationBlock dans le builder).
+        guestPhone: reservation.guest_phone,
+        guestStructure: reservation.guest_structure,
+        guestFunction: reservation.guest_function,
+        guestAfcNumber: reservation.guest_afc_number,
       });
 
       if (!emailResult.success) {
