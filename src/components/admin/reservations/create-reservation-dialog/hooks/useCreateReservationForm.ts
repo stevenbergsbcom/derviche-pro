@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import type { CreateAdminReservationData } from '@/lib/services/admin-reservations';
 import { checkDuplicateReservation } from '@/lib/services/reservations-duplicate';
 import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate';
+import { isSlotTimePast } from '@/lib/utils/timezone';
 import type { FoundProfile } from '@/app/api/pwa/search-professional/route';
 import type {
   AvailableSlot,
@@ -64,6 +65,13 @@ interface UseCreateReservationFormReturn {
   handleConfirmDuplicate: () => void;
   handleCancelDuplicate: () => void;
 
+  // Confirmation « créneau passé »
+  showPastSlotDialog: boolean;
+  /** True si le slot sélectionné a une heure antérieure à maintenant. */
+  selectedSlotIsPast: boolean;
+  handleConfirmPastSlot: () => void;
+  handleCancelPastSlot: () => void;
+
   // Handlers
   handleShowChange: (showId: string) => void;
   handleFieldChange: <K extends keyof CreateAdminReservationData>(
@@ -105,8 +113,18 @@ export function useCreateReservationForm({
   const [duplicateInfo, setDuplicateInfo] = useState<DuplicateCheckResult | null>(null);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
 
+  // Confirmation « créneau passé »
+  const [showPastSlotDialog, setShowPastSlotDialog] = useState(false);
+  const pastSlotConfirmedRef = useRef(false);
+
   // Spectacles publiés uniquement
   const publishedShows = shows.filter(s => s.status === 'published');
+
+  // Computed : le slot sélectionné a-t-il une heure passée ?
+  const selectedSlot = availableSlots.find(s => s.id === formData.slotId);
+  const selectedSlotIsPast = selectedSlot
+    ? isSlotTimePast(selectedSlot.date, selectedSlot.time)
+    : false;
 
   // Refs stables pour les callbacks (évite les race conditions)
   const onGetSlotsRef = useRef(onGetSlots);
@@ -128,6 +146,8 @@ export function useCreateReservationForm({
       setAvailableSlots([]);
       setSlotsError(null);
       setValidationErrors([]);
+      setShowPastSlotDialog(false);
+      pastSlotConfirmedRef.current = false;
     }
   }, [open]);
 
@@ -187,9 +207,16 @@ export function useCreateReservationForm({
     value: CreateAdminReservationData[K]
   ) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Effacer les erreurs de validation (lecture via setState fonctionnel)
     setValidationErrors(prev => prev.length > 0 ? [] : prev);
+
+    // Si on change de slot, on réinitialise la confirmation « créneau passé »
+    // (le user doit re-confirmer s'il choisit un nouveau slot dont l'heure
+    // est aussi passée).
+    if (field === 'slotId') {
+      pastSlotConfirmedRef.current = false;
+    }
   }, []); // Pas de dépendances externes
 
   // S189 : Pré-remplissage depuis un profil professionnel
@@ -232,7 +259,29 @@ export function useCreateReservationForm({
     }
   }, [formData, notifOptions]);
 
-  // Handler soumission (avec détection doublons S184)
+  // Étape post « créneau passé » : check doublon + création. Extraite pour
+  // pouvoir être appelée depuis handleSubmit ET handleConfirmPastSlot.
+  const proceedAfterPastSlotCheck = useCallback(async () => {
+    // S184 : Vérifier les doublons avant de créer
+    const email = formData.email?.trim();
+    if (email && formData.slotId) {
+      setIsSaving(true);
+      const dupResult = await checkDuplicateReservation(formData.slotId, email);
+      setIsSaving(false);
+
+      if (dupResult.hasDuplicate) {
+        setDuplicateInfo(dupResult);
+        setShowDuplicateDialog(true);
+        return;
+      }
+    }
+
+    // Pas de doublon → créer directement
+    await performCreate();
+  }, [formData.email, formData.slotId, performCreate]);
+
+  // Handler soumission (avec détection doublons S184 + confirmation
+  // « créneau passé » si l'heure du slot est antérieure à maintenant)
   const handleSubmit = useCallback(async () => {
     const errors = validateReservationForm(
       formData,
@@ -247,23 +296,17 @@ export function useCreateReservationForm({
       return;
     }
 
-    // S184 : Vérifier les doublons avant de créer
-    const email = formData.email?.trim();
-    if (email && formData.slotId) {
-      setIsSaving(true);
-      const dupResult = await checkDuplicateReservation(formData.slotId, email);
-      setIsSaving(false);
-
-      if (dupResult.hasDuplicate) {
-        setDuplicateInfo(dupResult);
-        setShowDuplicateDialog(true);
-        return; // Attendre la confirmation
+    // Confirmation « créneau passé » : intercepter avant le check doublon.
+    if (!pastSlotConfirmedRef.current) {
+      const slot = availableSlots.find(s => s.id === formData.slotId);
+      if (slot && isSlotTimePast(slot.date, slot.time)) {
+        setShowPastSlotDialog(true);
+        return;
       }
     }
 
-    // Pas de doublon → créer directement
-    await performCreate();
-  }, [formData, selectedShowId, maxPlaces, availableSlots, performCreate]);
+    await proceedAfterPastSlotCheck();
+  }, [formData, selectedShowId, maxPlaces, availableSlots, proceedAfterPastSlotCheck]);
 
   // S184 : Confirmer la création malgré doublon
   const handleConfirmDuplicate = useCallback(() => {
@@ -276,6 +319,17 @@ export function useCreateReservationForm({
   const handleCancelDuplicate = useCallback(() => {
     setShowDuplicateDialog(false);
     setDuplicateInfo(null);
+  }, []);
+
+  // Confirmation « créneau passé » : l'admin a vu la modale et confirme.
+  const handleConfirmPastSlot = useCallback(() => {
+    setShowPastSlotDialog(false);
+    pastSlotConfirmedRef.current = true;
+    void proceedAfterPastSlotCheck();
+  }, [proceedAfterPastSlotCheck]);
+
+  const handleCancelPastSlot = useCallback(() => {
+    setShowPastSlotDialog(false);
   }, []);
 
   // Handler fermeture
@@ -312,6 +366,12 @@ export function useCreateReservationForm({
     showDuplicateDialog,
     handleConfirmDuplicate,
     handleCancelDuplicate,
+
+    // Confirmation « créneau passé »
+    showPastSlotDialog,
+    selectedSlotIsPast,
+    handleConfirmPastSlot,
+    handleCancelPastSlot,
 
     // Handlers
     handleShowChange,
