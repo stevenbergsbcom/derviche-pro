@@ -21,16 +21,19 @@ interface HeroSectionProps {
 
 export function HeroSection({ hero, spectaclesWithImage }: HeroSectionProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
-  // Slider automatique
+  // Slider automatique — mis en pause au hover pour laisser le temps
+  // à l'utilisateur de lire le titre / compagnie et de cliquer.
   useEffect(() => {
     if (spectaclesWithImage.length === 0) return;
+    if (isPaused) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % spectaclesWithImage.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [spectaclesWithImage.length]);
+  }, [spectaclesWithImage.length, isPaused]);
 
   return (
     <section className="py-12 md:py-24 bg-gradient-to-b from-white to-muted/30">
@@ -58,29 +61,45 @@ export function HeroSection({ hero, spectaclesWithImage }: HeroSectionProps) {
           )}
         </div>
 
-        {/* Hero Slider — masqué en mobile (< md) */}
+        {/* Hero Slider — masqué en mobile (< md). Chaque slide est un Link
+            cliquable vers la fiche du spectacle. */}
         {spectaclesWithImage.length > 0 && (
           <div className="hidden md:block max-w-4xl mx-auto">
-            <div className="aspect-video rounded-xl overflow-hidden shadow-2xl relative">
-              {spectaclesWithImage.map((spectacle, index) => (
-                <div
-                  key={spectacle.slug}
-                  className={`absolute inset-0 transition-opacity duration-1000 ${index === currentSlide ? 'opacity-100' : 'opacity-0'}`}
-                >
-                  <Image
-                    src={spectacle.image}
-                    alt={spectacle.title}
-                    width={1200}
-                    height={675}
-                    className="w-full h-full object-cover"
-                    priority={index === 0}
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:p-6">
-                    <p className="text-white font-bold text-lg md:text-2xl">{spectacle.title}</p>
-                    <p className="text-white/80 text-sm md:text-base">{spectacle.company}</p>
-                  </div>
-                </div>
-              ))}
+            <div
+              className="aspect-video rounded-xl overflow-hidden shadow-2xl relative"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+            >
+              {spectaclesWithImage.map((spectacle, index) => {
+                const isActive = index === currentSlide;
+                return (
+                  <Link
+                    key={spectacle.slug}
+                    href={`/spectacle/${spectacle.slug}`}
+                    aria-label={`Voir le spectacle ${spectacle.title}`}
+                    aria-hidden={!isActive}
+                    tabIndex={isActive ? 0 : -1}
+                    className={`group absolute inset-0 transition-opacity duration-1000 ${
+                      isActive
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none'
+                    }`}
+                  >
+                    <Image
+                      src={spectacle.image}
+                      alt={spectacle.title}
+                      width={1200}
+                      height={675}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                      priority={index === 0}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4 md:p-6">
+                      <p className="text-white font-bold text-lg md:text-2xl">{spectacle.title}</p>
+                      <p className="text-white/80 text-sm md:text-base">{spectacle.company}</p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
