@@ -9,26 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Users, MapPin, Loader2, AlertTriangle, Clock } from 'lucide-react';
-import { isSlotTimePast } from '@/lib/utils/timezone';
+import { isTimeSlotInPast } from '../utils/calendar';
 
 import type { TimeSlot, ReservationFormData } from '../types';
-
-// ============================================
-// HELPERS
-// ============================================
-
-/**
- * Convertit le `TimeSlot` interne (Date + "11h00") au format attendu par
- * `isSlotTimePast` (YYYY-MM-DD + "11:00").
- */
-function isTimeSlotInPast(slot: TimeSlot): boolean {
-  const y = slot.date.getFullYear();
-  const m = String(slot.date.getMonth() + 1).padStart(2, '0');
-  const d = String(slot.date.getDate()).padStart(2, '0');
-  const dateStr = `${y}-${m}-${d}`;
-  const timeStr = slot.time.replace('h', ':');
-  return isSlotTimePast(dateStr, timeStr);
-}
 
 // ============================================
 // PROPS
@@ -73,9 +56,12 @@ export function ReservationFormStep({
           du jour même si l'heure est passée ; ce bandeau prévient
           l'utilisateur pour éviter une réservation par erreur. */}
       {slotInPast && (
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4">
+        <div
+          role="alert"
+          className="bg-warning/10 border border-warning/30 rounded-lg p-4 mb-4"
+        >
           <div className="flex items-start gap-3">
-            <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+            <Clock className="w-5 h-5 text-warning shrink-0 mt-0.5" aria-hidden="true" />
             <div className="text-sm text-foreground">
               <p className="font-medium mb-1">
                 Cette représentation a déjà commencé

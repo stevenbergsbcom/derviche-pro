@@ -16,7 +16,6 @@ import type { DuplicateCheckResult } from '@/lib/services/reservations-duplicate
 import { getUserCompanyInfo, type UserCompanyInfo } from '@/lib/services/public-catalog';
 import { createClient } from '@/lib/supabase/client';
 import { formatDuration } from '@/lib/utils/shows';
-import { isSlotTimePast } from '@/lib/utils/timezone';
 
 import type { TimeSlot, Step, ReservationFormData } from '../types';
 import { DEFAULT_MAX_RESERVATIONS, INITIAL_FORM_DATA } from '../types';
@@ -26,6 +25,7 @@ import {
   getLastDayOfMonth,
   isSameDay,
   createDateKey,
+  isTimeSlotInPast,
 } from '../utils/calendar';
 
 // ============================================
@@ -561,16 +561,9 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
       // Confirmation « créneau passé » : si l'heure du slot est antérieure
       // à maintenant ET que l'utilisateur n'a pas encore confirmé, on
       // affiche la modale et on attend son choix avant de continuer.
-      if (!pastSlotConfirmedRef.current) {
-        const y = selectedSlot.date.getFullYear();
-        const m = String(selectedSlot.date.getMonth() + 1).padStart(2, '0');
-        const d = String(selectedSlot.date.getDate()).padStart(2, '0');
-        const dateStr = `${y}-${m}-${d}`;
-        const timeStr = selectedSlot.time.replace('h', ':');
-        if (isSlotTimePast(dateStr, timeStr)) {
-          setShowPastSlotDialog(true);
-          return;
-        }
+      if (!pastSlotConfirmedRef.current && isTimeSlotInPast(selectedSlot)) {
+        setShowPastSlotDialog(true);
+        return;
       }
 
       await proceedAfterPastSlotCheck();
@@ -594,9 +587,13 @@ export function useSpectacleBooking(): UseSpectacleBookingReturn {
   // Confirmation « créneau passé » : l'utilisateur a vu la modale et confirme
   // qu'il veut bien réserver malgré que l'horaire soit dépassé. On marque le
   // ref et on enchaîne sur le check doublon + submit.
+  // Garde anti double-clic : si le ref est déjà à `true`, on a déjà traité
+  // un click précédent — on ignore les suivants (Radix peut maintenir le
+  // bouton actif pendant la transition de fermeture de la modale).
   const handleConfirmPastSlot = useCallback(async () => {
-    setShowPastSlotDialog(false);
+    if (pastSlotConfirmedRef.current) return;
     pastSlotConfirmedRef.current = true;
+    setShowPastSlotDialog(false);
     await proceedAfterPastSlotCheck();
   }, [proceedAfterPastSlotCheck]);
 

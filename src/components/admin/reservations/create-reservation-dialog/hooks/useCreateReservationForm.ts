@@ -322,9 +322,13 @@ export function useCreateReservationForm({
   }, []);
 
   // Confirmation « créneau passé » : l'admin a vu la modale et confirme.
+  // Garde anti double-clic : si le ref est déjà à `true`, on ignore les
+  // clics suivants (Radix peut maintenir le bouton actif pendant la
+  // transition de fermeture de la modale).
   const handleConfirmPastSlot = useCallback(() => {
-    setShowPastSlotDialog(false);
+    if (pastSlotConfirmedRef.current) return;
     pastSlotConfirmedRef.current = true;
+    setShowPastSlotDialog(false);
     void proceedAfterPastSlotCheck();
   }, [proceedAfterPastSlotCheck]);
 

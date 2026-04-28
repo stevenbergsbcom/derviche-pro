@@ -4,6 +4,7 @@
  */
 
 import type { PublicSlot } from '@/lib/services/public-catalog';
+import { isSlotTimePast } from '@/lib/utils/timezone';
 import type { TimeSlot } from '../types';
 
 /**
@@ -74,4 +75,22 @@ export function isSameDay(date1: Date, date2: Date): boolean {
  */
 export function createDateKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+/**
+ * Indique si la wall-clock Paris du `TimeSlot` est antérieure à maintenant.
+ * Wrapper sur `isSlotTimePast` qui gère la conversion du format interne :
+ *   - `slot.date` (Date) → `YYYY-MM-DD`
+ *   - `slot.time` ("11h00") → `HH:MM`
+ *
+ * Utilisé pour l'affichage du bandeau et l'orchestration de la modale
+ * de confirmation lors de la réservation d'un créneau passé.
+ */
+export function isTimeSlotInPast(slot: TimeSlot): boolean {
+  const y = slot.date.getFullYear();
+  const m = String(slot.date.getMonth() + 1).padStart(2, '0');
+  const d = String(slot.date.getDate()).padStart(2, '0');
+  const dateStr = `${y}-${m}-${d}`;
+  const timeStr = slot.time.replace('h', ':');
+  return isSlotTimePast(dateStr, timeStr);
 }

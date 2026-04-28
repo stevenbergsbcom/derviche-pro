@@ -46,7 +46,10 @@ export function ShowSlotSection({
           une heure antérieure à maintenant. La création reste possible —
           c'est juste une confirmation visuelle. */}
       {slotIsPast && (
-        <div className="flex items-start gap-3 rounded-md border border-warning/30 bg-warning/10 p-3">
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-md border border-warning/30 bg-warning/10 p-3"
+        >
           <Clock className="w-4 h-4 text-warning shrink-0 mt-0.5" aria-hidden="true" />
           <div className="text-sm">
             <p className="font-medium">Cette représentation a déjà commencé</p>
