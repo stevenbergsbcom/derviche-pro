@@ -157,12 +157,18 @@ export async function checkRateLimit(
       identifier,
     };
   } catch (err) {
-    // Fail-open : si Upstash est down, ne pas bloquer les utilisateurs
-    logger.warn('[rate-limit] Erreur Upstash — fail-open activé', {
-      target,
-      identifier,
-      error: err instanceof Error ? err.message : String(err),
-    });
+    // Fail-open : si Upstash est down, ne pas bloquer les utilisateurs.
+    // En dev local, l'instance Upstash a souvent des hoquets de connexion
+    // (DNS, réseau) qui spamment la console sans valeur ajoutée — on
+    // silence le warn en dev. En prod, on garde le warn (utile pour
+    // détecter une vraie panne Upstash).
+    if (process.env.NODE_ENV !== 'development') {
+      logger.warn('[rate-limit] Erreur Upstash — fail-open activé', {
+        target,
+        identifier,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     return { success: true, limit: 0, remaining: 0, reset: 0, identifier };
   }
 }
