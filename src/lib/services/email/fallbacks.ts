@@ -82,7 +82,7 @@ export function getFallbackTemplate(key: EmailTemplateKey): EmailTemplate {
       show_reservation_code: false,
     },
     reminder_4h: {
-      header_title: "C'est bientôt ! 🎭",
+      header_title: "C'est bientôt !",
       subject: "Plus que quelques heures — {{spectacle}} à {{heure}}",
       intro_text: "Bonjour {{prénom}},\n\nPlus que quelques heures ! Votre représentation de {{spectacle}} commence à {{heure}}. Nous vous attendons !",
       body_text: '',

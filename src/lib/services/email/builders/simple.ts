@@ -115,7 +115,7 @@ export function buildSimpleHtml(
 
   const bookingLinkBlock = (template.show_booking_link && isSafeUrl(appUrl))
     ? `<tr><td style="padding:16px 0 0 0;">
-        <a href="${escapeHtml(appUrl)}/spectacle/${encodeURIComponent(data.showSlug)}" style="color:#1e3a5f;font-size:14px;">🎭 ${escapeHtml(template.booking_link_text)}</a>
+        <a href="${escapeHtml(appUrl)}/spectacle/${encodeURIComponent(data.showSlug)}" style="color:#1e3a5f;font-size:14px;">${escapeHtml(template.booking_link_text)}</a>
        </td></tr>`
     : '';
 
