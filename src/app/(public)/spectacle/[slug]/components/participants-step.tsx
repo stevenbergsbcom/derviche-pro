@@ -51,14 +51,35 @@ export function ParticipantsStep({
                 <p dangerouslySetInnerHTML={{ __html: invitationPolicy }} />
               )}
               {dervisheManager && (
-                <p className={invitationPolicy ? 'mt-1' : ''}>
-                  Contact pour toute précision sur votre réservation
-                  {' : '}
-                  {dervisheManager.firstName} {dervisheManager.lastName}
-                  {dervisheManager.phone && ` - ${dervisheManager.phone}`}
-                  {' - '}
-                  {dervisheManager.email}
-                </p>
+                // Bloc contact restructuré en lignes verticales pour éviter le
+                // débordement sur mobile (l'email peut être très long et n'a
+                // pas de césure naturelle). `[overflow-wrap:anywhere]` sur le
+                // lien email autorise la coupure au @/. uniquement si le
+                // conteneur est trop étroit.
+                <div className={invitationPolicy ? 'mt-2' : ''}>
+                  <p>Contact pour toute précision sur votre réservation :</p>
+                  <p className="mt-1">
+                    {dervisheManager.firstName} {dervisheManager.lastName}
+                  </p>
+                  {dervisheManager.phone && (
+                    <p>
+                      <a
+                        href={`tel:${dervisheManager.phone.replace(/\s/g, '')}`}
+                        className="underline"
+                      >
+                        {dervisheManager.phone}
+                      </a>
+                    </p>
+                  )}
+                  <p>
+                    <a
+                      href={`mailto:${dervisheManager.email}`}
+                      className="underline [overflow-wrap:anywhere]"
+                    >
+                      {dervisheManager.email}
+                    </a>
+                  </p>
+                </div>
               )}
             </div>
           </div>
