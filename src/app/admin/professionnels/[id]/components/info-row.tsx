@@ -5,6 +5,8 @@
 
 'use client';
 
+import { copyEmailWithToast } from '@/lib/utils/copy-email';
+
 interface InfoRowProps {
   /** Icône lucide-react à afficher */
   icon: React.ElementType;
@@ -26,6 +28,7 @@ export function InfoRow({ icon: Icon, label, value, isEmail = false }: InfoRowPr
       {isEmail ? (
         <a
           href={`mailto:${value}`}
+          onClick={() => void copyEmailWithToast(value)}
           className="truncate text-sm font-medium text-derviche hover:underline"
         >
           {value}

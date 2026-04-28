@@ -25,6 +25,7 @@ import {
   MapPin,
   Phone,
 } from 'lucide-react';
+import { copyEmailWithToast } from '@/lib/utils/copy-email';
 import { EmptyState } from '@/components/admin';
 import type { ProfessionalsTableProps } from '@/app/admin/professionnels/types';
 import {
@@ -107,7 +108,10 @@ export function ProfessionalsMobileCards({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
-                      <a href={`mailto:${pro.email}`}>
+                      <a
+                        href={`mailto:${pro.email}`}
+                        onClick={() => void copyEmailWithToast(pro.email)}
+                      >
                         <Mail className="mr-2 h-4 w-4" />
                         {LABELS.EMAIL_CONTACT}
                       </a>

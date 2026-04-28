@@ -37,6 +37,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
+import { copyEmailWithToast } from '@/lib/utils/copy-email';
 import { EmptyState } from '@/components/admin';
 import type { ProfessionalsTableProps } from '@/app/admin/professionnels/types';
 import { STATUS_BADGE_CLASSES, TABLE_COLUMNS, LABELS, MESSAGES } from '@/app/admin/professionnels/constants';
@@ -109,6 +110,7 @@ export function ProfessionalsTable({
                 >
                   <a
                     href={`mailto:${pro.email}`}
+                    onClick={() => void copyEmailWithToast(pro.email)}
                     className="hover:underline hover:text-foreground transition-colors"
                     title={LABELS.EMAIL_CONTACT}
                   >
@@ -238,7 +240,10 @@ export function ProfessionalsTable({
 
                         {/* Mailto */}
                         <DropdownMenuItem asChild>
-                          <a href={`mailto:${pro.email}`}>
+                          <a
+                            href={`mailto:${pro.email}`}
+                            onClick={() => void copyEmailWithToast(pro.email)}
+                          >
                             <Mail className="mr-2 h-4 w-4" />
                             {LABELS.EMAIL_CONTACT}
                           </a>

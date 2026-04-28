@@ -29,6 +29,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
+import { copyEmailWithToast } from '@/lib/utils/copy-email';
 import { ProfessionalEditForm } from './ProfessionalEditForm';
 import { ProfessionalReservations } from './ProfessionalReservations';
 import type {
@@ -273,7 +274,10 @@ export function ProfessionalModal({
             </Button>
 
             <Button variant="outline" size="sm" className="flex-1" asChild>
-              <a href={`mailto:${professional.email}`}>
+              <a
+                href={`mailto:${professional.email}`}
+                onClick={() => void copyEmailWithToast(professional.email)}
+              >
                 <Mail className="h-3.5 w-3.5 mr-1.5" />
                 {LABELS.EMAIL_CONTACT}
               </a>
