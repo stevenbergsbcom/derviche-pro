@@ -27,7 +27,13 @@ export function WysiwygEditor({
     
     // Ref pour éviter les boucles infinies de mise à jour
     const isInternalUpdate = useRef(false);
-    const lastValueRef = useRef(value);
+    // ⚠️ Initialisé à '' (et non `value`) pour que le useEffect ci-dessous
+    // déclenche bien l'écriture initiale de l'innerHTML au premier render
+    // quand le composant est monté avec une valeur non vide (ex: mode édition
+    // d'un formulaire). Sinon : lastValueRef.current === value au premier
+    // render → comparaison égale → innerHTML jamais rempli → champ visible
+    // vide alors que la valeur métier est correcte (bug).
+    const lastValueRef = useRef('');
 
     // Synchroniser la valeur externe uniquement si elle a changé depuis l'extérieur
     useEffect(() => {
