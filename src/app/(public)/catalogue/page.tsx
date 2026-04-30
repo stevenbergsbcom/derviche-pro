@@ -5,11 +5,13 @@ import { Header, Footer } from '@/components/layout';
 import { SpectacleCard, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
 import { transformShowToSpectacle } from '@/lib/utils/shows';
-import { CatalogueFiltersForm } from './components/CatalogueFiltersForm';
+import { CatalogueFiltersForm, countActiveFilters } from './components/CatalogueFiltersForm';
 import { CatalogueMobileFilters } from './components/CatalogueMobileFilters';
 
 // ============================================
@@ -354,9 +356,42 @@ export default function CataloguePage() {
                 onSearchChange={setSearchQuery}
               />
 
-              {/* Bouton Réinitialiser */}
-              <div className="mt-4 flex justify-end">
-                <Button variant="outline" onClick={resetFilters} className="text-sm">
+              {/* Toolbar inférieure : switch « En tournée uniquement » à
+                  gauche, bouton « Réinitialiser » à droite. Le switch est
+                  rendu ici (et non dans le form) pour éviter une 2ᵉ ligne
+                  déséquilibrée sur le grid desktop. En mobile (Sheet), le
+                  switch reste dans le form pour s'aligner avec les autres
+                  champs. */}
+              <div className="mt-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="catalogue-available-desktop"
+                    checked={onlyAvailable}
+                    onCheckedChange={setOnlyAvailable}
+                  />
+                  <Label
+                    htmlFor="catalogue-available-desktop"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    En tournée uniquement
+                  </Label>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  disabled={
+                    countActiveFilters({
+                      genre: genreFilter,
+                      audience: audienceFilter,
+                      mois: moisFilter,
+                      lieu: lieuFilter,
+                      ville: villeFilter,
+                      onlyAvailable,
+                      searchQuery,
+                    }) === 0
+                  }
+                  className="text-sm"
+                >
                   Réinitialiser
                 </Button>
               </div>

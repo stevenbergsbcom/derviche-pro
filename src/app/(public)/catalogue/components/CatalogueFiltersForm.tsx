@@ -183,31 +183,33 @@ export function CatalogueFiltersForm({
         </div>
       </div>
 
-      {/* Switch « En tournée uniquement » — placé en dernier dans le DOM
-          pour qu'il wrappe naturellement en 2ᵉ ligne sur xl (où le grid
-          totalise 7 colonnes : 5 selects + recherche col-span-2). En layout
-          stacked (mobile), il s'aligne après les autres champs. */}
-      <div className="space-y-2">
-        <Label
-          htmlFor="catalogue-available"
-          className="text-sm text-muted-foreground"
-        >
-          Disponibilité
-        </Label>
-        <div className="flex items-center gap-3 h-10">
-          <Switch
-            id="catalogue-available"
-            checked={value.onlyAvailable}
-            onCheckedChange={onAvailableChange}
-          />
+      {/* Switch « En tournée uniquement » — uniquement en mode mobile
+          (Sheet stacked). En desktop (`grid`), le switch est rendu par la
+          page dans une toolbar en bas, alignée avec le bouton « Réinitialiser »
+          pour éviter une 2ᵉ ligne déséquilibrée. */}
+      {layout === 'stacked' && (
+        <div className="space-y-2">
           <Label
             htmlFor="catalogue-available"
-            className="text-sm font-normal cursor-pointer"
+            className="text-sm text-muted-foreground"
           >
-            En tournée uniquement
+            Disponibilité
           </Label>
+          <div className="flex items-center gap-3 h-10">
+            <Switch
+              id="catalogue-available"
+              checked={value.onlyAvailable}
+              onCheckedChange={onAvailableChange}
+            />
+            <Label
+              htmlFor="catalogue-available"
+              className="text-sm font-normal cursor-pointer"
+            >
+              En tournée uniquement
+            </Label>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
