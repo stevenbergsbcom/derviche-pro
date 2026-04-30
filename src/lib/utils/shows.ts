@@ -47,6 +47,7 @@ export function transformShowToSpectacle(show: PublicShow): Spectacle {
     image: show.imageUrl || PLACEHOLDER_IMAGE,
     slug: show.slug,
     genres: show.categories,
+    targetAudiences: show.targetAudiences,
     nextDate: status === 'available' ? (show.nextDate || '') : '',
     nextTime: status === 'available' ? show.nextTime : null,
     remainingSlots: show.availableSlotsCount,
