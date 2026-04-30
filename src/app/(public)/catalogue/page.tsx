@@ -5,11 +5,13 @@ import { Header, Footer } from '@/components/layout';
 import { SpectacleCard, type SpectacleStatus } from '@/components/spectacles';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { ArrowUp, Loader2, AlertTriangle } from 'lucide-react';
 import { searchMatch } from '@/lib/utils';
 import { usePublicCatalog } from '@/hooks/usePublicCatalog';
 import { transformShowToSpectacle } from '@/lib/utils/shows';
-import { CatalogueFiltersForm } from './components/CatalogueFiltersForm';
+import { CatalogueFiltersForm, countActiveFilters } from './components/CatalogueFiltersForm';
 import { CatalogueMobileFilters } from './components/CatalogueMobileFilters';
 
 // ============================================
@@ -49,6 +51,7 @@ export default function CataloguePage() {
   const [isMounted, setIsMounted] = useState(false);
 
   const [genreFilter, setGenreFilter] = useState<string>('Tous');
+  const [audienceFilter, setAudienceFilter] = useState<string>('Tous');
   const [moisFilter, setMoisFilter] = useState<string>('Tous');
   const [lieuFilter, setLieuFilter] = useState<string>('Tous');
   const [villeFilter, setVilleFilter] = useState<string>('Toutes');
@@ -86,6 +89,16 @@ export default function CataloguePage() {
       show.categories.forEach((cat) => uniqueGenres.add(cat));
     });
     return ['Tous', ...Array.from(uniqueGenres).sort()];
+  }, [publicShows]);
+
+  // Liste dédupliquée des publics cibles présents sur les shows publiés.
+  // Tri alphabétique français pour stabilité visuelle.
+  const audiences = useMemo(() => {
+    const unique = new Set<string>();
+    publicShows.forEach((show) => {
+      show.targetAudiences.forEach((a) => unique.add(a));
+    });
+    return ['Tous', ...Array.from(unique).sort((a, b) => a.localeCompare(b, 'fr'))];
   }, [publicShows]);
 
   const lieux = useMemo(() => {
@@ -128,6 +141,7 @@ export default function CataloguePage() {
   // Fonction pour réinitialiser les filtres
   const resetFilters = () => {
     setGenreFilter('Tous');
+    setAudienceFilter('Tous');
     setMoisFilter('Tous');
     setLieuFilter('Tous');
     setVilleFilter('Toutes');
@@ -147,6 +161,14 @@ export default function CataloguePage() {
       .filter((spectacle) => {
         // Filtre par genre
         if (genreFilter !== 'Tous' && !spectacle.genres.includes(genreFilter)) {
+          return false;
+        }
+
+        // Filtre par public cible
+        if (
+          audienceFilter !== 'Tous' &&
+          !(spectacle.targetAudiences ?? []).includes(audienceFilter)
+        ) {
           return false;
         }
 
@@ -205,7 +227,16 @@ export default function CataloguePage() {
         if (statusDiff !== 0) return statusDiff;
         return a.title.localeCompare(b.title, 'fr');
       });
-  }, [spectacles, genreFilter, moisFilter, lieuFilter, villeFilter, onlyAvailable, searchQuery]);
+  }, [
+    spectacles,
+    genreFilter,
+    audienceFilter,
+    moisFilter,
+    lieuFilter,
+    villeFilter,
+    onlyAvailable,
+    searchQuery,
+  ]);
 
   // Attendre que le composant soit monté pour éviter les erreurs d'hydratation
   if (!isMounted) {
@@ -282,15 +313,17 @@ export default function CataloguePage() {
           <CatalogueMobileFilters
             value={{
               genre: genreFilter,
+              audience: audienceFilter,
               mois: moisFilter,
               lieu: lieuFilter,
               ville: villeFilter,
               onlyAvailable,
               searchQuery,
             }}
-            options={{ genres, mois, lieux, villes }}
+            options={{ genres, audiences, mois, lieux, villes }}
             resultsCount={filteredSpectacles.length}
             onGenreChange={setGenreFilter}
+            onAudienceChange={setAudienceFilter}
             onMoisChange={setMoisFilter}
             onLieuChange={setLieuFilter}
             onVilleChange={setVilleFilter}
@@ -306,14 +339,16 @@ export default function CataloguePage() {
                 layout="grid"
                 value={{
                   genre: genreFilter,
+                  audience: audienceFilter,
                   mois: moisFilter,
                   lieu: lieuFilter,
                   ville: villeFilter,
                   onlyAvailable,
                   searchQuery,
                 }}
-                options={{ genres, mois, lieux, villes }}
+                options={{ genres, audiences, mois, lieux, villes }}
                 onGenreChange={setGenreFilter}
+                onAudienceChange={setAudienceFilter}
                 onMoisChange={setMoisFilter}
                 onLieuChange={setLieuFilter}
                 onVilleChange={setVilleFilter}
@@ -321,9 +356,42 @@ export default function CataloguePage() {
                 onSearchChange={setSearchQuery}
               />
 
-              {/* Bouton Réinitialiser */}
-              <div className="mt-4 flex justify-end">
-                <Button variant="outline" onClick={resetFilters} className="text-sm">
+              {/* Toolbar inférieure : switch « En tournée uniquement » à
+                  gauche, bouton « Réinitialiser » à droite. Le switch est
+                  rendu ici (et non dans le form) pour éviter une 2ᵉ ligne
+                  déséquilibrée sur le grid desktop. En mobile (Sheet), le
+                  switch reste dans le form pour s'aligner avec les autres
+                  champs. */}
+              <div className="mt-4 flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    id="catalogue-available-desktop"
+                    checked={onlyAvailable}
+                    onCheckedChange={setOnlyAvailable}
+                  />
+                  <Label
+                    htmlFor="catalogue-available-desktop"
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    En tournée uniquement
+                  </Label>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={resetFilters}
+                  disabled={
+                    countActiveFilters({
+                      genre: genreFilter,
+                      audience: audienceFilter,
+                      mois: moisFilter,
+                      lieu: lieuFilter,
+                      ville: villeFilter,
+                      onlyAvailable,
+                      searchQuery,
+                    }) === 0
+                  }
+                  className="text-sm"
+                >
                   Réinitialiser
                 </Button>
               </div>

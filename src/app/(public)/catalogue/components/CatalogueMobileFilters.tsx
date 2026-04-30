@@ -40,6 +40,7 @@ interface CatalogueMobileFiltersProps {
   /** Nombre total de spectacles correspondant aux filtres actifs. */
   resultsCount: number;
   onGenreChange: (v: string) => void;
+  onAudienceChange: (v: string) => void;
   onMoisChange: (v: string) => void;
   onLieuChange: (v: string) => void;
   onVilleChange: (v: string) => void;
@@ -89,6 +90,7 @@ export function CatalogueMobileFilters(props: CatalogueMobileFiltersProps) {
               value={props.value}
               options={props.options}
               onGenreChange={props.onGenreChange}
+              onAudienceChange={props.onAudienceChange}
               onMoisChange={props.onMoisChange}
               onLieuChange={props.onLieuChange}
               onVilleChange={props.onVilleChange}

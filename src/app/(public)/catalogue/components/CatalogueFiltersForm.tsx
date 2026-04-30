@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 
 export interface CatalogueFiltersValue {
   genre: string;
+  audience: string;
   mois: string;
   lieu: string;
   ville: string;
@@ -36,6 +37,7 @@ export interface CatalogueFiltersValue {
 
 export interface CatalogueFiltersOptions {
   genres: string[];
+  audiences: string[];
   mois: string[];
   lieux: string[];
   villes: string[];
@@ -45,6 +47,7 @@ interface CatalogueFiltersFormProps {
   value: CatalogueFiltersValue;
   options: CatalogueFiltersOptions;
   onGenreChange: (v: string) => void;
+  onAudienceChange: (v: string) => void;
   onMoisChange: (v: string) => void;
   onLieuChange: (v: string) => void;
   onVilleChange: (v: string) => void;
@@ -61,6 +64,7 @@ export function CatalogueFiltersForm({
   value,
   options,
   onGenreChange,
+  onAudienceChange,
   onMoisChange,
   onLieuChange,
   onVilleChange,
@@ -86,6 +90,23 @@ export function CatalogueFiltersForm({
             {options.genres.map((g) => (
               <SelectItem key={g} value={g}>
                 {g}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Publics cible */}
+      <div className="space-y-2">
+        <Label htmlFor="catalogue-audience">Public cible</Label>
+        <Select value={value.audience} onValueChange={onAudienceChange}>
+          <SelectTrigger id="catalogue-audience">
+            <SelectValue placeholder="Public cible" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.audiences.map((a) => (
+              <SelectItem key={a} value={a}>
+                {a}
               </SelectItem>
             ))}
           </SelectContent>
@@ -143,29 +164,6 @@ export function CatalogueFiltersForm({
         </Select>
       </div>
 
-      {/* Switch En tournée uniquement */}
-      <div className="space-y-2">
-        <Label
-          htmlFor="catalogue-available"
-          className="text-sm text-muted-foreground"
-        >
-          Disponibilité
-        </Label>
-        <div className="flex items-center gap-3 h-10">
-          <Switch
-            id="catalogue-available"
-            checked={value.onlyAvailable}
-            onCheckedChange={onAvailableChange}
-          />
-          <Label
-            htmlFor="catalogue-available"
-            className="text-sm font-normal cursor-pointer"
-          >
-            En tournée uniquement
-          </Label>
-        </div>
-      </div>
-
       {/* Recherche */}
       <div className={cn('space-y-2', layout === 'grid' && 'xl:col-span-2')}>
         <Label htmlFor="catalogue-search">Recherche</Label>
@@ -184,6 +182,34 @@ export function CatalogueFiltersForm({
           />
         </div>
       </div>
+
+      {/* Switch « En tournée uniquement » — uniquement en mode mobile
+          (Sheet stacked). En desktop (`grid`), le switch est rendu par la
+          page dans une toolbar en bas, alignée avec le bouton « Réinitialiser »
+          pour éviter une 2ᵉ ligne déséquilibrée. */}
+      {layout === 'stacked' && (
+        <div className="space-y-2">
+          <Label
+            htmlFor="catalogue-available"
+            className="text-sm text-muted-foreground"
+          >
+            Disponibilité
+          </Label>
+          <div className="flex items-center gap-3 h-10">
+            <Switch
+              id="catalogue-available"
+              checked={value.onlyAvailable}
+              onCheckedChange={onAvailableChange}
+            />
+            <Label
+              htmlFor="catalogue-available"
+              className="text-sm font-normal cursor-pointer"
+            >
+              En tournée uniquement
+            </Label>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -200,6 +226,7 @@ export function CatalogueFiltersForm({
 export function countActiveFilters(value: CatalogueFiltersValue): number {
   let count = 0;
   if (value.genre !== 'Tous') count += 1;
+  if (value.audience !== 'Tous') count += 1;
   if (value.mois !== 'Tous') count += 1;
   if (value.lieu !== 'Tous') count += 1;
   if (value.ville !== 'Toutes') count += 1;
