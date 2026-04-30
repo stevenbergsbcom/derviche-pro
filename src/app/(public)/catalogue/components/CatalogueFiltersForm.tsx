@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 
 export interface CatalogueFiltersValue {
   genre: string;
+  audience: string;
   mois: string;
   lieu: string;
   ville: string;
@@ -36,6 +37,7 @@ export interface CatalogueFiltersValue {
 
 export interface CatalogueFiltersOptions {
   genres: string[];
+  audiences: string[];
   mois: string[];
   lieux: string[];
   villes: string[];
@@ -45,6 +47,7 @@ interface CatalogueFiltersFormProps {
   value: CatalogueFiltersValue;
   options: CatalogueFiltersOptions;
   onGenreChange: (v: string) => void;
+  onAudienceChange: (v: string) => void;
   onMoisChange: (v: string) => void;
   onLieuChange: (v: string) => void;
   onVilleChange: (v: string) => void;
@@ -61,6 +64,7 @@ export function CatalogueFiltersForm({
   value,
   options,
   onGenreChange,
+  onAudienceChange,
   onMoisChange,
   onLieuChange,
   onVilleChange,
@@ -86,6 +90,23 @@ export function CatalogueFiltersForm({
             {options.genres.map((g) => (
               <SelectItem key={g} value={g}>
                 {g}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Publics cible */}
+      <div className="space-y-2">
+        <Label htmlFor="catalogue-audience">Public cible</Label>
+        <Select value={value.audience} onValueChange={onAudienceChange}>
+          <SelectTrigger id="catalogue-audience">
+            <SelectValue placeholder="Public cible" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.audiences.map((a) => (
+              <SelectItem key={a} value={a}>
+                {a}
               </SelectItem>
             ))}
           </SelectContent>
@@ -143,7 +164,29 @@ export function CatalogueFiltersForm({
         </Select>
       </div>
 
-      {/* Switch En tournée uniquement */}
+      {/* Recherche */}
+      <div className={cn('space-y-2', layout === 'grid' && 'xl:col-span-2')}>
+        <Label htmlFor="catalogue-search">Recherche</Label>
+        <div className="relative">
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4"
+            aria-hidden="true"
+          />
+          <Input
+            id="catalogue-search"
+            type="text"
+            placeholder="Rechercher un spectacle..."
+            value={value.searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+
+      {/* Switch « En tournée uniquement » — placé en dernier dans le DOM
+          pour qu'il wrappe naturellement en 2ᵉ ligne sur xl (où le grid
+          totalise 7 colonnes : 5 selects + recherche col-span-2). En layout
+          stacked (mobile), il s'aligne après les autres champs. */}
       <div className="space-y-2">
         <Label
           htmlFor="catalogue-available"
@@ -165,25 +208,6 @@ export function CatalogueFiltersForm({
           </Label>
         </div>
       </div>
-
-      {/* Recherche */}
-      <div className={cn('space-y-2', layout === 'grid' && 'xl:col-span-2')}>
-        <Label htmlFor="catalogue-search">Recherche</Label>
-        <div className="relative">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4"
-            aria-hidden="true"
-          />
-          <Input
-            id="catalogue-search"
-            type="text"
-            placeholder="Rechercher un spectacle..."
-            value={value.searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
     </div>
   );
 }
@@ -200,6 +224,7 @@ export function CatalogueFiltersForm({
 export function countActiveFilters(value: CatalogueFiltersValue): number {
   let count = 0;
   if (value.genre !== 'Tous') count += 1;
+  if (value.audience !== 'Tous') count += 1;
   if (value.mois !== 'Tous') count += 1;
   if (value.lieu !== 'Tous') count += 1;
   if (value.ville !== 'Toutes') count += 1;

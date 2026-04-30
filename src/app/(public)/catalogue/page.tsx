@@ -49,6 +49,7 @@ export default function CataloguePage() {
   const [isMounted, setIsMounted] = useState(false);
 
   const [genreFilter, setGenreFilter] = useState<string>('Tous');
+  const [audienceFilter, setAudienceFilter] = useState<string>('Tous');
   const [moisFilter, setMoisFilter] = useState<string>('Tous');
   const [lieuFilter, setLieuFilter] = useState<string>('Tous');
   const [villeFilter, setVilleFilter] = useState<string>('Toutes');
@@ -86,6 +87,16 @@ export default function CataloguePage() {
       show.categories.forEach((cat) => uniqueGenres.add(cat));
     });
     return ['Tous', ...Array.from(uniqueGenres).sort()];
+  }, [publicShows]);
+
+  // Liste dédupliquée des publics cibles présents sur les shows publiés.
+  // Tri alphabétique français pour stabilité visuelle.
+  const audiences = useMemo(() => {
+    const unique = new Set<string>();
+    publicShows.forEach((show) => {
+      show.targetAudiences.forEach((a) => unique.add(a));
+    });
+    return ['Tous', ...Array.from(unique).sort((a, b) => a.localeCompare(b, 'fr'))];
   }, [publicShows]);
 
   const lieux = useMemo(() => {
@@ -128,6 +139,7 @@ export default function CataloguePage() {
   // Fonction pour réinitialiser les filtres
   const resetFilters = () => {
     setGenreFilter('Tous');
+    setAudienceFilter('Tous');
     setMoisFilter('Tous');
     setLieuFilter('Tous');
     setVilleFilter('Toutes');
@@ -147,6 +159,14 @@ export default function CataloguePage() {
       .filter((spectacle) => {
         // Filtre par genre
         if (genreFilter !== 'Tous' && !spectacle.genres.includes(genreFilter)) {
+          return false;
+        }
+
+        // Filtre par public cible
+        if (
+          audienceFilter !== 'Tous' &&
+          !(spectacle.targetAudiences ?? []).includes(audienceFilter)
+        ) {
           return false;
         }
 
@@ -205,7 +225,16 @@ export default function CataloguePage() {
         if (statusDiff !== 0) return statusDiff;
         return a.title.localeCompare(b.title, 'fr');
       });
-  }, [spectacles, genreFilter, moisFilter, lieuFilter, villeFilter, onlyAvailable, searchQuery]);
+  }, [
+    spectacles,
+    genreFilter,
+    audienceFilter,
+    moisFilter,
+    lieuFilter,
+    villeFilter,
+    onlyAvailable,
+    searchQuery,
+  ]);
 
   // Attendre que le composant soit monté pour éviter les erreurs d'hydratation
   if (!isMounted) {
@@ -282,15 +311,17 @@ export default function CataloguePage() {
           <CatalogueMobileFilters
             value={{
               genre: genreFilter,
+              audience: audienceFilter,
               mois: moisFilter,
               lieu: lieuFilter,
               ville: villeFilter,
               onlyAvailable,
               searchQuery,
             }}
-            options={{ genres, mois, lieux, villes }}
+            options={{ genres, audiences, mois, lieux, villes }}
             resultsCount={filteredSpectacles.length}
             onGenreChange={setGenreFilter}
+            onAudienceChange={setAudienceFilter}
             onMoisChange={setMoisFilter}
             onLieuChange={setLieuFilter}
             onVilleChange={setVilleFilter}
@@ -306,14 +337,16 @@ export default function CataloguePage() {
                 layout="grid"
                 value={{
                   genre: genreFilter,
+                  audience: audienceFilter,
                   mois: moisFilter,
                   lieu: lieuFilter,
                   ville: villeFilter,
                   onlyAvailable,
                   searchQuery,
                 }}
-                options={{ genres, mois, lieux, villes }}
+                options={{ genres, audiences, mois, lieux, villes }}
                 onGenreChange={setGenreFilter}
+                onAudienceChange={setAudienceFilter}
                 onMoisChange={setMoisFilter}
                 onLieuChange={setLieuFilter}
                 onVilleChange={setVilleFilter}
