@@ -21,6 +21,12 @@ export interface Spectacle {
   image: string;
   slug: string;
   genres: string[];
+  /**
+   * Publics cibles du spectacle (ex: « Adulte », « Famille »).
+   * Affichés en badge top-right de la card pour cohérence avec la
+   * page détail du spectacle.
+   */
+  targetAudiences?: string[];
   nextDate: string;
   /** Heure de la prochaine représentation (HH:MM) — optionnel, affichée après la date. */
   nextTime?: string | null;
@@ -77,7 +83,7 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
         ? 'opacity-75 cursor-default' 
         : 'hover:shadow-lg cursor-pointer'
     }`}>
-      {/* Image avec badge genre */}
+      {/* Image avec badges */}
       <div className="aspect-[4/3] overflow-hidden relative">
         {showPlaceholder ? (
           <ImagePlaceholder title={spectacle.title} genres={spectacle.genres} />
@@ -93,8 +99,8 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
               }`}
               onError={() => setImageError(true)}
             />
-            {/* Badges genres */}
-            <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+            {/* Badges genres — top-left */}
+            <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-1">
               {spectacle.genres.map((g) => (
                 <span key={g} className="bg-gold text-white text-xs font-semibold px-2 py-1 rounded">
                   {g}
@@ -103,15 +109,31 @@ export function SpectacleCard({ spectacle }: SpectacleCardProps) {
             </div>
           </>
         )}
-        {/* Badge Dernières représentations */}
+
+        {/* Badges publics cible — top-right (style identique à la page spectacle).
+            Affichés y compris sur le placeholder pour homogénéité visuelle. */}
+        {spectacle.targetAudiences && spectacle.targetAudiences.length > 0 && (
+          <div className="absolute top-2 right-2 z-10 flex flex-wrap gap-1 justify-end">
+            {spectacle.targetAudiences.map((aud) => (
+              <span
+                key={aud}
+                className="bg-black/60 text-white text-xs font-semibold px-2 py-1 rounded"
+              >
+                {aud}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Badges statut (« Dernières représentations » / « Bientôt ») —
+            déplacés en bottom-right pour ne pas chevaucher les publics cible. */}
         {isLastRepresentations && (
-          <span className="absolute top-2 right-2 bg-error text-white text-xs font-semibold px-2 py-1 rounded">
+          <span className="absolute bottom-2 right-2 z-10 bg-error text-white text-xs font-semibold px-2 py-1 rounded">
             Dernières représentations
           </span>
         )}
-        {/* Badge Coming Soon */}
         {isComingSoon && (
-          <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded">
+          <span className="absolute bottom-2 right-2 z-10 bg-orange-500 text-white text-xs font-semibold px-2 py-1 rounded">
             Bientôt
           </span>
         )}
