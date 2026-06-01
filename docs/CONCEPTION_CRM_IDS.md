@@ -1,7 +1,8 @@
 # Conception — Intégration des IDs CRM (Zoho)
 
-> **Statut** : conception verrouillée, prête pour implémentation
-> **Sessions cibles** : S174 (backend) + S175 (affichage + exports)
+> **Statut** : ✅ **IMPLÉMENTÉ** — S174 mergé sur `main` (commit `dbc0ef6`), S175 mergé sur `main` (commit `6540a0c`).
+> **Sessions livrées** : S174 (backend + saisie + héritage lecture seule) + S175 (colonnes configurables + exports + piège Excel)
+> **Voir** : `docs/STATUT.md` pour le récap des livrables et la dette technique consciente.
 > **Origine** : demande client — synchroniser la plateforme avec leur CRM Zoho
 
 ---

@@ -143,8 +143,15 @@ ReservationSource = 'public' | 'admin'
 - **shows** : period, derviche_manager_id, invitation_policy, folder_url, teaser_url, captation_available, captation_url
 - **companies** : city, contact_name
 - **slots** : hosted_by_id (personne assurant l'accueil)
-- **reservations** : guest_email_secondary, guest_phone_secondary, guest_address, guest_postal_code, guest_city
+- **reservations** : guest_email_secondary, guest_phone_secondary, guest_address, guest_postal_code, guest_city, guest_country
 - **profiles** : disabled_at (désactivation temporaire)
+
+### Champs IDs CRM Zoho (S174 + S175)
+- **venues.crm_id** : TEXT, index unique partiel `WHERE crm_id IS NOT NULL`. Saisie sur la fiche lieu.
+- **profiles.crm_id** : TEXT, index unique partiel. Saisie sur la fiche pro. **Source de vérité** pour les résa avec compte.
+- **reservations.crm_id** : TEXT, pas d'unicité. Renseigné uniquement pour les résa guest (`user_id IS NULL`). Pour les résa pro, lire `profiles.crm_id` via la jointure `booked_by:user_id (crm_id)`.
+
+Format : ~17 chiffres (IDs Zoho actuels), mais le TEXT absorbe tout futur changement de format CRM. Validation côté UI : sanitization numérique-uniquement à la frappe (`CrmIdInput`).
 
 ### Politiques RLS clés
 - **profiles** : Chacun voit son profil, admin voit tous

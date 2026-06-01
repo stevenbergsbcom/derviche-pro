@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S198 — Refacto routes email (factory helpers) — 23 avril 2026
+> Dernière mise à jour : Session S174 + S175 — IDs CRM Zoho (saisie + exports) — 1ᵉʳ juin 2026
 
 ---
 
@@ -79,13 +79,13 @@
 | Module | État |
 |--------|------|
 | Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison, **bouton Check-in → nouvel onglet (S190)** |
-| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export |
+| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM + UUID + adresse éclatée (S175)**, **forçage texte Excel/CSV sur IDs Zoho (S175)** |
 | **Statistiques** | ✅ Page `/admin/statistiques` dédiée — KPIs, drill-down drawers, comparaison périodes, export PDF, préférences column visibility (S189) |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories (renommables S192), publics cibles (renommables S192), médias, **champ `derviche_site_url` (S191)** |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
-| Lieux | ✅ CRUD salles (venues) |
+| Lieux | ✅ CRUD salles (venues), **ID CRM Zoho (S174)** |
 | Compagnies | ✅ CRUD, liaison utilisateur |
-| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète |
+| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète, **ID CRM Zoho (S174)** |
 | Préférences | ✅ Organisation, Apparence (thème custom S174), **Classement (vedette + ordre global, S194)**, Email, Templates (12, UX DRY S175), Notifications, Rappels, Google Calendar, RGPD, **Page d'accueil (S176)** — **sous-menu collapsible dans la sidebar (S195)** |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137, **fix résa publique S182**, **notification admin enrichie (S191)** |
 | **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
@@ -1496,9 +1496,113 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 
 ---
 
+### S174 — IDs CRM Zoho (backend + saisie) ✅
+
+> Numérotation reprise depuis `docs/CONCEPTION_CRM_IDS.md` (conception en amont). À ne pas confondre avec l'ancien S174 « thème custom » mentionné dans la ligne Préférences.
+
+**Objectif** : permettre au client de saisir dans la plateforme les identifiants de son CRM Zoho pour les lieux, les pros et les réservations sans compte, afin de faire le pont entre la plateforme et son CRM.
+
+**Migrations (3) — appliquées en prod** :
+- `117_add_crm_id_to_venues.sql` : `venues.crm_id TEXT` + index unique partiel `WHERE crm_id IS NOT NULL`.
+- `118_add_crm_id_to_profiles.sql` : `profiles.crm_id TEXT` + index unique partiel.
+- `119_add_crm_id_to_reservations.sql` : `reservations.crm_id TEXT` (PAS d'unicité — un pro guest peut réserver N fois).
+
+**Composant réutilisable** :
+- `src/components/admin/crm-id-input.tsx` — input numérique-uniquement (sanitization à la frappe via `/\D/g`), retourne `null` si vide (cohérent avec l'index partiel).
+
+**Intégration UI** :
+- Formulaire lieu (création + édition) — `venue-form-dialog.tsx`
+- Formulaire pro (édition) — `ProfessionalEditForm.tsx` + schéma Zod (regex défense en profondeur)
+- Fiche complète pro `/admin/professionnels/[id]` — lecture seule via `ContactInfoPanel`, colonne gauche élargie 300→380px
+- Dialog édition résa :
+  - guest (`userId === null`) → champ éditable via `CrmIdInput`
+  - pro connecté → champ lecture seule (icône cadenas + helper « hérité de la fiche du pro »), valeur tirée de `profiles.crm_id` via la jointure `booked_by:user_id (crm_id)`
+- Dialog création résa admin → champ éditable + pré-remplissage depuis profil pro sélectionné via `ProfessionalSearchBar`
+
+**Service layer — défense en profondeur** :
+- `updateReservation` : RPC principale puis side-update direct sur `reservations.crm_id` avec `.is('user_id', null)` (impossible d'écraser un crm_id pro même si caller envoie `crmId` par erreur). Erreur métier explicite si l'écriture échoue (la RPC est idempotente → retry safe).
+- `createAdminReservation` : même garde `.is('user_id', null)`. Non-bloquant (échec → toast warning côté UI, pas de retry pour éviter doublon de création).
+- `initializeFormData` du dialog édition omet `crmId` du payload quand `userId !== null` → la mutation skip naturellement le side-update.
+- `humanizeVenueError` traduit la violation de l'index unique partiel en message lisible (« Cet ID CRM est déjà attribué à un autre lieu »).
+
+**Cascade typage** :
+- `database.ts` : `VenueRow/Insert/Update`, `ProfileRow/Insert/Update`, `ReservationRow/Insert/Update` étendus avec `crm_id`. En-tête mise à jour (« Migrations : 001-119 »).
+- `supabase.ts` (types Supabase générés manuellement) : `crm_id` ajouté sur les 3 tables × 3 variants.
+- `Professional`, `UpdateProfessionalData`, `AdminReservation`, `UpdateReservationData`, `CreateAdminReservationData`, `ReservationRowWithRelations.booked_by.crm_id`, `CompanyReservation.crmId` (S175).
+
+**Audit Cursor** : 8.5/10, aucune issue bloquante. Retours intégrés (JSDoc obsolète, sanitization silencieuse vs « avertissement non bloquant », défense `.is('user_id', null)`, side-update silencieux → erreur explicite côté update).
+
+**Articles doc modifiés** :
+- `content/lieux/vue-ensemble.mdx` — section dédiée ID CRM + keywords
+- `content/professionnels/vue-ensemble.mdx` — section dédiée
+- `content/reservations/creer.mdx` — mention pré-remplissage
+- `content/reservations/modifier-annuler.mdx` — distinction guest vs pro
+
+**Commits merge main** : `dbc0ef6`
+
+---
+
+### S175 — IDs CRM Zoho (affichage hérité + exports) ✅
+
+**Objectif** : exposer les IDs CRM dans les tableaux admin/compagnie (colonnes configurables) et dans les exports (CSV / Excel), avec gestion du « piège Excel » (notation scientifique sur les IDs 17 chiffres).
+
+**Nouvelles colonnes configurables (masquées par défaut)** :
+
+| Colonne | Admin | Compagnie |
+|---|---|---|
+| `crmIdPro` | ✅ | ⚠ (résa guest seulement — RLS) |
+| `crmIdVenue` | ✅ | ✅ |
+| `userUuid` | ✅ | — (technique, admin only) |
+| `venueUuid` | ✅ | — |
+| `addressStreet` / `addressPostalCode` / `addressCity` / `addressCountry` | ✅ | ✅ |
+
+La colonne « Adresse » historique reste disponible (concaténée).
+
+**Piège Excel résolu** :
+- Excel `.xlsx` : cellules forcées en `{ t: 's', v: ... }` (cell-object string) sur les colonnes IDs / UUIDs / code postal.
+- CSV : valeur wrappée dans `="<valeur>"` (formule Excel évaluée en chaîne textuelle) sur les IDs CRM + code postal.
+- Sans ça : `70611000000487416` → `7,06E+16` à l'ouverture Excel (corruption silencieuse).
+
+**Exports professionnels CSV** :
+- Séparateur passé de `,` à `;` (cohérent avec exports résa, évite le bug « tout dans col. A » d'Excel FR au double-clic).
+- Colonnes systématiques en fin de fichier : `ID CRM Zoho` (forcé texte) + `UUID (technique)`.
+- Force-text aussi sur `postal_code` (préserve les éventuels zéros de tête).
+
+**SELECT enrichis** :
+- `RESERVATION_SELECT_QUERY` + `_SINGLE_` : `booked_by.crm_id` (héritage profile sur résa pro) + `venues.crm_id`.
+- `company-reservations/list.ts` + `export.ts` : `reservations.crm_id` + `guest_country` + `venues.crm_id`.
+
+**Transformer admin — discriminated `userId`** :
+```
+crmId = userId === null
+  ? row.crm_id              // résa guest : valeur sur reservations.crm_id
+  : row.booked_by?.crm_id   // résa pro   : hérité du profil
+```
+
+**Limitation V1 — compagnie** : `crmIdPro` reste vide pour les résa de pros connectés côté compagnie. La RLS `profiles` n'autorise pas la jointure `booked_by` pour le rôle `company`. À débloquer en S176 si le client le demande (nouvelle policy `profiles_select_company`).
+
+**Backfill prefs utilisateur** : les hooks `useReservationColumnsPreference` et `useCompanyReservationColumnsPreference` ont déjà un mécanisme `missingColumns.filter(...)` qui injecte les nouvelles colonnes en fin d'ordre pour les users avec prefs antérieures. Aucun script de migration de données nécessaire.
+
+**Cleanup** : 3 fichiers dead code supprimés dans `src/components/company/reservations/` (`company-table-cell-renderer.tsx`, `company-reservation-helpers.tsx`, `company-sortable-header.tsx`) — aucun consumer dans le codebase, −330 lignes.
+
+**Audit Cursor** : 9/10, aucune issue bloquante. Retours P2/P3 intégrés (toast warning sur échec crm_id à la création, force-text CP pros, MDX 3 → 4 colonnes adresse). Retours P1 (duplication structurelle `getCellValue` × 4 + double config compagnie) reportés en session de refacto.
+
+**Articles doc modifiés** :
+- `content/reservations/exporter.mdx` — section IDs CRM + callouts CSV vs Excel + limitation compagnie + keywords
+- `content/professionnels/vue-ensemble.mdx` — mention ajouts CSV S175
+
+**Dette technique consciente** :
+- Duplication `getCellValue` × 4 (export-helpers admin/compagnie + preview-utils admin/compagnie) — à factoriser
+- Double config colonnes compagnie (`COMPANY_RESERVATION_COLUMNS_CONFIG` user-prefs + `COMPANY_COLUMNS_CONFIG` hooks) — à unifier
+- RLS `profiles_select_company` pour débloquer `crmIdPro` côté compagnie sur résa pro
+
+**Commit merge main** : `6540a0c`
+
+---
+
 ## Backlog / TODO
 
-### Prochaine session : S199 — à définir
+### Prochaine session : S200 — à définir
 
 **Candidats backlog (par priorité) :**
 | # | Fonctionnalité | Complexité | Valeur |
@@ -1514,6 +1618,9 @@ Rendre le contenu de la page d'accueil 100% configurable depuis l'onglet « Page
 | 9 | Étendre la garde dirty `ConfirmableNavLink` aux autres liens sidebar admin sensibles | Faible | UX |
 | 10 | Régénérer `src/types/supabase.ts` (dette post-migrations 107→112) | Faible | Type safety |
 | 11 | Hook pre-push / GitHub Action d'enforcement automatique de la règle MAJ doc | Faible | Fiabilité |
+| 12 | **Factorisation `getCellValue` exports résa** (4 implémentations parallèles — dette S175) | Moyenne | Maintenabilité |
+| 13 | **Unifier config colonnes compagnie** (`COMPANY_RESERVATION_COLUMNS_CONFIG` user-prefs + `COMPANY_COLUMNS_CONFIG` hooks — dette S175) | Faible | Maintenabilité |
+| 14 | **RLS `profiles_select_company`** : débloquer `crmIdPro` côté compagnie sur résa pro (dette S175) | Faible | Métier |
 
 > **Note** : le backlog ci-dessus a été réorganisé après l'audit de refacto S198. L'ancien item « Factory email routes » (#4) est terminé.
 
