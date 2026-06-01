@@ -215,6 +215,11 @@ export function EditReservationDialog({
               organization={formData.organization ?? null}
               function={formData.function ?? null}
               afcNumber={formData.afcNumber ?? null}
+              crmId={formData.crmId ?? null}
+              // S174 — ID CRM Zoho éditable uniquement pour les résas guest.
+              // `reservation.userId === null` est la source de vérité (formData
+              // ne porte pas userId, c'est volontairement séparé).
+              isGuest={reservation?.userId === null}
               onChange={handleChange}
               disabled={isSaving}
             />

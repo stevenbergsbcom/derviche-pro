@@ -4,7 +4,7 @@ slug: professionnels/vue-ensemble
 category: professionnels
 categoryLabel: Professionnels
 categoryIcon: Users
-keywords: [professionnels, pros, base, fiche, colonnes, export, csv, désactiver]
+keywords: [professionnels, pros, base, fiche, colonnes, export, csv, désactiver, crm, zoho, id crm, identifiant]
 roles: [super-admin, admin]
 order: 1
 ---
@@ -31,8 +31,20 @@ Votre sélection est **sauvegardée** (réutilisée à la prochaine visite).
 
 Clic sur une ligne → drawer latéral avec :
 - **Coordonnées complètes**
+- **ID CRM (Zoho)** — voir section dédiée ci-dessous
 - **Historique des réservations** (toutes, avec détail spectacle / créneau / statut)
 - **Toggle Actif / Inactif**
+
+## ID CRM (Zoho)
+
+Le champ **ID CRM (Zoho)** permet de relier la fiche pro à son enregistrement dans votre CRM Zoho. Il s'agit d'un identifiant numérique (~17 chiffres) trouvable dans l'URL de la fiche contact sur Zoho.
+
+- **Optionnel** — laissez vide si le pro n'a pas (encore) de fiche dans votre CRM
+- **Unique** — un même ID ne peut pas être attribué à deux pros différents
+- **Numérique uniquement** — les caractères non chiffrés sont retirés automatiquement à la saisie
+- **Source de vérité pour les réservations** — quand un pro connecté à son compte réserve, son ID CRM est hérité automatiquement (pas besoin de le ressaisir sur chaque résa)
+
+Pour une réservation sans compte (guest), l'ID CRM se saisit directement sur la fiche de la réservation — voir [Modifier / annuler une réservation](/admin/aide/reservations/modifier-annuler).
 
 ## Désactiver un pro
 

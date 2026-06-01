@@ -232,6 +232,8 @@ export function useCreateReservationForm({
       organization: profile.organization ?? null,
       function: profile.function ?? null,
       afcNumber: profile.afcNumber ?? null,
+      // S174 — pré-remplir l'ID CRM Zoho depuis le profil sélectionné
+      crmId: profile.crmId ?? null,
       address: profile.address ?? null,
       postalCode: profile.postalCode ?? null,
       city: profile.city ?? null,

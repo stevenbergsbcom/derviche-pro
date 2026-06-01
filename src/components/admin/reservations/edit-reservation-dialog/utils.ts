@@ -32,6 +32,8 @@ export function initializeFormData(reservation: AdminReservation): UpdateReserva
     organization: reservation.organization,
     function: reservation.function,
     afcNumber: reservation.afcNumber,
+    // S174 — ID CRM Zoho (résa guest uniquement, sinon null)
+    crmId: reservation.crmId,
     numPlaces: reservation.numPlaces,
     slotId: reservation.slotId,
     specialRequests: reservation.specialRequests,

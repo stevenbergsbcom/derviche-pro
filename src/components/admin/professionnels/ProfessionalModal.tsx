@@ -27,6 +27,7 @@ import {
   Trash2,
   IdCard,
   ClipboardList,
+  Hash,
 } from 'lucide-react';
 import Link from 'next/link';
 import { copyEmailWithToast } from '@/lib/utils/copy-email';
@@ -127,6 +128,8 @@ function ProfessionalInfoTab({ professional }: { professional: Professional }) {
           <InfoRow icon={Building2} label="Structure" value={professional.structure} />
           <InfoRow icon={IdCard} label="Fonction" value={professional.function} />
           <InfoRow icon={IdCard} label="N° AFC" value={professional.afc_number} />
+          {/* S174 — ID CRM Zoho, lecture seule (édition via le formulaire) */}
+          <InfoRow icon={Hash} label="ID CRM (Zoho)" value={professional.crm_id} />
         </div>
       </div>
 

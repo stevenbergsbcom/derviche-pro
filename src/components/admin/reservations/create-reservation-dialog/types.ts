@@ -137,6 +137,8 @@ export interface ProfessionalInfoSectionProps extends FormSectionProps {
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
+  /** Migration 119 — ID CRM Zoho (S174). */
+  crmId: string | null;
   onChange: FieldChangeHandler;
 }
 

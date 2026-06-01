@@ -159,6 +159,29 @@ export async function updateReservation(
       return { data: null, error: errMsg };
     }
 
+    // S174 — ID CRM Zoho (résas guest)
+    // La RPC update_reservation_safe ne connaît pas la colonne crm_id (ajoutée
+    // en migration 119) et n'a aucune logique de sécurité à porter dessus
+    // (pas d'invariant capacité/doublon/lock). On fait donc un UPDATE direct
+    // séparé quand le caller envoie un crmId (undefined = on ne touche pas).
+    // Les policies RLS `reservations_update_admin` autorisent déjà cette
+    // colonne pour les admins.
+    if (data.crmId !== undefined) {
+      const { error: crmIdError } = await supabase
+        .from('reservations')
+        .update({ crm_id: data.crmId })
+        .eq('id', id);
+      if (crmIdError) {
+        logger.warn('Erreur mise à jour crm_id (non-bloquante)', {
+          id,
+          error: crmIdError.message,
+        });
+        // Non-bloquant : la modification principale de la résa a réussi via
+        // la RPC. On retourne quand même la résa rafraîchie, charge à
+        // l'utilisateur de retenter si l'ID CRM est critique.
+      }
+    }
+
     // Récupérer la réservation mise à jour
     const updatedResult = await getAdminReservationById(id);
     if (updatedResult.data) {
@@ -324,6 +347,27 @@ export async function createAdminReservation(
       const errMsg = result?.error || 'Erreur lors de la création';
       logger.error(ERROR_MESSAGES.CREATE_RPC_FAIL, { error: errMsg });
       return { success: false, error: errMsg };
+    }
+
+    // S174 — Si un ID CRM Zoho a été fourni à la création, on l'écrit
+    // dans la foulée via un UPDATE direct (la RPC create_admin_reservation
+    // ne connaît pas la colonne crm_id, ajoutée en migration 119).
+    if (
+      result.reservation_id &&
+      data.crmId !== undefined &&
+      data.crmId !== null &&
+      data.crmId.trim() !== ''
+    ) {
+      const { error: crmIdError } = await supabase
+        .from('reservations')
+        .update({ crm_id: data.crmId.trim() })
+        .eq('id', result.reservation_id);
+      if (crmIdError) {
+        logger.warn('Erreur écriture crm_id à la création (non-bloquante)', {
+          reservationId: result.reservation_id,
+          error: crmIdError.message,
+        });
+      }
     }
 
     logger.info('Réservation admin créée', { reservationId: result.reservation_id });

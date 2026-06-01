@@ -74,7 +74,16 @@ export interface AdminReservation {
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
-  
+  /**
+   * ID CRM Zoho (migration 119).
+   *
+   * Pour S174 :
+   *  - résa guest (userId === null) → vient de `reservations.crm_id`, éditable.
+   *  - résa avec compte (userId !== null) → reste `null` ici en S174.
+   *    S175 affichera `profiles.crm_id` en lecture seule via jointure dédiée.
+   */
+  crmId: string | null;
+
   // Réservation
   numPlaces: number;
   status: ReservationStatus;
@@ -218,6 +227,12 @@ export interface UpdateReservationData {
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
+  /**
+   * ID CRM Zoho (migration 119) — uniquement pertinent pour les résas guest.
+   * `undefined` → laisse la valeur en BDD intacte.
+   * `null` → vide explicitement le champ.
+   */
+  crmId?: string | null;
   // Réservation
   numPlaces?: number;
   slotId?: string;
@@ -245,6 +260,8 @@ export interface CreateAdminReservationData {
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
+  /** Migration 119 — ID CRM Zoho. Une résa admin est toujours guest (user_id NULL). */
+  crmId?: string | null;
   // Notes
   comment?: string | null;
   checkinComment?: string | null;
@@ -328,6 +345,8 @@ export interface ReservationRowWithRelations {
   guest_structure: string | null;
   guest_function: string | null;
   guest_afc_number: string | null;
+  /** Migration 119 — ID CRM Zoho (résas guest uniquement). */
+  crm_id: string | null;
   num_places: number;
   status: string;
   /** Origine de la création : 'public' (site public) ou 'admin' (back-office / PWA walk-in). */
