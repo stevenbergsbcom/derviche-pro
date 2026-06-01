@@ -9,15 +9,16 @@
  *  - fiche réservation guest (reservations.crm_id)
  *
  * Validation souple :
- *  - Seuls les chiffres sont acceptés (`/^\d*$/`)
+ *  - Seuls les chiffres sont acceptés (filtrage `/\D/g` à la frappe)
  *  - Aucune longueur imposée côté UI (les IDs Zoho font ~17 chiffres
  *    aujourd'hui, mais ce format peut évoluer côté CRM)
- *  - Un avertissement non bloquant s'affiche si la saisie n'est pas
- *    numérique pure (l'admin peut quand même enregistrer)
  *
- * La saisie est nettoyée à la volée (caractères non-numériques retirés)
- * pour offrir un comportement prévisible quand l'admin colle un ID
- * copié depuis Zoho avec des espaces ou caractères parasites.
+ * La saisie est nettoyée à la volée (caractères non-numériques retirés
+ * silencieusement) pour offrir un comportement prévisible quand l'admin
+ * colle un ID copié depuis Zoho avec des espaces ou caractères parasites.
+ * Le composant ne lève aucun avertissement visuel — par design : la
+ * sanitization est invisible et l'utilisateur voit immédiatement le
+ * résultat propre dans le champ.
  */
 
 'use client';

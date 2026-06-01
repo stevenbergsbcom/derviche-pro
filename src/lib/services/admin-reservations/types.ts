@@ -75,12 +75,15 @@ export interface AdminReservation {
   function: string | null;
   afcNumber: string | null;
   /**
-   * ID CRM Zoho (migration 119).
+   * ID CRM Zoho (migration 119), résolu par le transformer :
+   *  - résa guest (`userId === null`) → vient de `reservations.crm_id`, éditable
+   *    depuis le dialog d'édition (CrmIdInput).
+   *  - résa avec compte (`userId !== null`) → hérité de `profiles.crm_id` via
+   *    la jointure `booked_by:user_id (crm_id)`. Affiché en lecture seule dans
+   *    le dialog. Pour modifier, passer par la fiche du pro (source de vérité).
    *
-   * Pour S174 :
-   *  - résa guest (userId === null) → vient de `reservations.crm_id`, éditable.
-   *  - résa avec compte (userId !== null) → reste `null` ici en S174.
-   *    S175 affichera `profiles.crm_id` en lecture seule via jointure dédiée.
+   * Cette résolution dans le transformer évite à chaque consommateur (UI,
+   * export S175…) de devoir distinguer les deux cas.
    */
   crmId: string | null;
 
