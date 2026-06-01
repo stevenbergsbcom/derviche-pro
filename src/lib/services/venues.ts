@@ -1,7 +1,7 @@
 /**
  * Service Venues - CRUD pour la table venues
  * Derviche Diffusion
- * 
+ *
  * Gère toutes les opérations sur les lieux/salles de spectacle
  */
 
@@ -9,6 +9,19 @@ import { createClient } from '@/lib/supabase/client';
 import type { VenueRow, VenueInsert, VenueUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
 import { logActivityClient } from '@/lib/services/logs/client';
+
+/**
+ * Traduit une erreur PostgreSQL en message utilisateur lisible.
+ * Cas spécialement géré : violation de l'index unique partiel sur crm_id
+ * (migration 117) — l'utilisateur doit savoir qu'il essaie de réutiliser
+ * un ID CRM déjà attribué à un autre lieu, pas un message technique brut.
+ */
+function humanizeVenueError(rawMessage: string): string {
+  if (rawMessage.includes('venues_crm_id_unique') || rawMessage.includes('duplicate key value violates unique constraint "venues_crm_id_unique"')) {
+    return 'Cet ID CRM est déjà attribué à un autre lieu.';
+  }
+  return rawMessage;
+}
 
 // ============================================
 // TYPES
@@ -99,7 +112,7 @@ export async function createVenue(venue: VenueInsert): Promise<VenueResult> {
 
     if (error) {
       logger.error('Erreur création venue', error);
-      return { data: null, error: error.message };
+      return { data: null, error: humanizeVenueError(error.message) };
     }
 
     logger.info(`Venue créé: ${data.name} (${data.id})`);
@@ -134,7 +147,7 @@ export async function updateVenue(id: string, venue: VenueUpdate): Promise<Venue
 
     if (error) {
       logger.error('Erreur mise à jour venue', { id, error: error.message });
-      return { data: null, error: error.message };
+      return { data: null, error: humanizeVenueError(error.message) };
     }
 
     logger.info(`Venue mis à jour: ${data.name} (${data.id})`);
