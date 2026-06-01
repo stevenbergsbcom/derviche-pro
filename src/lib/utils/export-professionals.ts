@@ -128,12 +128,22 @@ function buildExportData(
     ...TRAILING_COLUMNS,
   ];
 
+  /**
+   * S175 — Colonnes forcées en texte à l'ouverture Excel.
+   * - `crm_id` : préserve les 17 chiffres (sinon notation scientifique).
+   * - `postal_code` : préserve un éventuel zéro de tête (ex: « 01000 » lu
+   *   « 1000 » par défaut).
+   */
+  const forceTextKeys: ReadonlySet<keyof Professional> = new Set([
+    'crm_id',
+    'postal_code',
+  ]);
+
   const headers = allColumns.map((c) => c.label);
   const rows = professionals.map((pro) =>
     allColumns.map((c) => {
       const raw = formatValue(pro[c.key]);
-      // S175 — Forçage texte Excel sur l'ID CRM 17 chiffres
-      if (c.key === 'crm_id') return forceExcelText(raw);
+      if (forceTextKeys.has(c.key)) return forceExcelText(raw);
       return raw;
     })
   );

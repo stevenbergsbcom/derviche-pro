@@ -279,6 +279,14 @@ export interface CreateAdminReservationResult {
   success: boolean;
   reservationId?: string;
   error?: string;
+  /**
+   * S175 — Avertissement non-bloquant. Renseigné quand la résa a bien été
+   * créée mais qu'un side-effet a échoué (typiquement l'écriture de
+   * `reservations.crm_id`). Permet au caller d'afficher un toast d'info à
+   * l'admin sans transformer un succès en échec (ce qui provoquerait un
+   * doublon de création au retry).
+   */
+  warning?: string;
 }
 
 // ============================================

@@ -322,6 +322,11 @@ function AdminReservationsContent() {
     const { _notifOptions: notifOptions, ...createData } = data;
     const result = await createAdminReservation(createData);
     if (result.success) {
+      // S175 — Surfacer l'avertissement non-bloquant si le side-update CRM
+      // a échoué (la résa a été créée mais sans ID CRM persisté).
+      if (result.warning) {
+        toast.warning(result.warning);
+      }
       setSearchInput('');
       filtersHook.handleResetFilters();
       const resetFilters = { period: 'all' as const, sortBy: 'created_at_desc' as SortOption };

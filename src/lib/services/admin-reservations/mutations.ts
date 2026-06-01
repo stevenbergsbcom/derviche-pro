@@ -367,9 +367,10 @@ export async function createAdminReservation(
     // NB : volontairement NON-BLOQUANT ici, contrairement à updateReservation.
     // Convertir cette erreur en échec retournerait `success: false` au caller
     // alors que la résa a déjà été créée → l'admin retenterait → DOUBLON.
-    // L'erreur est donc loguée en `error` (et non plus `warn`) pour qu'elle
-    // remonte dans les logs production et qu'un admin puisse rattraper l'ID
-    // CRM manuellement via le dialog d'édition si besoin.
+    // S175 — En cas d'échec, on remonte un `warning` distinct du `error`
+    // pour que la page puisse afficher un toast d'info à l'admin tout en
+    // gardant le `success: true`.
+    let crmIdWarning: string | undefined;
     if (
       result.reservation_id &&
       data.crmId !== undefined &&
@@ -386,6 +387,8 @@ export async function createAdminReservation(
           reservationId: result.reservation_id,
           error: crmIdError.message,
         });
+        crmIdWarning =
+          "L'ID CRM n'a pas été enregistré. La réservation est créée — vous pouvez le renseigner via le dialog d'édition.";
       }
     }
 
@@ -403,7 +406,11 @@ export async function createAdminReservation(
         source: 'admin',
       },
     });
-    return { success: true, reservationId: result.reservation_id };
+    return {
+      success: true,
+      reservationId: result.reservation_id,
+      ...(crmIdWarning ? { warning: crmIdWarning } : {}),
+    };
 
   } catch (err) {
     const message = err instanceof Error ? err.message : ERROR_MESSAGES.EXCEPTION;
