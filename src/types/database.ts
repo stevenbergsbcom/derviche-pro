@@ -542,6 +542,7 @@ export interface ReservationRow {
   guest_address: string | null;
   guest_postal_code: string | null;
   guest_city: string | null;
+  guest_country: string | null;
   // Champs réservation
   num_places: number;
   status: ReservationStatus;
@@ -586,6 +587,7 @@ export interface ReservationInsert {
   guest_address?: string | null;
   guest_postal_code?: string | null;
   guest_city?: string | null;
+  guest_country?: string | null;
   // Champs réservation
   num_places: number;
   status?: ReservationStatus;
@@ -617,6 +619,7 @@ export interface ReservationUpdate {
   guest_address?: string | null;
   guest_postal_code?: string | null;
   guest_city?: string | null;
+  guest_country?: string | null;
   // Champs check-in
   checkin_status?: CheckinStatus | null;
   checkin_comment?: string | null;

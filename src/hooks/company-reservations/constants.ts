@@ -27,6 +27,11 @@ export const COMPANY_COLUMNS_CONFIG: Record<
   function: { label: 'Fonction', defaultVisible: false },
   afcNumber: { label: 'N° AFC', defaultVisible: false },
   address: { label: 'Adresse', defaultVisible: false },
+  // S175 — adresse éclatée
+  addressStreet: { label: 'Rue', defaultVisible: false },
+  addressPostalCode: { label: 'Code postal', defaultVisible: false },
+  addressCity: { label: 'Ville', defaultVisible: false },
+  addressCountry: { label: 'Pays', defaultVisible: false },
   numPlaces: { label: 'Places', defaultVisible: true },
   status: { label: 'Statut', defaultVisible: true },
   checkinStatus: { label: 'Check-in', defaultVisible: true },
@@ -34,6 +39,9 @@ export const COMPANY_COLUMNS_CONFIG: Record<
   checkinNotes: { label: 'Notes check-in', defaultVisible: false },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
+  // S175 — IDs CRM Zoho (masqués par défaut)
+  crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
+  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par défaut des colonnes compagnie */
@@ -51,6 +59,10 @@ export const COMPANY_COLUMNS_ORDER: CompanyExportColumn[] = [
   'function',
   'afcNumber',
   'address',
+  'addressStreet',
+  'addressPostalCode',
+  'addressCity',
+  'addressCountry',
   'numPlaces',
   'status',
   'checkinStatus',
@@ -58,6 +70,9 @@ export const COMPANY_COLUMNS_ORDER: CompanyExportColumn[] = [
   'checkinNotes',
   'checkinVenueNotes',
   'createdAt',
+  // S175 — IDs CRM
+  'crmIdPro',
+  'crmIdVenue',
 ];
 
 /** Colonnes visibles par défaut pour les compagnies */

@@ -4,7 +4,7 @@ slug: reservations/exporter
 category: reservations
 categoryLabel: Réservations
 categoryIcon: Calendar
-keywords: [export, exporter, csv, excel, télécharger, download, extraction, listes]
+keywords: [export, exporter, csv, excel, télécharger, download, extraction, listes, crm, zoho, id crm, identifiant, uuid, adresse]
 roles: [super-admin, admin, externe]
 order: 5
 ---
@@ -40,6 +40,23 @@ Colonnes disponibles :
 - Demandes spéciales
 - Code de réservation
 - Dates (création, modification)
+- **ID CRM (pro)** et **ID CRM (lieu)** — identifiants Zoho (~17 chiffres), masqués par défaut
+- **Adresse séparée** : Rue / Code postal / Ville / Pays en 4 colonnes (en plus de la colonne « Adresse complète »)
+- **UUID pro** et **UUID lieu** — identifiants techniques Supabase, utiles uniquement pour le support technique (super-admin)
+
+### Spécifique CRM Zoho
+
+Les colonnes **ID CRM (pro)** et **ID CRM (lieu)** font le pont avec votre CRM Zoho. Activez-les depuis le sélecteur de colonnes pour les inclure dans vos exports.
+
+Les valeurs sont automatiquement **forcées en format texte** dans le fichier généré pour éviter le piège classique d'Excel qui convertit `70611000000487416` en `7,06E+16` (notation scientifique) et corrompt la donnée. Cela fonctionne identiquement en Excel et CSV.
+
+<Callout type="info">
+**CSV vs Excel** : les deux formats préservent désormais les IDs CRM. Le CSV utilise une formule Excel (`="..."`) qui s'évalue en chaîne textuelle ; visible si vous ouvrez le fichier dans un éditeur de texte, transparent dans Excel.
+</Callout>
+
+<Callout type="warning">
+**Côté compagnie (export depuis /company/reservations)** : l'ID CRM du pro n'est exposé que pour les réservations **sans compte** (guest). Pour les réservations faites par un pro connecté à son compte, le champ reste vide côté export compagnie — la jointure vers la fiche du pro n'est pas autorisée par les règles d'accès actuelles. Si la compagnie a besoin de cet ID, l'admin peut le fournir via l'export admin qui n'a pas cette limitation.
+</Callout>
 
 <Callout type="warning">
 **Protection des données personnelles** : un fichier exporté contient des emails, téléphones et parfois adresses. Stockez-le en lieu sûr et supprimez-le dès qu'il n'est plus nécessaire (RGPD).

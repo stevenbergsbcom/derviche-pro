@@ -42,6 +42,11 @@ export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   function: 'Fonction',
   afcNumber: 'N° AFC',
   address: 'Adresse',
+  // S175 — adresse éclatée
+  addressStreet: 'Rue',
+  addressPostalCode: 'CP',
+  addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Places',
   status: 'Statut',
   checkinStatus: 'Check-in',
@@ -49,6 +54,9 @@ export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   checkinNotes: 'Notes accueil',
   checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
+  // S175 — IDs CRM Zoho
+  crmIdPro: 'ID CRM (pro)',
+  crmIdVenue: 'ID CRM (lieu)',
 };
 
 // ============================================

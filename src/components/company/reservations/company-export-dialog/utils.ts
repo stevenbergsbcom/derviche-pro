@@ -80,6 +80,19 @@ export function getCellValue(col: CompanyExportColumn, r: CompanyReservation): s
       return truncate(fullAddress, TRUNCATE_LENGTHS.address);
     }
 
+    // S175 — adresse éclatée pour l'export
+    case 'addressStreet':
+      return truncate(r.address, TRUNCATE_LENGTHS.address);
+
+    case 'addressPostalCode':
+      return r.postalCode || '-';
+
+    case 'addressCity':
+      return r.city || '-';
+
+    case 'addressCountry':
+      return r.country || '-';
+
     case 'numPlaces':
       return String(r.numPlaces);
 
@@ -95,6 +108,15 @@ export function getCellValue(col: CompanyExportColumn, r: CompanyReservation): s
 
     case 'createdAt':
       return r.createdAt ? formatDateShort(r.createdAt.split('T')[0]) : '-';
+
+    // S175 — IDs CRM Zoho (lecture seule côté compagnie)
+    // crmIdPro côté compagnie ne lit QUE `reservations.crm_id` (résa guest).
+    // Pour résa pro, la RLS empêche d'accéder à `profiles.crm_id` → vide.
+    case 'crmIdPro':
+      return r.crmId || '-';
+
+    case 'crmIdVenue':
+      return r.slot?.venue?.crmId || '-';
 
     default:
       return '-';

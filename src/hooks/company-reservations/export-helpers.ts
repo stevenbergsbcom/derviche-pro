@@ -33,6 +33,11 @@ const EXPORT_COLUMN_LABELS: Record<CompanyExportColumn, string> = {
   function: 'Fonction',
   afcNumber: 'N° AFC',
   address: 'Adresse complète',
+  // S175 — adresse éclatée
+  addressStreet: 'Rue',
+  addressPostalCode: 'Code postal',
+  addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Nb places',
   status: 'Statut',
   checkinStatus: 'Check-in',
@@ -40,6 +45,9 @@ const EXPORT_COLUMN_LABELS: Record<CompanyExportColumn, string> = {
   checkinNotes: 'Notes check-in',
   checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
+  // S175 — IDs CRM Zoho
+  crmIdPro: 'ID CRM Zoho (pro)',
+  crmIdVenue: 'ID CRM Zoho (lieu)',
 };
 
 // ============================================
@@ -105,6 +113,15 @@ function getCellValue(col: CompanyExportColumn, r: CompanyReservation): string {
       const parts = [r.address, r.postalCode, r.city].filter(Boolean);
       return parts.length > 0 ? parts.join(' ') : '-';
     }
+    // S175 — adresse éclatée
+    case 'addressStreet':
+      return r.address || '-';
+    case 'addressPostalCode':
+      return r.postalCode || '-';
+    case 'addressCity':
+      return r.city || '-';
+    case 'addressCountry':
+      return r.country || '-';
     case 'numPlaces':
       return String(r.numPlaces);
     case 'status':
@@ -119,6 +136,13 @@ function getCellValue(col: CompanyExportColumn, r: CompanyReservation): string {
       return r.checkinVenueNotes || '-';
     case 'createdAt':
       return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
+    // S175 — IDs CRM Zoho
+    // crmIdPro côté compagnie n'est lu QUE depuis `reservations.crm_id` (résa
+    // guest). Pour résa pro, la RLS empêche l'accès à `profiles.crm_id` → vide.
+    case 'crmIdPro':
+      return r.crmId || '-';
+    case 'crmIdVenue':
+      return r.slot?.venue?.crmId || '-';
     default:
       return '-';
   }
@@ -188,11 +212,37 @@ export function reservationsToCSV(
     return str;
   };
 
-  const rows = reservations.map((r) => columns.map((col) => escapeCSV(getCellValue(col, r))));
+  // S175 \u2014 For\u00E7age type texte c\u00F4t\u00E9 Excel via `="<valeur>"` pour les IDs CRM.
+  // `addressPostalCode` inclus pour pr\u00E9server un \u00E9ventuel z\u00E9ro de t\u00EAte (ex: 01000).
+  const csvForceTextColumns: ReadonlySet<CompanyExportColumn> = new Set([
+    'crmIdPro',
+    'crmIdVenue',
+    'addressPostalCode',
+  ]);
+
+  const rows = reservations.map((r) =>
+    columns.map((col) => {
+      const raw = getCellValue(col, r);
+      if (csvForceTextColumns.has(col) && raw !== '' && raw !== '-') {
+        return escapeCSV(`="${raw}"`);
+      }
+      return escapeCSV(raw);
+    })
+  );
 
   const BOM = '\uFEFF';
   return BOM + [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\n');
 }
+
+/**
+ * Colonnes à forcer en TEXTE dans Excel (S175 — évite la notation
+ * scientifique `7,06E+16` sur les IDs CRM 17 chiffres).
+ */
+const FORCE_TEXT_COLUMNS: ReadonlySet<CompanyExportColumn> = new Set([
+  'crmIdPro',
+  'crmIdVenue',
+  'addressPostalCode',
+]);
 
 /**
  * Convertit les réservations en Excel avec colonnes personnalisées
@@ -206,6 +256,18 @@ export function reservationsToExcel(
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+  // S175 — Forçage type texte pour les colonnes IDs CRM / CP.
+  // Sans ça Excel convertit les IDs 17 chiffres en notation scientifique
+  // (`7,06E+16`) à l'ouverture, corrompant la donnée.
+  columns.forEach((col, colIndex) => {
+    if (!FORCE_TEXT_COLUMNS.has(col)) return;
+    reservations.forEach((_, rowIndex) => {
+      const cellAddr = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+      const value = data[rowIndex]?.[colIndex] ?? '';
+      ws[cellAddr] = { t: 's', v: value };
+    });
+  });
 
   const colWidths = columns.map((col, index) => {
     const headerLen = EXPORT_COLUMN_LABELS[col].length;

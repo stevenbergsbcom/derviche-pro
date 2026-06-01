@@ -56,6 +56,10 @@ Cas d'usage : pro qui n'est plus en poste, demande RGPD de désactivation, etc.
 
 Bouton **« Exporter CSV »** → fichier avec les colonnes visibles.
 
+Depuis S175, le CSV inclut systématiquement (en fin de fichier) :
+- **ID CRM Zoho** — au format texte (formule `="..."` lue par Excel), pour préserver les 17 chiffres
+- **UUID (technique)** — identifiant Supabase, utile uniquement pour le support technique
+
 <Callout type="warning">
 **Attention RGPD** : un export contient des données personnelles. Stockez-le en lieu sûr et détruisez-le après usage.
 </Callout>

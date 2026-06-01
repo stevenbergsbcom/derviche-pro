@@ -23,6 +23,11 @@ export const EXPORT_COLUMN_LABELS: Record<ReservationColumn, string> = {
   function: 'Fonction',
   afcNumber: 'N° AFC',
   address: 'Adresse complète',
+  // S175 — adresse séparée (export)
+  addressStreet: 'Rue',
+  addressPostalCode: 'Code postal',
+  addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Nb places',
   status: 'Statut',
   checkinStatus: 'Check-in',
@@ -31,6 +36,11 @@ export const EXPORT_COLUMN_LABELS: Record<ReservationColumn, string> = {
   checkinVenueNotes: 'Notes lieu',
   checkinInternalNotes: 'Notes internes',
   createdAt: 'Créé le',
+  // S175 — identifiants externes
+  crmIdPro: 'ID CRM Zoho (pro)',
+  crmIdVenue: 'ID CRM Zoho (lieu)',
+  userUuid: 'UUID pro (technique)',
+  venueUuid: 'UUID lieu (technique)',
 } as const;
 
 /**

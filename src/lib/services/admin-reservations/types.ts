@@ -39,6 +39,8 @@ export interface AdminReservationSlot {
     id: string;
     name: string;
     city: string;
+    /** Migration 117 — ID CRM Zoho du lieu, utilisé par les exports S175. */
+    crmId: string | null;
   } | null;
   show: {
     id: string;
@@ -277,6 +279,14 @@ export interface CreateAdminReservationResult {
   success: boolean;
   reservationId?: string;
   error?: string;
+  /**
+   * S175 — Avertissement non-bloquant. Renseigné quand la résa a bien été
+   * créée mais qu'un side-effet a échoué (typiquement l'écriture de
+   * `reservations.crm_id`). Permet au caller d'afficher un toast d'info à
+   * l'admin sans transformer un succès en échec (ce qui provoquerait un
+   * doublon de création au retry).
+   */
+  warning?: string;
 }
 
 // ============================================
@@ -403,7 +413,7 @@ export interface SlotRowWithRelations {
   capacity: number;
   remaining_capacity: number;
   hosted_by: string;
-  venues?: { id: string; name: string; city: string } | null;
+  venues?: { id: string; name: string; city: string; crm_id: string | null } | null;
   shows?: {
     id: string;
     title: string;

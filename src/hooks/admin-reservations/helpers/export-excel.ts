@@ -10,6 +10,22 @@ import { EXPORT_COLUMN_LABELS } from '../constants';
 import { getCellValue } from './formatters';
 
 /**
+ * Colonnes dont la valeur doit être forcée en TEXTE dans Excel (S175).
+ *
+ * Sans ce forçage, Excel interprète les IDs CRM 17 chiffres comme un nombre
+ * et bascule en notation scientifique (`7,06E+16`) ce qui corrompt
+ * silencieusement la donnée à l'ouverture. Les UUIDs ne sont pas concernés
+ * (caractères non numériques) mais on les force aussi par défense.
+ */
+const FORCE_TEXT_COLUMNS: ReadonlySet<ReservationColumn> = new Set([
+  'crmIdPro',
+  'crmIdVenue',
+  'userUuid',
+  'venueUuid',
+  'addressPostalCode',
+]);
+
+/**
  * Largeur maximale d'une colonne Excel
  */
 const MAX_COLUMN_WIDTH = 50;
@@ -59,7 +75,7 @@ export function reservationsToExcel(
   // En-têtes basés sur les colonnes sélectionnées
   const headers = columns.map((col) => EXPORT_COLUMN_LABELS[col]);
 
-  // Données
+  // Données (string brutes, utilisées pour le calcul de largeur des colonnes)
   const data = reservations.map((reservation) =>
     columns.map((col) => getCellValue(col, reservation))
   );
@@ -67,6 +83,21 @@ export function reservationsToExcel(
   // Créer le workbook
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+
+  // S175 — Forçage type texte pour les colonnes IDs CRM / UUID / CP.
+  // Sans ce traitement, Excel convertit `70611000000487416` en `7,06E+16`
+  // (notation scientifique) à l'ouverture du fichier. On réécrit chaque
+  // cellule concernée avec un cell-object `{ t: 's', v: ... }` pour forcer
+  // le type string au niveau XLSX.
+  columns.forEach((col, colIndex) => {
+    if (!FORCE_TEXT_COLUMNS.has(col)) return;
+    reservations.forEach((_, rowIndex) => {
+      // +1 pour sauter la ligne d'en-tête
+      const cellAddr = XLSX.utils.encode_cell({ r: rowIndex + 1, c: colIndex });
+      const value = data[rowIndex]?.[colIndex] ?? '';
+      worksheet[cellAddr] = { t: 's', v: value };
+    });
+  });
 
   // Ajuster la largeur des colonnes
   worksheet['!cols'] = calculateColumnWidths(columns, data);

@@ -38,7 +38,13 @@ export type ReservationColumn =
   | 'organization'
   | 'function'
   | 'afcNumber'
+  // Adresse — affichage liste = concaténée (`address`),
+  // export = séparée pour faciliter l'analyse côté Excel/CRM (S175).
   | 'address'
+  | 'addressStreet'
+  | 'addressPostalCode'
+  | 'addressCity'
+  | 'addressCountry'
   | 'numPlaces'
   | 'status'
   | 'checkinStatus'
@@ -46,7 +52,14 @@ export type ReservationColumn =
   | 'checkinNotes'
   | 'checkinVenueNotes'
   | 'checkinInternalNotes'
-  | 'createdAt';
+  | 'createdAt'
+  // Identifiants externes (S175) — masqués par défaut, utiles pour
+  // le pont avec le CRM Zoho (crmIdPro / crmIdVenue) et le support
+  // technique (userUuid / venueUuid).
+  | 'crmIdPro'
+  | 'crmIdVenue'
+  | 'userUuid'
+  | 'venueUuid';
 
 /** Structure des preferences de colonnes */
 export interface ReservationColumnsPreference {
@@ -80,6 +93,7 @@ export type ProfessionalColumn =
 /**
  * Colonnes disponibles pour la liste des reservations compagnie
  * EXCLUT: checkinInternalNotes (notes internes reservees a l'admin)
+ *        ainsi que userUuid/venueUuid (techniques, réservés à l'admin)
  */
 export type CompanyReservationColumn =
   | 'date'
@@ -95,13 +109,20 @@ export type CompanyReservationColumn =
   | 'function'
   | 'afcNumber'
   | 'address'
+  | 'addressStreet'
+  | 'addressPostalCode'
+  | 'addressCity'
+  | 'addressCountry'
   | 'numPlaces'
   | 'status'
   | 'checkinStatus'
   | 'specialRequests'
   | 'checkinNotes'
   | 'checkinVenueNotes'
-  | 'createdAt';
+  | 'createdAt'
+  // S175 — identifiants CRM Zoho (lecture seule, utile pour le pont CRM)
+  | 'crmIdPro'
+  | 'crmIdVenue';
 
 /** Structure des preferences de colonnes compagnie */
 export interface CompanyReservationColumnsPreference {

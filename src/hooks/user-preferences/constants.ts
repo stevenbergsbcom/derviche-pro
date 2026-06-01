@@ -38,6 +38,11 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   function: { label: 'Fonction', defaultVisible: false },
   afcNumber: { label: 'N° AFC', defaultVisible: false },
   address: { label: 'Adresse', defaultVisible: false },
+  // S175 — séparation adresse (utile pour l'analyse Excel / le pont CRM)
+  addressStreet: { label: 'Rue', defaultVisible: false },
+  addressPostalCode: { label: 'Code postal', defaultVisible: false },
+  addressCity: { label: 'Ville', defaultVisible: false },
+  addressCountry: { label: 'Pays', defaultVisible: false },
 
   // Notes et metadonnees
   specialRequests: { label: 'Demandes', defaultVisible: false },
@@ -45,6 +50,12 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   checkinInternalNotes: { label: 'Notes internes', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
+
+  // S175 — Identifiants externes / techniques (masqués par défaut)
+  crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
+  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
+  userUuid: { label: 'UUID pro (technique)', defaultVisible: false },
+  venueUuid: { label: 'UUID lieu (technique)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par defaut des colonnes */
@@ -62,6 +73,10 @@ export const DEFAULT_COLUMNS_ORDER: ReservationColumn[] = [
   'function',
   'afcNumber',
   'address',
+  'addressStreet',
+  'addressPostalCode',
+  'addressCity',
+  'addressCountry',
   'numPlaces',
   'status',
   'checkinStatus',
@@ -70,6 +85,11 @@ export const DEFAULT_COLUMNS_ORDER: ReservationColumn[] = [
   'checkinVenueNotes',
   'checkinInternalNotes',
   'createdAt',
+  // S175 — Colonnes CRM/techniques regroupées en fin de liste, masquées par défaut
+  'crmIdPro',
+  'crmIdVenue',
+  'userUuid',
+  'venueUuid',
 ];
 
 /** Colonnes visibles par defaut */
@@ -122,7 +142,9 @@ export const DEFAULT_PROFESSIONAL_VISIBLE_COLUMNS: ProfessionalColumn[] = Object
 
 /** Configuration des colonnes compagnie avec labels.
  *  S198 : toutes les colonnes visibles par défaut — l'utilisateur décoche
- *  celles qu'il ne veut pas dans le dialog de sélection des colonnes. */
+ *  celles qu'il ne veut pas dans le dialog de sélection des colonnes.
+ *  S175 : nouvelles colonnes IDs CRM masquées par défaut (cas d'usage rare
+ *  côté compagnie, on n'encombre pas la vue par défaut). */
 export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn, { label: string; defaultVisible: boolean }> = {
   // Infos reservation
   date: { label: 'Date', defaultVisible: true },
@@ -145,12 +167,21 @@ export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn
   function: { label: 'Fonction', defaultVisible: true },
   afcNumber: { label: 'N° AFC', defaultVisible: true },
   address: { label: 'Adresse', defaultVisible: true },
+  // S175 — séparation adresse (export Excel)
+  addressStreet: { label: 'Rue', defaultVisible: false },
+  addressPostalCode: { label: 'Code postal', defaultVisible: false },
+  addressCity: { label: 'Ville', defaultVisible: false },
+  addressCountry: { label: 'Pays', defaultVisible: false },
 
   // Notes et metadonnees (SANS notes internes)
   specialRequests: { label: 'Demandes', defaultVisible: true },
   checkinNotes: { label: 'Notes accueil', defaultVisible: true },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: true },
   createdAt: { label: 'Créé le', defaultVisible: true },
+
+  // S175 — IDs CRM Zoho (masqués par défaut)
+  crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
+  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par defaut des colonnes compagnie */
@@ -168,6 +199,10 @@ export const DEFAULT_COMPANY_COLUMNS_ORDER: CompanyReservationColumn[] = [
   'function',
   'afcNumber',
   'address',
+  'addressStreet',
+  'addressPostalCode',
+  'addressCity',
+  'addressCountry',
   'numPlaces',
   'status',
   'checkinStatus',
@@ -175,6 +210,9 @@ export const DEFAULT_COMPANY_COLUMNS_ORDER: CompanyReservationColumn[] = [
   'checkinNotes',
   'checkinVenueNotes',
   'createdAt',
+  // S175 — IDs CRM
+  'crmIdPro',
+  'crmIdVenue',
 ];
 
 /** Colonnes visibles par defaut compagnie */

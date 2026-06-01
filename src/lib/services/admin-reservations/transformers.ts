@@ -119,7 +119,17 @@ function transformSlot(slot: SlotRowWithRelations): AdminReservationSlot {
     capacity: slot.capacity,
     remainingCapacity: slot.remaining_capacity,
     hostedBy: slot.hosted_by,
-    venue: slot.venues || null,
+    // S175 — expose `crmId` du lieu (TEXT, migration 117) pour les exports
+    // et la colonne configurable « ID CRM (lieu) ». `slot.venues.crm_id` peut
+    // être absent si la jointure ne le ramène pas — fallback à null.
+    venue: slot.venues
+      ? {
+          id: slot.venues.id,
+          name: slot.venues.name,
+          city: slot.venues.city,
+          crmId: slot.venues.crm_id ?? null,
+        }
+      : null,
     show: slot.shows ? {
       id: slot.shows.id,
       title: slot.shows.title,

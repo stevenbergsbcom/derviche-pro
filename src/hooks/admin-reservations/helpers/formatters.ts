@@ -64,6 +64,19 @@ export function getCellValue(
       return parts.length > 0 ? parts.join(' ') : '-';
     }
 
+    // S175 — adresse éclatée en 4 colonnes pour l'export
+    case 'addressStreet':
+      return r.address ?? '-';
+
+    case 'addressPostalCode':
+      return r.postalCode ?? '-';
+
+    case 'addressCity':
+      return r.city ?? '-';
+
+    case 'addressCountry':
+      return r.country ?? '-';
+
     case 'numPlaces':
       return String(r.numPlaces);
 
@@ -88,6 +101,20 @@ export function getCellValue(
     case 'createdAt':
       // createdAt est un datetime complet, extraire juste la date
       return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
+
+    // S175 — Identifiants externes / techniques
+    case 'crmIdPro':
+      return r.crmId ?? '-';
+
+    case 'crmIdVenue':
+      return r.slot?.venue?.crmId ?? '-';
+
+    case 'userUuid':
+      // UUID du compte pro (null pour résa guest) — pont technique support
+      return r.userId ?? '-';
+
+    case 'venueUuid':
+      return r.slot?.venue?.id ?? '-';
 
     default:
       return '-';

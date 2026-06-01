@@ -126,6 +126,19 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
       return truncate(fullAddress, TRUNCATE_LENGTHS.address);
     }
 
+    // S175 — adresse éclatée (export)
+    case 'addressStreet':
+      return truncate(r.address, TRUNCATE_LENGTHS.address);
+
+    case 'addressPostalCode':
+      return r.postalCode || '-';
+
+    case 'addressCity':
+      return r.city || '-';
+
+    case 'addressCountry':
+      return r.country || '-';
+
     case 'numPlaces':
       return String(r.numPlaces);
 
@@ -150,6 +163,19 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
 
     case 'createdAt':
       return r.createdAt ? formatDateShort(r.createdAt.split('T')[0]) : '-';
+
+    // S175 — Identifiants externes / techniques
+    case 'crmIdPro':
+      return r.crmId || '-';
+
+    case 'crmIdVenue':
+      return r.slot?.venue?.crmId || '-';
+
+    case 'userUuid':
+      return r.userId || '-';
+
+    case 'venueUuid':
+      return r.slot?.venue?.id || '-';
 
     default:
       return '-';

@@ -62,11 +62,14 @@ const COLUMN_TO_FIELD: Record<ProfessionalColumn, { key: keyof Professional; lab
 // ============================================
 
 const TRAILING_COLUMNS: FixedColumn[] = [
-  { key: 'postal_code', label: 'Code postal' },
-  { key: 'country',     label: 'Pays'        },
-  { key: 'address',     label: 'Adresse'     },
-  { key: 'afc_number',  label: 'N° AFC'      },
-  { key: 'created_at',  label: 'Créé le'     },
+  { key: 'postal_code', label: 'Code postal'        },
+  { key: 'country',     label: 'Pays'               },
+  { key: 'address',     label: 'Adresse'            },
+  { key: 'afc_number',  label: 'N° AFC'             },
+  // S175 — Identifiants externes (toujours présents en queue d'export)
+  { key: 'crm_id',      label: 'ID CRM Zoho'        },
+  { key: 'id',          label: 'UUID (technique)'   },
+  { key: 'created_at',  label: 'Créé le'            },
 ];
 
 // ============================================
@@ -89,6 +92,17 @@ function formatValue(value: unknown): string {
     return value;
   }
   return String(value);
+}
+
+/**
+ * S175 — Wrappe une valeur en formule Excel `="..."` pour forcer le type
+ * texte à l'ouverture du CSV. Évite que les IDs CRM 17 chiffres soient
+ * convertis en notation scientifique `7,06E+16` par Excel.
+ * Retourne la valeur inchangée si vide.
+ */
+function forceExcelText(value: string): string {
+  if (value === '') return '';
+  return `="${value}"`;
 }
 
 function generateFilename(): string {
@@ -114,9 +128,24 @@ function buildExportData(
     ...TRAILING_COLUMNS,
   ];
 
+  /**
+   * S175 — Colonnes forcées en texte à l'ouverture Excel.
+   * - `crm_id` : préserve les 17 chiffres (sinon notation scientifique).
+   * - `postal_code` : préserve un éventuel zéro de tête (ex: « 01000 » lu
+   *   « 1000 » par défaut).
+   */
+  const forceTextKeys: ReadonlySet<keyof Professional> = new Set([
+    'crm_id',
+    'postal_code',
+  ]);
+
   const headers = allColumns.map((c) => c.label);
   const rows = professionals.map((pro) =>
-    allColumns.map((c) => formatValue(pro[c.key]))
+    allColumns.map((c) => {
+      const raw = formatValue(pro[c.key]);
+      if (forceTextKeys.has(c.key)) return forceExcelText(raw);
+      return raw;
+    })
   );
 
   return { headers, rows };
@@ -129,16 +158,19 @@ function buildExportData(
 function buildCsvContent(professionals: Professional[], visibleColumns: ProfessionalColumn[]): string {
   const { headers, rows } = buildExportData(professionals, visibleColumns);
 
+  // S175 \u2014 d\u00E9limiteur point-virgule pour Excel fran\u00E7ais (coh\u00E9rent avec les
+  // exports r\u00E9sa admin/compagnie). \u00C9vite le bug \u00AB tout dans la colonne A \u00BB
+  // au double-clic dans Excel FR.
   const escape = (v: string): string => {
-    if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+    if (v.includes(';') || v.includes(',') || v.includes('"') || v.includes('\n')) {
       return `"${v.replace(/"/g, '""')}"`;
     }
     return v;
   };
 
   const lines = [
-    headers.map(escape).join(','),
-    ...rows.map((row) => row.map(escape).join(',')),
+    headers.map(escape).join(';'),
+    ...rows.map((row) => row.map(escape).join(';')),
   ];
 
   return '\uFEFF' + lines.join('\r\n'); // BOM UTF-8 pour Excel

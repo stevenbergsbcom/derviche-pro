@@ -48,7 +48,8 @@ export const RESERVATION_SELECT_QUERY = `
     venues (
       id,
       name,
-      city
+      city,
+      crm_id
     ),
     shows!inner (
       id,
@@ -101,7 +102,8 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
     venues (
       id,
       name,
-      city
+      city,
+      crm_id
     ),
     shows (
       id,
