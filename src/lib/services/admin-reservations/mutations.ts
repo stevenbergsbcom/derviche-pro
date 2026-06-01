@@ -159,6 +159,40 @@ export async function updateReservation(
       return { data: null, error: errMsg };
     }
 
+    // S174 — ID CRM Zoho (résas guest)
+    // La RPC update_reservation_safe ne connaît pas la colonne crm_id (ajoutée
+    // en migration 119) et n'a aucune logique de sécurité à porter dessus
+    // (pas d'invariant capacité/doublon/lock). On fait donc un UPDATE direct
+    // séparé quand le caller envoie un crmId (undefined = on ne touche pas).
+    // Les policies RLS `reservations_update_admin` autorisent déjà cette
+    // colonne pour les admins.
+    //
+    // Défense en profondeur (retour audit Cursor S174 §3.5) : `.is('user_id', null)`
+    // garantit que l'écriture ne s'applique JAMAIS sur une résa de pro connecté,
+    // même si un caller programmatique envoyait `crmId` par erreur. La source de
+    // vérité pour ce cas reste `profiles.crm_id`.
+    if (data.crmId !== undefined) {
+      const { error: crmIdError } = await supabase
+        .from('reservations')
+        .update({ crm_id: data.crmId })
+        .eq('id', id)
+        .is('user_id', null);
+      if (crmIdError) {
+        // Sortie en erreur volontaire (retour audit Cursor S174 §3.1) — la RPC
+        // principale est idempotente, l'admin peut retenter sans risque de
+        // doubler les changements. Mieux qu'un warn silencieux qui laisserait
+        // croire à un succès alors que l'ID CRM saisi n'a pas été persisté.
+        logger.error('Erreur mise à jour crm_id sur résa guest', {
+          id,
+          error: crmIdError.message,
+        });
+        return {
+          data: null,
+          error: "L'ID CRM n'a pas pu être enregistré. Réessayez ; les autres champs sont déjà sauvegardés.",
+        };
+      }
+    }
+
     // Récupérer la réservation mise à jour
     const updatedResult = await getAdminReservationById(id);
     if (updatedResult.data) {
@@ -324,6 +358,35 @@ export async function createAdminReservation(
       const errMsg = result?.error || 'Erreur lors de la création';
       logger.error(ERROR_MESSAGES.CREATE_RPC_FAIL, { error: errMsg });
       return { success: false, error: errMsg };
+    }
+
+    // S174 — Si un ID CRM Zoho a été fourni à la création, on l'écrit
+    // dans la foulée via un UPDATE direct (la RPC create_admin_reservation
+    // ne connaît pas la colonne crm_id, ajoutée en migration 119).
+    //
+    // NB : volontairement NON-BLOQUANT ici, contrairement à updateReservation.
+    // Convertir cette erreur en échec retournerait `success: false` au caller
+    // alors que la résa a déjà été créée → l'admin retenterait → DOUBLON.
+    // L'erreur est donc loguée en `error` (et non plus `warn`) pour qu'elle
+    // remonte dans les logs production et qu'un admin puisse rattraper l'ID
+    // CRM manuellement via le dialog d'édition si besoin.
+    if (
+      result.reservation_id &&
+      data.crmId !== undefined &&
+      data.crmId !== null &&
+      data.crmId.trim() !== ''
+    ) {
+      const { error: crmIdError } = await supabase
+        .from('reservations')
+        .update({ crm_id: data.crmId.trim() })
+        .eq('id', result.reservation_id)
+        .is('user_id', null);
+      if (crmIdError) {
+        logger.error('Erreur écriture crm_id à la création (non-bloquante : résa déjà créée)', {
+          reservationId: result.reservation_id,
+          error: crmIdError.message,
+        });
+      }
     }
 
     logger.info('Réservation admin créée', { reservationId: result.reservation_id });

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle } from 'lucide-react';
+import { CrmIdInput } from '@/components/admin/crm-id-input';
 import type { ProfessionalEditFormProps, UpdateProfessionalData } from '@/app/admin/professionnels/types';
 import { LABELS } from '@/app/admin/professionnels/constants';
 
@@ -51,6 +52,12 @@ const schema = z.object({
   city: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   comments: z.string().optional().nullable(),
+  // S174 — ID CRM Zoho (numérique uniquement, validation souple)
+  crm_id: z
+    .string()
+    .regex(/^\d*$/, 'L\'ID CRM doit être composé uniquement de chiffres')
+    .optional()
+    .nullable(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -74,6 +81,7 @@ function normalizeFormValues(values: FormValues): UpdateProfessionalData {
     city: normalize(values.city),
     country: normalize(values.country),
     comments: normalize(values.comments),
+    crm_id: normalize(values.crm_id),
   };
 }
 
@@ -104,6 +112,7 @@ export function ProfessionalEditForm({
       city: professional.city ?? '',
       country: professional.country ?? '',
       comments: professional.comments ?? '',
+      crm_id: professional.crm_id ?? '',
     },
   });
 
@@ -370,6 +379,25 @@ export function ProfessionalEditForm({
             </div>
           </div>
         </div>
+
+        {/* ---- ID CRM Zoho (S174) ---- */}
+        <FormField
+          control={form.control}
+          name="crm_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <CrmIdInput
+                  value={field.value}
+                  onChange={(value) => field.onChange(value ?? '')}
+                  disabled={isSubmitting}
+                  helpText="Identifiant du contact dans votre CRM Zoho (~17 chiffres). Optionnel — utilisé pour faire le pont avec votre CRM dans les exports."
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         {/* ---- Notes internes ---- */}
         <FormField

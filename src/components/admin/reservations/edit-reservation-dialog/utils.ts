@@ -17,8 +17,15 @@ export { formatDateFr, formatDateTimeFr };
 
 /**
  * Initialise les données du formulaire à partir d'une réservation existante
+ *
+ * S174 — `crmId` n'est inclus QUE pour les résas guest (`userId === null`).
+ * Pour les résas avec compte, on volontairement omet le champ pour que la
+ * mutation `updateReservation` n'écrive PAS dans `reservations.crm_id` :
+ *  - la source de vérité est `profiles.crm_id` (vu en lecture seule en S175),
+ *  - on évite d'écraser une éventuelle future valeur dénormalisée.
  */
 export function initializeFormData(reservation: AdminReservation): UpdateReservationData {
+  const isGuest = reservation.userId === null;
   return {
     firstName: reservation.firstName,
     lastName: reservation.lastName,
@@ -32,6 +39,8 @@ export function initializeFormData(reservation: AdminReservation): UpdateReserva
     organization: reservation.organization,
     function: reservation.function,
     afcNumber: reservation.afcNumber,
+    // S174 — exposé uniquement pour les résas guest (cf. doc ci-dessus)
+    ...(isGuest ? { crmId: reservation.crmId } : {}),
     numPlaces: reservation.numPlaces,
     slotId: reservation.slotId,
     specialRequests: reservation.specialRequests,

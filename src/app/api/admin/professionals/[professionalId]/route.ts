@@ -17,6 +17,7 @@ import {
   notFoundResponse,
   serverErrorResponse,
   successResponse,
+  errorResponse,
 } from '@/lib/api';
 
 // ============================================
@@ -41,6 +42,8 @@ interface UpdateProfessionalBody {
   city?: string | null;
   country?: string | null;
   comments?: string | null;
+  /** Migration 118 — ID CRM Zoho */
+  crm_id?: string | null;
 }
 
 // ============================================
@@ -101,6 +104,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       'city',
       'country',
       'comments',
+      'crm_id',
     ];
 
     for (const field of updatableFields) {
@@ -120,6 +124,12 @@ export async function PATCH(request: Request, context: RouteContext) {
         professionalId,
         error: updateError.message,
       });
+      // S174 — surfacer le cas spécifique de l'ID CRM en doublon pour
+      // donner une cause claire à l'admin (l'index unique partiel
+      // `profiles_crm_id_unique` empêche d'attribuer le même ID à deux pros).
+      if (updateError.message.includes('profiles_crm_id_unique')) {
+        return errorResponse('Cet ID CRM est déjà attribué à un autre professionnel.');
+      }
       return serverErrorResponse('Erreur lors de la mise à jour du profil');
     }
 

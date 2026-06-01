@@ -146,7 +146,8 @@ export default function AdminLieuxPage() {
                 toast.success('Lieu modifié avec succès');
             } else {
                 logger.error('Lieux - Erreur mise à jour', { error: result.error });
-                toast.error('Erreur lors de la modification');
+                // S174 — surfacer l'erreur métier (ex: ID CRM déjà attribué)
+                toast.error(result.error || 'Erreur lors de la modification');
             }
         } else {
             const result = await create(formData as VenueInsert);
@@ -155,7 +156,8 @@ export default function AdminLieuxPage() {
                 toast.success('Lieu créé avec succès');
             } else {
                 logger.error('Lieux - Erreur création', { error: result.error });
-                toast.error('Erreur lors de la création');
+                // S174 — surfacer l'erreur métier (ex: ID CRM déjà attribué)
+                toast.error(result.error || 'Erreur lors de la création');
             }
         }
 

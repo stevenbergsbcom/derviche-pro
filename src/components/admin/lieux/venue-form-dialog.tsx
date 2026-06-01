@@ -14,6 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { CrmIdInput } from '@/components/admin/crm-id-input';
 import type { VenueRow, VenueInsert } from '@/types/database';
 
 // Type pour les données du formulaire (compatible avec VenueInsert)
@@ -48,6 +49,7 @@ const defaultFormData: VenueFormData = {
     pmr_accessible: false,
     parking: false,
     transports: '',
+    crm_id: null,
 };
 
 /**
@@ -82,6 +84,7 @@ export function VenueFormDialog({
                     pmr_accessible: editingVenue.pmr_accessible || false,
                     parking: editingVenue.parking || false,
                     transports: editingVenue.transports || '',
+                    crm_id: editingVenue.crm_id ?? null,
                 });
             } else {
                 // Mode création
@@ -271,6 +274,14 @@ export function VenueFormDialog({
                             disabled={isSubmitting}
                         />
                     </div>
+
+                    {/* ID CRM Zoho (S174) — optionnel, pont vers le CRM client */}
+                    <CrmIdInput
+                        value={formData.crm_id}
+                        onChange={(value) => setFormData({ ...formData, crm_id: value })}
+                        disabled={isSubmitting}
+                        helpText="Identifiant du lieu dans votre CRM Zoho (~17 chiffres). Optionnel — utilisé pour faire le pont avec votre CRM dans les exports."
+                    />
 
                     <div className="flex flex-wrap gap-6">
                         <div className="flex items-center space-x-2">

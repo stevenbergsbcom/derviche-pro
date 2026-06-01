@@ -7,7 +7,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Building2, IdCard, Mail, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Building2, Hash, IdCard, Mail, MapPin, Phone } from 'lucide-react';
 import type { Professional } from '@/lib/services/professionals';
 import { InfoRow } from './info-row';
 
@@ -33,6 +33,8 @@ export function ContactInfoPanel({ professional, address }: ContactInfoPanelProp
         <InfoRow icon={Building2} label="Structure" value={professional.structure} />
         <InfoRow icon={IdCard} label="Fonction" value={professional.function} />
         <InfoRow icon={IdCard} label="N° AFC" value={professional.afc_number} />
+        {/* S174 — ID CRM Zoho, lecture seule sur la fiche complète. */}
+        <InfoRow icon={Hash} label="ID CRM (Zoho)" value={professional.crm_id} />
       </div>
 
       <div>

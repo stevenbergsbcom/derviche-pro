@@ -8,6 +8,7 @@
 import { Building } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { CrmIdInput } from '@/components/admin/crm-id-input';
 import type { ProfessionalInfoSectionProps } from '../types';
 import { LABELS, PLACEHOLDERS } from '../constants';
 
@@ -15,6 +16,7 @@ export function ProfessionalInfoSection({
   organization,
   function: functionField, // 'function' est un mot réservé
   afcNumber,
+  crmId,
   onChange,
   disabled,
 }: ProfessionalInfoSectionProps) {
@@ -60,6 +62,19 @@ export function ProfessionalInfoSection({
             value={afcNumber || ''}
             onChange={(e) => onChange('afcNumber', e.target.value || null)}
             placeholder={PLACEHOLDERS.afcNumber}
+            disabled={disabled}
+          />
+        </div>
+
+        {/*
+          ID CRM Zoho (S174)
+          Une résa créée depuis l'admin est toujours en mode guest
+          (user_id IS NULL côté BDD) → le champ est toujours pertinent.
+        */}
+        <div className="sm:col-span-2">
+          <CrmIdInput
+            value={crmId}
+            onChange={(value) => onChange('crmId', value)}
             disabled={disabled}
           />
         </div>

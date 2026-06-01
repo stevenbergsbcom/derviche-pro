@@ -114,7 +114,7 @@ export default function ProfessionalDetailPage({ params }: PageProps) {
             history={history}
           />
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr]">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
             <ContactInfoPanel professional={professional} address={address} />
             <ReservationHistoryTable
               history={history}

@@ -74,7 +74,19 @@ export interface AdminReservation {
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
-  
+  /**
+   * ID CRM Zoho (migration 119), résolu par le transformer :
+   *  - résa guest (`userId === null`) → vient de `reservations.crm_id`, éditable
+   *    depuis le dialog d'édition (CrmIdInput).
+   *  - résa avec compte (`userId !== null`) → hérité de `profiles.crm_id` via
+   *    la jointure `booked_by:user_id (crm_id)`. Affiché en lecture seule dans
+   *    le dialog. Pour modifier, passer par la fiche du pro (source de vérité).
+   *
+   * Cette résolution dans le transformer évite à chaque consommateur (UI,
+   * export S175…) de devoir distinguer les deux cas.
+   */
+  crmId: string | null;
+
   // Réservation
   numPlaces: number;
   status: ReservationStatus;
@@ -218,6 +230,12 @@ export interface UpdateReservationData {
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
+  /**
+   * ID CRM Zoho (migration 119) — uniquement pertinent pour les résas guest.
+   * `undefined` → laisse la valeur en BDD intacte.
+   * `null` → vide explicitement le champ.
+   */
+  crmId?: string | null;
   // Réservation
   numPlaces?: number;
   slotId?: string;
@@ -245,6 +263,8 @@ export interface CreateAdminReservationData {
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
+  /** Migration 119 — ID CRM Zoho. Une résa admin est toujours guest (user_id NULL). */
+  crmId?: string | null;
   // Notes
   comment?: string | null;
   checkinComment?: string | null;
@@ -328,6 +348,8 @@ export interface ReservationRowWithRelations {
   guest_structure: string | null;
   guest_function: string | null;
   guest_afc_number: string | null;
+  /** Migration 119 — ID CRM Zoho (résas guest uniquement). */
+  crm_id: string | null;
   num_places: number;
   status: string;
   /** Origine de la création : 'public' (site public) ou 'admin' (back-office / PWA walk-in). */
@@ -367,6 +389,8 @@ export interface ReservationRowWithRelations {
   booked_by?: {
     first_name: string | null;
     last_name: string | null;
+    /** Migration 118 — ID CRM Zoho du compte pro (anticipation S175 : lecture seule sur résa avec compte). */
+    crm_id: string | null;
   } | null;
   slots?: SlotRowWithRelations | null;
 }

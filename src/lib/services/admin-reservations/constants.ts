@@ -35,7 +35,8 @@ export const RESERVATION_SELECT_QUERY = `
   ),
   booked_by:user_id (
     first_name,
-    last_name
+    last_name,
+    crm_id
   ),
   slots!inner (
     id,
@@ -87,7 +88,8 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
   ),
   booked_by:user_id (
     first_name,
-    last_name
+    last_name,
+    crm_id
   ),
   slots (
     id,
