@@ -69,6 +69,17 @@ export function renderCompanyTableCell(col: CompanyReservationColumn, r: Company
         </span>
       );
     }
+    // S175 — adresse éclatée
+    case 'addressStreet':
+      return (
+        <span className="text-sm max-w-[180px] truncate block" title={r.address || ''}>
+          {r.address || '-'}
+        </span>
+      );
+    case 'addressPostalCode':
+      return <span className="text-sm">{r.postalCode || '-'}</span>;
+    case 'addressCity':
+      return <span className="text-sm">{r.city || '-'}</span>;
     case 'numPlaces':
       return <span className="text-center block">{r.numPlaces}</span>;
     case 'status':
@@ -95,6 +106,20 @@ export function renderCompanyTableCell(col: CompanyReservationColumn, r: Company
       );
     case 'createdAt':
       return <span className="text-sm text-muted-foreground">{formatDateTimeFr(r.createdAt)}</span>;
+    // S175 — IDs CRM Zoho (lecture seule)
+    // crmIdPro côté compagnie : résa guest seulement (cf. transformer)
+    case 'crmIdPro':
+      return (
+        <span className="text-sm font-mono" title={r.crmId || ''}>
+          {r.crmId || '-'}
+        </span>
+      );
+    case 'crmIdVenue':
+      return (
+        <span className="text-sm font-mono" title={r.slot?.venue?.crmId || ''}>
+          {r.slot?.venue?.crmId || '-'}
+        </span>
+      );
     default:
       return '-';
   }

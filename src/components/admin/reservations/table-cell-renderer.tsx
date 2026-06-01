@@ -106,6 +106,17 @@ export function renderTableCell(
         </span>
       );
     }
+    // S175 — adresse séparée en colonnes individuelles
+    case 'addressStreet':
+      return (
+        <span className="text-sm max-w-[180px] truncate block" title={r.address || ''}>
+          {r.address || '-'}
+        </span>
+      );
+    case 'addressPostalCode':
+      return <span className="text-sm">{r.postalCode || '-'}</span>;
+    case 'addressCity':
+      return <span className="text-sm">{r.city || '-'}</span>;
     case 'numPlaces':
       return <span className="text-center block">{r.numPlaces}</span>;
     case 'status':
@@ -138,6 +149,31 @@ export function renderTableCell(
       );
     case 'createdAt':
       return <span className="text-sm text-muted-foreground">{formatDateTimeFr(r.createdAt)}</span>;
+    // S175 — Identifiants externes / techniques
+    case 'crmIdPro':
+      return (
+        <span className="text-sm font-mono" title={r.crmId || ''}>
+          {r.crmId || '-'}
+        </span>
+      );
+    case 'crmIdVenue':
+      return (
+        <span className="text-sm font-mono" title={r.slot?.venue?.crmId || ''}>
+          {r.slot?.venue?.crmId || '-'}
+        </span>
+      );
+    case 'userUuid':
+      return (
+        <span className="text-xs font-mono text-muted-foreground" title={r.userId || ''}>
+          {r.userId || '-'}
+        </span>
+      );
+    case 'venueUuid':
+      return (
+        <span className="text-xs font-mono text-muted-foreground" title={r.slot?.venue?.id || ''}>
+          {r.slot?.venue?.id || '-'}
+        </span>
+      );
     default:
       return '-';
   }

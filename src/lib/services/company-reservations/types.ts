@@ -21,6 +21,8 @@ export interface CompanyReservationSlot {
     id: string;
     name: string;
     city: string;
+    /** Migration 117 — ID CRM Zoho du lieu (utilisé par les exports S175). */
+    crmId: string | null;
   } | null;
   show: {
     id: string;
@@ -47,6 +49,14 @@ export interface CompanyReservation {
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
+  /**
+   * Migration 119 — ID CRM Zoho. Côté compagnie, n'est lu QUE depuis
+   * `reservations.crm_id` (résa guest). Pour une résa avec compte pro,
+   * la valeur héritée de `profiles.crm_id` n'est PAS exposée côté
+   * compagnie (les RLS actuelles ne permettent pas le join `booked_by`).
+   * Limitation V1 acceptée — à lever via une RLS dédiée si besoin.
+   */
+  crmId: string | null;
 
   // Réservation
   numPlaces: number;
@@ -134,10 +144,17 @@ export type CompanyExportColumn =
   | 'function'
   | 'afcNumber'
   | 'address'
+  // S175 — adresse éclatée
+  | 'addressStreet'
+  | 'addressPostalCode'
+  | 'addressCity'
   | 'numPlaces'
   | 'status'
   | 'checkinStatus'
   | 'specialRequests'
   | 'checkinNotes'
   | 'checkinVenueNotes'
-  | 'createdAt';
+  | 'createdAt'
+  // S175 — IDs CRM Zoho (lecture seule)
+  | 'crmIdPro'
+  | 'crmIdVenue';

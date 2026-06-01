@@ -18,7 +18,7 @@ export function transformReservation(
       capacity: number;
       remaining_capacity: number;
       hosted_by: string;
-      venues?: { id: string; name: string; city: string } | null;
+      venues?: { id: string; name: string; city: string; crm_id: string | null } | null;
       shows?: { id: string; title: string; slug: string } | null;
     } | null;
   }
@@ -42,6 +42,11 @@ export function transformReservation(
     organization: row.guest_structure,
     function: row.guest_function,
     afcNumber: row.guest_afc_number || null,
+    // S175 — ID CRM Zoho. Exposé uniquement depuis `reservations.crm_id`
+    // (renseigné pour les résa guest). Pour les résa pro, la valeur sur
+    // `profiles.crm_id` n'est PAS accessible côté compagnie via les RLS
+    // actuelles → on retourne null. Limitation acceptée pour V1.
+    crmId: row.crm_id ?? null,
 
     // Réservation
     numPlaces: row.num_places,
@@ -67,7 +72,15 @@ export function transformReservation(
       capacity: slot.capacity,
       remainingCapacity: slot.remaining_capacity,
       hostedBy: slot.hosted_by,
-      venue: slot.venues || null,
+      // S175 — expose venue.crmId pour la colonne « ID CRM (lieu) » des exports
+      venue: slot.venues
+        ? {
+            id: slot.venues.id,
+            name: slot.venues.name,
+            city: slot.venues.city,
+            crmId: slot.venues.crm_id ?? null,
+          }
+        : null,
       show: slot.shows || null,
     } : null,
   };

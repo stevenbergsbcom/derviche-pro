@@ -39,6 +39,8 @@ export interface AdminReservationSlot {
     id: string;
     name: string;
     city: string;
+    /** Migration 117 — ID CRM Zoho du lieu, utilisé par les exports S175. */
+    crmId: string | null;
   } | null;
   show: {
     id: string;
@@ -403,7 +405,7 @@ export interface SlotRowWithRelations {
   capacity: number;
   remaining_capacity: number;
   hosted_by: string;
-  venues?: { id: string; name: string; city: string } | null;
+  venues?: { id: string; name: string; city: string; crm_id: string | null } | null;
   shows?: {
     id: string;
     title: string;

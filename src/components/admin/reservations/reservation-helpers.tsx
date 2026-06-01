@@ -43,6 +43,10 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
   function: 'Fonction',
   afcNumber: 'N° AFC',
   address: 'Adresse',
+  // S175 — adresse éclatée
+  addressStreet: 'Rue',
+  addressPostalCode: 'CP',
+  addressCity: 'Ville',
   numPlaces: 'Places',
   status: 'Statut',
   checkinStatus: 'Check-in',
@@ -51,6 +55,11 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
   checkinVenueNotes: 'Notes lieu',
   checkinInternalNotes: 'Notes internes',
   createdAt: 'Créé le',
+  // S175 — Identifiants externes / techniques
+  crmIdPro: 'ID CRM (pro)',
+  crmIdVenue: 'ID CRM (lieu)',
+  userUuid: 'UUID pro',
+  venueUuid: 'UUID lieu',
 };
 
 // ============================================

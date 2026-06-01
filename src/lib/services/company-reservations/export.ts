@@ -40,6 +40,7 @@ export async function getAllCompanyReservationsForExport(
         guest_structure,
         guest_function,
         guest_afc_number,
+        crm_id,
         num_places,
         status,
         special_requests,
@@ -60,7 +61,8 @@ export async function getAllCompanyReservationsForExport(
           venues (
             id,
             name,
-            city
+            city,
+            crm_id
           ),
           shows!inner (
             id,
