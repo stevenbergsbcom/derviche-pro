@@ -386,6 +386,8 @@ export interface ReservationRowWithRelations {
   booked_by?: {
     first_name: string | null;
     last_name: string | null;
+    /** Migration 118 — ID CRM Zoho du compte pro (anticipation S175 : lecture seule sur résa avec compte). */
+    crm_id: string | null;
   } | null;
   slots?: SlotRowWithRelations | null;
 }

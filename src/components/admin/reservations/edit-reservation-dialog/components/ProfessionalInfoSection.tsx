@@ -5,6 +5,7 @@
 
 'use client';
 
+import { Info, Lock } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { CrmIdInput } from '@/components/admin/crm-id-input';
@@ -62,19 +63,46 @@ export function ProfessionalInfoSection({
 
         {/*
           ID CRM Zoho (S174)
-          Affiché uniquement pour les résas guest (user_id IS NULL).
-          Pour une résa avec compte, l'ID CRM vit sur profiles.crm_id —
-          la lecture seule via jointure est prévue en S175.
+          - Résa guest (isGuest=true) → champ éditable, valeur sur reservations.crm_id
+          - Résa avec compte (isGuest=false) → champ lecture seule, valeur héritée
+            de profiles.crm_id via la jointure `booked_by` (modifiable depuis la
+            fiche du pro, pas depuis la résa — source de vérité unique).
         */}
-        {isGuest && (
-          <div className="sm:col-span-2">
+        <div className="sm:col-span-2">
+          {isGuest ? (
             <CrmIdInput
               value={crmId}
               onChange={(value) => onChange('crmId', value)}
               disabled={disabled}
             />
-          </div>
-        )}
+          ) : (
+            <div className="space-y-2">
+              <Label
+                htmlFor="crm_id_readonly"
+                className="flex items-center gap-1.5 text-sm"
+              >
+                ID CRM (Zoho)
+                <Lock className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
+              </Label>
+              <Input
+                id="crm_id_readonly"
+                type="text"
+                value={crmId ?? ''}
+                placeholder="—"
+                readOnly
+                disabled
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
+                <span>
+                  Hérité de la fiche du professionnel. Pour modifier,
+                  ouvrir la fiche du pro depuis l&apos;onglet Professionnels.
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

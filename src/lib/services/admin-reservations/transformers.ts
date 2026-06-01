@@ -176,10 +176,15 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
     organization: row.guest_structure,
     function: row.guest_function,
     afcNumber: row.guest_afc_number || null,
-    // S174 — ID CRM Zoho. En S174, on n'expose la valeur que pour les
-    // résas guest (où elle vit sur reservations.crm_id). S175 ajoutera
-    // l'héritage depuis profiles.crm_id pour les résas avec compte.
-    crmId: row.user_id === null ? row.crm_id : null,
+    // S174 — ID CRM Zoho :
+    //   - résa guest (user_id IS NULL) → valeur stockée sur reservations.crm_id
+    //     (éditable depuis le dialog d'édition de la résa).
+    //   - résa avec compte (user_id renseigné) → valeur héritée du profil pro
+    //     via la jointure `booked_by:user_id (crm_id)`. Lecture seule côté UI.
+    crmId:
+      row.user_id === null
+        ? (row.crm_id ?? null)
+        : (row.booked_by?.crm_id ?? null),
 
 
     // Réservation
