@@ -4,7 +4,7 @@ slug: faq/glossaire
 category: faq
 categoryLabel: FAQ & dépannage
 categoryIcon: HelpCircle
-keywords: [glossaire, lexique, vocabulaire, définitions, termes, walk-in, hosted_by, vedette]
+keywords: [glossaire, lexique, vocabulaire, définitions, termes, walk-in, hosted_by, vedette, crm, zoho, id crm, uuid]
 roles: [super-admin, admin, externe]
 order: 5
 ---
@@ -28,6 +28,9 @@ Rôle interne pour les collaborateurs ponctuels (accueil, techniciens). Accès *
 
 ## Guest / Réservation invitée
 Réservation créée **sans compte pro associé**. Le pro donne juste nom + email. Créée par un admin en walk-in ou par le pro lui-même en réservation publique sans inscription.
+
+## ID CRM (Zoho)
+Identifiant numérique (~17 chiffres) qui désigne un lieu ou un professionnel dans le CRM Zoho du client. Permet de faire le pont entre la plateforme et le CRM dans les exports. Saisi sur la fiche lieu ou la fiche pro. Pour les réservations de pros connectés, l'ID est hérité automatiquement du profil pro (source de vérité unique). Voir [Exporter les réservations](/admin/aide/reservations/exporter).
 
 ## Hosted by (accueil assuré par)
 Indique **qui assure l'accueil** d'un créneau :
@@ -65,6 +68,9 @@ Un modèle d'email éditable (sujet + corps + options) qui est envoyé automatiq
 
 ## Vedette (featured)
 Un spectacle marqué `is_featured = true` via l'onglet **Classement**. Il apparaît dans le slider hero de la page d'accueil publique. Maximum ~10 pour ne pas diluer l'attention.
+
+## UUID (technique)
+Identifiant interne 36 caractères au format `xxxxxxxx-xxxx-...` généré par Supabase pour chaque ligne en base. Sans signification métier — utile uniquement pour le support technique (debug ciblé). Disponible dans les exports admin sur demande (colonnes « UUID pro » et « UUID lieu », masquées par défaut). À ne pas confondre avec l'**ID CRM (Zoho)**.
 
 ## Walk-in
 Une réservation créée **sur place le jour J**, sans réservation préalable. Créée via le bouton flottant gold dans la PWA check-in.
