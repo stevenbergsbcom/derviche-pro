@@ -46,6 +46,7 @@ export interface CompanyReservation {
   address: string | null;
   postalCode: string | null;
   city: string | null;
+  country: string | null;
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
@@ -148,6 +149,7 @@ export type CompanyExportColumn =
   | 'addressStreet'
   | 'addressPostalCode'
   | 'addressCity'
+  | 'addressCountry'
   | 'numPlaces'
   | 'status'
   | 'checkinStatus'

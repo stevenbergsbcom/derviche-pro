@@ -148,16 +148,19 @@ function buildExportData(
 function buildCsvContent(professionals: Professional[], visibleColumns: ProfessionalColumn[]): string {
   const { headers, rows } = buildExportData(professionals, visibleColumns);
 
+  // S175 \u2014 d\u00E9limiteur point-virgule pour Excel fran\u00E7ais (coh\u00E9rent avec les
+  // exports r\u00E9sa admin/compagnie). \u00C9vite le bug \u00AB tout dans la colonne A \u00BB
+  // au double-clic dans Excel FR.
   const escape = (v: string): string => {
-    if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+    if (v.includes(';') || v.includes(',') || v.includes('"') || v.includes('\n')) {
       return `"${v.replace(/"/g, '""')}"`;
     }
     return v;
   };
 
   const lines = [
-    headers.map(escape).join(','),
-    ...rows.map((row) => row.map(escape).join(',')),
+    headers.map(escape).join(';'),
+    ...rows.map((row) => row.map(escape).join(';')),
   ];
 
   return '\uFEFF' + lines.join('\r\n'); // BOM UTF-8 pour Excel

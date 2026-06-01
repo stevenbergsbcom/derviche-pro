@@ -37,6 +37,7 @@ const EXPORT_COLUMN_LABELS: Record<CompanyExportColumn, string> = {
   addressStreet: 'Rue',
   addressPostalCode: 'Code postal',
   addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Nb places',
   status: 'Statut',
   checkinStatus: 'Check-in',
@@ -119,6 +120,8 @@ function getCellValue(col: CompanyExportColumn, r: CompanyReservation): string {
       return r.postalCode || '-';
     case 'addressCity':
       return r.city || '-';
+    case 'addressCountry':
+      return r.country || '-';
     case 'numPlaces':
       return String(r.numPlaces);
     case 'status':

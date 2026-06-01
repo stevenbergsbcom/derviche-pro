@@ -37,6 +37,7 @@ export async function getAllCompanyReservationsForExport(
         guest_address,
         guest_postal_code,
         guest_city,
+        guest_country,
         guest_structure,
         guest_function,
         guest_afc_number,

@@ -27,6 +27,7 @@ export const EXPORT_COLUMN_LABELS: Record<ReservationColumn, string> = {
   addressStreet: 'Rue',
   addressPostalCode: 'Code postal',
   addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Nb places',
   status: 'Statut',
   checkinStatus: 'Check-in',

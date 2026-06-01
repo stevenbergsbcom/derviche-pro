@@ -136,6 +136,9 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
     case 'addressCity':
       return r.city || '-';
 
+    case 'addressCountry':
+      return r.country || '-';
+
     case 'numPlaces':
       return String(r.numPlaces);
 

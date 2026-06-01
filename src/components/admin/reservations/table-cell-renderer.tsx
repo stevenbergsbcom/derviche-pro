@@ -117,6 +117,8 @@ export function renderTableCell(
       return <span className="text-sm">{r.postalCode || '-'}</span>;
     case 'addressCity':
       return <span className="text-sm">{r.city || '-'}</span>;
+    case 'addressCountry':
+      return <span className="text-sm">{r.country || '-'}</span>;
     case 'numPlaces':
       return <span className="text-center block">{r.numPlaces}</span>;
     case 'status':

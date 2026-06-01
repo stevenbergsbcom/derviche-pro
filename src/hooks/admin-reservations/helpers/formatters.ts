@@ -64,7 +64,7 @@ export function getCellValue(
       return parts.length > 0 ? parts.join(' ') : '-';
     }
 
-    // S175 — adresse éclatée en 3 colonnes pour l'export
+    // S175 — adresse éclatée en 4 colonnes pour l'export
     case 'addressStreet':
       return r.address ?? '-';
 
@@ -73,6 +73,9 @@ export function getCellValue(
 
     case 'addressCity':
       return r.city ?? '-';
+
+    case 'addressCountry':
+      return r.country ?? '-';
 
     case 'numPlaces':
       return String(r.numPlaces);

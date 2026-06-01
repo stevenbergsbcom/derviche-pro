@@ -46,6 +46,7 @@ export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   addressStreet: 'Rue',
   addressPostalCode: 'CP',
   addressCity: 'Ville',
+  addressCountry: 'Pays',
   numPlaces: 'Places',
   status: 'Statut',
   checkinStatus: 'Check-in',

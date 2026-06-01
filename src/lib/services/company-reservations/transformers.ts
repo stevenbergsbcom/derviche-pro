@@ -39,6 +39,8 @@ export function transformReservation(
     address: row.guest_address || null,
     postalCode: row.guest_postal_code || null,
     city: row.guest_city || null,
+    // S175 — pays ajouté (initialement omis côté compagnie)
+    country: row.guest_country || null,
     organization: row.guest_structure,
     function: row.guest_function,
     afcNumber: row.guest_afc_number || null,

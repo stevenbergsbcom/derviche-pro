@@ -90,6 +90,9 @@ export function getCellValue(col: CompanyExportColumn, r: CompanyReservation): s
     case 'addressCity':
       return r.city || '-';
 
+    case 'addressCountry':
+      return r.country || '-';
+
     case 'numPlaces':
       return String(r.numPlaces);
 

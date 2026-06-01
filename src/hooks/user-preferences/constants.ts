@@ -42,6 +42,7 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   addressStreet: { label: 'Rue', defaultVisible: false },
   addressPostalCode: { label: 'Code postal', defaultVisible: false },
   addressCity: { label: 'Ville', defaultVisible: false },
+  addressCountry: { label: 'Pays', defaultVisible: false },
 
   // Notes et metadonnees
   specialRequests: { label: 'Demandes', defaultVisible: false },
@@ -75,6 +76,7 @@ export const DEFAULT_COLUMNS_ORDER: ReservationColumn[] = [
   'addressStreet',
   'addressPostalCode',
   'addressCity',
+  'addressCountry',
   'numPlaces',
   'status',
   'checkinStatus',
@@ -169,6 +171,7 @@ export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn
   addressStreet: { label: 'Rue', defaultVisible: false },
   addressPostalCode: { label: 'Code postal', defaultVisible: false },
   addressCity: { label: 'Ville', defaultVisible: false },
+  addressCountry: { label: 'Pays', defaultVisible: false },
 
   // Notes et metadonnees (SANS notes internes)
   specialRequests: { label: 'Demandes', defaultVisible: true },
@@ -199,6 +202,7 @@ export const DEFAULT_COMPANY_COLUMNS_ORDER: CompanyReservationColumn[] = [
   'addressStreet',
   'addressPostalCode',
   'addressCity',
+  'addressCountry',
   'numPlaces',
   'status',
   'checkinStatus',
