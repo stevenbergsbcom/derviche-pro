@@ -15,10 +15,14 @@ import { getCellValue } from './formatters';
  * comme la formule `="..."` qui retourne la chaîne textuelle, donc préserve
  * les 17 chiffres au lieu de basculer en notation scientifique `7,06E+16`.
  * Les UUID ne sont pas concernés (les tirets empêchent la conversion).
+ *
+ * `addressPostalCode` est inclus en défense : un CP comme `01000` serait
+ * sinon lu `1000` par Excel à l'ouverture du CSV (perte du zéro de tête).
  */
 const FORCE_TEXT_COLUMNS: ReadonlySet<ReservationColumn> = new Set([
   'crmIdPro',
   'crmIdVenue',
+  'addressPostalCode',
 ]);
 
 /**

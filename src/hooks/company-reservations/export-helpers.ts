@@ -210,9 +210,11 @@ export function reservationsToCSV(
   };
 
   // S175 \u2014 For\u00E7age type texte c\u00F4t\u00E9 Excel via `="<valeur>"` pour les IDs CRM.
+  // `addressPostalCode` inclus pour pr\u00E9server un \u00E9ventuel z\u00E9ro de t\u00EAte (ex: 01000).
   const csvForceTextColumns: ReadonlySet<CompanyExportColumn> = new Set([
     'crmIdPro',
     'crmIdVenue',
+    'addressPostalCode',
   ]);
 
   const rows = reservations.map((r) =>

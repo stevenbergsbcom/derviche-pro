@@ -55,6 +55,10 @@ Les valeurs sont automatiquement **forcées en format texte** dans le fichier g�
 </Callout>
 
 <Callout type="warning">
+**Côté compagnie (export depuis /company/reservations)** : l'ID CRM du pro n'est exposé que pour les réservations **sans compte** (guest). Pour les réservations faites par un pro connecté à son compte, le champ reste vide côté export compagnie — la jointure vers la fiche du pro n'est pas autorisée par les règles d'accès actuelles. Si la compagnie a besoin de cet ID, l'admin peut le fournir via l'export admin qui n'a pas cette limitation.
+</Callout>
+
+<Callout type="warning">
 **Protection des données personnelles** : un fichier exporté contient des emails, téléphones et parfois adresses. Stockez-le en lieu sûr et supprimez-le dès qu'il n'est plus nécessaire (RGPD).
 </Callout>
 
