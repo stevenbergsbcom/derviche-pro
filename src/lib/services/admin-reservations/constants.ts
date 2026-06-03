@@ -36,7 +36,8 @@ export const RESERVATION_SELECT_QUERY = `
   booked_by:user_id (
     first_name,
     last_name,
-    crm_id
+    crm_id,
+    crm_structure_id
   ),
   slots!inner (
     id,
@@ -48,8 +49,7 @@ export const RESERVATION_SELECT_QUERY = `
     venues (
       id,
       name,
-      city,
-      crm_id
+      city
     ),
     shows!inner (
       id,
@@ -90,7 +90,8 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
   booked_by:user_id (
     first_name,
     last_name,
-    crm_id
+    crm_id,
+    crm_structure_id
   ),
   slots (
     id,
@@ -102,8 +103,7 @@ export const RESERVATION_SINGLE_SELECT_QUERY = `
     venues (
       id,
       name,
-      city,
-      crm_id
+      city
     ),
     shows (
       id,

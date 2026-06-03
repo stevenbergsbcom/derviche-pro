@@ -55,6 +55,13 @@ export interface CreateResult {
   success: boolean;
   reservationId?: string;
   error?: string;
+  /**
+   * Avertissement non-bloquant (Session B + retour audit Cursor) :
+   * la résa a été créée mais un side-effet a échoué (typiquement l'écriture
+   * de `reservations.crm_id` / `reservations.crm_structure_id`). À surfacer
+   * via un toast warning pour que l'admin sache que tout n'a pas été persisté.
+   */
+  warning?: string;
 }
 
 /**
@@ -137,8 +144,10 @@ export interface ProfessionalInfoSectionProps extends FormSectionProps {
   organization: string | null;
   function: string | null;
   afcNumber: string | null;
-  /** Migration 119 — ID CRM Zoho (S174). */
+  /** Migration 119 — ID CRM Zoho contact (S174). */
   crmId: string | null;
+  /** Migration 122 — ID CRM Zoho structure (Session B). */
+  crmStructureId: string | null;
   onChange: FieldChangeHandler;
 }
 

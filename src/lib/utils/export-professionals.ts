@@ -62,14 +62,15 @@ const COLUMN_TO_FIELD: Record<ProfessionalColumn, { key: keyof Professional; lab
 // ============================================
 
 const TRAILING_COLUMNS: FixedColumn[] = [
-  { key: 'postal_code', label: 'Code postal'        },
-  { key: 'country',     label: 'Pays'               },
-  { key: 'address',     label: 'Adresse'            },
-  { key: 'afc_number',  label: 'N° AFC'             },
-  // S175 — Identifiants externes (toujours présents en queue d'export)
-  { key: 'crm_id',      label: 'ID CRM Zoho'        },
-  { key: 'id',          label: 'UUID (technique)'   },
-  { key: 'created_at',  label: 'Créé le'            },
+  { key: 'postal_code',      label: 'Code postal'             },
+  { key: 'country',          label: 'Pays'                    },
+  { key: 'address',          label: 'Adresse'                 },
+  { key: 'afc_number',       label: 'N° AFC'                  },
+  // S175 + Session B — Identifiants externes (toujours présents en queue d'export)
+  { key: 'crm_id',           label: 'ID CRM Zoho (contact)'   },
+  { key: 'crm_structure_id', label: 'ID CRM Zoho (structure)' },
+  { key: 'id',               label: 'UUID (technique)'        },
+  { key: 'created_at',       label: 'Créé le'                 },
 ];
 
 // ============================================
@@ -129,13 +130,15 @@ function buildExportData(
   ];
 
   /**
-   * S175 — Colonnes forcées en texte à l'ouverture Excel.
-   * - `crm_id` : préserve les 17 chiffres (sinon notation scientifique).
+   * S175 + Session B — Colonnes forcées en texte à l'ouverture Excel.
+   * - `crm_id` + `crm_structure_id` : préservent les 17 chiffres (sinon notation
+   *   scientifique).
    * - `postal_code` : préserve un éventuel zéro de tête (ex: « 01000 » lu
    *   « 1000 » par défaut).
    */
   const forceTextKeys: ReadonlySet<keyof Professional> = new Set([
     'crm_id',
+    'crm_structure_id',
     'postal_code',
   ]);
 

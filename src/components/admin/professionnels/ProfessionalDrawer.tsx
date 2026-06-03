@@ -149,6 +149,8 @@ function ProfessionalInfoTab({
           <InfoRow icon={IdCard} label="N° AFC" value={professional.afc_number} />
           {/* S174 — ID CRM Zoho, lecture seule (édition via le formulaire) */}
           <InfoRow icon={Hash} label="ID CRM (Zoho)" value={professional.crm_id} />
+          {/* Session B — ID CRM Zoho de la structure du pro */}
+          <InfoRow icon={Hash} label="ID CRM structure (Zoho)" value={professional.crm_structure_id} />
         </div>
       </div>
 

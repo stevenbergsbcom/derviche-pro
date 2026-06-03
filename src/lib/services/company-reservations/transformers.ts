@@ -18,7 +18,7 @@ export function transformReservation(
       capacity: number;
       remaining_capacity: number;
       hosted_by: string;
-      venues?: { id: string; name: string; city: string; crm_id: string | null } | null;
+      venues?: { id: string; name: string; city: string } | null;
       shows?: { id: string; title: string; slug: string } | null;
     } | null;
   }
@@ -74,15 +74,7 @@ export function transformReservation(
       capacity: slot.capacity,
       remainingCapacity: slot.remaining_capacity,
       hostedBy: slot.hosted_by,
-      // S175 — expose venue.crmId pour la colonne « ID CRM (lieu) » des exports
-      venue: slot.venues
-        ? {
-            id: slot.venues.id,
-            name: slot.venues.name,
-            city: slot.venues.city,
-            crmId: slot.venues.crm_id ?? null,
-          }
-        : null,
+      venue: slot.venues || null,
       show: slot.shows || null,
     } : null,
   };

@@ -164,18 +164,15 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
     case 'createdAt':
       return r.createdAt ? formatDateShort(r.createdAt.split('T')[0]) : '-';
 
-    // S175 — Identifiants externes / techniques
+    // S175 + Session B — Identifiants externes / techniques
     case 'crmIdPro':
       return r.crmId || '-';
 
-    case 'crmIdVenue':
-      return r.slot?.venue?.crmId || '-';
+    case 'crmIdStructure':
+      return r.crmStructureId || '-';
 
     case 'userUuid':
       return r.userId || '-';
-
-    case 'venueUuid':
-      return r.slot?.venue?.id || '-';
 
     default:
       return '-';

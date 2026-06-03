@@ -39,15 +39,26 @@ export function useReservationColumnsPreference() {
     ? { order: DEFAULT_COLUMNS_ORDER, visible: value }
     : value;
 
-  // S'assurer que toutes les colonnes sont presentes dans l'ordre
-  // (pour les nouvelles colonnes ajoutees apres la sauvegarde des preferences)
+  // Sessions A+B (retour audit Cursor P2) — purger les colonnes obsolètes
+  // ET ajouter les nouvelles. Sans la purge, un admin qui avait activé
+  // `crmIdVenue` / `venueUuid` (S175, retirés Session A) garderait ces
+  // entrées dans son JSON sauvegardé → `EXPORT_COLUMN_LABELS[col]` retourne
+  // `undefined` → en-tête CSV vide. La whitelist `DEFAULT_COLUMNS_ORDER` est
+  // la source de vérité.
   const allColumns = DEFAULT_COLUMNS_ORDER;
-  const missingColumns = allColumns.filter(col => !normalizedValue.order.includes(col));
+  const allColumnsSet = new Set<string>(allColumns);
+  const purgedOrder = normalizedValue.order.filter(col => allColumnsSet.has(col));
+  const missingColumns = allColumns.filter(col => !purgedOrder.includes(col));
+  const purgedVisible = normalizedValue.visible.filter(col => allColumnsSet.has(col));
 
-  if (missingColumns.length > 0) {
+  if (
+    missingColumns.length > 0 ||
+    purgedOrder.length !== normalizedValue.order.length ||
+    purgedVisible.length !== normalizedValue.visible.length
+  ) {
     normalizedValue = {
-      ...normalizedValue,
-      order: [...normalizedValue.order, ...missingColumns],
+      order: [...purgedOrder, ...missingColumns],
+      visible: purgedVisible,
     };
   }
 
@@ -120,14 +131,23 @@ export function useCompanyReservationColumnsPreference() {
     ? { order: DEFAULT_COMPANY_COLUMNS_ORDER, visible: value }
     : value;
 
-  // S'assurer que toutes les colonnes sont presentes dans l'ordre
+  // Sessions A+B — purge + ajout (cf. version admin ci-dessus).
+  // `crmIdVenue` côté compagnie aurait pu être présent en prefs sauvegardées
+  // depuis S175 ; on le retire ici.
   const allColumns = DEFAULT_COMPANY_COLUMNS_ORDER;
-  const missingColumns = allColumns.filter(col => !normalizedValue.order.includes(col));
+  const allColumnsSet = new Set<string>(allColumns);
+  const purgedOrder = normalizedValue.order.filter(col => allColumnsSet.has(col));
+  const missingColumns = allColumns.filter(col => !purgedOrder.includes(col));
+  const purgedVisible = normalizedValue.visible.filter(col => allColumnsSet.has(col));
 
-  if (missingColumns.length > 0) {
+  if (
+    missingColumns.length > 0 ||
+    purgedOrder.length !== normalizedValue.order.length ||
+    purgedVisible.length !== normalizedValue.visible.length
+  ) {
     normalizedValue = {
-      ...normalizedValue,
-      order: [...normalizedValue.order, ...missingColumns],
+      order: [...purgedOrder, ...missingColumns],
+      visible: purgedVisible,
     };
   }
 

@@ -54,9 +54,8 @@ export const COLUMN_HEADERS: Record<CompanyReservationColumn, string> = {
   checkinNotes: 'Notes accueil',
   checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
-  // S175 — IDs CRM Zoho
+  // S175 — ID CRM Zoho du pro
   crmIdPro: 'ID CRM (pro)',
-  crmIdVenue: 'ID CRM (lieu)',
 };
 
 // ============================================

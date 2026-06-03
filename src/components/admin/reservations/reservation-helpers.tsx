@@ -56,11 +56,10 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
   checkinVenueNotes: 'Notes lieu',
   checkinInternalNotes: 'Notes internes',
   createdAt: 'Créé le',
-  // S175 — Identifiants externes / techniques
+  // S175 + Session B — Identifiants externes / techniques
   crmIdPro: 'ID CRM (pro)',
-  crmIdVenue: 'ID CRM (lieu)',
+  crmIdStructure: 'ID CRM (structure)',
   userUuid: 'UUID pro',
-  venueUuid: 'UUID lieu',
 };
 
 // ============================================

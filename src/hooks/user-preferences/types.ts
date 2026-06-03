@@ -53,13 +53,12 @@ export type ReservationColumn =
   | 'checkinVenueNotes'
   | 'checkinInternalNotes'
   | 'createdAt'
-  // Identifiants externes (S175) — masqués par défaut, utiles pour
-  // le pont avec le CRM Zoho (crmIdPro / crmIdVenue) et le support
-  // technique (userUuid / venueUuid).
+  // Identifiants externes (S175 + Session B) — masqués par défaut, utiles
+  // pour le pont avec le CRM Zoho (crmIdPro = contact, crmIdStructure =
+  // structure du pro) et le support technique (userUuid).
   | 'crmIdPro'
-  | 'crmIdVenue'
-  | 'userUuid'
-  | 'venueUuid';
+  | 'crmIdStructure'
+  | 'userUuid';
 
 /** Structure des preferences de colonnes */
 export interface ReservationColumnsPreference {
@@ -93,7 +92,7 @@ export type ProfessionalColumn =
 /**
  * Colonnes disponibles pour la liste des reservations compagnie
  * EXCLUT: checkinInternalNotes (notes internes reservees a l'admin)
- *        ainsi que userUuid/venueUuid (techniques, réservés à l'admin)
+ *        ainsi que userUuid (technique, réservé à l'admin)
  */
 export type CompanyReservationColumn =
   | 'date'
@@ -120,9 +119,8 @@ export type CompanyReservationColumn =
   | 'checkinNotes'
   | 'checkinVenueNotes'
   | 'createdAt'
-  // S175 — identifiants CRM Zoho (lecture seule, utile pour le pont CRM)
-  | 'crmIdPro'
-  | 'crmIdVenue';
+  // S175 — identifiant CRM Zoho du pro (lecture seule, utile pour le pont CRM)
+  | 'crmIdPro';
 
 /** Structure des preferences de colonnes compagnie */
 export interface CompanyReservationColumnsPreference {

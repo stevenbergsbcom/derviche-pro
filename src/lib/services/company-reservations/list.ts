@@ -66,8 +66,7 @@ export async function getCompanyReservations(
           venues (
             id,
             name,
-            city,
-            crm_id
+            city
           ),
           shows!inner (
             id,

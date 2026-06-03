@@ -45,9 +45,8 @@ const EXPORT_COLUMN_LABELS: Record<CompanyExportColumn, string> = {
   checkinNotes: 'Notes check-in',
   checkinVenueNotes: 'Notes lieu',
   createdAt: 'Créé le',
-  // S175 — IDs CRM Zoho
+  // S175 — ID CRM Zoho du pro
   crmIdPro: 'ID CRM Zoho (pro)',
-  crmIdVenue: 'ID CRM Zoho (lieu)',
 };
 
 // ============================================
@@ -136,13 +135,11 @@ function getCellValue(col: CompanyExportColumn, r: CompanyReservation): string {
       return r.checkinVenueNotes || '-';
     case 'createdAt':
       return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
-    // S175 — IDs CRM Zoho
+    // S175 — ID CRM Zoho
     // crmIdPro côté compagnie n'est lu QUE depuis `reservations.crm_id` (résa
     // guest). Pour résa pro, la RLS empêche l'accès à `profiles.crm_id` → vide.
     case 'crmIdPro':
       return r.crmId || '-';
-    case 'crmIdVenue':
-      return r.slot?.venue?.crmId || '-';
     default:
       return '-';
   }
@@ -212,11 +209,10 @@ export function reservationsToCSV(
     return str;
   };
 
-  // S175 \u2014 For\u00E7age type texte c\u00F4t\u00E9 Excel via `="<valeur>"` pour les IDs CRM.
+  // S175 \u2014 For\u00E7age type texte c\u00F4t\u00E9 Excel via `="<valeur>"` pour l'ID CRM.
   // `addressPostalCode` inclus pour pr\u00E9server un \u00E9ventuel z\u00E9ro de t\u00EAte (ex: 01000).
   const csvForceTextColumns: ReadonlySet<CompanyExportColumn> = new Set([
     'crmIdPro',
-    'crmIdVenue',
     'addressPostalCode',
   ]);
 
@@ -240,7 +236,6 @@ export function reservationsToCSV(
  */
 const FORCE_TEXT_COLUMNS: ReadonlySet<CompanyExportColumn> = new Set([
   'crmIdPro',
-  'crmIdVenue',
   'addressPostalCode',
 ]);
 

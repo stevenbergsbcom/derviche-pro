@@ -1,12 +1,15 @@
 /**
  * CrmIdInput
- * Derviche Diffusion — S174
+ * Derviche Diffusion — S174 + Session B
  *
  * Champ de saisie réutilisable pour les identifiants CRM Zoho.
  * Utilisé dans :
- *  - formulaire lieu (venues.crm_id)
- *  - formulaire pro (profiles.crm_id)
- *  - fiche réservation guest (reservations.crm_id)
+ *  - formulaire pro — `profiles.crm_id` (contact) + `profiles.crm_structure_id` (structure)
+ *  - fiche réservation guest — `reservations.crm_id` + `reservations.crm_structure_id`
+ *  - dialogs résa admin (création + édition)
+ *
+ * Note : la prop `label` permet de réutiliser le composant pour les deux
+ * variantes (« ID CRM (Zoho) » et « ID CRM structure (Zoho) »).
  *
  * Validation souple :
  *  - Seuls les chiffres sont acceptés (filtrage `/\D/g` à la frappe)

@@ -39,9 +39,8 @@ export const COMPANY_COLUMNS_CONFIG: Record<
   checkinNotes: { label: 'Notes check-in', defaultVisible: false },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
-  // S175 — IDs CRM Zoho (masqués par défaut)
+  // S175 — ID CRM Zoho du pro (masqué par défaut)
   crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
-  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par défaut des colonnes compagnie */
@@ -70,9 +69,8 @@ export const COMPANY_COLUMNS_ORDER: CompanyExportColumn[] = [
   'checkinNotes',
   'checkinVenueNotes',
   'createdAt',
-  // S175 — IDs CRM
+  // S175 — ID CRM pro
   'crmIdPro',
-  'crmIdVenue',
 ];
 
 /** Colonnes visibles par défaut pour les compagnies */

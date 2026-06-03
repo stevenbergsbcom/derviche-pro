@@ -109,14 +109,11 @@ export function getCellValue(col: CompanyExportColumn, r: CompanyReservation): s
     case 'createdAt':
       return r.createdAt ? formatDateShort(r.createdAt.split('T')[0]) : '-';
 
-    // S175 — IDs CRM Zoho (lecture seule côté compagnie)
+    // S175 — ID CRM Zoho du pro (lecture seule côté compagnie)
     // crmIdPro côté compagnie ne lit QUE `reservations.crm_id` (résa guest).
     // Pour résa pro, la RLS empêche d'accéder à `profiles.crm_id` → vide.
     case 'crmIdPro':
       return r.crmId || '-';
-
-    case 'crmIdVenue':
-      return r.slot?.venue?.crmId || '-';
 
     default:
       return '-';

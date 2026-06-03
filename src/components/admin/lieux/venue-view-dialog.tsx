@@ -10,7 +10,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Mail, Phone, Car, Accessibility, Train, Hash } from 'lucide-react';
+import { MapPin, Mail, Phone, Car, Accessibility, Train } from 'lucide-react';
 import type { VenueRow } from '@/types/database';
 
 export interface VenueViewDialogProps {
@@ -132,17 +132,6 @@ export function VenueViewDialog({
                             )}
                         </div>
                     </div>
-
-                    {/* ID CRM Zoho (S174) */}
-                    {venue.crm_id && (
-                        <div>
-                            <h4 className="text-sm font-semibold text-muted-foreground mb-1">ID CRM (Zoho)</h4>
-                            <p className="flex items-center gap-2 text-sm font-mono">
-                                <Hash className="w-4 h-4 text-muted-foreground" aria-hidden="true" />
-                                {venue.crm_id}
-                            </p>
-                        </div>
-                    )}
 
                     {/* Coordonnées GPS */}
                     {(venue.latitude !== null && venue.longitude !== null) && (

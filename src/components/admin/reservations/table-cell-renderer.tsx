@@ -151,29 +151,23 @@ export function renderTableCell(
       );
     case 'createdAt':
       return <span className="text-sm text-muted-foreground">{formatDateTimeFr(r.createdAt)}</span>;
-    // S175 — Identifiants externes / techniques
+    // S175 + Session B — Identifiants externes / techniques
     case 'crmIdPro':
       return (
         <span className="text-sm font-mono" title={r.crmId || ''}>
           {r.crmId || '-'}
         </span>
       );
-    case 'crmIdVenue':
+    case 'crmIdStructure':
       return (
-        <span className="text-sm font-mono" title={r.slot?.venue?.crmId || ''}>
-          {r.slot?.venue?.crmId || '-'}
+        <span className="text-sm font-mono" title={r.crmStructureId || ''}>
+          {r.crmStructureId || '-'}
         </span>
       );
     case 'userUuid':
       return (
         <span className="text-xs font-mono text-muted-foreground" title={r.userId || ''}>
           {r.userId || '-'}
-        </span>
-      );
-    case 'venueUuid':
-      return (
-        <span className="text-xs font-mono text-muted-foreground" title={r.slot?.venue?.id || ''}>
-          {r.slot?.venue?.id || '-'}
         </span>
       );
     default:
