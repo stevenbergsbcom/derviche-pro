@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Session S174 + S175 — IDs CRM Zoho (saisie + exports) — 1ᵉʳ juin 2026
+> Dernière mise à jour : Sessions A + B — correction malentendu CRM lieu → structure du pro — 3 juin 2026
 
 ---
 
@@ -79,13 +79,13 @@
 | Module | État |
 |--------|------|
 | Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison, **bouton Check-in → nouvel onglet (S190)** |
-| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM + UUID + adresse éclatée (S175)**, **forçage texte Excel/CSV sur IDs Zoho (S175)** |
+| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM contact + structure + UUID + adresse éclatée (S175 + Sessions A/B)**, **forçage texte Excel/CSV sur IDs Zoho (S175)** |
 | **Statistiques** | ✅ Page `/admin/statistiques` dédiée — KPIs, drill-down drawers, comparaison périodes, export PDF, préférences column visibility (S189) |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories (renommables S192), publics cibles (renommables S192), médias, **champ `derviche_site_url` (S191)** |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
-| Lieux | ✅ CRUD salles (venues), **ID CRM Zoho (S174)** |
+| Lieux | ✅ CRUD salles (venues) |
 | Compagnies | ✅ CRUD, liaison utilisateur |
-| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète, **ID CRM Zoho (S174)** |
+| Professionnels | ✅ Liste, filtres, CRUD, colonnes configurables, export CSV, lien fiche complète, **ID CRM Zoho contact + structure (S174 + Sessions A/B)** |
 | Préférences | ✅ Organisation, Apparence (thème custom S174), **Classement (vedette + ordre global, S194)**, Email, Templates (12, UX DRY S175), Notifications, Rappels, Google Calendar, RGPD, **Page d'accueil (S176)** — **sous-menu collapsible dans la sidebar (S195)** |
 | Notifications | ✅ Badge cloche header + Sheet paginé + marquage lu + dismiss — S137, **fix résa publique S182**, **notification admin enrichie (S191)** |
 | **Système** | ✅ Logs journal + widget quota Resend + **widget rate limiting — S153** |
@@ -1600,6 +1600,65 @@ crmId = userId === null
 
 ---
 
+### Sessions A + B — Correction malentendu CRM lieu → structure du pro ✅
+
+> Numérotation lettres (A/B) au lieu de S2XX : à la demande client, les deux sessions ont été livrées en bloc sur `main` après application des 3 migrations, sans état intermédiaire incohérent en prod. Cf. `docs/SESSION_A_CRM_SUPPRESSION_VENUE.md` et `docs/SESSION_B_CRM_STRUCTURE.md` pour les specs détaillées, `docs/CONCEPTION_CRM_IDS.md` pour le contexte mis à jour.
+
+**Origine** : malentendu identifié après livraison S174/S175. Ce qu'on avait compris comme « ID CRM Lieu » (rattaché aux salles) était en réalité l'identifiant Zoho de la **structure pour laquelle travaille le professionnel** — donc rattaché aux pros et aux résas guest, pas aux salles.
+
+#### Session A — Suppression (migration 120)
+
+- `DROP INDEX venues_crm_id_unique` + `DROP COLUMN venues.crm_id`
+- Code retiré : composant `<CrmIdInput>` du formulaire lieu, bloc d'affichage du view dialog lieu, colonnes d'export `crmIdVenue` et `venueUuid` (admin + compagnie), propriété `venue.crmId` du type interne, jointures `venues.crm_id` dans les SELECT résa.
+- Préservés : `venue.id` (UUID utilisé partout pour identifier le lieu), `crmIdPro` et `userUuid` (concernent le pro).
+
+#### Session B — Ajout (migrations 121 + 122)
+
+Pattern strictement identique à `crm_id` (S174) :
+- `profiles.crm_structure_id TEXT` (sans unicité — plusieurs pros peuvent partager une structure)
+- `reservations.crm_structure_id TEXT` (sans unicité, résa guest uniquement)
+- Saisie via `<CrmIdInput>` (réutilisé, prop `label` permet la variante structure).
+
+Diffusion identique à `crm_id` :
+- Form pro : nouveau champ « ID CRM structure (Zoho) »
+- Fiche pro complète + drawer + modal : InfoRow lecture seule
+- Dialog édition résa : guest → éditable, pro → lecture seule (Lock + Info, hérité via `booked_by.crm_structure_id`)
+- Dialog création résa : éditable + pré-remplissage depuis le pro sélectionné dans la barre de recherche
+- Mutations admin : combined UPDATE des deux IDs en un seul round-trip, garde `.is('user_id', null)` (défense en profondeur)
+- Transformer discriminé : `userId === null ? row.crm_structure_id : booked_by?.crm_structure_id`
+- Colonne export configurable `crmIdStructure` + label « ID CRM Zoho (structure) », masquée par défaut, forcée texte en Excel ET CSV
+- API search-professional + `handleProfileSelect` propagent `crmStructureId`
+- Export pros CSV : ajout systématique en queue + force-text (libellés disambigués « ID CRM Zoho (contact) » vs « (structure) »)
+
+#### Retours audit Cursor S175 résolus
+
+- **Toast warning création résa** : `CreateResult.warning?: string` ajouté au contrat dialog, consommé dans `performCreate` (source unique de feedback, déduplication avec le page handler)
+- **Purge prefs utilisateur** : `useReservationColumnsPreference` et son équivalent compagnie filtrent maintenant `order` + `visible` sur la whitelist `DEFAULT_*_COLUMNS_ORDER`. Un admin qui avait activé `crmIdVenue` en S175 voit la colonne disparaître proprement au prochain chargement (pas d'en-tête vide en export)
+- **Cleanup commentaires** : `humanizeVenueError` retiré, headers `crm-id-input.tsx` et `database.ts` mis à jour
+
+#### Hors scope (intentionnel, à ouvrir si demande client)
+
+- Compagnie : `crm_structure_id` pas exposé côté `CompanyReservation` (RLS `profiles` bloque la jointure `booked_by`, cohérent avec la limitation V1 actée pour `crm_id`).
+- PWA `add-reservation-drawer` : form schema ne porte aucun ID CRM (continuité avec S174/S175).
+- MDX `aide/` : mis à jour dans la session de doc qui suit.
+
+#### Articles doc modifiés (session de doc)
+
+- `content/lieux/vue-ensemble.mdx` — section « ID CRM (Zoho) » retirée
+- `content/professionnels/vue-ensemble.mdx` — disambiguation contact vs structure
+- `content/reservations/creer.mdx` + `modifier-annuler.mdx` + `exporter.mdx` — mentions « ID CRM (lieu) » remplacées par « (structure) »
+- `content/faq/glossaire.mdx` — entrée « ID CRM (Zoho) » devient « ID CRM (Zoho — contact + structure) »
+
+#### Audit Cursor
+
+9/10 sur l'ensemble Session A + B + fixes audit, aucune issue bloquante.
+
+#### Commit merge main
+
+`2941aa4`
+
+---
+
 ## Backlog / TODO
 
 ### Prochaine session : S200 — à définir
@@ -1620,7 +1679,8 @@ crmId = userId === null
 | 11 | Hook pre-push / GitHub Action d'enforcement automatique de la règle MAJ doc | Faible | Fiabilité |
 | 12 | **Factorisation `getCellValue` exports résa** (4 implémentations parallèles — dette S175) | Moyenne | Maintenabilité |
 | 13 | **Unifier config colonnes compagnie** (`COMPANY_RESERVATION_COLUMNS_CONFIG` user-prefs + `COMPANY_COLUMNS_CONFIG` hooks — dette S175) | Faible | Maintenabilité |
-| 14 | **RLS `profiles_select_company`** : débloquer `crmIdPro` côté compagnie sur résa pro (dette S175) | Faible | Métier |
+| 14 | **RLS `profiles_select_company`** : débloquer `crmIdPro` + `crmIdStructure` côté compagnie sur résa pro (dette S175 + Session B) | Faible | Métier |
+| 15 | **Composant `<InheritedCrmField>`** : factoriser le bloc « lecture seule guest/pro » dupliqué × 2 dans le dialog édition résa (dette Session B audit P1) | Faible | Maintenabilité |
 
 > **Note** : le backlog ci-dessus a été réorganisé après l'audit de refacto S198. L'ancien item « Factory email routes » (#4) est terminé.
 

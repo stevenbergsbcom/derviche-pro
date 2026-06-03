@@ -1,8 +1,11 @@
 # Conception — Intégration des IDs CRM (Zoho)
 
-> **Statut** : ⚠️ **CORRECTION EN COURS** — une erreur de compréhension client a été identifiée après livraison de S174/S175.
-> **Historique** : S174 + S175 livrés (commits `dbc0ef6` + `6540a0c`) selon la compréhension initiale (ERRONÉE sur le « lieu »).
-> **À venir** : 2 sessions correctives — Session A (suppression `venues.crm_id`) puis Session B (ajout `crm_structure_id`).
+> **Statut** : ✅ **IMPLÉMENTÉ ET CORRIGÉ**
+> **Sessions livrées** :
+> - S174 + S175 (commits `dbc0ef6` + `6540a0c`) — implémentation initiale selon la compréhension erronée
+> - Sessions A + B (commit merge `2941aa4`) — correction du malentendu client
+> **Migrations appliquées** : 117 (venues.crm_id, supprimée par 120), 118 (profiles.crm_id), 119 (reservations.crm_id), **120 (drop venues.crm_id)**, **121 (profiles.crm_structure_id)**, **122 (reservations.crm_structure_id)**
+> **Voir aussi** : `docs/STATUT.md` pour le récap des livrables et la dette technique consciente.
 > **Origine** : demande client — synchroniser la plateforme avec leur CRM Zoho.
 
 ---

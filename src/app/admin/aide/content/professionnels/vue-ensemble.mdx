@@ -4,7 +4,7 @@ slug: professionnels/vue-ensemble
 category: professionnels
 categoryLabel: Professionnels
 categoryIcon: Users
-keywords: [professionnels, pros, base, fiche, colonnes, export, csv, désactiver, crm, zoho, id crm, identifiant]
+keywords: [professionnels, pros, base, fiche, colonnes, export, csv, désactiver, crm, zoho, id crm, contact, structure, identifiant]
 roles: [super-admin, admin]
 order: 1
 ---
@@ -31,20 +31,32 @@ Votre sélection est **sauvegardée** (réutilisée à la prochaine visite).
 
 Clic sur une ligne → drawer latéral avec :
 - **Coordonnées complètes**
-- **ID CRM (Zoho)** — voir section dédiée ci-dessous
+- **ID CRM (Zoho) — contact** + **ID CRM structure (Zoho)** — voir section dédiée ci-dessous
 - **Historique des réservations** (toutes, avec détail spectacle / créneau / statut)
 - **Toggle Actif / Inactif**
 
-## ID CRM (Zoho)
+## ID CRM Zoho — deux identifiants distincts
 
-Le champ **ID CRM (Zoho)** permet de relier la fiche pro à son enregistrement dans votre CRM Zoho. Il s'agit d'un identifiant numérique (~17 chiffres) trouvable dans l'URL de la fiche contact sur Zoho.
+Un professionnel porte **DEUX** identifiants Zoho indépendants :
 
-- **Optionnel** — laissez vide si le pro n'a pas (encore) de fiche dans votre CRM
+### ID CRM (Zoho) — contact
+Identifie **la personne** dans votre CRM (la fiche contact). Numérique, ~17 chiffres, trouvable dans l'URL de la fiche contact sur Zoho.
+
+- **Optionnel**
 - **Unique** — un même ID ne peut pas être attribué à deux pros différents
-- **Numérique uniquement** — les caractères non chiffrés sont retirés automatiquement à la saisie
-- **Source de vérité pour les réservations** — quand un pro connecté à son compte réserve, son ID CRM est hérité automatiquement (pas besoin de le ressaisir sur chaque résa)
+- **Source de vérité** pour les réservations avec compte : l'ID est hérité automatiquement
 
-Pour une réservation sans compte (guest), l'ID CRM se saisit directement sur la fiche de la réservation — voir [Modifier / annuler une réservation](/admin/aide/reservations/modifier-annuler).
+### ID CRM structure (Zoho)
+Identifie **l'organisation pour laquelle travaille le pro** (la fiche structure dans votre CRM). Numérique, ~17 chiffres.
+
+- **Optionnel**
+- **PAS d'unicité** — plusieurs pros peuvent dépendre de la même structure (collègues d'une même MJC, théâtre, conservatoire…), donc le même ID se répètera légitimement
+- **Source de vérité** pour les réservations avec compte : hérité automatiquement comme l'ID contact
+
+### Comportement commun
+- **Numérique uniquement** : caractères non chiffrés retirés automatiquement à la saisie
+- **Pour les résa sans compte (guest)** : les deux IDs se saisissent directement sur la fiche de la réservation — voir [Modifier / annuler une réservation](/admin/aide/reservations/modifier-annuler)
+- **Pas d'ID CRM côté lieu** : par décision produit, les salles (`venues`) ne portent aucun ID CRM. L'ID structure vit sur le pro.
 
 ## Désactiver un pro
 
@@ -56,8 +68,9 @@ Cas d'usage : pro qui n'est plus en poste, demande RGPD de désactivation, etc.
 
 Bouton **« Exporter CSV »** → fichier avec les colonnes visibles.
 
-Depuis S175, le CSV inclut systématiquement (en fin de fichier) :
-- **ID CRM Zoho** — au format texte (formule `="..."` lue par Excel), pour préserver les 17 chiffres
+Le CSV inclut systématiquement (en fin de fichier) :
+- **ID CRM Zoho (contact)** — au format texte (formule `="..."` lue par Excel), pour préserver les 17 chiffres
+- **ID CRM Zoho (structure)** — idem
 - **UUID (technique)** — identifiant Supabase, utile uniquement pour le support technique
 
 <Callout type="warning">

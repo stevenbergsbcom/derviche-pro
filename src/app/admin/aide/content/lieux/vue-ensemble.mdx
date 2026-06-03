@@ -4,7 +4,7 @@ slug: lieux/vue-ensemble
 category: lieux
 categoryLabel: Lieux
 categoryIcon: MapPin
-keywords: [lieux, venues, salles, capacité, pmr, accessibilité, parking, transports, adresse, crm, zoho, id crm, identifiant]
+keywords: [lieux, venues, salles, capacité, pmr, accessibilité, parking, transports, adresse]
 roles: [super-admin, admin]
 order: 1
 ---
@@ -24,18 +24,12 @@ Bouton **« Nouveau lieu »**. Champs :
 - **Accessibilité PMR** (oui / non)
 - **Parking** (oui / non + description libre)
 - **Transports** (métro / bus / parking / autre — texte libre)
-- **ID CRM (Zoho)** (optionnel)
 
 Les infos d'accessibilité et transports apparaissent sur la fiche publique du spectacle (bloc « Informations pratiques »).
 
-## ID CRM (Zoho)
-
-Le champ **ID CRM (Zoho)** permet d'associer le lieu à sa fiche correspondante dans votre CRM Zoho. Il s'agit d'un identifiant numérique (~17 chiffres) que vous trouvez dans l'URL de la fiche lieu sur Zoho.
-
-- **Optionnel** — vous pouvez laisser le champ vide
-- **Unique** — un même ID ne peut pas être attribué à deux lieux différents
-- **Numérique uniquement** — les caractères non chiffrés sont automatiquement retirés à la saisie
-- **Apparaît dans les exports** — pour faire le pont avec votre CRM (à partir de la session S175)
+<Callout type="info">
+**Pas d'ID CRM sur les lieux** : les salles n'ont pas d'identifiant CRM Zoho côté plateforme. L'ID CRM « structure » est porté par le **professionnel** (pas par le lieu), car il représente l'organisation pour laquelle ce pro travaille. Voir [Gérer les professionnels](/admin/aide/professionnels/vue-ensemble).
+</Callout>
 
 ## Modifier un lieu
 
