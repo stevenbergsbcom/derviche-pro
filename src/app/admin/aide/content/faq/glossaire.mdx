@@ -4,7 +4,7 @@ slug: faq/glossaire
 category: faq
 categoryLabel: FAQ & dépannage
 categoryIcon: HelpCircle
-keywords: [glossaire, lexique, vocabulaire, définitions, termes, walk-in, hosted_by, vedette, crm, zoho, id crm, uuid]
+keywords: [glossaire, lexique, vocabulaire, définitions, termes, walk-in, hosted_by, vedette, crm, zoho, id crm, contact, structure, uuid]
 roles: [super-admin, admin, externe]
 order: 5
 ---
@@ -29,8 +29,11 @@ Rôle interne pour les collaborateurs ponctuels (accueil, techniciens). Accès *
 ## Guest / Réservation invitée
 Réservation créée **sans compte pro associé**. Le pro donne juste nom + email. Créée par un admin en walk-in ou par le pro lui-même en réservation publique sans inscription.
 
-## ID CRM (Zoho)
-Identifiant numérique (~17 chiffres) qui désigne un lieu ou un professionnel dans le CRM Zoho du client. Permet de faire le pont entre la plateforme et le CRM dans les exports. Saisi sur la fiche lieu ou la fiche pro. Pour les réservations de pros connectés, l'ID est hérité automatiquement du profil pro (source de vérité unique). Voir [Exporter les réservations](/admin/aide/reservations/exporter).
+## ID CRM (Zoho) — contact
+Identifiant numérique (~17 chiffres) qui désigne **un professionnel (la personne)** dans le CRM Zoho du client. Saisi sur la fiche pro. Pour les réservations de pros connectés, l'ID est hérité automatiquement du profil. Permet de faire le pont entre la plateforme et le CRM dans les exports. Voir [Exporter les réservations](/admin/aide/reservations/exporter).
+
+## ID CRM structure (Zoho)
+Identifiant numérique (~17 chiffres) qui désigne **l'organisation pour laquelle travaille le pro** dans le CRM Zoho (la fiche structure dans Zoho). Saisi sur la fiche pro (pas sur la fiche lieu — les salles ne portent pas d'ID CRM). Pas d'unicité : plusieurs pros peuvent partager une même structure. Même logique d'héritage que l'ID contact pour les résa.
 
 ## Hosted by (accueil assuré par)
 Indique **qui assure l'accueil** d'un créneau :

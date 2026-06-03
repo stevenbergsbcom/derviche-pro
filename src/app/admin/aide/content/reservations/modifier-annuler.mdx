@@ -4,7 +4,7 @@ slug: reservations/modifier-annuler
 category: reservations
 categoryLabel: Réservations
 categoryIcon: Calendar
-keywords: [modifier, annuler, édition, éditer, suppression, changement, résa, reservation, crm, zoho, id crm, identifiant, guest]
+keywords: [modifier, annuler, édition, éditer, suppression, changement, résa, reservation, crm, zoho, id crm, contact, structure, identifiant, guest]
 roles: [super-admin, admin, externe]
 order: 3
 ---
@@ -17,17 +17,22 @@ order: 3
 Vous pouvez modifier :
 
 - **Informations du professionnel** : nom, email, téléphone, structure
-- **ID CRM (Zoho)** — pour les réservations sans compte uniquement (voir ci-dessous)
+- **ID CRM (Zoho) — contact** + **ID CRM structure (Zoho)** — pour les réservations sans compte uniquement (voir ci-dessous)
 - **Nombre de places**
 - **Notes internes Derviche** (jamais visibles par le pro ni la compagnie)
 - **Demandes spéciales** (visibles PWA / admin / compagnie)
 - **Statut check-in** (présent / absent / coup de cœur / presse)
 
-### ID CRM (Zoho) sur une réservation
+### IDs CRM Zoho sur une réservation
 
-- **Réservation faite par un pro connecté** : l'ID CRM n'est **pas modifiable** ici. Il est hérité automatiquement de la fiche pro (à modifier depuis [Professionnels](/admin/aide/professionnels/vue-ensemble) si besoin).
-- **Réservation sans compte (guest)** : l'ID CRM se saisit directement sur la réservation. Champ optionnel, numérique uniquement (~17 chiffres).
-- L'ID CRM apparaît dans les exports pour faire le pont avec votre CRM Zoho (à partir de S175).
+Deux champs distincts, même comportement :
+- **ID CRM (Zoho) — contact** : identifie la personne dans votre CRM
+- **ID CRM structure (Zoho)** : identifie l'organisation pour laquelle elle travaille
+
+Pour les deux :
+- **Réservation faite par un pro connecté** : valeur **non modifiable** ici. Héritée automatiquement de la fiche pro (à modifier depuis [Professionnels](/admin/aide/professionnels/vue-ensemble) si besoin).
+- **Réservation sans compte (guest)** : champ éditable directement sur la réservation. Optionnel, numérique uniquement (~17 chiffres).
+- Présents dans les exports CSV/Excel pour faire le pont avec votre CRM Zoho.
 
 Cliquez **« Enregistrer »**. Un toast confirme la sauvegarde.
 

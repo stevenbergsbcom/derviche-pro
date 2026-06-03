@@ -146,12 +146,31 @@ ReservationSource = 'public' | 'admin'
 - **reservations** : guest_email_secondary, guest_phone_secondary, guest_address, guest_postal_code, guest_city, guest_country
 - **profiles** : disabled_at (désactivation temporaire)
 
-### Champs IDs CRM Zoho (S174 + S175)
-- **venues.crm_id** : TEXT, index unique partiel `WHERE crm_id IS NOT NULL`. Saisie sur la fiche lieu.
-- **profiles.crm_id** : TEXT, index unique partiel. Saisie sur la fiche pro. **Source de vérité** pour les résa avec compte.
-- **reservations.crm_id** : TEXT, pas d'unicité. Renseigné uniquement pour les résa guest (`user_id IS NULL`). Pour les résa pro, lire `profiles.crm_id` via la jointure `booked_by:user_id (crm_id)`.
+### Champs IDs CRM Zoho (S174 + Sessions A/B)
 
-Format : ~17 chiffres (IDs Zoho actuels), mais le TEXT absorbe tout futur changement de format CRM. Validation côté UI : sanitization numérique-uniquement à la frappe (`CrmIdInput`).
+Un professionnel porte **DEUX** identifiants Zoho :
+- son ID **contact** (la personne) — `crm_id`
+- son ID **structure** (l'organisation pour laquelle il travaille) — `crm_structure_id`
+
+Les salles (`venues`) ne portent AUCUN ID CRM : la colonne `venues.crm_id` ajoutée à tort en S174 a été supprimée en migration 120 (Session A).
+
+#### Colonnes BDD
+
+- **profiles.crm_id** : TEXT, index unique partiel `WHERE crm_id IS NOT NULL`. Saisie sur la fiche pro. **Source de vérité** pour les résa avec compte.
+- **profiles.crm_structure_id** : TEXT, **pas d'unicité** (plusieurs pros peuvent partager une structure).
+- **reservations.crm_id** : TEXT, pas d'unicité. Renseigné uniquement pour les résa guest (`user_id IS NULL`). Pour les résa pro, lire `profiles.crm_id` via la jointure `booked_by:user_id (crm_id)`.
+- **reservations.crm_structure_id** : TEXT, pas d'unicité. Même logique que `crm_id` mais pour la structure.
+
+Format : ~17 chiffres (IDs Zoho actuels), mais le TEXT absorbe tout futur changement de format CRM. Validation côté UI : sanitization numérique-uniquement à la frappe (`CrmIdInput`, réutilisé pour les deux variantes via la prop `label`).
+
+#### Pattern de résolution dans le transformer admin
+
+```ts
+crmId          = userId === null ? row.crm_id          : booked_by?.crm_id          ?? null
+crmStructureId = userId === null ? row.crm_structure_id : booked_by?.crm_structure_id ?? null
+```
+
+Côté UI, ce pattern se traduit par : éditable pour résa guest, lecture seule + Lock pour résa avec compte (hérité du profil pro). Côté mutation, garde `.is('user_id', null)` sur les side-updates → impossible d'écraser un profil pro depuis le pipeline résa.
 
 ### Politiques RLS clés
 - **profiles** : Chacun voit son profil, admin voit tous
