@@ -215,17 +215,22 @@ export function EditReservationDialog({
               organization={formData.organization ?? null}
               function={formData.function ?? null}
               afcNumber={formData.afcNumber ?? null}
-              // S174 — ID CRM Zoho :
+              // S174 + Session B — IDs CRM Zoho (contact + structure) :
               //  - résa guest → la valeur vit dans formData (champ éditable).
               //  - résa avec compte → la valeur vient du profil pro via la
-              //    jointure `booked_by` portée par `reservation.crmId`.
-              //    `formData.crmId` est volontairement absent dans ce cas
-              //    (cf. initializeFormData) pour ne pas écraser la source de
-              //    vérité côté `profiles.crm_id`.
+              //    jointure `booked_by` portée par `reservation.crmId` /
+              //    `reservation.crmStructureId`. `formData.*` est volontairement
+              //    absent dans ce cas (cf. initializeFormData) pour ne pas
+              //    écraser la source de vérité côté `profiles`.
               crmId={
                 reservation?.userId === null
                   ? (formData.crmId ?? null)
                   : (reservation?.crmId ?? null)
+              }
+              crmStructureId={
+                reservation?.userId === null
+                  ? (formData.crmStructureId ?? null)
+                  : (reservation?.crmStructureId ?? null)
               }
               isGuest={reservation?.userId === null}
               onChange={handleChange}

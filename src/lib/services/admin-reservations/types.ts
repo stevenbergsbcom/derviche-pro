@@ -39,8 +39,6 @@ export interface AdminReservationSlot {
     id: string;
     name: string;
     city: string;
-    /** Migration 117 — ID CRM Zoho du lieu, utilisé par les exports S175. */
-    crmId: string | null;
   } | null;
   show: {
     id: string;
@@ -77,7 +75,7 @@ export interface AdminReservation {
   function: string | null;
   afcNumber: string | null;
   /**
-   * ID CRM Zoho (migration 119), résolu par le transformer :
+   * ID CRM Zoho contact (migration 119), résolu par le transformer :
    *  - résa guest (`userId === null`) → vient de `reservations.crm_id`, éditable
    *    depuis le dialog d'édition (CrmIdInput).
    *  - résa avec compte (`userId !== null`) → hérité de `profiles.crm_id` via
@@ -88,6 +86,13 @@ export interface AdminReservation {
    * export S175…) de devoir distinguer les deux cas.
    */
   crmId: string | null;
+  /**
+   * ID CRM Zoho structure (migration 122) — pendant de `crmId` mais pour la
+   * structure pour laquelle travaille le pro. Même logique de résolution :
+   *  - résa guest → `reservations.crm_structure_id`
+   *  - résa avec compte → `booked_by.crm_structure_id`
+   */
+  crmStructureId: string | null;
 
   // Réservation
   numPlaces: number;
@@ -233,11 +238,16 @@ export interface UpdateReservationData {
   function?: string | null;
   afcNumber?: string | null;
   /**
-   * ID CRM Zoho (migration 119) — uniquement pertinent pour les résas guest.
+   * ID CRM Zoho contact (migration 119) — uniquement pertinent pour les résas guest.
    * `undefined` → laisse la valeur en BDD intacte.
    * `null` → vide explicitement le champ.
    */
   crmId?: string | null;
+  /**
+   * ID CRM Zoho structure (migration 122) — uniquement pertinent pour les résas
+   * guest, même logique que `crmId` (undefined = no-op).
+   */
+  crmStructureId?: string | null;
   // Réservation
   numPlaces?: number;
   slotId?: string;
@@ -265,8 +275,10 @@ export interface CreateAdminReservationData {
   organization?: string | null;
   function?: string | null;
   afcNumber?: string | null;
-  /** Migration 119 — ID CRM Zoho. Une résa admin est toujours guest (user_id NULL). */
+  /** Migration 119 — ID CRM Zoho contact. Une résa admin est toujours guest. */
   crmId?: string | null;
+  /** Migration 122 — ID CRM Zoho structure du pro (résa admin = guest). */
+  crmStructureId?: string | null;
   // Notes
   comment?: string | null;
   checkinComment?: string | null;
@@ -358,8 +370,10 @@ export interface ReservationRowWithRelations {
   guest_structure: string | null;
   guest_function: string | null;
   guest_afc_number: string | null;
-  /** Migration 119 — ID CRM Zoho (résas guest uniquement). */
+  /** Migration 119 — ID CRM Zoho contact (résas guest uniquement). */
   crm_id: string | null;
+  /** Migration 122 — ID CRM Zoho structure (résas guest uniquement). */
+  crm_structure_id: string | null;
   num_places: number;
   status: string;
   /** Origine de la création : 'public' (site public) ou 'admin' (back-office / PWA walk-in). */
@@ -399,8 +413,10 @@ export interface ReservationRowWithRelations {
   booked_by?: {
     first_name: string | null;
     last_name: string | null;
-    /** Migration 118 — ID CRM Zoho du compte pro (anticipation S175 : lecture seule sur résa avec compte). */
+    /** Migration 118 — ID CRM Zoho contact du compte pro (lecture seule sur résa avec compte). */
     crm_id: string | null;
+    /** Migration 121 — ID CRM Zoho structure du compte pro (lecture seule). */
+    crm_structure_id: string | null;
   } | null;
   slots?: SlotRowWithRelations | null;
 }
@@ -413,7 +429,7 @@ export interface SlotRowWithRelations {
   capacity: number;
   remaining_capacity: number;
   hosted_by: string;
-  venues?: { id: string; name: string; city: string; crm_id: string | null } | null;
+  venues?: { id: string; name: string; city: string } | null;
   shows?: {
     id: string;
     title: string;

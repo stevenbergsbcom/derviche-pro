@@ -28,8 +28,10 @@ export const INITIAL_FORM_DATA: CreateAdminReservationData = {
   organization: null,
   function: null,
   afcNumber: null,
-  // S174 — Migration 119 (ID CRM Zoho, résa guest uniquement)
+  // S174 — Migration 119 (ID CRM Zoho contact, résa guest uniquement)
   crmId: null,
+  // Session B — Migration 122 (ID CRM Zoho structure, résa guest uniquement)
+  crmStructureId: null,
   comment: null,
   checkinComment: null,
   checkinVenueNotes: null,

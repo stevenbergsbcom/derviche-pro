@@ -17,6 +17,7 @@ export function ProfessionalInfoSection({
   function: functionValue,
   afcNumber,
   crmId,
+  crmStructureId,
   isGuest,
   onChange,
   disabled,
@@ -62,7 +63,7 @@ export function ProfessionalInfoSection({
         </div>
 
         {/*
-          ID CRM Zoho (S174)
+          ID CRM Zoho contact (S174)
           - Résa guest (isGuest=true) → champ éditable, valeur sur reservations.crm_id
           - Résa avec compte (isGuest=false) → champ lecture seule, valeur héritée
             de profiles.crm_id via la jointure `booked_by` (modifiable depuis la
@@ -88,6 +89,51 @@ export function ProfessionalInfoSection({
                 id="crm_id_readonly"
                 type="text"
                 value={crmId ?? ''}
+                placeholder="—"
+                readOnly
+                disabled
+                className="font-mono"
+              />
+              <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <Info className="w-3 h-3 mt-0.5 shrink-0" aria-hidden="true" />
+                <span>
+                  Hérité de la fiche du professionnel. Pour modifier,
+                  ouvrir la fiche du pro depuis l&apos;onglet Professionnels.
+                </span>
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/*
+          ID CRM Zoho structure (Session B)
+          - Résa guest → éditable, valeur sur reservations.crm_structure_id
+          - Résa avec compte → lecture seule, valeur héritée de
+            profiles.crm_structure_id via `booked_by`.
+        */}
+        <div className="sm:col-span-2">
+          {isGuest ? (
+            <CrmIdInput
+              id="crm_structure_id"
+              label="ID CRM structure (Zoho)"
+              value={crmStructureId}
+              onChange={(value) => onChange('crmStructureId', value)}
+              disabled={disabled}
+              helpText="Identifiant de la structure du pro dans votre CRM Zoho (~17 chiffres). Optionnel."
+            />
+          ) : (
+            <div className="space-y-2">
+              <Label
+                htmlFor="crm_structure_id_readonly"
+                className="flex items-center gap-1.5 text-sm"
+              >
+                ID CRM structure (Zoho)
+                <Lock className="w-3 h-3 text-muted-foreground" aria-hidden="true" />
+              </Label>
+              <Input
+                id="crm_structure_id_readonly"
+                type="text"
+                value={crmStructureId ?? ''}
                 placeholder="—"
                 readOnly
                 disabled

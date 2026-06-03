@@ -56,8 +56,10 @@ export interface FoundProfile {
   postalCode: string | null;
   city: string | null;
   country: string | null;
-  /** Migration 118 — ID CRM Zoho du profil. */
+  /** Migration 118 — ID CRM Zoho du profil (contact). */
   crmId: string | null;
+  /** Migration 121 — ID CRM Zoho de la structure du pro. */
+  crmStructureId: string | null;
 }
 
 export type SearchProfessionalResult =
@@ -121,7 +123,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     const SELECT = `
       id, email, first_name, last_name, structure,
       phone, phone2, email2, afc_number, function,
-      address, postal_code, city, country, crm_id, deleted_at
+      address, postal_code, city, country, crm_id, crm_structure_id, deleted_at
     `;
 
     const { data: profiles, error: profileError } = await (
@@ -191,6 +193,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         city: string | null;
         country: string | null;
         crm_id: string | null;
+        crm_structure_id: string | null;
       }) => ({
         id: p.id,
         email: p.email,
@@ -207,6 +210,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         city: p.city,
         country: p.country,
         crmId: p.crm_id,
+        crmStructureId: p.crm_structure_id,
       })),
     };
 

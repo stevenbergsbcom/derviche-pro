@@ -232,8 +232,9 @@ export function useCreateReservationForm({
       organization: profile.organization ?? null,
       function: profile.function ?? null,
       afcNumber: profile.afcNumber ?? null,
-      // S174 — pré-remplir l'ID CRM Zoho depuis le profil sélectionné
+      // S174 + Session B — pré-remplir les IDs CRM Zoho depuis le profil sélectionné
       crmId: profile.crmId ?? null,
+      crmStructureId: profile.crmStructureId ?? null,
       address: profile.address ?? null,
       postalCode: profile.postalCode ?? null,
       city: profile.city ?? null,
@@ -249,6 +250,13 @@ export function useCreateReservationForm({
       const result = await onCreateRef.current({ ...formData, _notifOptions: notifOptions });
 
       if (result.success) {
+        // Session B + retour audit Cursor : surface l'avertissement non-bloquant
+        // si le side-update CRM a échoué (la résa est créée, mais un ID CRM n'a
+        // pas été persisté). Affiché AVANT le succès pour que l'utilisateur
+        // remarque l'anomalie.
+        if (result.warning) {
+          toast.warning(result.warning);
+        }
         toast.success(TOAST_MESSAGES.createSuccess);
         onOpenChangeRef.current(false);
       } else {

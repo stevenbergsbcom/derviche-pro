@@ -102,19 +102,16 @@ export function getCellValue(
       // createdAt est un datetime complet, extraire juste la date
       return r.createdAt ? formatDateExport(r.createdAt.split('T')[0]) : '-';
 
-    // S175 — Identifiants externes / techniques
+    // S175 + Session B — Identifiants externes / techniques
     case 'crmIdPro':
       return r.crmId ?? '-';
 
-    case 'crmIdVenue':
-      return r.slot?.venue?.crmId ?? '-';
+    case 'crmIdStructure':
+      return r.crmStructureId ?? '-';
 
     case 'userUuid':
       // UUID du compte pro (null pour résa guest) — pont technique support
       return r.userId ?? '-';
-
-    case 'venueUuid':
-      return r.slot?.venue?.id ?? '-';
 
     default:
       return '-';

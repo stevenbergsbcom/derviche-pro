@@ -5,8 +5,10 @@
  * Ces types correspondent exactement au schéma défini dans les migrations SQL.
  * Ils sont utilisés pour typer les requêtes Supabase et garantir la cohérence des données.
  * 
- * Mis à jour : Session S174 — ajout crm_id (Zoho) sur venues / profiles / reservations
- * Migrations : 001-119
+ * Mis à jour : Sessions A + B — suppression de venues.crm_id (malentendu CRM "lieu"),
+ *               ajout de crm_structure_id sur profiles + reservations (structure du pro).
+ *               Voir docs/CONCEPTION_CRM_IDS.md.
+ * Migrations : 001-122
  */
 
 // ============================================
@@ -143,6 +145,8 @@ export interface ProfileRow {
   company_id: string | null;
   // Migration 118 — ID CRM Zoho (~17 chiffres, TEXT pour préserver le format)
   crm_id: string | null;
+  // Migration 121 — ID CRM Zoho de la structure du pro (pas d'unicité)
+  crm_structure_id: string | null;
   gdpr_consent: boolean;
   gdpr_consent_date: string | null;
   gdpr_data_retention_accepted: boolean;
@@ -173,6 +177,8 @@ export interface ProfileInsert {
   company_id?: string | null;
   // Migration 118 — ID CRM Zoho
   crm_id?: string | null;
+  // Migration 121 — ID CRM Zoho de la structure du pro
+  crm_structure_id?: string | null;
   gdpr_consent?: boolean;
   gdpr_consent_date?: string | null;
   gdpr_data_retention_accepted?: boolean;
@@ -197,6 +203,8 @@ export interface ProfileUpdate {
   company_id?: string | null;
   // Migration 118 — ID CRM Zoho
   crm_id?: string | null;
+  // Migration 121 — ID CRM Zoho de la structure du pro
+  crm_structure_id?: string | null;
   gdpr_consent?: boolean;
   gdpr_consent_date?: string | null;
   gdpr_data_retention_accepted?: boolean;
@@ -245,8 +253,6 @@ export interface VenueRow {
   pmr_accessible: boolean;
   parking: boolean;
   transports: string | null;
-  // Migration 117 — ID CRM Zoho (~17 chiffres, TEXT pour préserver le format)
-  crm_id: string | null;
   // Champs système
   deleted_at: string | null;
   created_at: string;
@@ -271,8 +277,6 @@ export interface VenueInsert {
   pmr_accessible?: boolean;
   parking?: boolean;
   transports?: string | null;
-  // Migration 117 — ID CRM Zoho
-  crm_id?: string | null;
 }
 
 /** Données pour mettre à jour une salle */
@@ -293,8 +297,6 @@ export interface VenueUpdate {
   pmr_accessible?: boolean;
   parking?: boolean;
   transports?: string | null;
-  // Migration 117 — ID CRM Zoho
-  crm_id?: string | null;
   // Champs système
   deleted_at?: string | null;
 }
@@ -565,6 +567,9 @@ export interface ReservationRow {
   // Migration 119 — ID CRM Zoho pour résa guest (user_id IS NULL).
   // Pour une résa AVEC compte, lire profiles.crm_id via jointure.
   crm_id: string | null;
+  // Migration 122 — ID CRM Zoho de la structure du pro pour résa guest.
+  // Pour une résa AVEC compte, lire profiles.crm_structure_id via jointure.
+  crm_structure_id: string | null;
   // Champs système
   created_at: string;
   updated_at: string;
@@ -597,6 +602,8 @@ export interface ReservationInsert {
   created_by_user_id?: string | null;
   // Migration 119 — ID CRM Zoho (uniquement pertinent pour les résas guest)
   crm_id?: string | null;
+  // Migration 122 — ID CRM Zoho structure (résa guest)
+  crm_structure_id?: string | null;
 }
 
 /** Données pour mettre à jour une réservation */
@@ -634,6 +641,8 @@ export interface ReservationUpdate {
   cancellation_reason?: string | null;
   // Migration 119 — ID CRM Zoho (uniquement pertinent pour les résas guest)
   crm_id?: string | null;
+  // Migration 122 — ID CRM Zoho structure (résa guest)
+  crm_structure_id?: string | null;
 }
 
 // ============================================

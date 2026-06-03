@@ -119,17 +119,7 @@ function transformSlot(slot: SlotRowWithRelations): AdminReservationSlot {
     capacity: slot.capacity,
     remainingCapacity: slot.remaining_capacity,
     hostedBy: slot.hosted_by,
-    // S175 — expose `crmId` du lieu (TEXT, migration 117) pour les exports
-    // et la colonne configurable « ID CRM (lieu) ». `slot.venues.crm_id` peut
-    // être absent si la jointure ne le ramène pas — fallback à null.
-    venue: slot.venues
-      ? {
-          id: slot.venues.id,
-          name: slot.venues.name,
-          city: slot.venues.city,
-          crmId: slot.venues.crm_id ?? null,
-        }
-      : null,
+    venue: slot.venues || null,
     show: slot.shows ? {
       id: slot.shows.id,
       title: slot.shows.title,
@@ -186,7 +176,7 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
     organization: row.guest_structure,
     function: row.guest_function,
     afcNumber: row.guest_afc_number || null,
-    // S174 — ID CRM Zoho :
+    // S174 — ID CRM Zoho contact :
     //   - résa guest (user_id IS NULL) → valeur stockée sur reservations.crm_id
     //     (éditable depuis le dialog d'édition de la résa).
     //   - résa avec compte (user_id renseigné) → valeur héritée du profil pro
@@ -195,6 +185,12 @@ export function transformReservation(row: ReservationRowWithRelations): AdminRes
       row.user_id === null
         ? (row.crm_id ?? null)
         : (row.booked_by?.crm_id ?? null),
+    // Session B — ID CRM Zoho structure : même logique que crmId, avec
+    // `crm_structure_id` sur reservations / profiles.
+    crmStructureId:
+      row.user_id === null
+        ? (row.crm_structure_id ?? null)
+        : (row.booked_by?.crm_structure_id ?? null),
 
 
     // Réservation

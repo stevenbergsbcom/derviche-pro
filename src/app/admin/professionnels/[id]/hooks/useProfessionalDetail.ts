@@ -51,7 +51,7 @@ export function useProfessionalDetail(professionalId: string): UseProfessionalDe
         id, email, first_name, last_name,
         phone, email2, phone2, function, structure,
         afc_number, address, postal_code, city, country,
-        comments, crm_id, gdpr_consent, created_at, last_login_at,
+        comments, crm_id, crm_structure_id, gdpr_consent, created_at, last_login_at,
         disabled_at
       `)
       .eq('id', professionalId)

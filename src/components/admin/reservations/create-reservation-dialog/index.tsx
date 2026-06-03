@@ -167,6 +167,7 @@ export function CreateReservationDialog({
             function={formData.function ?? null}
             afcNumber={formData.afcNumber ?? null}
             crmId={formData.crmId ?? null}
+            crmStructureId={formData.crmStructureId ?? null}
             onChange={handleFieldChange}
             disabled={isSaving}
           />

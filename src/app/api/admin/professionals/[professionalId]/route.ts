@@ -42,8 +42,10 @@ interface UpdateProfessionalBody {
   city?: string | null;
   country?: string | null;
   comments?: string | null;
-  /** Migration 118 — ID CRM Zoho */
+  /** Migration 118 — ID CRM Zoho (contact) */
   crm_id?: string | null;
+  /** Migration 121 — ID CRM Zoho de la structure du pro */
+  crm_structure_id?: string | null;
 }
 
 // ============================================
@@ -105,6 +107,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       'country',
       'comments',
       'crm_id',
+      'crm_structure_id',
     ];
 
     for (const field of updatableFields) {

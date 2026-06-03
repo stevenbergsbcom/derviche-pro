@@ -108,18 +108,12 @@ export function renderCompanyTableCell(col: CompanyReservationColumn, r: Company
       );
     case 'createdAt':
       return <span className="text-sm text-muted-foreground">{formatDateTimeFr(r.createdAt)}</span>;
-    // S175 — IDs CRM Zoho (lecture seule)
+    // S175 — ID CRM Zoho du pro (lecture seule)
     // crmIdPro côté compagnie : résa guest seulement (cf. transformer)
     case 'crmIdPro':
       return (
         <span className="text-sm font-mono" title={r.crmId || ''}>
           {r.crmId || '-'}
-        </span>
-      );
-    case 'crmIdVenue':
-      return (
-        <span className="text-sm font-mono" title={r.slot?.venue?.crmId || ''}>
-          {r.slot?.venue?.crmId || '-'}
         </span>
       );
     default:

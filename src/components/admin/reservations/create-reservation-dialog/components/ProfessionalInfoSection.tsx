@@ -17,6 +17,7 @@ export function ProfessionalInfoSection({
   function: functionField, // 'function' est un mot réservé
   afcNumber,
   crmId,
+  crmStructureId,
   onChange,
   disabled,
 }: ProfessionalInfoSectionProps) {
@@ -67,7 +68,7 @@ export function ProfessionalInfoSection({
         </div>
 
         {/*
-          ID CRM Zoho (S174)
+          ID CRM Zoho contact (S174)
           Une résa créée depuis l'admin est toujours en mode guest
           (user_id IS NULL côté BDD) → le champ est toujours pertinent.
         */}
@@ -76,6 +77,21 @@ export function ProfessionalInfoSection({
             value={crmId}
             onChange={(value) => onChange('crmId', value)}
             disabled={disabled}
+          />
+        </div>
+
+        {/*
+          ID CRM Zoho structure (Session B)
+          Toujours guest côté admin — donc toujours éditable.
+        */}
+        <div className="sm:col-span-2">
+          <CrmIdInput
+            id="crm_structure_id"
+            label="ID CRM structure (Zoho)"
+            value={crmStructureId}
+            onChange={(value) => onChange('crmStructureId', value)}
+            disabled={disabled}
+            helpText="Identifiant de la structure du pro dans votre CRM Zoho (~17 chiffres). Optionnel."
           />
         </div>
       </div>

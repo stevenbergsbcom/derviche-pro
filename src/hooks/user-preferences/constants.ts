@@ -51,11 +51,10 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   checkinInternalNotes: { label: 'Notes internes', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
 
-  // S175 — Identifiants externes / techniques (masqués par défaut)
+  // S175 + Session B — Identifiants externes / techniques (masqués par défaut)
   crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
-  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
+  crmIdStructure: { label: 'ID CRM (structure)', defaultVisible: false },
   userUuid: { label: 'UUID pro (technique)', defaultVisible: false },
-  venueUuid: { label: 'UUID lieu (technique)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par defaut des colonnes */
@@ -85,11 +84,10 @@ export const DEFAULT_COLUMNS_ORDER: ReservationColumn[] = [
   'checkinVenueNotes',
   'checkinInternalNotes',
   'createdAt',
-  // S175 — Colonnes CRM/techniques regroupées en fin de liste, masquées par défaut
+  // S175 + Session B — Colonnes CRM/techniques regroupées en fin de liste, masquées par défaut
   'crmIdPro',
-  'crmIdVenue',
+  'crmIdStructure',
   'userUuid',
-  'venueUuid',
 ];
 
 /** Colonnes visibles par defaut */
@@ -179,9 +177,8 @@ export const COMPANY_RESERVATION_COLUMNS_CONFIG: Record<CompanyReservationColumn
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: true },
   createdAt: { label: 'Créé le', defaultVisible: true },
 
-  // S175 — IDs CRM Zoho (masqués par défaut)
+  // S175 — ID CRM Zoho du pro (masqué par défaut)
   crmIdPro: { label: 'ID CRM (pro)', defaultVisible: false },
-  crmIdVenue: { label: 'ID CRM (lieu)', defaultVisible: false },
 };
 
 /** Ordre d'affichage par defaut des colonnes compagnie */
@@ -210,9 +207,8 @@ export const DEFAULT_COMPANY_COLUMNS_ORDER: CompanyReservationColumn[] = [
   'checkinNotes',
   'checkinVenueNotes',
   'createdAt',
-  // S175 — IDs CRM
+  // S175 — ID CRM pro
   'crmIdPro',
-  'crmIdVenue',
 ];
 
 /** Colonnes visibles par defaut compagnie */

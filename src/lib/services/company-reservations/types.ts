@@ -21,8 +21,6 @@ export interface CompanyReservationSlot {
     id: string;
     name: string;
     city: string;
-    /** Migration 117 — ID CRM Zoho du lieu (utilisé par les exports S175). */
-    crmId: string | null;
   } | null;
   show: {
     id: string;
@@ -157,6 +155,5 @@ export type CompanyExportColumn =
   | 'checkinNotes'
   | 'checkinVenueNotes'
   | 'createdAt'
-  // S175 — IDs CRM Zoho (lecture seule)
-  | 'crmIdPro'
-  | 'crmIdVenue';
+  // S175 — ID CRM Zoho du pro (lecture seule)
+  | 'crmIdPro';

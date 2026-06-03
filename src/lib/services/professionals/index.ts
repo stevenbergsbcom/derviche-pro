@@ -33,8 +33,10 @@ export interface Professional {
   city: string | null;
   country: string | null;
   comments: string | null;
-  /** Migration 118 — ID CRM Zoho */
+  /** Migration 118 — ID CRM Zoho (contact) */
   crm_id: string | null;
+  /** Migration 121 — ID CRM Zoho de la structure du pro */
+  crm_structure_id: string | null;
   gdpr_consent: boolean;
   created_at: string;
   last_login_at: string | null;
@@ -58,8 +60,10 @@ export interface UpdateProfessionalData {
   city?: string | null;
   country?: string | null;
   comments?: string | null;
-  /** Migration 118 — ID CRM Zoho */
+  /** Migration 118 — ID CRM Zoho (contact) */
   crm_id?: string | null;
+  /** Migration 121 — ID CRM Zoho de la structure du pro */
+  crm_structure_id?: string | null;
 }
 
 /** Résultat d'une liste de professionnels */
@@ -112,6 +116,7 @@ export async function getProfessionals(): Promise<ProfessionalsListResult> {
         country,
         comments,
         crm_id,
+        crm_structure_id,
         gdpr_consent,
         created_at,
         last_login_at,
@@ -182,6 +187,7 @@ export async function getProfessionals(): Promise<ProfessionalsListResult> {
       country: profile.country,
       comments: profile.comments,
       crm_id: profile.crm_id,
+      crm_structure_id: profile.crm_structure_id,
       gdpr_consent: profile.gdpr_consent,
       created_at: profile.created_at,
       last_login_at: profile.last_login_at,
@@ -228,6 +234,7 @@ export async function getProfessionalById(
         country,
         comments,
         crm_id,
+        crm_structure_id,
         gdpr_consent,
         created_at,
         last_login_at,
@@ -273,6 +280,7 @@ export async function getProfessionalById(
       country: data.country,
       comments: data.comments,
       crm_id: data.crm_id,
+      crm_structure_id: data.crm_structure_id,
       gdpr_consent: data.gdpr_consent,
       created_at: data.created_at,
       last_login_at: data.last_login_at,

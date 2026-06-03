@@ -52,10 +52,16 @@ const schema = z.object({
   city: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   comments: z.string().optional().nullable(),
-  // S174 — ID CRM Zoho (numérique uniquement, validation souple)
+  // S174 — ID CRM Zoho contact (numérique uniquement, validation souple)
   crm_id: z
     .string()
     .regex(/^\d*$/, 'L\'ID CRM doit être composé uniquement de chiffres')
+    .optional()
+    .nullable(),
+  // Session B — ID CRM Zoho structure (numérique uniquement, validation souple)
+  crm_structure_id: z
+    .string()
+    .regex(/^\d*$/, 'L\'ID CRM structure doit être composé uniquement de chiffres')
     .optional()
     .nullable(),
 });
@@ -82,6 +88,7 @@ function normalizeFormValues(values: FormValues): UpdateProfessionalData {
     country: normalize(values.country),
     comments: normalize(values.comments),
     crm_id: normalize(values.crm_id),
+    crm_structure_id: normalize(values.crm_structure_id),
   };
 }
 
@@ -113,6 +120,7 @@ export function ProfessionalEditForm({
       country: professional.country ?? '',
       comments: professional.comments ?? '',
       crm_id: professional.crm_id ?? '',
+      crm_structure_id: professional.crm_structure_id ?? '',
     },
   });
 
@@ -380,7 +388,7 @@ export function ProfessionalEditForm({
           </div>
         </div>
 
-        {/* ---- ID CRM Zoho (S174) ---- */}
+        {/* ---- ID CRM Zoho contact (S174) ---- */}
         <FormField
           control={form.control}
           name="crm_id"
@@ -392,6 +400,27 @@ export function ProfessionalEditForm({
                   onChange={(value) => field.onChange(value ?? '')}
                   disabled={isSubmitting}
                   helpText="Identifiant du contact dans votre CRM Zoho (~17 chiffres). Optionnel — utilisé pour faire le pont avec votre CRM dans les exports."
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* ---- ID CRM Zoho structure (Session B) ---- */}
+        <FormField
+          control={form.control}
+          name="crm_structure_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <CrmIdInput
+                  id="crm_structure_id"
+                  label="ID CRM structure (Zoho)"
+                  value={field.value}
+                  onChange={(value) => field.onChange(value ?? '')}
+                  disabled={isSubmitting}
+                  helpText="Identifiant de la structure pour laquelle travaille le professionnel dans votre CRM Zoho (~17 chiffres). Optionnel."
                 />
               </FormControl>
               <FormMessage />

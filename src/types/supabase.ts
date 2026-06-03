@@ -312,6 +312,7 @@ export type Database = {
           country: string | null
           created_at: string
           crm_id: string | null
+          crm_structure_id: string | null
           deleted_at: string | null
           disabled_at: string | null
           email: string
@@ -340,6 +341,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           crm_id?: string | null
+          crm_structure_id?: string | null
           deleted_at?: string | null
           disabled_at?: string | null
           email: string
@@ -368,6 +370,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           crm_id?: string | null
+          crm_structure_id?: string | null
           deleted_at?: string | null
           disabled_at?: string | null
           email?: string
@@ -410,6 +413,7 @@ export type Database = {
           created_at: string
           created_by_user_id: string | null
           crm_id: string | null
+          crm_structure_id: string | null
           google_calendar_event_id: string | null
           guest_address: string | null
           guest_afc_number: string | null
@@ -445,6 +449,7 @@ export type Database = {
           created_at?: string
           created_by_user_id?: string | null
           crm_id?: string | null
+          crm_structure_id?: string | null
           google_calendar_event_id?: string | null
           guest_address?: string | null
           guest_afc_number?: string | null
@@ -480,6 +485,7 @@ export type Database = {
           created_at?: string
           created_by_user_id?: string | null
           crm_id?: string | null
+          crm_structure_id?: string | null
           google_calendar_event_id?: string | null
           guest_address?: string | null
           guest_afc_number?: string | null
@@ -1052,7 +1058,6 @@ export type Database = {
           contact_phone: string | null
           country: string
           created_at: string
-          crm_id: string | null
           deleted_at: string | null
           description: string | null
           id: string
@@ -1074,7 +1079,6 @@ export type Database = {
           contact_phone?: string | null
           country?: string
           created_at?: string
-          crm_id?: string | null
           deleted_at?: string | null
           description?: string | null
           id?: string
@@ -1096,7 +1100,6 @@ export type Database = {
           contact_phone?: string | null
           country?: string
           created_at?: string
-          crm_id?: string | null
           deleted_at?: string | null
           description?: string | null
           id?: string

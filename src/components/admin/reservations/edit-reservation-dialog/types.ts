@@ -114,11 +114,16 @@ export interface ProfessionalInfoSectionProps extends FormSectionProps {
   function: string | null;
   afcNumber: string | null;
   /**
-   * ID CRM Zoho (S174). Affiché et éditable uniquement pour les résas guest
-   * (`isGuest === true`). Pour une résa avec compte, l'ID est porté par
-   * `profiles.crm_id` et hors scope S174.
+   * ID CRM Zoho contact (S174). Affiché et éditable uniquement pour les résas
+   * guest (`isGuest === true`). Pour une résa avec compte, l'ID est hérité de
+   * `profiles.crm_id` (lecture seule).
    */
   crmId: string | null;
+  /**
+   * ID CRM Zoho structure (Session B). Même comportement que `crmId` mais
+   * relié à `profiles.crm_structure_id` / `reservations.crm_structure_id`.
+   */
+  crmStructureId: string | null;
   /** Indique que la réservation est en mode guest (user_id IS NULL). */
   isGuest: boolean;
   onChange: FieldChangeHandler;

@@ -19,9 +19,8 @@ import { getCellValue } from './formatters';
  */
 const FORCE_TEXT_COLUMNS: ReadonlySet<ReservationColumn> = new Set([
   'crmIdPro',
-  'crmIdVenue',
+  'crmIdStructure',
   'userUuid',
-  'venueUuid',
   'addressPostalCode',
 ]);
 

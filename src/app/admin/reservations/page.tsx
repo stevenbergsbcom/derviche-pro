@@ -322,11 +322,10 @@ function AdminReservationsContent() {
     const { _notifOptions: notifOptions, ...createData } = data;
     const result = await createAdminReservation(createData);
     if (result.success) {
-      // S175 — Surfacer l'avertissement non-bloquant si le side-update CRM
-      // a échoué (la résa a été créée mais sans ID CRM persisté).
-      if (result.warning) {
-        toast.warning(result.warning);
-      }
+      // S175 + Session B — Le `warning` éventuel (échec side-update CRM) est
+      // surfacé par le dialog (`useCreateReservationForm.performCreate`) qui
+      // est le point unique de feedback utilisateur. On le laisse dans
+      // `result` pour qu'il transite, sans en faire un toast supplémentaire ici.
       setSearchInput('');
       filtersHook.handleResetFilters();
       const resetFilters = { period: 'all' as const, sortBy: 'created_at_desc' as SortOption };

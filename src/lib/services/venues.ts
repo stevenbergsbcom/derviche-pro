@@ -10,18 +10,13 @@ import type { VenueRow, VenueInsert, VenueUpdate } from '@/types/database';
 import { logger } from '@/lib/logger';
 import { logActivityClient } from '@/lib/services/logs/client';
 
-/**
- * Traduit une erreur PostgreSQL en message utilisateur lisible.
- * Cas spécialement géré : violation de l'index unique partiel sur crm_id
- * (migration 117) — l'utilisateur doit savoir qu'il essaie de réutiliser
- * un ID CRM déjà attribué à un autre lieu, pas un message technique brut.
- */
-function humanizeVenueError(rawMessage: string): string {
-  if (rawMessage.includes('venues_crm_id_unique') || rawMessage.includes('duplicate key value violates unique constraint "venues_crm_id_unique"')) {
-    return 'Cet ID CRM est déjà attribué à un autre lieu.';
-  }
-  return rawMessage;
-}
+// Note Session A : la fonction `humanizeVenueError` (S174) traduisait la
+// violation de l'index unique partiel `venues_crm_id_unique`. La colonne
+// `venues.crm_id` ayant été supprimée (migration 120), cette traduction
+// n'a plus d'utilité. Les erreurs PostgreSQL transitent désormais telles
+// quelles via `error.message` — aucun chemin d'erreur métier connu sur
+// les opérations CRUD venues actuelles ne mérite encore une traduction
+// dédiée.
 
 // ============================================
 // TYPES
@@ -112,7 +107,7 @@ export async function createVenue(venue: VenueInsert): Promise<VenueResult> {
 
     if (error) {
       logger.error('Erreur création venue', error);
-      return { data: null, error: humanizeVenueError(error.message) };
+      return { data: null, error: error.message };
     }
 
     logger.info(`Venue créé: ${data.name} (${data.id})`);
@@ -147,7 +142,7 @@ export async function updateVenue(id: string, venue: VenueUpdate): Promise<Venue
 
     if (error) {
       logger.error('Erreur mise à jour venue', { id, error: error.message });
-      return { data: null, error: humanizeVenueError(error.message) };
+      return { data: null, error: error.message };
     }
 
     logger.info(`Venue mis à jour: ${data.name} (${data.id})`);
