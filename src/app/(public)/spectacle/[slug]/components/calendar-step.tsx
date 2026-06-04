@@ -124,14 +124,25 @@ export function CalendarStep({
                     key={date.toISOString()}
                     onClick={() => onDayClick(date)}
                     disabled={!hasSlotsForDate}
+                    /*
+                      iOS Safari < 16.2 : `bg-derviche/10` compile en
+                      `color-mix(...)` non supporté, ce qui rend la
+                      déclaration `background-color` invalide. Sans bg
+                      explicite, iOS Safari applique son style de bouton
+                      par défaut (teinte bleue système) → texte derviche
+                      sur fond bleu système ≈ invisible. On utilise donc
+                      des tokens dédiés `bg-derviche-muted` (oklch direct,
+                      sans color-mix) + `appearance-none` pour neutraliser
+                      le style natif iOS.
+                    */
                     className={`
-                      aspect-square rounded-lg text-sm font-medium transition-colors
+                      aspect-square rounded-lg text-sm font-medium transition-colors appearance-none
                       ${
                         isDateSelected
                           ? 'bg-derviche text-white'
                           : hasSlotsForDate
-                            ? 'bg-derviche/10 text-derviche hover:bg-derviche/20 cursor-pointer'
-                            : 'text-muted-foreground/30 cursor-not-allowed'
+                            ? 'bg-derviche-muted text-derviche hover:bg-derviche-muted-hover cursor-pointer'
+                            : 'bg-transparent text-muted-foreground/30 cursor-not-allowed'
                       }
                     `}
                   >

@@ -52,6 +52,12 @@ html {
   --color-derviche: var(--derviche);
   --color-derviche-light: var(--derviche-light);
   --color-derviche-dark: var(--derviche-dark);
+  /* Variantes très claires pour les fonds tintés (calendrier, badges, etc.).
+     Tokens explicites pour éviter `bg-derviche/10` qui compile en
+     `color-mix()` non supporté sur iOS Safari < 16.2 → texte invisible sur
+     fond bleu système. */
+  --color-derviche-muted: var(--derviche-muted);
+  --color-derviche-muted-hover: var(--derviche-muted-hover);
   --color-gold: var(--gold);
   --color-gold-light: var(--gold-light);
   --color-success: var(--success);
@@ -103,6 +109,11 @@ html {
   /* Bleu plus clair */
   --derviche-dark: oklch(0.22 0.06 250);
   /* Bleu très foncé */
+  /* Bleu très clair tinté (équivalent ~10% derviche sur blanc) — utilisé
+     comme fond de bouton « actif/disponible » dans le calendrier public. */
+  --derviche-muted: oklch(0.95 0.015 250);
+  /* Idem en hover (équivalent ~20%) */
+  --derviche-muted-hover: oklch(0.9 0.025 250);
   --gold: oklch(0.75 0.15 85);
   /* Or #d4a853 */
   --gold-light: oklch(0.85 0.12 85);
@@ -152,6 +163,10 @@ html {
   --derviche: oklch(0.5 0.15 250);
   --derviche-light: oklch(0.6 0.15 250);
   --derviche-dark: oklch(0.35 0.1 250);
+  /* Fonds tintés en dark mode — légèrement plus clairs que le fond
+     pour rester perceptibles sans saturer. */
+  --derviche-muted: oklch(0.25 0.05 250);
+  --derviche-muted-hover: oklch(0.30 0.07 250);
   --gold: oklch(0.8 0.15 85);
   --gold-light: oklch(0.9 0.1 85);
   --success: oklch(0.7 0.2 145);
