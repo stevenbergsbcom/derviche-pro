@@ -62,6 +62,11 @@ export const VALIDATION_MESSAGES = {
   lastNameRequired: 'Le nom est requis',
   emailRequired: "L'email est requis",
   emailInvalid: "L'email n'est pas valide",
+  // Migration 123 : structure / ville / code postal devenus obligatoires
+  // pour filtrer les réservations non-professionnelles (festivaliers).
+  organizationRequired: 'La structure / organisation est requise',
+  postalCodeRequired: 'Le code postal est requis',
+  cityRequired: 'La ville est requise',
   numPlacesMin: 'Le nombre de places doit être au moins 1',
   numPlacesMax: (max: number) => `Le nombre de places ne peut pas dépasser ${max}`,
   capacityInsufficient: (available: number) => `Capacité insuffisante (${available} places disponibles)`,

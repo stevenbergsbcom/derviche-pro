@@ -45,6 +45,18 @@ export function validateReservationForm(
     errors.push(VALIDATION_MESSAGES.emailInvalid);
   }
 
+  // Migration 123 : structure / ville / code postal devenus obligatoires
+  // (cohérence avec le formulaire public et la RPC create_public_reservation).
+  if (!formData.organization?.trim()) {
+    errors.push(VALIDATION_MESSAGES.organizationRequired);
+  }
+  if (!formData.postalCode?.trim()) {
+    errors.push(VALIDATION_MESSAGES.postalCodeRequired);
+  }
+  if (!formData.city?.trim()) {
+    errors.push(VALIDATION_MESSAGES.cityRequired);
+  }
+
   // Validation nombre de places
   if (!formData.numPlaces || formData.numPlaces < 1) {
     errors.push(VALIDATION_MESSAGES.numPlacesMin);

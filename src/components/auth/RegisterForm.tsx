@@ -43,11 +43,17 @@ export interface RegisterFormProps {
 // SCHEMA
 // ============================================
 
+// Migration 123 / 124 : structure / code postal / ville sont obligatoires
+// à l'inscription pour aligner avec les nouvelles règles de réservation
+// (filtrage des inscriptions non-professionnelles).
 const registerSchema = z
   .object({
     first_name: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
     last_name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
     email: z.string().email('Format email invalide').min(1, 'Email requis'),
+    structure: z.string().min(1, 'La structure / organisation est requise'),
+    postal_code: z.string().min(1, 'Le code postal est requis'),
+    city: z.string().min(1, 'La ville est requise'),
     password: z
       .string()
       .min(10, 'Le mot de passe doit contenir au moins 10 caractères')
@@ -79,6 +85,9 @@ export function RegisterForm({ onSuccess, onSwitchToLogin, onContinueAsGuest }: 
       first_name: '',
       last_name: '',
       email: '',
+      structure: '',
+      postal_code: '',
+      city: '',
       password: '',
       confirmPassword: '',
     },
@@ -98,6 +107,11 @@ export function RegisterForm({ onSuccess, onSwitchToLogin, onContinueAsGuest }: 
           data: {
             first_name: values.first_name,
             last_name: values.last_name,
+            // Migration 124 : ces 3 champs sont copiés dans `profiles` par
+            // le trigger `handle_new_user` via `raw_user_meta_data`.
+            structure: values.structure,
+            postal_code: values.postal_code,
+            city: values.city,
           },
         },
       });
@@ -191,6 +205,67 @@ export function RegisterForm({ onSuccess, onSwitchToLogin, onContinueAsGuest }: 
               </FormItem>
             )}
           />
+
+          {/* Migration 124 : structure / code postal / ville obligatoires
+              à l'inscription pour aligner avec les nouvelles règles de résa
+              (filtrage des inscriptions non-professionnelles). */}
+          <FormField
+            control={form.control}
+            name="structure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Structure / Organisation</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="Théâtre Municipal"
+                    autoComplete="organization"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-3 gap-3">
+            <FormField
+              control={form.control}
+              name="postal_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Code postal</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="75001"
+                      autoComplete="postal-code"
+                      disabled={isLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Ville</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Paris"
+                      autoComplete="address-level2"
+                      disabled={isLoading}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
           <FormField
             control={form.control}

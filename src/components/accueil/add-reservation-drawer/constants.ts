@@ -18,6 +18,10 @@ export const addReservationSchema = z.object({
   email: z.string().email('Email invalide').max(255),
   numPlaces: z.number().min(1, 'Minimum 1 place').max(20, 'Maximum 20 places'),
   // Champs optionnels
+  // NB : structure / code postal / ville sont obligatoires sur le formulaire
+  // public et l'inscription pro (mig 123 / 124), mais RESTENT optionnels
+  // dans le walk-in PWA pour ne pas freiner l'accueil rapide en salle —
+  // le staff peut compléter ces infos plus tard via l'édition admin.
   phone: z.string().max(20).optional(),
   emailSecondary: z.string().email('Email secondaire invalide').max(255).optional().or(z.literal('')),
   phoneSecondary: z.string().max(20).optional(),

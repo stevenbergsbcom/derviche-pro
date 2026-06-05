@@ -29,9 +29,9 @@ export function ProfessionalInfoSection({
       </h4>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Organisation */}
+        {/* Organisation — obligatoire (mig 123) */}
         <div className="space-y-2">
-          <Label htmlFor="organization">{LABELS.organization}</Label>
+          <Label htmlFor="organization">{LABELS.organization} *</Label>
           <Input
             id="organization"
             value={organization || ''}
