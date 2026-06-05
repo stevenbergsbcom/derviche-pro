@@ -184,19 +184,25 @@ export function ReservationFormStep({
           />
         </div>
 
+        {/* Migration 123 : code postal, ville et structure sont devenus
+            obligatoires pour filtrer les réservations non-professionnelles
+            (festivaliers). Côté serveur, la RPC `create_public_reservation`
+            applique la même règle en défense en profondeur. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="postalCode">Code postal</Label>
+            <Label htmlFor="postalCode">Code postal *</Label>
             <Input
               id="postalCode"
+              required
               value={formData.postalCode}
               onChange={(e) => onFormDataChange({ postalCode: e.target.value })}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="city">Ville</Label>
+            <Label htmlFor="city">Ville *</Label>
             <Input
               id="city"
+              required
               value={formData.city}
               onChange={(e) => onFormDataChange({ city: e.target.value })}
             />
@@ -213,9 +219,10 @@ export function ReservationFormStep({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="organization">Structure / Organisation</Label>
+            <Label htmlFor="organization">Structure / Organisation *</Label>
             <Input
               id="organization"
+              required
               value={formData.organization}
               onChange={(e) => onFormDataChange({ organization: e.target.value })}
             />

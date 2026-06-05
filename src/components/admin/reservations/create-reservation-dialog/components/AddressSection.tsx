@@ -40,9 +40,9 @@ export function AddressSection({
           />
         </div>
         
-        {/* Code postal */}
+        {/* Code postal — obligatoire (mig 123) */}
         <div className="space-y-2">
-          <Label htmlFor="postalCode">{LABELS.postalCode}</Label>
+          <Label htmlFor="postalCode">{LABELS.postalCode} *</Label>
           <Input
             id="postalCode"
             value={postalCode || ''}
@@ -52,10 +52,10 @@ export function AddressSection({
             autoComplete="postal-code"
           />
         </div>
-        
-        {/* Ville */}
+
+        {/* Ville — obligatoire (mig 123) */}
         <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="city">{LABELS.city}</Label>
+          <Label htmlFor="city">{LABELS.city} *</Label>
           <Input
             id="city"
             value={city || ''}

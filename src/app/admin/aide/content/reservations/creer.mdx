@@ -38,11 +38,16 @@ Cet article couvre le cas 2.
 ### Étape 3 — Informations et options
 
 - **Nombre de places** (spinner)
+- **Structure / Organisation** *, **Code postal** *, **Ville** * — **obligatoires** depuis juin 2026. Ces 3 champs servent à filtrer les réservations non-professionnelles (festivaliers).
 - **ID CRM (Zoho) — contact** + **ID CRM structure (Zoho)** — les deux optionnels, ~17 chiffres chacun. Si vous avez sélectionné un pro existant dont l'un ou l'autre est déjà renseigné, il est pré-rempli automatiquement.
 - **Notes internes Derviche** (non visibles par le pro ni par la compagnie)
 - **Demandes spéciales** (visibles dans l'admin et la PWA check-in)
 - **Envoyer l'email de confirmation ?** — case cochée par défaut
 - **Synchroniser avec Google Calendar ?** — case cochée par défaut
+
+<Callout type="info">
+**Pourquoi structure / ville / code postal sont obligatoires** : ces 3 champs sont notre principal filtre contre les réservations non-professionnelles. Un festivalier ne renseignera pas spontanément la structure pour laquelle il travaille — ces obligatoires bloquent donc l'essentiel des cas accidentels, sans alourdir la saisie pour un vrai pro qui les connaît par cœur. Règle appliquée à la fois côté UI (publique + admin) et côté serveur (RPC `create_public_reservation`).
+</Callout>
 
 Cliquez **« Créer la réservation »**.
 
