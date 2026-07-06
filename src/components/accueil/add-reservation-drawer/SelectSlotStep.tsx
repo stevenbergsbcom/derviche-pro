@@ -61,10 +61,17 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [slotListOpen, setSlotListOpen] = useState(true);
 
-  // Case "Inclure représentations passées" — réservée super-admin/admin
-  // pour du rattrapage a posteriori (résa oubliée sur J-1 par exemple).
-  // Le service applique la même règle côté serveur en défense en profondeur.
-  const canIncludePast = role === 'super-admin' || role === 'admin';
+  // Case "Inclure représentations passées" — disponible pour tous les rôles
+  // staff qui accèdent à la PWA (super-admin, admin, externe, company).
+  // Chaque rôle reste confiné à son périmètre existant :
+  //   - externe : shows où il est assigné
+  //   - company : slots hosted_by='company' (filtre appliqué au fetch)
+  // includePast élargit uniquement la fenêtre temporelle, pas le périmètre.
+  const canIncludePast =
+    role === 'super-admin' ||
+    role === 'admin' ||
+    role === 'externe' ||
+    role === 'company';
   const [includePast, setIncludePast] = useState(false);
 
   // Charger les spectacles au montage

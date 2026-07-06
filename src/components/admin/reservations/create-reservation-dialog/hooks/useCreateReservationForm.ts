@@ -109,11 +109,15 @@ export function useCreateReservationForm({
   onOpenChange,
   currentUserRole,
 }: UseCreateReservationFormProps): UseCreateReservationFormReturn {
-  // Option "Inclure représentations passées" : disponible uniquement pour
-  // super-admin/admin (pas externe). Le service applique la même règle
-  // côté serveur en défense en profondeur.
+  // Option "Inclure représentations passées" : disponible pour tous les
+  // rôles staff qui accèdent au dialog admin (super-admin, admin, externe).
+  // L'externe reste naturellement confiné à ses spectacles assignés via
+  // `showsOptions` (filtre déjà en place page.tsx). Le service applique la
+  // même règle côté serveur en défense en profondeur.
   const canIncludePast =
-    currentUserRole === 'super-admin' || currentUserRole === 'admin';
+    currentUserRole === 'super-admin' ||
+    currentUserRole === 'admin' ||
+    currentUserRole === 'externe';
   const [includePast, setIncludePast] = useState<boolean>(false);
   // États du formulaire
   const [formData, setFormData] = useState<CreateAdminReservationData>(INITIAL_FORM_DATA);
