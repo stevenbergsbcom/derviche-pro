@@ -34,6 +34,7 @@ export function getTodayDate(): string {
  */
 export function getEffectiveDateFilters(filters: AdminReservationFilters): EffectiveDateFilters {
   // Si des dates personnalisées sont définies, elles prennent le dessus
+  // (intention explicite de l'utilisateur, respectée même en recherche).
   if (filters.dateFrom || filters.dateTo) {
     return {
       dateFrom: filters.dateFrom,
@@ -41,9 +42,18 @@ export function getEffectiveDateFilters(filters: AdminReservationFilters): Effec
     };
   }
 
+  // Recherche active : on ignore le filtre Période (défaut « À venir ») pour
+  // chercher sur TOUTES les périodes. Sinon une résa passée matchant le terme
+  // serait masquée → l'utilisateur croirait que la recherche ne trouve pas
+  // tout. Le chip Période est neutralisé côté UI tant qu'une recherche est
+  // active, puis « À venir » redevient actif dès qu'on efface la recherche.
+  if (filters.search && filters.search.trim()) {
+    return {};
+  }
+
   // Sinon, appliquer le filtre period
   const today = getTodayDate();
-  
+
   switch (filters.period) {
     case 'upcoming':
       return { dateFrom: today };

@@ -254,6 +254,9 @@ export function SearchAndActions({
         <p className="text-xs text-muted-foreground ml-1">
           {totalResults} réservation{totalResults > 1 ? 's' : ''}
           {appliedSearch && ` pour « ${appliedSearch} »`}
+          {/* Signal : la recherche couvre toutes les périodes (le filtre
+              « À venir » est neutralisé tant qu'une recherche est active). */}
+          {appliedSearch && ' · toutes périodes'}
           {/* Hint plafond : si le nombre de résultats atteint le cap RPC,
               c'est probablement tronqué → inviter à affiner. */}
           {appliedSearch && totalResults >= SEARCH_RESULT_CAP && (

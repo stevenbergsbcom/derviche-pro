@@ -95,11 +95,19 @@ export function getEffectiveDateFilters(filters: CompanyReservationFilters): {
   dateTo?: string;
 } {
   // Si des dates personnalisées sont définies, elles prennent le dessus
+  // (intention explicite, respectée même en recherche).
   if (filters.dateFrom || filters.dateTo) {
     return {
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
     };
+  }
+
+  // Recherche active : on ignore le filtre Période (défaut « À venir ») pour
+  // chercher sur TOUTES les périodes — cohérent avec l'admin. Sinon une résa
+  // passée matchant le terme serait masquée.
+  if (filters.search && filters.search.trim()) {
+    return {};
   }
 
   // Sinon, appliquer le filtre period
