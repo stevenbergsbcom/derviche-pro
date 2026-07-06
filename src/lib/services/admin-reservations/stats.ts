@@ -272,11 +272,12 @@ export async function getAvailableSlotsForShow(
     const supabase = createClient();
     const today = getTodayDate();
 
-    // Défense en profondeur : `includePast` est réservé aux rôles admin.
-    // Si un caller demande includePast sans avoir le rôle requis, on ignore
-    // silencieusement l'option (comportement = includePast:false).
-    // La restriction UI (checkbox visible uniquement pour ces rôles)
-    // reste le premier rempart ; ce check bloque les appels directs.
+    // Défense en profondeur : `includePast` est réservé aux rôles staff
+    // (super-admin, admin, externe, company). Les visiteurs anonymes et les
+    // professionnels n'ont aucune raison légitime de réserver a posteriori.
+    // Les rôles staff restent naturellement confinés à leur périmètre
+    // existant (externe = shows assignés, company = hosted_by='company'),
+    // includePast élargit uniquement la fenêtre temporelle.
     //
     // NB : on utilise le helper getUserRole qui gère le cas où user_roles
     // contient plusieurs lignes pour un même user (tri par priorité), plutôt
@@ -288,9 +289,10 @@ export async function getAvailableSlotsForShow(
         effectiveIncludePast = false;
       } else {
         const role = await getUserRole(user.id);
-        if (role !== 'super-admin' && role !== 'admin') {
+        const staffRoles = ['super-admin', 'admin', 'externe', 'company'];
+        if (!role || !staffRoles.includes(role)) {
           logger.warn(
-            '[getAvailableSlotsForShow] includePast demandé sans rôle admin — ignoré',
+            '[getAvailableSlotsForShow] includePast demandé sans rôle staff — ignoré',
             { userId: user.id, role },
           );
           effectiveIncludePast = false;
