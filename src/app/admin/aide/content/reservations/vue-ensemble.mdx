@@ -4,7 +4,7 @@ slug: reservations/vue-ensemble
 category: reservations
 categoryLabel: Réservations
 categoryIcon: Calendar
-keywords: [réservations, liste, filtres, recherche, colonnes, pagination, tri, cartes]
+keywords: [réservations, liste, filtres, recherche, colonnes, pagination, tri, cartes, multi-mots, nom, email, téléphone, structure, crm, zoho, pro connecté]
 roles: [super-admin, admin, externe]
 order: 1
 ---
@@ -26,14 +26,36 @@ Ces chiffres se recalculent à chaque changement de filtre.
 
 En haut de la liste :
 
-- **Barre de recherche** : nom du pro, email, téléphone. La recherche est déclenchée après une courte pause (≈ 300 ms).
+- **Barre de recherche** : cherche dans **15+ champs** (voir détail ci-dessous). Déclenchée après une courte pause (≈ 300 ms).
 - **Filtre Spectacle** (dropdown)
 - **Filtre Lieu** (dropdown — n'affiche que les lieux ayant au moins une réservation)
 - **Filtre Statut** : Confirmée, En attente, Annulée, Transférée
 - **Filtre Période** : À venir, Passées, Saison, ou plage personnalisée (format MM-JJ → MM-JJ)
 
+### Ce que couvre la recherche
+
+Que la réservation ait été faite **par un pro connecté** ou **en mode invité (guest)**, la recherche trouve :
+
+- **Nom** et **prénom**
+- **Email** (principal ou secondaire)
+- **Téléphone** (principal ou secondaire)
+- **Structure / Organisation**
+- **ID CRM Zoho** (contact + structure) — utile pour retrouver une résa depuis Zoho
+
+### Recherche multi-mots
+
+Vous pouvez taper plusieurs mots séparés par un espace, par exemple `Jean Dupont` ou `Marie Théâtre` — chaque mot doit matcher au moins un champ. La recherche est **insensible à la casse et aux accents partiels**.
+
+Deux détails pratiques :
+- La recherche se déclenche à partir de **2 caractères** (en dessous, elle attend).
+- Si votre terme est trop large et remonte **beaucoup** de résultats, un message vous invite à **affiner** — précisez le nom ou ajoutez un mot pour tout voir.
+
 <Callout type="tip">
 Les filtres sont **mémorisés dans l'URL**. Vous pouvez copier le lien et le partager à un collègue : il arrivera exactement sur la même vue filtrée.
+</Callout>
+
+<Callout type="info">
+**Amélioration du 7 juillet 2026** : la recherche cherchait auparavant uniquement dans les résa guest (3 champs). Depuis cette date, elle couvre aussi les résa faites par un pro connecté à son compte (via jointure profil) et les IDs CRM Zoho.
 </Callout>
 
 ## Colonnes du tableau

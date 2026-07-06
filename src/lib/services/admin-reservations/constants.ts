@@ -167,12 +167,39 @@ export const DEFAULT_SORT_BY = 'slot_date_asc' as const;
 // COLONNES DE RECHERCHE
 // ============================================
 
-/** Colonnes utilisées pour la recherche textuelle */
+/**
+ * @deprecated Depuis 07-06, la recherche passe par la RPC
+ * `search_reservation_ids` (migration 125) qui couvre 13+ colonnes
+ * (guest_*, profiles via jointure, CRM ids) avec support multi-tokens.
+ * Voir `resolveSearchIds` dans filters.ts.
+ *
+ * Cette constante n'est plus utilisée en interne, conservée
+ * temporairement pour éviter de casser d'éventuels imports externes.
+ */
 export const SEARCH_COLUMNS = [
   'guest_email',
-  'guest_first_name', 
+  'guest_first_name',
   'guest_last_name',
 ] as const;
+
+/**
+ * Nombre minimal de caractères pour déclencher une recherche.
+ * En dessous, le front n'envoie pas de requête (un terme trop court
+ * matcherait trop de lignes — cf. plafond ci-dessous).
+ */
+export const SEARCH_MIN_LENGTH = 2;
+
+/**
+ * Plafond de résultats renvoyés par les RPC de recherche
+ * (`search_reservation_ids` / `search_company_reservation_ids`).
+ *
+ * ⚠ DOIT rester synchro avec le `v_cap` hardcodé dans les migrations
+ * 125 et 126. Motif : le service applique `.in('id', ids)` en GET, l'URL
+ * doit rester bornée (~7,5 KB à 200 UUIDs). Voir la mémoire projet
+ * « recherche-in-url-limit ». Si `count` atteint ce plafond, l'UI invite
+ * à affiner la recherche.
+ */
+export const SEARCH_RESULT_CAP = 200;
 
 // ============================================
 // MESSAGES D'ERREUR

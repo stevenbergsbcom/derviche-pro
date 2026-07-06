@@ -5,9 +5,34 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import { buildSearchOrClause } from '@/lib/utils';
 import type { CompanyReservationFilters, PaginationOptions, CompanyReservationsResult } from './types';
 import { transformReservation, getEffectiveDateFilters } from './transformers';
+
+/**
+ * Résout un terme de recherche en liste d'IDs candidats via la RPC
+ * `search_company_reservation_ids` (migration 126). Retour :
+ * - `null` : pas de recherche demandée → aucun filtre par ID
+ * - `string[]` (possiblement vide) : filtre .in('id', ids) à appliquer
+ * En cas d'erreur RPC, on renvoie `null` (fallback sûr : liste complète
+ * plutôt qu'erreur bloquante pour l'utilisateur).
+ */
+async function resolveCompanySearchIds(
+  supabase: ReturnType<typeof createClient>,
+  term: string | undefined,
+): Promise<string[] | null> {
+  if (!term || !term.trim()) return null;
+  const { data, error } = await supabase.rpc('search_company_reservation_ids', {
+    p_term: term,
+  });
+  if (error) {
+    logger.error('[company-reservations] search_company_reservation_ids error', {
+      error: error.message,
+      term,
+    });
+    return null;
+  }
+  return (data as string[] | null) ?? [];
+}
 
 /**
  * Récupère la liste des réservations pour la compagnie connectée
@@ -24,6 +49,22 @@ export async function getCompanyReservations(
 
     // Calculer les filtres de date effectifs
     const effectiveDates = getEffectiveDateFilters(filters);
+
+    // Résoudre la recherche AVANT la query principale (voir list.ts admin
+    // pour le pattern). RPC 126 = OR sur guest_* + CRM ids, restreinte
+    // aux résas des shows de la compagnie.
+    const searchIds = await resolveCompanySearchIds(supabase, filters.search);
+    if (searchIds !== null && searchIds.length === 0) {
+      // Zéro correspondance : retour vide sans exécuter la query principale.
+      return {
+        data: [],
+        total: 0,
+        page,
+        pageSize,
+        totalPages: 0,
+        error: null,
+      };
+    }
 
     // Construction de la requête de base
     // Note: Les RLS policies filtrent automatiquement par company_id
@@ -102,14 +143,12 @@ export async function getCompanyReservations(
       query = query.lte('slots.date', effectiveDates.dateTo);
     }
 
-    if (filters.search) {
-      const searchClause = buildSearchOrClause(
-        filters.search,
-        ['guest_email', 'guest_first_name', 'guest_last_name']
-      );
-      if (searchClause) {
-        query = query.or(searchClause);
-      }
+    // Recherche : filtre .in('id', ids) issus de la RPC 126 (voir plus haut).
+    // Le early-return du cas `[]` a déjà été géré avant la construction
+    // de la query, donc ici searchIds est soit null (pas de recherche),
+    // soit un array non vide.
+    if (searchIds !== null) {
+      query = query.in('id', searchIds);
     }
 
     // Tri (défaut: date représentation croissante)

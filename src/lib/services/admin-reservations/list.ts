@@ -19,11 +19,12 @@ import {
   ERROR_MESSAGES,
 } from './constants';
 import { transformReservations } from './transformers';
-import { 
-  applyFilters, 
-  applySorting, 
+import {
+  applyFilters,
+  applySorting,
   applyPagination,
   calculateTotalPages,
+  resolveSearchIds,
 } from './filters';
 
 // ============================================
@@ -66,13 +67,30 @@ async function executeListQuery(
   options: QueryOptions = {}
 ): Promise<InternalQueryResult> {
   const supabase = createClient();
-  
+
+  // Résoudre la recherche AVANT la query principale : la RPC
+  // `search_reservation_ids` fait un OR sur 13+ colonnes (guest_*,
+  // profiles via jointure, CRM ids) — on transforme le résultat en
+  // filtre `.in('id', ids)` sur la query Supabase JS classique, ce qui
+  // préserve la pagination et les autres filtres inchangés.
+  const searchIds = await resolveSearchIds(filters);
+  if (searchIds !== null && searchIds.length === 0) {
+    // Recherche demandée mais aucune correspondance → shortcut retour vide
+    // sans exécuter la query principale (évite un SELECT inutile).
+    return { data: [], count: 0, error: null };
+  }
+
   // Construction de la requête de base
   // Note: On utilise 'any' car le typage exact dépend des options (count ou non)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
     .from('reservations')
     .select(RESERVATION_SELECT_QUERY, options.withCount ? { count: 'exact' } : undefined);
+
+  // Appliquer le filtre d'IDs issus de la recherche
+  if (searchIds !== null) {
+    query = query.in('id', searchIds);
+  }
 
   // Appliquer les filtres
   query = applyFilters(query, filters);

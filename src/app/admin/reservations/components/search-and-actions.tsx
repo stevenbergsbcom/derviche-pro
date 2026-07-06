@@ -25,6 +25,7 @@ import {
   Download,
   SlidersHorizontal,
 } from 'lucide-react';
+import { SEARCH_MIN_LENGTH, SEARCH_RESULT_CAP } from '@/lib/services/admin-reservations';
 
 // ============================================
 // TYPES
@@ -241,11 +242,25 @@ export function SearchAndActions({
 
       </div>
 
+      {/* Aide min-length : l'utilisateur a tapé 1 seul caractère */}
+      {searchInput.trim().length > 0 && searchInput.trim().length < SEARCH_MIN_LENGTH && (
+        <p className="text-xs text-muted-foreground ml-1">
+          Tapez au moins {SEARCH_MIN_LENGTH} caractères pour lancer la recherche.
+        </p>
+      )}
+
       {/* Compteur de résultats */}
       {!isLoading && (appliedSearch || activeFiltersCount > 0) && (
         <p className="text-xs text-muted-foreground ml-1">
           {totalResults} réservation{totalResults > 1 ? 's' : ''}
           {appliedSearch && ` pour « ${appliedSearch} »`}
+          {/* Hint plafond : si le nombre de résultats atteint le cap RPC,
+              c'est probablement tronqué → inviter à affiner. */}
+          {appliedSearch && totalResults >= SEARCH_RESULT_CAP && (
+            <span className="text-warning">
+              {' '}— trop de résultats, affinez votre recherche pour tout voir.
+            </span>
+          )}
         </p>
       )}
     </div>
