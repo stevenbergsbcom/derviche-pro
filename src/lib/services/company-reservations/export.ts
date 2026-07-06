@@ -5,9 +5,31 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import { buildSearchOrClause } from '@/lib/utils';
 import type { CompanyReservationFilters, CompanyReservation } from './types';
 import { transformReservation, getEffectiveDateFilters } from './transformers';
+
+/**
+ * Copie interne (list.ts en a une identique). Retour :
+ * - `null` si pas de recherche demandée
+ * - `string[]` (possiblement vide) sinon
+ */
+async function resolveCompanySearchIds(
+  supabase: ReturnType<typeof createClient>,
+  term: string | undefined,
+): Promise<string[] | null> {
+  if (!term || !term.trim()) return null;
+  const { data, error } = await supabase.rpc('search_company_reservation_ids', {
+    p_term: term,
+  });
+  if (error) {
+    logger.error('[company-reservations/export] search RPC error', {
+      error: error.message,
+      term,
+    });
+    return null;
+  }
+  return (data as string[] | null) ?? [];
+}
 
 /**
  * Récupère TOUTES les réservations pour export (sans pagination)
@@ -21,6 +43,12 @@ export async function getAllCompanyReservationsForExport(
 
     // Calculer les filtres de date effectifs
     const effectiveDates = getEffectiveDateFilters(filters);
+
+    // Résoudre la recherche via RPC 126 (voir list.ts pour le pattern).
+    const searchIds = await resolveCompanySearchIds(supabase, filters.search);
+    if (searchIds !== null && searchIds.length === 0) {
+      return { data: [], error: null };
+    }
 
     // Construction de la requête de base
     let query = supabase
@@ -98,14 +126,9 @@ export async function getAllCompanyReservationsForExport(
       query = query.lte('slots.date', effectiveDates.dateTo);
     }
 
-    if (filters.search) {
-      const searchClause = buildSearchOrClause(
-        filters.search,
-        ['guest_email', 'guest_first_name', 'guest_last_name']
-      );
-      if (searchClause) {
-        query = query.or(searchClause);
-      }
+    // Recherche : filtre .in('id', ids) issus de la RPC 126.
+    if (searchIds !== null) {
+      query = query.in('id', searchIds);
     }
 
     // Tri aligné sur l'UI (filters.sortBy) — le fichier exporté reflète

@@ -11,6 +11,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
+import { SEARCH_MIN_LENGTH } from '@/lib/services/admin-reservations';
 import {
   useCompanyReservations,
   type CompanyExportOptions,
@@ -138,7 +139,10 @@ export default function CompanyReservationsPage() {
     previousSearchRef.current = debouncedSearch;
     setIsSearching(true);
 
-    const newFilters = { ...filtersRef.current, search: debouncedSearch.trim() || undefined };
+    // Garde min-length (cf. admin) : terme < SEARCH_MIN_LENGTH = pas de filtre.
+    const trimmed = debouncedSearch.trim();
+    const effectiveSearch = trimmed.length >= SEARCH_MIN_LENGTH ? trimmed : undefined;
+    const newFilters = { ...filtersRef.current, search: effectiveSearch };
 
     const doSearch = async () => {
       try {

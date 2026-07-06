@@ -64,6 +64,9 @@ export type {
 
 export type { GetAvailableSlotsOptions } from './stats';
 
+// Constantes de recherche (min length + plafond résultats)
+export { SEARCH_MIN_LENGTH, SEARCH_RESULT_CAP } from './constants';
+
 // ============================================
 // FONCTIONS - LISTE
 // ============================================

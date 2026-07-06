@@ -26,7 +26,7 @@ import {
   CreateReservationDialog,
 } from '@/components/admin/reservations';
 import type { AdminReservation, UpdateReservationData, CreateAdminReservationData } from '@/lib/services/admin-reservations';
-import { createAdminReservation, getAdminReservationById, getVenuesWithReservations } from '@/lib/services/admin-reservations';
+import { createAdminReservation, getAdminReservationById, getVenuesWithReservations, SEARCH_MIN_LENGTH } from '@/lib/services/admin-reservations';
 import { useSearchParams } from 'next/navigation';
 import type { CheckinStatus } from '@/types/database';
 import { toast } from 'sonner';
@@ -189,7 +189,12 @@ function AdminReservationsContent() {
     previousSearchRef.current = debouncedSearch;
     setIsSearching(true);
 
-    const newFilters = { ...filtersRef.current, search: debouncedSearch.trim() || undefined };
+    // Garde min-length : un terme < SEARCH_MIN_LENGTH est traité comme
+    // vide (pas de filtre) → un seul caractère matcherait trop de lignes
+    // et gonflerait l'URL du `.in()` côté service (voir SEARCH_RESULT_CAP).
+    const trimmed = debouncedSearch.trim();
+    const effectiveSearch = trimmed.length >= SEARCH_MIN_LENGTH ? trimmed : undefined;
+    const newFilters = { ...filtersRef.current, search: effectiveSearch };
 
     const doSearch = async () => {
       try {

@@ -80,6 +80,24 @@ function escapeLike(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
 }
 
+/**
+ * Prépare un token pour interpolation dans une clause PostgREST `.or()`.
+ *
+ * La syntaxe `.or('col.ilike.%v%,col2.ilike.%v%')` utilise la virgule
+ * comme séparateur de conditions et les parenthèses pour le groupement.
+ * Un token contenant `,` `(` `)` `"` casserait donc la clause (voire
+ * injecterait une condition parasite). On retire ces caractères
+ * structurels — ils n'ont aucun sens dans une recherche nom/email/tél —
+ * puis on applique l'échappement ILIKE habituel.
+ *
+ * Retourne `null` si le token devient vide après nettoyage (à ignorer).
+ */
+function sanitizeOrToken(token: string): string | null {
+  const stripped = token.replace(/[(),"]/g, '').trim();
+  if (!stripped) return null;
+  return escapeLike(stripped);
+}
+
 // ============================================
 // ROUTE HANDLER
 // ============================================
@@ -119,12 +137,55 @@ export async function GET(request: Request): Promise<NextResponse> {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // 4. Requête selon le mode (email ou nom)
+    // 4. Requête selon le mode (email ou nom/multi-tokens)
     const SELECT = `
       id, email, first_name, last_name, structure,
       phone, phone2, email2, afc_number, function,
       address, postal_code, city, country, crm_id, crm_structure_id, deleted_at
     `;
+
+    // Recherche par nom : on split par espaces pour supporter "Jean Dupont"
+    // (chaque token doit matcher au moins une colonne parmi last_name,
+    // first_name, email, phone, structure). On applique les tokens en
+    // filtres successifs — Supabase les combine en AND automatiquement,
+    // donc "Jean Dupont" = tous les profils dont AU MOINS UN champ matche
+    // "Jean" ET AU MOINS UN champ matche "Dupont". C'est le comportement
+    // attendu par le staff qui tape prénom+nom.
+    const buildNameQuery = (tokens: string[]) => {
+      let queryB = adminClient
+        .from('profiles')
+        .select(SELECT)
+        .is('deleted_at', null);
+
+      // Chaque token = un groupe .or() ; Supabase combine les groupes en AND.
+      for (const esc of tokens) {
+        queryB = queryB.or(
+          [
+            `last_name.ilike.%${esc}%`,
+            `first_name.ilike.%${esc}%`,
+            `email.ilike.%${esc}%`,
+            `phone.ilike.%${esc}%`,
+            `structure.ilike.%${esc}%`,
+          ].join(','),
+        );
+      }
+      return queryB
+        .order('last_name', { ascending: true })
+        .limit(10);
+    };
+
+    // Sanitize les tokens (retire ,()" qui casseraient la clause .or()).
+    const nameTokens = q
+      .split(/\s+/)
+      .map(sanitizeOrToken)
+      .filter((t): t is string => t !== null);
+
+    // Cas dégénéré : recherche par nom mais tous les tokens neutralisés
+    // (ex: requête « (,) »). On court-circuite AVANT d'exécuter une requête
+    // sans filtre .or() qui renverrait des profils au hasard (fuite RGPD).
+    if (!isEmailQuery(q) && nameTokens.length === 0) {
+      return NextResponse.json({ found: false } satisfies SearchProfessionalResult);
+    }
 
     const { data: profiles, error: profileError } = await (
       isEmailQuery(q)
@@ -134,13 +195,7 @@ export async function GET(request: Request): Promise<NextResponse> {
             .eq('email', q.toLowerCase())
             .is('deleted_at', null)
             .limit(1)
-        : adminClient
-            .from('profiles')
-            .select(SELECT)
-            .or(`last_name.ilike.%${escapeLike(q)}%,first_name.ilike.%${escapeLike(q)}%`)
-            .is('deleted_at', null)
-            .order('last_name', { ascending: true })
-            .limit(10)
+        : buildNameQuery(nameTokens)
     );
 
     if (profileError) {

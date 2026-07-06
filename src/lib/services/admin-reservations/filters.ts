@@ -1,12 +1,13 @@
 /**
  * Filtres et query builders pour le service Admin Reservations
- * 
+ *
  * @module admin-reservations/filters
  */
 
-import { buildSearchOrClause } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import { logger } from '@/lib/logger';
 import type { AdminReservationFilters, EffectiveDateFilters } from './types';
-import { SEARCH_COLUMNS, DEFAULT_SORT_BY } from './constants';
+import { DEFAULT_SORT_BY } from './constants';
 
 // ============================================
 // HELPERS DATE
@@ -118,15 +119,53 @@ export function applyFilters(query: any, filters: AdminReservationFilters): any 
     filteredQuery = filteredQuery.lte('slots.date', effectiveDates.dateTo);
   }
 
-  // Recherche textuelle
-  if (filters.search) {
-    const searchClause = buildSearchOrClause(filters.search, [...SEARCH_COLUMNS]);
-    if (searchClause) {
-      filteredQuery = filteredQuery.or(searchClause);
-    }
-  }
+  // Recherche textuelle : traitée séparément via `resolveSearchIds` (RPC)
+  // parce qu'elle nécessite un appel async (jointure profiles + multi-tokens).
+  // Voir migration 125 pour le détail. Le caller doit appliquer .in('id', ids)
+  // sur la query avant execution.
 
   return filteredQuery;
+}
+
+// ============================================
+// RECHERCHE (via RPC — migration 125)
+// ============================================
+
+/**
+ * Résout un terme de recherche en liste d'IDs de réservations candidates.
+ * Utilise la RPC `search_reservation_ids` qui fait un OR sur 13+ colonnes
+ * (guest_*, profiles, CRM ids) avec support multi-tokens.
+ *
+ * @returns
+ *   - `null` si aucune recherche n'est demandée (filters.search vide)
+ *     → le caller n'applique aucun filtre par ID
+ *   - `string[]` (potentiellement vide) sinon
+ *     → le caller applique .in('id', ids) ; si `[]` alors zéro résultat
+ */
+export async function resolveSearchIds(
+  filters: AdminReservationFilters,
+): Promise<string[] | null> {
+  if (!filters.search || !filters.search.trim()) {
+    return null;
+  }
+
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('search_reservation_ids', {
+    p_term: filters.search,
+  });
+
+  if (error) {
+    // Fallback safe : on log mais on ne bloque pas la page — l'utilisateur
+    // verra la liste complète (sans filtre de recherche) plutôt qu'une
+    // erreur. Le service log permet de détecter le problème.
+    logger.error('[admin-reservations] search_reservation_ids RPC error', {
+      error: error.message,
+      term: filters.search,
+    });
+    return null;
+  }
+
+  return (data as string[] | null) ?? [];
 }
 
 /**

@@ -1371,6 +1371,20 @@ export type Database = {
         }
         Returns: Json
       }
+      // Migration 125 — Recherche admin (super-admin/admin/externe)
+      search_reservation_ids: {
+        Args: {
+          p_term: string
+        }
+        Returns: string[]
+      }
+      // Migration 126 — Recherche compagnie
+      search_company_reservation_ids: {
+        Args: {
+          p_term: string
+        }
+        Returns: string[]
+      }
     }
     Enums: {
       reservation_source: "public" | "admin"
