@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-06T13:16:17.469Z",
+  "generatedAt": "2026-07-06T13:42:24.903Z",
   "count": 34,
   "articles": [
     {
@@ -570,7 +570,11 @@
         "structure",
         "crm",
         "zoho",
-        "pro connecté"
+        "pro connecté",
+        "période",
+        "passées",
+        "à venir",
+        "toutes périodes"
       ],
       "excerpt": "La page Réservations (/admin/reservations) est la plus utilisée de la plateforme. Elle centralise toutes les réservations avec recherche, filtres et export. Les 4 cartes statistiques en haut Dès l'ouverture de la page, 4 chiffres clés sont ",
       "body": "La page Réservations (/admin/reservations) est la plus utilisée de la plateforme. Elle centralise toutes les réservations avec recherche, filtres et export. Les 4 cartes statistiques en haut Dès l'ouverture de la page, 4 chiffres clés sont mis en avant : Total réservations (sur la période filtrée) Taux de confirmation Taux de présence (après check-in) Répartition par statut Ces chiffres se recalculent à chaque changement de filtre. Recherche et filtres En haut de la liste : Barre de recherche : cherche dans 15+ champs (voir détail ci-dessous). Déclenchée après une courte pause (≈ 300 ms). Filtre Spectacle (dropdown) Filtre Lieu (dropdown — n'affiche que les lieux ayant au moins une réservation) Filtre Statut : Confirmée, En attente, Annulée, Transférée Filtre Période : À venir, Passées, Saison, ou plage personnalisée (format MM-JJ → MM-JJ) Ce que couvre la recherche Que la réservation ait été faite par un pro connecté ou en mode invité (guest), la recherche trouve : Nom et prénom Email (principal ou secondaire) Téléphone (principal ou secondaire) Structure / Organisation ID CRM Zoho (contact + structure) — utile pour retrouver une résa depuis Zoho Recherche multi-mots Vous pouvez taper plusieurs mots séparés par un espace, par exemple Jean Dupont ou Marie Théâtre — chaque mot doit matcher au moins un champ. La recherche est insensible à la casse et aux accents partiels. Trois détails pratiques : La recherche se déclenche à partir de 2 caractères (en dessous, elle attend). Si votre terme est trop large et remonte beaucoup de résultats, un message vous invite à affiner — précisez le nom ou ajoutez un mot pour tout voir. La recherche couvre toutes les périodes (à venir et passées), même si le filtre « Période » est sur « À venir ». Ce filtre est automatiquement neutralisé pendant une recherche (grisé, affiché « Toutes ») puis redevient actif dès que vous effacez la recherche. Ainsi, chercher un pro dont la seule réservation est passée fonctionne sans avoir à changer le"
