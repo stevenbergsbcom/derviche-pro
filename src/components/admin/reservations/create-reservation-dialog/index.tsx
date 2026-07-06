@@ -53,28 +53,29 @@ import {
 // COMPOSANT PRINCIPAL
 // ============================================
 
-export function CreateReservationDialog({ 
-  open, 
-  onOpenChange, 
+export function CreateReservationDialog({
+  open,
+  onOpenChange,
   shows,
-  onGetSlots, 
+  onGetSlots,
   onCreate,
+  currentUserRole,
 }: CreateReservationDialogProps) {
   const {
     // État du formulaire
     formData,
     selectedShowId,
     maxPlaces,
-    
+
     // État des créneaux
     availableSlots,
     loadingSlots,
     slotsError,
-    
+
     // État de validation et soumission
     validationErrors,
     isSaving,
-    
+
     // Spectacles filtrés
     publishedShows,
 
@@ -94,6 +95,11 @@ export function CreateReservationDialog({
     handleConfirmPastSlot,
     handleCancelPastSlot,
 
+    // Case "Inclure représentations passées"
+    canIncludePast,
+    includePast,
+    handleIncludePastChange,
+
     // Handlers
     handleShowChange,
     handleFieldChange,
@@ -106,6 +112,7 @@ export function CreateReservationDialog({
     onGetSlots,
     onCreate,
     onOpenChange,
+    currentUserRole,
   });
 
   return (
@@ -141,6 +148,9 @@ export function CreateReservationDialog({
             maxPlaces={maxPlaces}
             disabled={isSaving}
             slotIsPast={selectedSlotIsPast}
+            canIncludePast={canIncludePast}
+            includePast={includePast}
+            onIncludePastChange={handleIncludePastChange}
           />
 
           {/* S189 : Recherche professionnel (optionnel) */}

@@ -6,6 +6,7 @@
  */
 
 import { logger } from '@/lib/logger';
+import { isSlotTimePast } from '@/lib/utils/timezone';
 import type { ReservationStatus, CheckinStatus } from '@/types/database';
 import type {
   AdminReservation,
@@ -258,13 +259,15 @@ export function transformAvailableSlot(row: {
   remaining_capacity: number;
   venues: { id: string; name: string; city: string } | null;
 }): AvailableSlot {
+  const timeHhMm = row.time.slice(0, 5); // HH:MM:SS → HH:MM
   return {
     id: row.id,
     date: row.date,
-    time: row.time.slice(0, 5), // HH:MM:SS → HH:MM
+    time: timeHhMm,
     capacity: row.capacity,
     remainingCapacity: row.remaining_capacity,
     venue: row.venues,
+    isPast: isSlotTimePast(row.date, timeHhMm),
   };
 }
 

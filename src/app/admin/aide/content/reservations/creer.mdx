@@ -4,7 +4,7 @@ slug: reservations/creer
 category: reservations
 categoryLabel: Réservations
 categoryIcon: Calendar
-keywords: [réservation, créer, nouveau, walk-in, ajouter, enregistrer, professionnel, guest, crm, zoho, id crm]
+keywords: [réservation, créer, nouveau, walk-in, ajouter, enregistrer, professionnel, guest, crm, zoho, id crm, représentation passée, rattrapage, oubliée, hier]
 roles: [super-admin, admin, externe]
 order: 2
 ---
@@ -26,6 +26,23 @@ Cet article couvre le cas 2.
 - Sélectionnez le spectacle dans la liste déroulante
 - Sélectionnez le créneau (date + heure + lieu + places restantes)
 - Si aucun créneau n'apparaît, c'est que le spectacle n'en a pas — créez-en un d'abord depuis la fiche du spectacle.
+
+#### Rattrapage sur une représentation passée <RoleBadge role="super-admin" /> <RoleBadge role="admin" />
+
+Une case **« Inclure les représentations passées »** apparaît sous le sélecteur de spectacle. Cochez-la pour rattraper une réservation oubliée (invité présent hier soir mais non enregistré, par exemple).
+
+- Les représentations passées apparaissent alors dans la liste, triées **du plus récent au plus ancien** (l'usage typique tombe en tête).
+- Chaque créneau passé porte un badge orange **« Passée »** pour lever toute ambiguïté.
+- La modale de confirmation « Cette représentation a déjà commencé » s'affichera avant la création.
+- **Email de confirmation** et **synchronisation Google Calendar** sont **décochés automatiquement** — il serait déroutant d'envoyer une confirmation pour hier, et l'événement Calendar n'a plus de sens. Vous pouvez les re-cocher manuellement si vous le souhaitez.
+
+<Callout type="warning">
+Cette option est réservée aux <RoleBadge role="super-admin" /> et <RoleBadge role="admin" />. Elle n'apparaît pas pour le rôle <RoleBadge role="externe" />. Le service applique la même règle côté serveur en défense en profondeur.
+</Callout>
+
+<Callout type="info">
+Aucune limite technique de profondeur : vous pouvez créer une résa sur une représentation vieille de plusieurs mois si le rattrapage se justifie. À utiliser exceptionnellement — pour la saisie régulière, préférez la [PWA d'accueil](/admin/aide/checkin-pwa/walk-in) le jour J.
+</Callout>
 
 ### Étape 2 — Recherche du professionnel
 

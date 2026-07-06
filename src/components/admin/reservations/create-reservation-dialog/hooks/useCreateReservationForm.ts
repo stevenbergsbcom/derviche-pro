@@ -14,6 +14,7 @@ import type {
   AvailableSlot,
   ShowOption,
   SlotsResult,
+  GetSlotsOptions,
   CreateResult,
   NotificationOptions,
 } from '../types';
@@ -32,9 +33,14 @@ import { DEFAULT_NOTIFICATION_OPTIONS } from '@/components/admin/reservations/no
 interface UseCreateReservationFormProps {
   open: boolean;
   shows: ShowOption[];
-  onGetSlots: (showId: string) => Promise<SlotsResult>;
+  onGetSlots: (showId: string, options?: GetSlotsOptions) => Promise<SlotsResult>;
   onCreate: (data: CreateAdminReservationData & { _notifOptions?: NotificationOptions }) => Promise<CreateResult>;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Rôle courant utilisé pour décider si l'option "Inclure représentations
+   * passées" est proposée dans l'UI (super-admin/admin uniquement).
+   */
+  currentUserRole?: string | null;
 }
 
 interface UseCreateReservationFormReturn {
@@ -72,6 +78,14 @@ interface UseCreateReservationFormReturn {
   handleConfirmPastSlot: () => void;
   handleCancelPastSlot: () => void;
 
+  // Case à cocher "Inclure représentations passées"
+  /** True si l'UI doit proposer la case (rôle super-admin/admin). */
+  canIncludePast: boolean;
+  /** État courant de la case. */
+  includePast: boolean;
+  /** Handler de bascule — déclenche un rechargement des créneaux. */
+  handleIncludePastChange: (value: boolean) => void;
+
   // Handlers
   handleShowChange: (showId: string) => void;
   handleFieldChange: <K extends keyof CreateAdminReservationData>(
@@ -93,7 +107,14 @@ export function useCreateReservationForm({
   onGetSlots,
   onCreate,
   onOpenChange,
+  currentUserRole,
 }: UseCreateReservationFormProps): UseCreateReservationFormReturn {
+  // Option "Inclure représentations passées" : disponible uniquement pour
+  // super-admin/admin (pas externe). Le service applique la même règle
+  // côté serveur en défense en profondeur.
+  const canIncludePast =
+    currentUserRole === 'super-admin' || currentUserRole === 'admin';
+  const [includePast, setIncludePast] = useState<boolean>(false);
   // États du formulaire
   const [formData, setFormData] = useState<CreateAdminReservationData>(INITIAL_FORM_DATA);
   const [selectedShowId, setSelectedShowId] = useState<string>('');
@@ -126,6 +147,19 @@ export function useCreateReservationForm({
     ? isSlotTimePast(selectedSlot.date, selectedSlot.time)
     : false;
 
+  // Auto-décoche email de confirmation + sync Google Calendar quand le slot
+  // sélectionné est passé — il serait déroutant d'envoyer une confirmation
+  // pour une représentation d'hier, et GCal n'a pas de sens sur un événement
+  // déjà écoulé. L'admin peut re-cocher manuellement s'il le souhaite.
+  useEffect(() => {
+    if (selectedSlotIsPast) {
+      setNotifOptions(prev => {
+        if (!prev.sendEmail && !prev.syncCalendar) return prev;
+        return { sendEmail: false, syncCalendar: false };
+      });
+    }
+  }, [selectedSlotIsPast]);
+
   // Refs stables pour les callbacks (évite les race conditions)
   const onGetSlotsRef = useRef(onGetSlots);
   const onCreateRef = useRef(onCreate);
@@ -148,11 +182,12 @@ export function useCreateReservationForm({
       setValidationErrors([]);
       setShowPastSlotDialog(false);
       pastSlotConfirmedRef.current = false;
+      setIncludePast(false);
     }
   }, [open]);
 
   // Chargement des créneaux
-  const loadSlots = useCallback(async (showId: string) => {
+  const loadSlots = useCallback(async (showId: string, opts?: GetSlotsOptions) => {
     if (!showId) {
       setAvailableSlots([]);
       return;
@@ -163,7 +198,7 @@ export function useCreateReservationForm({
     setFormData(prev => ({ ...prev, slotId: '' }));
 
     try {
-      const result = await onGetSlotsRef.current(showId);
+      const result = await onGetSlotsRef.current(showId, opts);
       if (result.success && result.data) {
         setAvailableSlots(result.data);
         // Auto-sélection si un seul créneau
@@ -183,12 +218,12 @@ export function useCreateReservationForm({
   // Handler changement de spectacle
   const handleShowChange = useCallback((showId: string) => {
     setSelectedShowId(showId);
-    
+
     // Récupérer la limite de places du spectacle sélectionné
     const selectedShow = publishedShows.find(s => s.id === showId);
     if (selectedShow) {
       setMaxPlaces(selectedShow.max_reservations_per_booking);
-      
+
       // Réinitialiser le nombre de places si nécessaire
       setFormData(prev => {
         if (prev.numPlaces > selectedShow.max_reservations_per_booking) {
@@ -197,9 +232,19 @@ export function useCreateReservationForm({
         return prev;
       });
     }
-    
-    void loadSlots(showId);
-  }, [publishedShows, loadSlots]);
+
+    void loadSlots(showId, { includePast });
+  }, [publishedShows, loadSlots, includePast]);
+
+  // Handler bascule "Inclure représentations passées" — recharge les slots
+  // du spectacle courant avec la nouvelle option et réinitialise le slotId
+  // sélectionné (l'ancien pouvant disparaître ou changer d'ordre).
+  const handleIncludePastChange = useCallback((value: boolean) => {
+    setIncludePast(value);
+    if (selectedShowId) {
+      void loadSlots(selectedShowId, { includePast: value });
+    }
+  }, [selectedShowId, loadSlots]);
 
   // Handler changement de champ
   const handleFieldChange = useCallback(<K extends keyof CreateAdminReservationData>(
@@ -386,6 +431,11 @@ export function useCreateReservationForm({
     selectedSlotIsPast,
     handleConfirmPastSlot,
     handleCancelPastSlot,
+
+    // Case "Inclure représentations passées"
+    canIncludePast,
+    includePast,
+    handleIncludePastChange,
 
     // Handlers
     handleShowChange,

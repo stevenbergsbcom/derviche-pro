@@ -27,6 +27,12 @@ export interface AvailableSlot {
     name: string;
     city: string;
   } | null;
+  /**
+   * True si la date/heure du slot est déjà passée. Sert à afficher un
+   * badge "passée" dans le sélecteur quand l'option "inclure les
+   * représentations passées" est cochée.
+   */
+  isPast: boolean;
 }
 
 /**
@@ -37,6 +43,17 @@ export interface ShowOption {
   title: string;
   status: string;
   max_reservations_per_booking: number;
+}
+
+/**
+ * Options du chargement des créneaux
+ */
+export interface GetSlotsOptions {
+  /**
+   * Inclut les représentations passées (dates < aujourd'hui).
+   * Réservé aux rôles super-admin/admin — vérifié côté service.
+   */
+  includePast?: boolean;
 }
 
 /**
@@ -71,9 +88,14 @@ export interface CreateReservationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shows: ShowOption[];
-  onGetSlots: (showId: string) => Promise<SlotsResult>;
+  onGetSlots: (showId: string, options?: GetSlotsOptions) => Promise<SlotsResult>;
   /** _notifOptions est une propriété UI pass-through pour le contrôle des notifications */
   onCreate: (data: CreateAdminReservationData & { _notifOptions?: NotificationOptions }) => Promise<CreateResult>;
+  /**
+   * Rôle courant de l'utilisateur — sert à décider si la case
+   * "Inclure représentations passées" est proposée.
+   */
+  currentUserRole?: string | null;
 }
 
 // ============================================
@@ -122,6 +144,19 @@ export interface ShowSlotSectionProps extends FormSectionProps {
    * Utilisé pour afficher un bandeau d'avertissement.
    */
   slotIsPast?: boolean;
+  /**
+   * True si l'option "Inclure représentations passées" est disponible
+   * (rôle super-admin ou admin). Contrôle l'affichage de la case à cocher.
+   */
+  canIncludePast?: boolean;
+  /**
+   * Valeur courante de la case à cocher "Inclure représentations passées".
+   */
+  includePast?: boolean;
+  /**
+   * Handler de bascule pour la case à cocher.
+   */
+  onIncludePastChange?: (value: boolean) => void;
 }
 
 /**

@@ -9,8 +9,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Theater, Calendar, Check as CheckIcon } from 'lucide-react';
+import { Loader2, Theater, Calendar, Check as CheckIcon, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useCheckinAccess } from '@/hooks/useCheckinAccess';
 import { getAccessibleShows } from '@/lib/services/checkin';
 import { getAvailableSlotsForShow } from '@/lib/services/admin-reservations';
@@ -32,6 +34,8 @@ interface SlotOption {
   time: string;
   venueName: string;
   remainingCapacity: number | null;
+  /** True quand la date/heure du slot est antérieure à maintenant. */
+  isPast: boolean;
 }
 
 export interface SelectSlotStepProps {
@@ -56,6 +60,12 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
 
   const [selectedSlotId, setSelectedSlotId] = useState('');
   const [slotListOpen, setSlotListOpen] = useState(true);
+
+  // Case "Inclure représentations passées" — réservée super-admin/admin
+  // pour du rattrapage a posteriori (résa oubliée sur J-1 par exemple).
+  // Le service applique la même règle côté serveur en défense en profondeur.
+  const canIncludePast = role === 'super-admin' || role === 'admin';
+  const [includePast, setIncludePast] = useState(false);
 
   // Charger les spectacles au montage
   useEffect(() => {
@@ -87,6 +97,39 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
     return () => { cancelled = true; };
   }, [userId, role, companyId]);
 
+  // Charger les créneaux d'un show. Extrait comme fonction utilitaire pour
+  // pouvoir être réappelée à la bascule de "Inclure représentations passées"
+  // sans réinitialiser la sélection de spectacle.
+  const loadSlotsForShow = useCallback(async (showId: string, withPast: boolean) => {
+    if (!showId) {
+      setSlots([]);
+      return;
+    }
+    setLoadingSlots(true);
+    try {
+      const options: { hostedBy?: 'company'; includePast?: boolean } = {};
+      if (role === 'company') options.hostedBy = 'company';
+      if (withPast) options.includePast = true;
+      const result = await getAvailableSlotsForShow(showId, options);
+      if (!result.error) {
+        setSlots(
+          result.data.map((s) => ({
+            id: s.id,
+            date: s.date,
+            time: s.time,
+            venueName: s.venue?.name ?? '',
+            remainingCapacity: s.remainingCapacity,
+            isPast: s.isPast,
+          }))
+        );
+      }
+    } catch (err) {
+      logger.error('[SelectSlotStep] Erreur chargement créneaux', { err: String(err) });
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [role]);
+
   // Charger les créneaux quand un spectacle est sélectionné
   // Pour le rôle company : filtre hosted_by='company' pour ne voir
   // que les créneaux dont elle est responsable de l'accueil.
@@ -97,28 +140,19 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
     setSlotListOpen(true);
     setSlots([]);
     if (!showId) return;
+    await loadSlotsForShow(showId, includePast);
+  }, [loadSlotsForShow, includePast]);
 
-    setLoadingSlots(true);
-    try {
-      const options = role === 'company' ? { hostedBy: 'company' as const } : undefined;
-      const result = await getAvailableSlotsForShow(showId, options);
-      if (!result.error) {
-        setSlots(
-          result.data.map((s) => ({
-            id: s.id,
-            date: s.date,
-            time: s.time,
-            venueName: s.venue?.name ?? '',
-            remainingCapacity: s.remainingCapacity,
-          }))
-        );
-      }
-    } catch (err) {
-      logger.error('[SelectSlotStep] Erreur chargement créneaux', { err: String(err) });
-    } finally {
-      setLoadingSlots(false);
+  // Bascule "Inclure représentations passées" — recharge les slots du show
+  // courant avec la nouvelle option et réinitialise la sélection.
+  const handleIncludePastToggle = useCallback(async (value: boolean) => {
+    setIncludePast(value);
+    setSelectedSlotId('');
+    setSlotListOpen(true);
+    if (selectedShowId) {
+      await loadSlotsForShow(selectedShowId, value);
     }
-  }, [role]);
+  }, [selectedShowId, loadSlotsForShow]);
 
   const canContinue = !!selectedSlotId && !disabled;
 
@@ -221,6 +255,38 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
             )}
           </div>
 
+          {/*
+            Case "Inclure les représentations passées" — visible uniquement
+            pour super-admin/admin. Pour rattraper une résa oubliée sur la
+            représentation d'hier. Email + Google Calendar sont décochés
+            automatiquement à la sélection d'un slot passé (voir
+            useAddReservation).
+          */}
+          {canIncludePast && (
+            <div className="flex items-start gap-2 rounded-lg border border-dashed border-warning/40 bg-warning/5 p-3">
+              <Checkbox
+                id="include-past-slots-pwa"
+                checked={includePast}
+                onCheckedChange={(checked) => void handleIncludePastToggle(checked === true)}
+                disabled={disabled || loadingSlots}
+                className="mt-0.5"
+              />
+              <div className="flex-1">
+                <Label
+                  htmlFor="include-past-slots-pwa"
+                  className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
+                >
+                  <History className="w-3.5 h-3.5" aria-hidden="true" />
+                  Inclure les représentations passées
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Rattrapage d&apos;une réservation oubliée. Email et sync
+                  Google Calendar seront désactivés automatiquement.
+                </p>
+              </div>
+            </div>
+          )}
+
           {loadingSlots ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -260,6 +326,11 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
                       <span className="space-y-0.5">
                         <span className={`block text-base font-medium ${isSelected ? 'text-derviche' : ''}`}>
                           {label}
+                          {slot.isPast && (
+                            <span className="ml-2 inline-flex items-center gap-1 rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning align-middle">
+                              Passée
+                            </span>
+                          )}
                         </span>
                         {slot.venueName && (
                           <span className="block text-sm text-muted-foreground">
@@ -286,7 +357,14 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
                 <div className="rounded-xl border-2 border-derviche bg-derviche/5 px-4 py-3.5">
                   <span className="flex items-center justify-between gap-3">
                     <span className="space-y-0.5">
-                      <span className="block text-base font-medium text-derviche">{label}</span>
+                      <span className="block text-base font-medium text-derviche">
+                        {label}
+                        {slot?.isPast && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded bg-warning/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning align-middle">
+                            Passée
+                          </span>
+                        )}
+                      </span>
                       {slot?.venueName && (
                         <span className="block text-sm text-muted-foreground">{slot.venueName}</span>
                       )}

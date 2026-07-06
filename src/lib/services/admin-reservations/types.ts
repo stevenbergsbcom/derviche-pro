@@ -335,11 +335,17 @@ export interface AvailableSlot {
   time: string;
   capacity: number;
   remainingCapacity: number;
-  venue: { 
-    id: string; 
-    name: string; 
-    city: string; 
+  venue: {
+    id: string;
+    name: string;
+    city: string;
   } | null;
+  /**
+   * True si la date/heure du slot est déjà passée par rapport à maintenant
+   * (timezone Paris). Rempli par le transformer via `isSlotTimePast`.
+   * Sert à badger visuellement les slots passés dans les sélecteurs.
+   */
+  isPast: boolean;
 }
 
 /** Résultat des slots disponibles */

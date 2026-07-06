@@ -152,13 +152,16 @@ export function useReservationQueries(initialPageSize: number = DEFAULT_PAGE_SIZ
   // SLOTS
   // ─────────────────────────────────────────────────────────────
 
-  const getSlots = useCallback(async (showId: string) => {
-    const result = await getAvailableSlotsForShow(showId);
-    if (result.error) {
-      return { success: false, error: result.error };
-    }
-    return { success: true, data: result.data };
-  }, []);
+  const getSlots = useCallback(
+    async (showId: string, options?: { includePast?: boolean }) => {
+      const result = await getAvailableSlotsForShow(showId, options);
+      if (result.error) {
+        return { success: false, error: result.error };
+      }
+      return { success: true, data: result.data };
+    },
+    [],
+  );
 
   // ─────────────────────────────────────────────────────────────
   // PAGINATION & FILTRES

@@ -9,6 +9,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
+import { isSlotTimePast } from '@/lib/utils/timezone';
 import type { UserRole } from '@/hooks/useCurrentUserRole';
 import type { SlotHostedBy } from '@/types/database';
 
@@ -172,12 +173,18 @@ export async function getAccessibleSlots(
  */
 export async function checkSlotCapacity(
   slotId: string
-): Promise<{ capacity: number; remaining: number; isUnlimited: boolean } | null> {
+): Promise<{
+  capacity: number;
+  remaining: number;
+  isUnlimited: boolean;
+  /** True si la date/heure du slot est déjà passée par rapport à maintenant. */
+  isPast: boolean;
+} | null> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('slots')
-      .select('capacity, remaining_capacity')
+      .select('capacity, remaining_capacity, date, time')
       .eq('id', slotId)
       .single();
 
@@ -186,10 +193,14 @@ export async function checkSlotCapacity(
     }
 
     const isUnlimited = data.capacity >= 999999;
+    // time peut arriver en HH:MM:SS depuis PostgreSQL — on tronque pour
+    // rester cohérent avec isSlotTimePast qui attend HH:MM.
+    const timeHhMm = typeof data.time === 'string' ? data.time.slice(0, 5) : '';
     return {
       capacity: data.capacity,
       remaining: data.remaining_capacity,
       isUnlimited,
+      isPast: isSlotTimePast(data.date, timeHhMm),
     };
   } catch (err) {
     logger.error('checkin.checkSlotCapacity - Exception', { err });

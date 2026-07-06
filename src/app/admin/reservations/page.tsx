@@ -80,7 +80,7 @@ function AdminReservationsContent() {
   } = useAdminReservations(50);
 
   const { shows, refresh: refreshShows } = useShows();
-  const { isExterne, assignedShowIds, isLoading: permissionsLoading } = useAdminPermissions();
+  const { userRole, isExterne, assignedShowIds, isLoading: permissionsLoading } = useAdminPermissions();
   const { 
     preference: columnsPreference, 
     visibleColumns, 
@@ -510,6 +510,7 @@ function AdminReservationsContent() {
         shows={showsOptions}
         onGetSlots={getSlots}
         onCreate={handleCreate}
+        currentUserRole={userRole}
       />
 
       <ExportDialog
