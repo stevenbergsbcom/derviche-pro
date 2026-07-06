@@ -187,9 +187,17 @@ export function ShowSlotSection({
 
     if (availableSlots.length === 0) {
       return (
-        <p className="text-sm text-muted-foreground">
-          Aucun créneau disponible
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            Aucun créneau disponible
+          </p>
+          {canIncludePast && !includePast && (
+            <p className="text-xs text-muted-foreground/80">
+              Ce spectacle n&apos;a que des représentations passées —
+              cochez la case ci-dessus pour les afficher.
+            </p>
+          )}
+        </div>
       );
     }
 
