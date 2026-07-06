@@ -227,6 +227,7 @@ function SearchAndActionsComponent({
         <p className="text-xs text-muted-foreground ml-1">
           {totalResults} réservation{totalResults > 1 ? 's' : ''}
           {appliedSearch && ` pour « ${appliedSearch} »`}
+          {appliedSearch && ' · toutes périodes'}
           {appliedSearch && totalResults >= SEARCH_RESULT_CAP && (
             <span className="text-warning">
               {' '}— trop de résultats, affinez votre recherche pour tout voir.

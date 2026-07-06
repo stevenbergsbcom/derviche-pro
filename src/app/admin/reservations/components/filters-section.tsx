@@ -68,6 +68,10 @@ export function FiltersSection({
   onResetFilters,
 }: FiltersSectionProps) {
   const hasDateFilters = !!(filters.dateFrom || filters.dateTo);
+  // Recherche active : le filtre Période est neutralisé (la recherche couvre
+  // toutes les périodes, cf. getEffectiveDateFilters). On grise le contrôle
+  // et on affiche « Toutes » pour que le comportement soit visible.
+  const searchActive = !!(filters.search && filters.search.trim());
 
   // Filtres avancés uniquement — exclut showId et search qui sont sur la ligne principale
   const advancedFiltersCount = [
@@ -132,13 +136,13 @@ export function FiltersSection({
         <div className="space-y-1">
           <Label className="text-xs">Période</Label>
           <Select
-            value={hasDateFilters ? 'all' : filters.period || 'upcoming'}
+            value={hasDateFilters || searchActive ? 'all' : filters.period || 'upcoming'}
             onValueChange={onPeriodFilter}
-            disabled={hasDateFilters}
+            disabled={hasDateFilters || searchActive}
           >
             <SelectTrigger
               aria-label="Filtrer par période"
-              className={hasDateFilters ? 'opacity-50' : ''}
+              className={hasDateFilters || searchActive ? 'opacity-50' : ''}
             >
               <SelectValue placeholder="À venir" />
             </SelectTrigger>
@@ -148,6 +152,11 @@ export function FiltersSection({
               <SelectItem value="all">Toutes</SelectItem>
             </SelectContent>
           </Select>
+          {searchActive && (
+            <p className="text-[11px] text-muted-foreground leading-tight">
+              Recherche : toutes périodes
+            </p>
+          )}
         </div>
 
         {/* Raccourci de date */}
