@@ -85,10 +85,15 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
       try {
         const result = await getAccessibleShows(userId, role, companyId ?? null);
         if (!cancelled && !result.error) {
-          // Filtrer : uniquement les spectacles avec au moins un créneau futur
+          // On garde les spectacles qui ont AU MOINS un créneau (futur OU passé).
+          // Cas nominal : spectacles avec upcomingSlotsCount > 0.
+          // Cas rattrapage : un festival terminé n'a que des créneaux passés
+          // mais l'utilisateur staff a besoin de le voir pour ajouter une
+          // réservation oubliée. La case "Inclure représentations passées"
+          // (visible après sélection du spectacle) fera le reste du filtrage.
           setShows(
             result.data
-              .filter((s) => s.upcomingSlotsCount > 0)
+              .filter((s) => s.upcomingSlotsCount > 0 || s.pastSlotsCount > 0)
               .map((s) => ({ id: s.id, title: s.title }))
           );
         }
@@ -300,9 +305,17 @@ export function SelectSlotStep({ onSlotSelected, disabled }: SelectSlotStepProps
               Chargement…
             </div>
           ) : slots.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-2">
-              Aucune représentation disponible.
-            </p>
+            <div className="space-y-1 py-2">
+              <p className="text-sm text-muted-foreground">
+                Aucune représentation disponible.
+              </p>
+              {canIncludePast && !includePast && (
+                <p className="text-xs text-muted-foreground/80">
+                  Ce spectacle n&apos;a que des représentations passées —
+                  cochez la case ci-dessus pour les afficher.
+                </p>
+              )}
+            </div>
           ) : slotListOpen ? (
             /* Liste complète */
             <div className="space-y-2" role="radiogroup" aria-label="Choisir une représentation">
