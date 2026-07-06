@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Sessions A + B — correction malentendu CRM lieu → structure du pro — 3 juin 2026
+> Dernière mise à jour : Recherche réservations élargie + rattrapage représentations passées — 6 juillet 2026
 
 ---
 
@@ -79,7 +79,7 @@
 | Module | État |
 |--------|------|
 | Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison, **bouton Check-in → nouvel onglet (S190)** |
-| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM contact + structure + UUID + adresse éclatée (S175 + Sessions A/B)**, **forçage texte Excel/CSV sur IDs Zoho (S175)** |
+| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM contact + structure + UUID + adresse éclatée (S175 + Sessions A/B)**, **forçage texte Excel/CSV sur IDs Zoho (S175)**, **recherche élargie multi-mots via RPC (guest_* + profils pros connectés + structure/tél/CRM), couvre toutes les périodes (07-06)**, **création résa sur représentation passée — rattrapage a posteriori (07-06)** |
 | **Statistiques** | ✅ Page `/admin/statistiques` dédiée — KPIs, drill-down drawers, comparaison périodes, export PDF, préférences column visibility (S189) |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories (renommables S192), publics cibles (renommables S192), médias, **champ `derviche_site_url` (S191)** |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
@@ -176,7 +176,26 @@
 
 ---
 
-## Dernier travail (S154 — 9 mars 2026) [MERGÉ MAIN ✅]
+## Dernier travail (Recherche + représentations passées — 6 juillet 2026) [MERGÉ MAIN ✅]
+
+### Recherche réservations élargie (RPC 125 / 126)
+- **Problème client** : la recherche ne cherchait que dans `guest_email/first_name/last_name` → invisible pour les résa de pros connectés (`user_id NOT NULL`, identité dans `profiles`).
+- **RPC `search_reservation_ids`** (migration 125, admin/super-admin/externe) : `OR` sur 16 colonnes (`guest_*` + 2 CRM ids + jointure `profiles` : nom/email/tél/structure/CRM). Multi-tokens (AND entre mots, OR entre colonnes). Externe borné à ses shows assignés (`user_show_assignments`).
+- **RPC `search_company_reservation_ids`** (migration 126, compagnie) : équivalent borné au `company_id` du profil connecté. Colonnes `guest_*` uniquement (RLS interdit la jointure `profiles` côté compagnie) → limite métier assumée pour les résa de pros connectés.
+- **Service** : `resolveSearchIds` → `.in('id', ids)` sur la query principale (pagination/filtres préservés). Fallback safe (liste complète) si la RPC échoue.
+- **Cap 200** résultats les plus récents (`SEARCH_RESULT_CAP`, synchro avec `v_cap` SQL) : borne l'URL du `.in()` en GET (~7,5 KB). Min 2 caractères front (`SEARCH_MIN_LENGTH`). Hints UX : « au moins 2 caractères » / « affinez ». Voir mémoire projet `recherche-in-url-limit` + `docs/DECISIONS.md`.
+- **Recherche = toutes périodes** : `getEffectiveDateFilters` renvoie `{}` si `search` actif → le filtre Période (défaut « À venir ») est neutralisé (grisé + « Toutes » + note « Recherche : toutes périodes »), stateless (redevient « À venir » à l'effacement). Symétrique admin + compagnie, export inclus.
+- **PWA `search-professional`** : multi-tokens + colonnes structure/tél/email, sanitize des caractères qui cassaient la clause `.or()` (virgule, parenthèses).
+
+### Création résa sur représentation passée (rattrapage a posteriori)
+- Case **« Inclure les représentations passées »** dans le dialog admin « Nouvelle réservation » ET le drawer PWA (SelectSlotStep), réservée super-admin/admin/externe/compagnie (chacun dans son périmètre).
+- `getAvailableSlotsForShow({ includePast })` : garde de rôle côté service, tri date descendante, flag `isPast` par slot (badge « passée »).
+- Email de confirmation + sync Google Calendar **décochés automatiquement** pour un créneau passé.
+- Édition (`update_reservation_safe`) non impactée → rattrapage des résa historiques libre.
+
+---
+
+## Travail précédent (S154 — 9 mars 2026) [MERGÉ MAIN ✅]
 
 ### S154-A — Dashboard admin enrichi
 - Sélecteur de période : 7 jours / 30 jours / Saison (configurable dans Préférences)
