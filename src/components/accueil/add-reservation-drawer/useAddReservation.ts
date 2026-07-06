@@ -121,6 +121,17 @@ export function useAddReservation({
           remaining: capacity.remaining,
           isUnlimited: capacity.isUnlimited,
         });
+        // Auto-décoche email + GCal quand le slot est passé — la sync
+        // GCal n'a pas de sens sur un événement écoulé, et envoyer un
+        // "confirmation de réservation" pour hier est déroutant pour
+        // le pro. L'admin peut re-cocher manuellement s'il le souhaite.
+        if (capacity.isPast) {
+          setNotifOptions((prev) =>
+            !prev.sendEmail && !prev.syncCalendar
+              ? prev
+              : { sendEmail: false, syncCalendar: false },
+          );
+        }
       }
     })();
 

@@ -4,7 +4,7 @@ slug: checkin-pwa/walk-in
 category: checkin-pwa
 categoryLabel: Check-in sur place
 categoryIcon: CheckSquare
-keywords: [walk-in, dernière minute, improviste, ajouter, sur place, nouvelle réservation, PWA]
+keywords: [walk-in, dernière minute, improviste, ajouter, sur place, nouvelle réservation, PWA, représentation passée, rattrapage, oubliée, hier]
 roles: [super-admin, admin, externe]
 order: 4
 ---
@@ -64,6 +64,19 @@ Cochez **« Enregistrer + check-in »** et validez.
 ## Bonne pratique — gestion du surbooking
 
 Si vous acceptez régulièrement des walk-ins au-delà de la capacité réelle, voyez plutôt avec un super-admin pour **augmenter la capacité déclarée** du créneau en amont. Mieux vaut connaître la capacité réelle.
+
+## Rattrapage sur une représentation passée <RoleBadge role="super-admin" /> <RoleBadge role="admin" />
+
+Le bouton flottant « + » peut aussi être utilisé pour rattraper une réservation oubliée sur une représentation d'un jour antérieur (par exemple : invité présent hier soir mais non enregistré).
+
+- Depuis l'écran d'accueil, choisissez le spectacle → une case **« Inclure les représentations passées »** apparaît sous le sélecteur de spectacle.
+- Cochez-la : les représentations passées apparaissent alors dans la liste, triées du plus récent au plus ancien.
+- Chaque créneau passé porte un badge orange **« Passée »**.
+- **Email de confirmation** et **synchronisation Google Calendar** sont **décochés automatiquement** dès que vous sélectionnez un créneau passé — vous pouvez les re-cocher manuellement si nécessaire.
+
+<Callout type="info">
+Cette option est réservée aux <RoleBadge role="super-admin" /> et <RoleBadge role="admin" />. Elle n'apparaît pas pour le rôle <RoleBadge role="externe" />, ni pour <RoleBadge role="company" />. Vous pouvez aussi passer par [le dialog admin « Nouvelle réservation »](/admin/aide/reservations/creer#rattrapage-sur-une-repr%C3%A9sentation-pass%C3%A9e) qui expose exactement la même option.
+</Callout>
 
 ## Pour aller plus loin
 

@@ -117,9 +117,13 @@ export function formatSlotLabel(slot: AvailableSlot, formatDate: (date: string) 
   const venueName = slot.venue?.name || 'Lieu ?';
   const available = formatAvailableCapacity(slot);
   const isFull = isSlotFull(slot);
-  
-  const baseLabel = `${formatDate(slot.date)} ${slot.time} — ${venueName}`;
-  
+
+  // Préfixe "🕒 PASSÉE — " quand le slot est antérieur à maintenant, pour
+  // lever toute ambiguïté visuelle quand l'option "Inclure représentations
+  // passées" est activée.
+  const pastPrefix = slot.isPast ? '🕒 PASSÉE — ' : '';
+  const baseLabel = `${pastPrefix}${formatDate(slot.date)} ${slot.time} — ${venueName}`;
+
   if (isFull) {
     return `${baseLabel} (Complet)`;
   }

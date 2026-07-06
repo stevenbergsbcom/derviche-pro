@@ -90,8 +90,15 @@ export interface UseAdminReservationsReturn {
     options: ExportOptions
   ) => Promise<{ success: boolean; error?: string }>;
 
-  /** Récupérer les slots disponibles pour un spectacle */
-  getSlots: (showId: string) => Promise<{
+  /**
+   * Récupérer les slots disponibles pour un spectacle.
+   * @param options.includePast Inclut les représentations passées
+   *   (réservé aux rôles super-admin/admin, vérifié côté service).
+   */
+  getSlots: (
+    showId: string,
+    options?: { includePast?: boolean },
+  ) => Promise<{
     success: boolean;
     data?: Array<{
       id: string;
@@ -100,6 +107,7 @@ export interface UseAdminReservationsReturn {
       capacity: number;
       remainingCapacity: number;
       venue: { id: string; name: string; city: string } | null;
+      isPast: boolean;
     }>;
     error?: string;
   }>;
@@ -139,4 +147,9 @@ export interface AvailableSlot {
   capacity: number;
   remainingCapacity: number;
   venue: { id: string; name: string; city: string } | null;
+  /**
+   * True si la date/heure du slot est déjà passée par rapport à maintenant.
+   * Cohérent avec le type source `src/lib/services/admin-reservations/types.ts`.
+   */
+  isPast: boolean;
 }

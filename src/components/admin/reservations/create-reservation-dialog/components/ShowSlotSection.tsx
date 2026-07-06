@@ -5,9 +5,10 @@
 
 'use client';
 
-import { Calendar, Loader2, AlertTriangle, Clock } from 'lucide-react';
+import { Calendar, Loader2, AlertTriangle, Clock, History } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -34,6 +35,9 @@ export function ShowSlotSection({
   maxPlaces,
   disabled,
   slotIsPast = false,
+  canIncludePast = false,
+  includePast = false,
+  onIncludePastChange,
 }: ShowSlotSectionProps) {
   return (
     <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
@@ -86,6 +90,40 @@ export function ShowSlotSection({
             </SelectContent>
           </Select>
         </div>
+
+        {/*
+          Case à cocher "Inclure les représentations passées" — réservée
+          super-admin/admin pour du rattrapage a posteriori (résa oubliée
+          sur la représentation d'hier). Affichée uniquement si un show
+          est sélectionné, et si le rôle courant y donne droit. Le service
+          `getAvailableSlotsForShow` applique une garde côté serveur qui
+          double la restriction UI.
+        */}
+        {canIncludePast && selectedShowId && onIncludePastChange && (
+          <div className="flex items-start gap-2 rounded-md border border-dashed border-warning/40 bg-warning/5 p-3">
+            <Checkbox
+              id="include-past-slots"
+              checked={includePast}
+              onCheckedChange={(checked) => onIncludePastChange(checked === true)}
+              disabled={disabled || loadingSlots}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <Label
+                htmlFor="include-past-slots"
+                className="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
+              >
+                <History className="w-3.5 h-3.5" aria-hidden="true" />
+                Inclure les représentations passées
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Pour rattraper une réservation oubliée. L&apos;email de
+                confirmation et la sync Google Calendar sont décochés
+                automatiquement pour les créneaux passés.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Sélection créneau et nombre de places */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

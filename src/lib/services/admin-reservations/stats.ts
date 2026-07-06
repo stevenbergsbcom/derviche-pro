@@ -6,7 +6,8 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/lib/logger';
-import type { 
+import { getUserRole } from '@/lib/auth/get-user-role';
+import type {
   ReservationStats,
   ReservationStatsResult,
   AdminReservationsListResult,
@@ -223,6 +224,20 @@ export interface GetAvailableSlotsOptions {
    * - 'company' : uniquement les slots hosted_by='company' (rôle company)
    */
   hostedBy?: 'derviche' | 'company' | 'externe';
+  /**
+   * Si `true`, inclut aussi les représentations dont la date est antérieure
+   * à aujourd'hui. Réservé aux rôles `super-admin` et `admin` pour du
+   * rattrapage a posteriori. Le service applique une garde côté serveur :
+   * si `includePast=true` mais que l'utilisateur n'a pas le rôle requis,
+   * l'option est silencieusement ignorée (comportement identique à
+   * `includePast=false`).
+   *
+   * Le tri des résultats est adapté : quand `includePast=true`, les slots
+   * sont triés date descendante (le plus récent d'abord) pour que le
+   * rattrapage typique (résa oubliée sur la représentation d'hier) tombe
+   * en tête de liste.
+   */
+  includePast?: boolean;
 }
 
 /**
@@ -257,13 +272,47 @@ export async function getAvailableSlotsForShow(
     const supabase = createClient();
     const today = getTodayDate();
 
+    // Défense en profondeur : `includePast` est réservé aux rôles admin.
+    // Si un caller demande includePast sans avoir le rôle requis, on ignore
+    // silencieusement l'option (comportement = includePast:false).
+    // La restriction UI (checkbox visible uniquement pour ces rôles)
+    // reste le premier rempart ; ce check bloque les appels directs.
+    //
+    // NB : on utilise le helper getUserRole qui gère le cas où user_roles
+    // contient plusieurs lignes pour un même user (tri par priorité), plutôt
+    // qu'un .maybeSingle() qui échouerait silencieusement dans ce cas.
+    let effectiveIncludePast = options?.includePast === true;
+    if (effectiveIncludePast) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        effectiveIncludePast = false;
+      } else {
+        const role = await getUserRole(user.id);
+        if (role !== 'super-admin' && role !== 'admin') {
+          logger.warn(
+            '[getAvailableSlotsForShow] includePast demandé sans rôle admin — ignoré',
+            { userId: user.id, role },
+          );
+          effectiveIncludePast = false;
+        }
+      }
+    }
+
     let query = supabase
       .from('slots')
       .select(SLOT_SELECT_QUERY)
-      .eq('show_id', showId)
-      .gte('date', today)
-      .order('date', { ascending: true })
-      .order('time', { ascending: true });
+      .eq('show_id', showId);
+
+    if (!effectiveIncludePast) {
+      query = query.gte('date', today);
+    }
+
+    // Tri : futurs = date ascendante (le plus proche d'abord),
+    //       inclus passés = date descendante (le plus récent d'abord —
+    //       cas typique du rattrapage sur la représentation d'hier).
+    query = query
+      .order('date', { ascending: !effectiveIncludePast })
+      .order('time', { ascending: !effectiveIncludePast });
 
     if (options?.hostedBy) {
       query = query.eq('hosted_by', options.hostedBy);
