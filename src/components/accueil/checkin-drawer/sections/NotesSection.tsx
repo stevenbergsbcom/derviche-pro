@@ -90,7 +90,7 @@ export function NotesSection({
           >
             <Lock className="w-4 h-4" aria-hidden="true" />
             Notes internes Derviche
-            <Badge variant="outline" className="text-xs ml-1">Admin</Badge>
+            <Badge variant="outline" className="text-xs ml-1">Interne</Badge>
           </label>
           <p className="text-xs text-muted-foreground mb-2">
             Non visibles par les compagnies

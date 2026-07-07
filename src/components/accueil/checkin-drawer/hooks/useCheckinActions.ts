@@ -40,7 +40,14 @@ export interface UseCheckinActionsProps {
   reservation: ReservationRowData | null;
   guestForm: GuestFormState;
   checkinForm: CheckinFormState;
-  isAdmin: boolean;
+  /**
+   * Staff Derviche (super-admin / admin / externe — tout sauf compagnie).
+   * Aligné sur la porte d'affichage du champ « Notes internes » (NotesSection).
+   * Le serveur autorise déjà ces mêmes rôles à écrire `checkin_internal_notes`
+   * (ADMIN_ROLES côté service check-in) → l'externe peut noter les notes
+   * internes sur les résas de ses spectacles assignés.
+   */
+  isStaffDD: boolean;
   isCancelled: boolean;
   userId: string | null;
   role: UserRole | null;
@@ -72,7 +79,7 @@ export function useCheckinActions({
   reservation,
   guestForm,
   checkinForm,
-  isAdmin,
+  isStaffDD,
   isCancelled,
   userId,
   role,
@@ -120,7 +127,7 @@ export function useCheckinActions({
           ...guestPayload,
           checkinComment: checkinForm.comment.trim() || null,
           checkinVenueNotes: checkinForm.venueNotes.trim() || null,
-          checkinInternalNotes: isAdmin ? (checkinForm.internalNotes.trim() || null) : undefined,
+          checkinInternalNotes: isStaffDD ? (checkinForm.internalNotes.trim() || null) : undefined,
         });
 
         if (!result.success || !result.data) {
@@ -147,7 +154,7 @@ export function useCheckinActions({
           status: checkinForm.selectedStatus,
           comment: checkinForm.comment.trim() || null,
           venueNotes: checkinForm.venueNotes.trim() || null,
-          internalNotes: isAdmin ? (checkinForm.internalNotes.trim() || null) : undefined,
+          internalNotes: isStaffDD ? (checkinForm.internalNotes.trim() || null) : undefined,
           userId,
           role,
           companyId,
@@ -190,7 +197,7 @@ export function useCheckinActions({
     reservation,
     guestForm,
     checkinForm,
-    isAdmin,
+    isStaffDD,
     isCancelled,
     userId,
     role,
