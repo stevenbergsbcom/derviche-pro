@@ -120,7 +120,7 @@ export function useCheckinDrawer({
     reservation,
     guestForm,
     checkinForm,
-    isAdmin,
+    isStaffDD,
     isCancelled,
     userId,
     role,

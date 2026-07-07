@@ -149,7 +149,7 @@ export function CheckinFieldsSection({
               <Lock className="w-4 h-4" aria-hidden="true" />
               Notes internes Derviche
               <Badge variant="outline" className="text-xs ml-1">
-                Admin
+                Interne
               </Badge>
             </Label>
             <p className="text-xs text-muted-foreground">Non visibles par les compagnies</p>
