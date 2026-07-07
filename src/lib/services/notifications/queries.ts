@@ -8,7 +8,7 @@
  *   - queries-helpers   : helpers internes partagés
  */
 
-export { getAdminNotifications, getAdminUnreadCount } from './queries-fetch';
+export { getAdminNotifications, getAdminUnreadCount, getAdminUnreadCountFast } from './queries-fetch';
 
 export {
   createAdminNotification,

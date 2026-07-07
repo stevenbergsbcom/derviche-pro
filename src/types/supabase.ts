@@ -1371,6 +1371,11 @@ export type Database = {
         }
         Returns: Json
       }
+      // Migration 127 — Compteur non-lus badge notifications (1 aller-retour)
+      get_admin_unread_count: {
+        Args: Record<string, never>
+        Returns: number
+      }
       // Migration 125 — Recherche admin (super-admin/admin/externe)
       search_reservation_ids: {
         Args: {
