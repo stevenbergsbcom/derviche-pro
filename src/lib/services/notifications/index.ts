@@ -17,6 +17,7 @@ export {
   createAdminNotification,
   getAdminNotifications,
   getAdminUnreadCount,
+  getAdminUnreadCountFast,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   dismissAllNotifications,

@@ -100,6 +100,34 @@ export async function getAdminNotifications(
 }
 
 /**
+ * Version optimisée (1 seul aller-retour DB) du compteur de non-lus.
+ * Appelle la RPC `get_admin_unread_count` (migration 127) qui fait le calcul
+ * côté SQL via anti-join. Utilisée par le polling léger du badge pour réduire
+ * la consommation Fluid CPU (l'ancien chemin faisait ~4 requêtes).
+ *
+ * Fallback : si la RPC échoue (non déployée, erreur), on retombe sur
+ * `getAdminUnreadCount()` classique pour ne jamais casser le badge.
+ */
+export async function getAdminUnreadCountFast(): Promise<UnreadCountResult> {
+  try {
+    const supabase = await createServerClient();
+    const { data, error } = await supabase.rpc('get_admin_unread_count');
+
+    if (error) {
+      logger.warn('[notifications/queries] RPC get_admin_unread_count échec — fallback', {
+        error: error.message,
+      });
+      return getAdminUnreadCount();
+    }
+
+    return { count: typeof data === 'number' ? data : 0 };
+  } catch (err) {
+    logger.error('[notifications/queries] Exception getAdminUnreadCountFast — fallback', { err });
+    return getAdminUnreadCount();
+  }
+}
+
+/**
  * Retourne le nombre de notifications non lues pour l'admin courant.
  * Tient compte du dismissed_at : ignore les notifs antérieures au dernier "Vider".
  * @param cachedDismissedAt - Si déjà récupéré par l'appelant, évite un double appel DB

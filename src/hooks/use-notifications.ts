@@ -22,7 +22,10 @@ import type { AdminNotification, GetNotificationsResult } from '@/lib/services/n
 // CONSTANTES
 // ============================================
 
-const POLL_INTERVAL_MS = 30_000; // 30 secondes
+// 60 s : une notif de réservation n'a pas besoin d'être temps réel. Combiné
+// à la pause quand l'onglet est en arrière-plan (Page Visibility API), ça
+// réduit fortement le volume d'appels (optim Fluid CPU Vercel).
+const POLL_INTERVAL_MS = 60_000; // 60 secondes
 const PAGE_LIMIT = 20;
 
 // ============================================
@@ -82,7 +85,9 @@ export function useNotifications(): UseNotificationsReturn {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/notifications?page=1&limit=1');
+      // Endpoint dédié ultra-léger (RPC 1 aller-retour) — optim Fluid CPU.
+      // Ne charge plus la liste + counts comme l'ancien ?page=1&limit=1.
+      const res = await fetch('/api/admin/notifications/unread-count');
 
       if (!res.ok) {
         // Erreur HTTP — on sort du loading dans tous les cas
@@ -92,7 +97,7 @@ export function useNotifications(): UseNotificationsReturn {
 
       const json = (await res.json()) as {
         success: boolean;
-        data?: GetNotificationsResult;
+        data?: { unreadCount: number };
       };
 
       if (!isMountedRef.current) return;
@@ -225,19 +230,43 @@ export function useNotifications(): UseNotificationsReturn {
   useEffect(() => {
     isMountedRef.current = true;
 
-    // Chargement initial du badge
-    void fetchUnreadCount();
+    const startPolling = () => {
+      if (pollIntervalRef.current) return; // déjà actif
+      pollIntervalRef.current = setInterval(() => {
+        void fetchUnreadCount();
+      }, POLL_INTERVAL_MS);
+    };
 
-    // Polling
-    pollIntervalRef.current = setInterval(() => {
-      void fetchUnreadCount();
-    }, POLL_INTERVAL_MS);
+    const stopPolling = () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+    };
+
+    // OPT-2 — Pause du polling quand l'onglet passe en arrière-plan.
+    // Les admins laissent leur onglet ouvert toute la journée : inutile de
+    // continuer à interroger le serveur quand l'onglet n'est pas regardé.
+    // Au retour au premier plan, on resync immédiatement + on reprend.
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        void fetchUnreadCount();
+        startPolling();
+      }
+    };
+
+    // Chargement initial du badge + polling uniquement si l'onglet est visible
+    void fetchUnreadCount();
+    if (!document.hidden) startPolling();
+
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       isMountedRef.current = false;
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      document.removeEventListener('visibilitychange', handleVisibility);
+      stopPolling();
     };
   }, [fetchUnreadCount]);
 
