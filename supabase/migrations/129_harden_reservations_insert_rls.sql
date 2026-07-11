@@ -1,0 +1,46 @@
+-- ============================================
+-- Migration 129: Durcir la RLS INSERT sur reservations
+-- Derviche Diffusion
+-- Date: 2026-07-11
+-- ============================================
+-- CONTEXTE (trou de sécurité) :
+-- La policy `reservations_insert_public` (migration 005) est :
+--   FOR INSERT TO authenticated, anon WITH CHECK (true)
+-- → n'importe qui, même anonyme, peut INSÉRER directement dans reservations
+--   via l'API REST Supabase (anon key publique), en contournant TOUTES les
+--   validations métier des RPC (champs obligatoires structure/CP/ville,
+--   coercion des rôles, verrou de capacité FOR UPDATE, garde de date, etc.)
+--   et en forgeant n'importe quelle colonne (source='admin', dates passées,
+--   created_by_user_id, checkin_status…).
+--
+-- CONSTAT CODE (vérifié) :
+-- Aucun chemin applicatif n'insère directement dans reservations. TOUTES les
+-- créations passent par les RPC SECURITY DEFINER :
+--   - create_public_reservation (formulaire public + mode compagnie)
+--   - create_admin_reservation  (dialog admin + PWA walk-in + transfert)
+-- Ces RPC sont SECURITY DEFINER (propriétaire postgres) et la table n'a PAS
+-- `FORCE ROW LEVEL SECURITY` → elles bypassing la RLS. Le public continue de
+-- réserver en APPELANT la RPC (GRANT EXECUTE ... TO anon), pas en insérant.
+--
+-- CORRECTION :
+-- Supprimer les 2 policies INSERT ouvertes/inutilisées. Sans policy INSERT
+-- pour anon/authenticated, la RLS refuse tout INSERT direct — seules les RPC
+-- SECURITY DEFINER peuvent créer une réservation. Périmètre légitime intact.
+--
+-- NOTE — policy `reservations_all_admin` (FOR ALL) conservée volontairement :
+-- elle laisse un admin/super-admin authentifié insérer directement, mais elle
+-- est bornée à `is_admin_or_super()` (staff de confiance), pas au public. Le
+-- trou fermé ici est l'insertion ANONYME/publique arbitraire.
+--
+-- PORTÉE : DROP POLICY uniquement. Les policies SELECT/UPDATE/DELETE
+-- (propriétaire, admin, externe, compagnie) sont inchangées → lecture,
+-- pointage, annulation, transfert non impactés.
+-- ============================================
+
+-- Trou principal : insertion publique/anonyme arbitraire.
+DROP POLICY IF EXISTS "reservations_insert_public" ON public.reservations;
+
+-- Insertion externe scopée mais inutilisée (l'externe crée via
+-- create_admin_reservation qui bypasse la RLS) — on ferme aussi ce chemin
+-- direct qui contournerait les validations des RPC.
+DROP POLICY IF EXISTS "reservations_insert_externe_dd" ON public.reservations;
