@@ -67,35 +67,15 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
 // EMAILS MERCI POST-ACCUEIL
 // ============================================
 
-/**
- * Labels courts des 4 types d'emails merci (table checkin_followup_emails),
- * alignés sur la terminologie du client : présent / cœur / presse / absent.
- * Partagés entre la colonne du tableau et l'export CSV/Excel.
- * Une clé inconnue (futur template) est affichée telle quelle en fallback.
- */
-export const FOLLOWUP_EMAIL_TYPE_LABELS: Record<string, string> = {
-  checkin_thank_you: 'Présent',
-  checkin_loved: 'Coup de cœur',
-  checkin_press: 'Presse',
-  checkin_followup_absent: 'Absent',
-};
-
-/**
- * Formate la liste des emails merci envoyés pour une cellule d'export :
- * « Présent 12 juil. 2026 14:32 ; Coup de cœur 12 juil. 2026 14:35 ».
- * Tri chronologique. Chaîne vide si aucun envoi.
- */
-export function formatFollowupEmailsList(
-  emails: { templateKey: string; sentAt: string }[],
-): string {
-  return [...emails]
-    .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
-    .map((e) => {
-      const label = FOLLOWUP_EMAIL_TYPE_LABELS[e.templateKey] ?? e.templateKey;
-      return `${label} ${formatDateTimeFr(e.sentAt)}`;
-    })
-    .join(' ; ');
-}
+// Source de vérité déplacée dans @/lib/utils/followup-emails (couche
+// neutre) car les builders de fichiers CSV/Excel — situés dans
+// hooks/admin-reservations/helpers — en ont aussi besoin et ne doivent
+// pas importer depuis components/. Re-export pour les consommateurs
+// existants (table-cell-renderer, export-dialog/utils).
+export {
+  FOLLOWUP_EMAIL_TYPE_LABELS,
+  formatFollowupEmailsList,
+} from '@/lib/utils/followup-emails';
 
 // ============================================
 // HELPERS DATE

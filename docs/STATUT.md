@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Recherche réservations élargie + rattrapage représentations passées — 6 juillet 2026
+> Dernière mise à jour : Colonne « Emails merci » + fixes accueil (compagnie/externe) + sécurité RLS + perf notifications — 25 juillet 2026
 
 ---
 
@@ -79,7 +79,7 @@
 | Module | État |
 |--------|------|
 | Dashboard | ✅ Stats, liens rapides, résas récentes, créneaux à venir, graphique réservations (recharts), top 3 spectacles, créneaux 24h, sélecteur période 7j/30j/Saison, **bouton Check-in → nouvel onglet (S190)** |
-| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM contact + structure + UUID + adresse éclatée (S175 + Sessions A/B)**, **forçage texte Excel/CSV sur IDs Zoho (S175)**, **recherche élargie multi-mots via RPC (guest_* + profils pros connectés + structure/tél/CRM), couvre toutes les périodes (07-06)**, **création résa sur représentation passée — rattrapage a posteriori (07-06)** |
+| Réservations | ✅ Liste, filtres (spectacle, lieu S187), pagination, détail, CRUD, check-in, export, **colonnes IDs CRM contact + structure + UUID + adresse éclatée (S175 + Sessions A/B)**, **forçage texte Excel/CSV sur IDs Zoho (S175)**, **recherche élargie multi-mots via RPC (guest_* + profils pros connectés + structure/tél/CRM), couvre toutes les périodes (07-06)**, **création résa sur représentation passée — rattrapage a posteriori (07-06)**, **colonne « Emails merci » type + date/heure d'envoi, tableau + exports CSV/Excel (07-25)** |
 | **Statistiques** | ✅ Page `/admin/statistiques` dédiée — KPIs, drill-down drawers, comparaison périodes, export PDF, préférences column visibility (S189) |
 | Spectacles | ✅ Liste, filtres, CRUD, catégories (renommables S192), publics cibles (renommables S192), médias, **champ `derviche_site_url` (S191)** |
 | Représentations | ✅ Créneaux par spectacle, CRUD, série de dates, capacité |
@@ -176,7 +176,32 @@
 
 ---
 
-## Dernier travail (Recherche + représentations passées — 6 juillet 2026) [MERGÉ MAIN ✅]
+## Dernier travail (7 → 25 juillet 2026) [MERGÉ MAIN ✅]
+
+### Perf — badge notifications admin (07-07)
+- Poste n°1 de conso Fluid CPU Vercel : polling du badge toutes les 30s × ~4 requêtes DB par tick, même onglet caché.
+- **Migration 127** : RPC `get_admin_unread_count` (anti-join, 1 aller-retour) + endpoint dédié `/api/admin/notifications/unread-count` + fallback safe sur l'ancien calcul.
+- Hook : intervalle 30s → 60s + pause quand l'onglet est en arrière-plan (Page Visibility API) + resync immédiat au retour. Passage Vercel Pro en parallèle (usage commercial + Fluid CPU à 78 %).
+
+### Fixes accueil / check-in (retours client, 07-08 → 07-25)
+- **Externe → notes internes Derviche** : le champ était affiché/éditable (porte `isStaffDD`) mais la sauvegarde le jetait (porte `isAdmin`) — alignement des deux portes, serveur déjà OK. Badge « Admin » → « Interne ».
+- **Migration 128** : le trigger `validate_reservation` (007) bloquait tout INSERT sur date passée → garde levée uniquement pour `source = 'admin'` (rattrapage) ; le public reste bloqué.
+- **Migration 130** : régression 095 — le rôle `company` (et son scoping slot de SA compagnie + `hosted_by='company'`) avait été silencieusement supprimé de `create_admin_reservation` → restauré. Durcissements : notes internes jamais écrites pour une compagnie (CASE serveur), `IF NOT FOUND` remplace le check EXISTS bugué de la 032. Constaté en prod sur « Algorithme ».
+- Limites UX connues (assumées) : recherche pro 403 pour compagnie (bouton « Continuer sans rechercher »), toggles email sans effet pour compagnie.
+
+### Sécurité — RLS INSERT reservations (07-11)
+- **Migration 129** : DROP des policies `reservations_insert_public` (`WITH CHECK (true)` pour anon !) et `reservations_insert_externe_dd`, toutes deux inutilisées — toute création passe par les RPC SECURITY DEFINER. Ferme l'insertion anonyme arbitraire (forge de `source`, contournement des validations).
+
+### Colonne « Emails merci » (07-25)
+- Demande client (clean de base) : voir quels emails post-accueil (Présent / Coup de cœur / Presse / Absent) ont été envoyés, avec date + heure.
+- Nouvelle colonne configurable `followupEmails` (masquée par défaut, backfill prefs auto) : badges dans le tableau, cellule texte dans les exports. Source : embed `checkin_followup_emails` déjà dans les SELECT admin → zéro requête en plus.
+- **Bug post-livraison corrigé** : le repo a TROIS mappings colonne → valeur (tableau, aperçu export, et builders CSV/Excel dans `hooks/admin-reservations/helpers/formatters.ts`) — le 3ᵉ manquait → fichier exporté à « - ». Helpers déplacés en couche neutre `lib/utils/followup-emails.ts` (re-export compat).
+- ⚠ **Dette connue** : ces 3 switch dupliqués referont ce bug à la prochaine colonne (les `Record` sont vérifiés par TS, les `switch` avec `default` non). Unification à prévoir.
+- Contexte données : tracking des envois depuis S146 (mars), premier envoi réel le 04-07 (festival) → les résas antérieures affichent « - » légitimement.
+
+---
+
+## Travail précédent (Recherche + représentations passées — 6 juillet 2026) [MERGÉ MAIN ✅]
 
 ### Recherche réservations élargie (RPC 125 / 126)
 - **Problème client** : la recherche ne cherchait que dans `guest_email/first_name/last_name` → invisible pour les résa de pros connectés (`user_id NOT NULL`, identité dans `profiles`).

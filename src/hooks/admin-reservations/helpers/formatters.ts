@@ -7,6 +7,7 @@ import type { AdminReservation } from '@/lib/services/admin-reservations';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import { translateStatus, translateCheckin } from './translations';
 import { formatDateExport } from '@/lib/utils/format-date';
+import { formatFollowupEmailsList } from '@/lib/utils/followup-emails';
 
 export { formatDateExport };
 
@@ -97,6 +98,10 @@ export function getCellValue(
 
     case 'checkinInternalNotes':
       return r.checkinInternalNotes ?? '-';
+
+    case 'followupEmails':
+      // « Présent 12 juil. 2026 14:32 ; Coup de cœur … » — '-' si aucun envoi
+      return formatFollowupEmailsList(r.checkinFollowupEmails ?? []) || '-';
 
     case 'createdAt':
       // createdAt est un datetime complet, extraire juste la date
