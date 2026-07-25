@@ -4,7 +4,7 @@ slug: checkin-pwa/emails-post-accueil
 category: checkin-pwa
 categoryLabel: Check-in sur place
 categoryIcon: CheckSquare
-keywords: [email, post-accueil, remerciement, coup de cœur, presse, absent, suivi, mention, merci]
+keywords: [email, post-accueil, remerciement, coup de cœur, presse, absent, suivi, mention, merci, tracé, envoyé, historique, wifi, doublon]
 roles: [super-admin, admin, externe]
 order: 5
 ---
@@ -61,6 +61,12 @@ Voir [Enrichir la fiche spectacle](/admin/aide/spectacles/enrichir) pour remplir
 <Callout type="tip">
 Les emails post-accueil sont **le bon moment** pour relancer les pros « coup de cœur » vers d'autres spectacles de votre catalogue — ajustez les liens dans le template pour pointer vers la page vitrine.
 </Callout>
+
+## Chaque envoi est tracé automatiquement
+
+L'envoi est **enregistré côté serveur au moment même de l'envoi** — le bouton « Enregistrer » du pointage ne joue aucun rôle là-dedans. Même si le wifi coupe juste après, l'envoi est bien tracé : le badge « ✓ Envoyé le … » réapparaît quand vous rouvrez la fiche, et un anti-doublon empêche d'envoyer deux fois le même type d'email.
+
+Côté admin, la colonne **« Emails merci »** de la liste des réservations (à activer dans le sélecteur de colonnes) montre le type, la date et l'heure de chaque envoi — exportable en CSV/Excel. Voir [Exporter les réservations](/admin/aide/reservations/exporter#vérifier-les-emails-merci-envoyés).
 
 ## Pour aller plus loin
 

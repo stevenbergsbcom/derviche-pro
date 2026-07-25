@@ -4,7 +4,7 @@ slug: reservations/exporter
 category: reservations
 categoryLabel: Réservations
 categoryIcon: Calendar
-keywords: [export, exporter, csv, excel, télécharger, download, extraction, listes, crm, zoho, id crm, identifiant, uuid, adresse]
+keywords: [export, exporter, csv, excel, télécharger, download, extraction, listes, crm, zoho, id crm, identifiant, uuid, adresse, emails merci, email envoyé, remerciement, suivi, présent, absent, presse, coup de cœur]
 roles: [super-admin, admin, externe]
 order: 5
 ---
@@ -43,6 +43,19 @@ Colonnes disponibles :
 - **ID CRM (pro)** et **ID CRM (structure)** — identifiants Zoho (~17 chiffres), masqués par défaut
 - **Adresse séparée** : Rue / Code postal / Ville / Pays en 4 colonnes (en plus de la colonne « Adresse complète »)
 - **UUID pro** — identifiant technique Supabase, utile uniquement pour le support technique (super-admin)
+- **Emails merci envoyés** — masquée par défaut. Pour chaque réservation, la liste des emails post-accueil réellement envoyés, avec le **type** (Présent / Coup de cœur / Presse / Absent) et la **date + heure d'envoi**, ex : `Présent 12 juil. 2026 14:32 ; Coup de cœur 12 juil. 2026 14:35`
+
+### Vérifier les emails merci envoyés
+
+L'envoi d'un email merci est **tracé automatiquement côté serveur** au moment de l'envoi — indépendamment du bouton « Enregistrer » du pointage. Pour auditer les envois (par exemple avant un nettoyage de base) :
+
+1. Filtrez par spectacle (et période si besoin).
+2. Activez la colonne **« Emails merci »** dans le sélecteur de colonnes.
+3. Exportez : la colonne indique type, date et heure de chaque envoi. Une cellule vide (`-`) = aucun email merci envoyé pour cette réservation.
+
+<Callout type="tip">
+Dans Excel, filtrez la colonne « Emails merci envoyés » sur « différent de - » pour ne garder que les réservations ayant reçu au moins un email.
+</Callout>
 
 ### Spécifique CRM Zoho
 

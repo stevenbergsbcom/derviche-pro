@@ -9,7 +9,13 @@ import React from 'react';
 import type { ReservationColumn } from '@/hooks/useUserPreferences';
 import type { AdminReservation } from '@/lib/services/admin-reservations';
 import { ReservationStatusBadge, ReservationCheckinBadge } from './reservation-badges';
-import { formatDateFr, formatDateTimeFr, formatBookedByLabel } from './reservation-helpers';
+import {
+  formatDateFr,
+  formatDateTimeFr,
+  formatBookedByLabel,
+  formatFollowupEmailsList,
+  FOLLOWUP_EMAIL_TYPE_LABELS,
+} from './reservation-helpers';
 
 /**
  * Rendu d'une cellule du tableau selon la colonne.
@@ -149,6 +155,30 @@ export function renderTableCell(
           {r.checkinInternalNotes || '-'}
         </span>
       );
+    case 'followupEmails': {
+      if (!r.checkinFollowupEmails || r.checkinFollowupEmails.length === 0) {
+        return '-';
+      }
+      const sorted = [...r.checkinFollowupEmails].sort((a, b) =>
+        a.sentAt.localeCompare(b.sentAt),
+      );
+      return (
+        <div className="flex flex-col gap-0.5" title={formatFollowupEmailsList(sorted)}>
+          {sorted.map((e) => (
+            <span
+              key={e.id}
+              className="inline-flex items-center gap-1 text-xs text-green-700 whitespace-nowrap"
+            >
+              <span aria-hidden="true">✓</span>
+              {FOLLOWUP_EMAIL_TYPE_LABELS[e.templateKey] ?? e.templateKey}
+              <span className="text-muted-foreground">
+                {formatDateTimeFr(e.sentAt)}
+              </span>
+            </span>
+          ))}
+        </div>
+      );
+    }
     case 'createdAt':
       return <span className="text-sm text-muted-foreground">{formatDateTimeFr(r.createdAt)}</span>;
     // S175 + Session B — Identifiants externes / techniques
