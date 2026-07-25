@@ -49,6 +49,9 @@ export const RESERVATION_COLUMNS_CONFIG: Record<ReservationColumn, { label: stri
   checkinNotes: { label: 'Notes accueil', defaultVisible: false },
   checkinVenueNotes: { label: 'Notes lieu', defaultVisible: false },
   checkinInternalNotes: { label: 'Notes internes', defaultVisible: false },
+  // Emails merci post-accueil (type + date/heure d'envoi) — masquée par
+  // défaut, activable pour le suivi/clean de base côté client.
+  followupEmails: { label: 'Emails merci', defaultVisible: false },
   createdAt: { label: 'Créé le', defaultVisible: false },
 
   // S175 + Session B — Identifiants externes / techniques (masqués par défaut)
@@ -83,6 +86,7 @@ export const DEFAULT_COLUMNS_ORDER: ReservationColumn[] = [
   'checkinNotes',
   'checkinVenueNotes',
   'checkinInternalNotes',
+  'followupEmails',
   'createdAt',
   // S175 + Session B — Colonnes CRM/techniques regroupées en fin de liste, masquées par défaut
   'crmIdPro',

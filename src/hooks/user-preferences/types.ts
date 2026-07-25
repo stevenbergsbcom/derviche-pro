@@ -52,6 +52,10 @@ export type ReservationColumn =
   | 'checkinNotes'
   | 'checkinVenueNotes'
   | 'checkinInternalNotes'
+  // Emails merci post-accueil envoyés (type + date/heure, table
+  // checkin_followup_emails). Demande client 07-11 : traçabilité des
+  // envois visible en liste et dans l'export.
+  | 'followupEmails'
   | 'createdAt'
   // Identifiants externes (S175 + Session B) — masqués par défaut, utiles
   // pour le pont avec le CRM Zoho (crmIdPro = contact, crmIdStructure =

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07T10:52:39.118Z",
+  "generatedAt": "2026-07-25T18:40:44.449Z",
   "count": 34,
   "articles": [
     {
@@ -229,7 +229,12 @@
         "absent",
         "suivi",
         "mention",
-        "merci"
+        "merci",
+        "tracé",
+        "envoyé",
+        "historique",
+        "wifi",
+        "doublon"
       ],
       "excerpt": "Après un spectacle, vous pouvez envoyer des emails personnalisés aux pros en fonction de leur statut de check-in — merci, coup de cœur, couverture presse, suivi d'absence. Les 4 types d'email post-accueil Merci présence (checkinthankyou) — ",
       "body": "Après un spectacle, vous pouvez envoyer des emails personnalisés aux pros en fonction de leur statut de check-in — merci, coup de cœur, couverture presse, suivi d'absence. Les 4 types d'email post-accueil Merci présence (checkinthankyou) — standard pour les présents Coup de cœur (checkinloved) — version chaleureuse pour les pros qui ont adoré Presse (checkinpress) — remerciement spécifique journalistes / critiques Absent (checkinfollowupabsent) — suivi si le pro n'est pas venu, avec proposition de prochains créneaux Les 4 templates sont éditables depuis Préférences → Templates (super-admin) — chacun avec sujet, corps et liens optionnels personnalisables. Envoyer depuis l'app check-in Ouvrez le créneau (écran 3). Tapez sur la ligne du pro → un panneau latéral s'ouvre. Section « Emails post-accueil », 4 boutons : Merci présence Coup de cœur Presse Absent Cliquez le bouton adapté → le template correspondant est envoyé immédiatement. Le bouton est grisé si aucun email de destination n'est disponible (ex. walk-in sans email saisi). Anti-doublon Chaque template ne peut être envoyé qu'une seule fois par réservation + type. Si vous cliquez deux fois, le deuxième envoi est ignoré (et un message « Déjà envoyé le JJ/MM à HHhMM » apparaît). Si besoin de renvoyer, un super-admin peut nettoyer l'entrée dans la table checkinfollowupemails — mais cette action est rare. Envoyer depuis l'admin web (édition réservation) Les mêmes 4 boutons sont accessibles dans le panneau d'édition d'une réservation (/admin/reservations), section Emails post-accueil. Liens inclus automatiquement Chaque template peut afficher (si le toggle est activé sur le template ET que l'URL correspondante est renseignée sur le spectacle) : 📂 Dossier de presse 🎬 Teaser vidéo 🎥 Captation Lien de réservation (vers la fiche publique) 📷 Dossier photo 🌐 Page dervichediffusion.com (libellé personnalisable par template) Voir Enrichir la fiche spectacle pour remplir ces URLs. Les emails post-accueil sont le bon moment"
@@ -685,10 +690,18 @@
         "id crm",
         "identifiant",
         "uuid",
-        "adresse"
+        "adresse",
+        "emails merci",
+        "email envoyé",
+        "remerciement",
+        "suivi",
+        "présent",
+        "absent",
+        "presse",
+        "coup de cœur"
       ],
       "excerpt": "Vous pouvez exporter la liste des réservations filtrées en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur. Comment exporter Ouvrez Réservations. Appliquez vos filtres (spectacle, lieu, période, statut, recherch",
-      "body": "Vous pouvez exporter la liste des réservations filtrées en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur. Comment exporter Ouvrez Réservations. Appliquez vos filtres (spectacle, lieu, période, statut, recherche…) : l'export reprend exactement la même vue. Cliquez sur le bouton « Exporter » en haut à droite. Choisissez le format : CSV — universel, léger, ouvrable partout Excel (.xlsx) — mise en forme préservée, prêt pour Excel / Google Sheets / LibreOffice Le fichier se télécharge immédiatement dans votre navigateur. Colonnes exportées L'export reprend les colonnes visibles du tableau. Pour ajouter / retirer des colonnes : Cliquez sur l'icône des colonnes (en haut du tableau). Cochez / décochez les colonnes. Votre sélection est sauvegardée pour les prochaines fois. Colonnes disponibles : Pro (nom, prénom, email, téléphone, structure, fonction, ville, code postal, pays) Spectacle, Compagnie Créneau (date, heure, lieu) Statut (Confirmée, Annulée, etc.) Check-in (présent, coup de cœur, presse, absent) Nombre de places Notes internes Derviche (⚠ ne jamais partager en dehors de l'équipe) Demandes spéciales Code de réservation Dates (création, modification) ID CRM (pro) et ID CRM (structure) — identifiants Zoho (~17 chiffres), masqués par défaut Adresse séparée : Rue / Code postal / Ville / Pays en 4 colonnes (en plus de la colonne « Adresse complète ») UUID pro — identifiant technique Supabase, utile uniquement pour le support technique (super-admin) Spécifique CRM Zoho Les colonnes ID CRM (pro) (le contact) et ID CRM (structure) (l'organisation) font le pont avec votre CRM Zoho. Activez-les depuis le sélecteur de colonnes pour les inclure dans vos exports. Les valeurs sont automatiquement forcées en format texte dans le fichier généré pour éviter le piège classique d'Excel qui convertit 70611000000487416 en 7,06E+16 (notation scientifique) et corrompt la donnée. Cela fonctionne identiquement en Excel et CSV. Pas d'ID CRM côté lieu : les sal"
+      "body": "Vous pouvez exporter la liste des réservations filtrées en CSV ou Excel pour les partager, les imprimer ou les analyser dans un tableur. Comment exporter Ouvrez Réservations. Appliquez vos filtres (spectacle, lieu, période, statut, recherche…) : l'export reprend exactement la même vue. Cliquez sur le bouton « Exporter » en haut à droite. Choisissez le format : CSV — universel, léger, ouvrable partout Excel (.xlsx) — mise en forme préservée, prêt pour Excel / Google Sheets / LibreOffice Le fichier se télécharge immédiatement dans votre navigateur. Colonnes exportées L'export reprend les colonnes visibles du tableau. Pour ajouter / retirer des colonnes : Cliquez sur l'icône des colonnes (en haut du tableau). Cochez / décochez les colonnes. Votre sélection est sauvegardée pour les prochaines fois. Colonnes disponibles : Pro (nom, prénom, email, téléphone, structure, fonction, ville, code postal, pays) Spectacle, Compagnie Créneau (date, heure, lieu) Statut (Confirmée, Annulée, etc.) Check-in (présent, coup de cœur, presse, absent) Nombre de places Notes internes Derviche (⚠ ne jamais partager en dehors de l'équipe) Demandes spéciales Code de réservation Dates (création, modification) ID CRM (pro) et ID CRM (structure) — identifiants Zoho (~17 chiffres), masqués par défaut Adresse séparée : Rue / Code postal / Ville / Pays en 4 colonnes (en plus de la colonne « Adresse complète ») UUID pro — identifiant technique Supabase, utile uniquement pour le support technique (super-admin) Emails merci envoyés — masquée par défaut. Pour chaque réservation, la liste des emails post-accueil réellement envoyés, avec le type (Présent / Coup de cœur / Presse / Absent) et la date + heure d'envoi, ex : Présent 12 juil. 2026 14:32 ; Coup de cœur 12 juil. 2026 14:35 Vérifier les emails merci envoyés L'envoi d'un email merci est tracé automatiquement côté serveur au moment de l'envoi — indépendamment du bouton « Enregistrer » du pointage. Pour auditer les envois (par exemple avant un nettoy"
     },
     {
       "slug": "spectacles/creer-publier",

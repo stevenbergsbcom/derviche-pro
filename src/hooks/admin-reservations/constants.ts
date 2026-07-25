@@ -35,6 +35,7 @@ export const EXPORT_COLUMN_LABELS: Record<ReservationColumn, string> = {
   checkinNotes: 'Notes check-in',
   checkinVenueNotes: 'Notes lieu',
   checkinInternalNotes: 'Notes internes',
+  followupEmails: 'Emails merci envoyés',
   createdAt: 'Créé le',
   // S175 + Session B — identifiants externes
   crmIdPro: 'ID CRM Zoho (pro)',

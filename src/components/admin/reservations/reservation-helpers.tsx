@@ -55,12 +55,47 @@ export const COLUMN_HEADERS: Record<ReservationColumn, string> = {
   checkinNotes: 'Notes check-in',
   checkinVenueNotes: 'Notes lieu',
   checkinInternalNotes: 'Notes internes',
+  followupEmails: 'Emails merci',
   createdAt: 'Créé le',
   // S175 + Session B — Identifiants externes / techniques
   crmIdPro: 'ID CRM (pro)',
   crmIdStructure: 'ID CRM (structure)',
   userUuid: 'UUID pro',
 };
+
+// ============================================
+// EMAILS MERCI POST-ACCUEIL
+// ============================================
+
+/**
+ * Labels courts des 4 types d'emails merci (table checkin_followup_emails),
+ * alignés sur la terminologie du client : présent / cœur / presse / absent.
+ * Partagés entre la colonne du tableau et l'export CSV/Excel.
+ * Une clé inconnue (futur template) est affichée telle quelle en fallback.
+ */
+export const FOLLOWUP_EMAIL_TYPE_LABELS: Record<string, string> = {
+  checkin_thank_you: 'Présent',
+  checkin_loved: 'Coup de cœur',
+  checkin_press: 'Presse',
+  checkin_followup_absent: 'Absent',
+};
+
+/**
+ * Formate la liste des emails merci envoyés pour une cellule d'export :
+ * « Présent 12 juil. 2026 14:32 ; Coup de cœur 12 juil. 2026 14:35 ».
+ * Tri chronologique. Chaîne vide si aucun envoi.
+ */
+export function formatFollowupEmailsList(
+  emails: { templateKey: string; sentAt: string }[],
+): string {
+  return [...emails]
+    .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
+    .map((e) => {
+      const label = FOLLOWUP_EMAIL_TYPE_LABELS[e.templateKey] ?? e.templateKey;
+      return `${label} ${formatDateTimeFr(e.sentAt)}`;
+    })
+    .join(' ; ');
+}
 
 // ============================================
 // HELPERS DATE

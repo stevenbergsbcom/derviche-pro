@@ -16,6 +16,7 @@ import {
   hasActiveFilters as hasActiveFiltersBase,
   getInitialPeriod as getInitialPeriodBase,
 } from '@/lib/utils/export-helpers';
+import { formatFollowupEmailsList } from '@/components/admin/reservations/reservation-helpers';
 
 // ============================================
 // FORMATAGE
@@ -160,6 +161,10 @@ export function getCellValue(col: ReservationColumn, r: AdminReservation): strin
 
     case 'checkinInternalNotes':
       return truncate(r.checkinInternalNotes, TRUNCATE_LENGTHS.checkinNotes);
+
+    case 'followupEmails':
+      // « Présent 12 juil. 2026 14:32 ; Coup de cœur 12 juil. 2026 14:35 »
+      return formatFollowupEmailsList(r.checkinFollowupEmails ?? []) || '-';
 
     case 'createdAt':
       return r.createdAt ? formatDateShort(r.createdAt.split('T')[0]) : '-';
