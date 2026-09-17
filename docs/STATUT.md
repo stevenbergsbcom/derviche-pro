@@ -176,7 +176,7 @@
 
 ---
 
-## Dernier travail (Hotfix notes check-in PWA — 17 septembre 2026) [DEV — en attente de merge]
+## Dernier travail (Hotfix notes check-in PWA — 17 septembre 2026) [MERGÉ MAIN ✅]
 
 ### Bug : « le commentaire disparaît à l'envoi du mail merci » (retour client)
 - **Cause réelle** : l'auto-save du statut (`handleAutoSaveStatus`, drawer PWA) envoyait `comment: null, venueNotes: null` → le service écrivait `NULL` en base à chaque clic sur une pastille. Le formulaire gardait le texte à l'écran (la prop `reservation` n'est pas rafraîchie tant que le drawer est ouvert), d'où une perte invisible jusqu'à la réouverture. Le mail n'y était pour rien. Les notes internes n'étaient pas touchées (`undefined`).
