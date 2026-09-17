@@ -23,6 +23,8 @@ export interface NotesSectionProps {
   onCommentChange: (value: string) => void;
   onVenueNotesChange: (value: string) => void;
   onInternalNotesChange: (value: string) => void;
+  /** Appelé à la sortie d'un champ de notes (auto-save) */
+  onNotesBlur: () => void;
   /** Staff DD (admin + externe) : true. Compagnies : false. Masque les notes internes. */
   isStaffDD: boolean;
 }
@@ -37,6 +39,7 @@ export function NotesSection({
   onCommentChange,
   onVenueNotesChange,
   onInternalNotesChange,
+  onNotesBlur,
   isStaffDD,
 }: NotesSectionProps) {
   return (
@@ -54,6 +57,7 @@ export function NotesSection({
           id="checkin-comment"
           value={checkinForm.comment}
           onChange={(e) => onCommentChange(e.target.value)}
+          onBlur={onNotesBlur}
           placeholder="Note sur l'invité..."
           rows={3}
           disabled={isSubmitting}
@@ -74,6 +78,7 @@ export function NotesSection({
           id="checkin-venue-notes"
           value={checkinForm.venueNotes}
           onChange={(e) => onVenueNotesChange(e.target.value)}
+          onBlur={onNotesBlur}
           placeholder="Informations liées au lieu, à l'accueil..."
           rows={3}
           disabled={isSubmitting}
@@ -99,6 +104,7 @@ export function NotesSection({
             id="checkin-internal-notes"
             value={checkinForm.internalNotes}
             onChange={(e) => onInternalNotesChange(e.target.value)}
+            onBlur={onNotesBlur}
             placeholder="Notes confidentielles Derviche..."
             rows={3}
             disabled={isSubmitting}

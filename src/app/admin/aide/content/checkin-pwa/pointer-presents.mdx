@@ -4,7 +4,7 @@ slug: checkin-pwa/pointer-presents
 category: checkin-pwa
 categoryLabel: Check-in sur place
 categoryIcon: CheckSquare
-keywords: [pointer, présent, absent, coup de cœur, presse, check-in, accueil, PWA]
+keywords: [pointer, présent, absent, coup de cœur, presse, check-in, accueil, PWA, note, notes, auto-save, enregistrement automatique]
 roles: [super-admin, admin, externe]
 order: 3
 ---
@@ -46,9 +46,14 @@ Cliquez sur la **même pastille** pour l'enlever, ou sur une autre pour basculer
 
 Chaque réservation peut avoir :
 - **Note d'accueil** (visible par la compagnie)
+- **Note sur le lieu** (visible par la compagnie)
 - **Note interne Derviche** (jamais visible par la compagnie ni le pro)
 
 Ces champs sont éditables depuis l'écran 3 via le panneau qui s'ouvre au clic sur une ligne.
+
+<Callout type="info">
+Les notes sont **enregistrées automatiquement** dès que vous quittez le champ (ou après une courte pause de frappe), quel que soit l'ordre de vos actions : vous pouvez saisir une note avant ou après avoir cliqué un statut ou envoyé un email post-accueil, elle est conservée. Le bouton « Enregistrer » reste utile pour valider en une fois les modifications des coordonnées du pro.
+</Callout>
 
 <Callout type="info">
 La **Note interne Derviche** est modifiable par tout le staff Derviche : <RoleBadge role="super-admin" />, <RoleBadge role="admin" /> **et** <RoleBadge role="externe" />. Un externe peut donc noter ses observations internes sur les réservations des spectacles qui lui sont assignés. Seules les **compagnies** n'y ont jamais accès (ni en lecture, ni en écriture).

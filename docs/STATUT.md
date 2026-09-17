@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Migration des crons GitHub Actions → Vercel Cron (pérennité hors activité) — 17 septembre 2026
+> Dernière mise à jour : Hotfix PWA — notes de check-in effacées par l'auto-save du statut — 17 septembre 2026
 
 ---
 
@@ -176,7 +176,22 @@
 
 ---
 
-## Dernier travail (Crons → Vercel Cron — 17 septembre 2026) [MERGÉ MAIN ✅]
+## Dernier travail (Hotfix notes check-in PWA — 17 septembre 2026) [DEV — en attente de merge]
+
+### Bug : « le commentaire disparaît à l'envoi du mail merci » (retour client)
+- **Cause réelle** : l'auto-save du statut (`handleAutoSaveStatus`, drawer PWA) envoyait `comment: null, venueNotes: null` → le service écrivait `NULL` en base à chaque clic sur une pastille. Le formulaire gardait le texte à l'écran (la prop `reservation` n'est pas rafraîchie tant que le drawer est ouvert), d'où une perte invisible jusqu'à la réouverture. Le mail n'y était pour rien. Les notes internes n'étaient pas touchées (`undefined`).
+- **Cause secondaire** : les notes n'étaient persistées que par « Enregistrer » (qui ferme le drawer) ; « Fermer » ou le balayage les jetaient.
+- **Correctif** (`useCheckinDrawer.ts`) :
+  - l'auto-save du statut envoie désormais les notes courantes du formulaire (`notesPayload`, notes internes uniquement pour le staff DD) ;
+  - nouveau `handleAutoSaveNotes` : à la sortie d'un champ (`onBlur`, `NotesSection`) et après 1,5 s sans frappe (couvre la fermeture par balayage, qui ne blur pas). Résas confirmées uniquement (le service refuse les annulées ; elles passent par « Enregistrer » → `updateGuestInfo`). Garde anti-doublon sur le payload en vol ;
+  - `savedReservation` : dernier état enregistré, mis à jour après chaque auto-save → `hasChanges` (« Modifications non enregistrées ») et le rollback de statut ne comparent plus à une prop périmée.
+- `hasNotesChanges()` extrait de `hasCheckinChanges()` (mappers.ts).
+- Doc : `checkin-pwa/pointer-presents.mdx` (3 notes listées, callout auto-save).
+- Données déjà effacées en prod : non récupérables (pas d'historique). Chiffres au 17/09 : 173 notes accueil, 345 notes lieu, 736 notes internes survivantes.
+
+---
+
+## Travail précédent (Crons → Vercel Cron — 17 septembre 2026) [MERGÉ MAIN ✅]
 
 ### Migration des crons GitHub Actions → Vercel Cron
 - **Déclencheur** : mail GitHub « scheduled workflow will be disabled soon » — les workflows planifiés sont coupés après 60 jours sans commit. Post-Avignon, le repo est calme → les 2 workflows (`cron-daily`, `cron-hourly`) allaient mourir.
