@@ -20,7 +20,7 @@ import type { ReservationRowData } from '../ReservationRow';
 import type { UseCheckinDrawerReturn } from './types';
 import { useGuestForm, useCheckinForm, useCheckinActions } from './hooks';
 import { updateCheckinStatus } from '@/lib/services/checkin';
-import { mapResultToReservationUpdate } from './helpers';
+import { mapResultToReservationUpdate, hasNotesChanges } from './helpers';
 import type { CheckinResultData, GuestResultData } from './helpers';
 import {
   DEFAULT_NOTIFICATION_OPTIONS,
@@ -28,6 +28,9 @@ import {
 } from '@/components/admin/reservations/notification-switches';
 import { getFullName } from './constants';
 import type { CheckinStatus } from '@/types/database';
+
+/** Délai d'inactivité de frappe avant l'auto-save des notes */
+const NOTES_AUTOSAVE_DELAY_MS = 1500;
 
 // ============================================
 // PROPS DU HOOK
@@ -95,20 +98,34 @@ export function useCheckinDrawer({
   const [localStatus, setLocalStatus] = useState<'confirmed' | 'cancelled' | 'no_show'>('confirmed');
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reactivateNotifOptions, setReactivateNotifOptions] = useState<NotificationOptions>(DEFAULT_NOTIFICATION_OPTIONS);
+  // Dernier état connu en base. La prop `reservation` n'est pas rafraîchie par le
+  // parent tant que le drawer est ouvert : après chaque auto-save réussi, c'est
+  // cet état qui sert de référence (indicateur « non enregistré », rollback).
+  const [savedReservation, setSavedReservation] = useState<ReservationRowData | null>(null);
 
   // ==========================================
   // COMPUTED VALUES
   // ==========================================
   const isCancelled = localStatus === 'cancelled';
   const displayName = getFullName(guestForm.firstName, guestForm.lastName);
+  const baseline = savedReservation ?? reservation;
 
   const hasChanges = useMemo(() => {
-    if (!reservation) return false;
-    return checkGuestHasChanges(reservation) || checkCheckinHasChanges(reservation);
-  }, [reservation, checkGuestHasChanges, checkCheckinHasChanges]);
+    if (!baseline) return false;
+    return checkGuestHasChanges(baseline) || checkCheckinHasChanges(baseline);
+  }, [baseline, checkGuestHasChanges, checkCheckinHasChanges]);
 
-  const isResettingStatus = checkinForm.selectedStatus === null && reservation?.checkinStatus !== null;
+  const isResettingStatus = checkinForm.selectedStatus === null && baseline?.checkinStatus !== null;
   const canSave = (checkinForm.selectedStatus !== null || isResettingStatus || hasChanges) && !accessLoading;
+
+  // Notes courantes du formulaire, au format attendu par le service.
+  // Les notes internes ne sont envoyées que par le staff DD (le formulaire est
+  // vide pour une compagnie : les envoyer écraserait la valeur en base).
+  const notesPayload = useMemo(() => ({
+    comment: checkinForm.comment.trim() || null,
+    venueNotes: checkinForm.venueNotes.trim() || null,
+    internalNotes: isStaffDD ? (checkinForm.internalNotes.trim() || null) : undefined,
+  }), [checkinForm.comment, checkinForm.venueNotes, checkinForm.internalNotes, isStaffDD]);
 
   // Callback stable pour réinitialiser le statut (évite re-renders inutiles)
   const clearSelectedStatus = useCallback(() => setSelectedStatus(null), [setSelectedStatus]);
@@ -146,12 +163,12 @@ export function useCheckinDrawer({
     isSavingStatusRef.current = true;
     setIsSavingStatus(true);
     try {
+      // Les notes courantes accompagnent le statut : envoyer `null` ici
+      // effaçait en base toute note déjà saisie (bug prod sept. 2026).
       const result = await updateCheckinStatus({
         reservationId: reservation.id,
         status,
-        comment: null,
-        venueNotes: null,
-        internalNotes: undefined,
+        ...notesPayload,
         userId,
         role,
         companyId,
@@ -164,8 +181,8 @@ export function useCheckinDrawer({
 
       if (!result.success || !result.data) {
         toast.error(result.error || 'Erreur lors de la sauvegarde du statut');
-        // Rollback : revenir au statut BDD
-        setSelectedStatus(reservation.checkinStatus ?? null);
+        // Rollback : revenir au dernier statut enregistré
+        setSelectedStatus(baseline?.checkinStatus ?? null);
         return;
       }
 
@@ -175,16 +192,72 @@ export function useCheckinDrawer({
         result.data as GuestResultData,
         result.data as CheckinResultData
       );
+      setSavedReservation(updatedReservation);
       onSuccess(updatedReservation);
     } catch (err) {
       logger.error('[handleAutoSaveStatus] Exception', err as Error);
       toast.error('Erreur lors de la sauvegarde du statut');
-      setSelectedStatus(reservation.checkinStatus ?? null);
+      setSelectedStatus(baseline?.checkinStatus ?? null);
     } finally {
       isSavingStatusRef.current = false;
       setIsSavingStatus(false);
     }
-  }, [reservation, userId, role, companyId, guestForm, setSelectedStatus, onSuccess]);
+  }, [reservation, baseline, userId, role, companyId, guestForm, notesPayload, setSelectedStatus, onSuccess]);
+
+  // ==========================================
+  // HANDLER - Auto-save des notes (sans fermer le drawer)
+  // ==========================================
+  // Déclenché à la sortie d'un champ de notes et après une pause de frappe.
+  // Ne concerne que les résas confirmées : pour une annulée, les notes passent
+  // par « Enregistrer » (updateGuestInfo).
+  const lastSentNotesRef = useRef<string | null>(null);
+
+  const handleAutoSaveNotes = useCallback(async () => {
+    if (!reservation || !baseline || !userId || !role || isCancelled) return;
+    if (!hasNotesChanges(checkinForm, baseline)) return;
+
+    // Évite de renvoyer un payload identique déjà en vol
+    const payloadKey = JSON.stringify(notesPayload);
+    if (lastSentNotesRef.current === payloadKey) return;
+    lastSentNotesRef.current = payloadKey;
+
+    try {
+      const result = await updateCheckinStatus({
+        reservationId: reservation.id,
+        ...notesPayload,
+        userId,
+        role,
+        companyId,
+      });
+
+      if (!result.success || !result.data) {
+        lastSentNotesRef.current = null;
+        toast.error(result.error || 'Notes non enregistrées');
+        return;
+      }
+
+      const updatedReservation = mapResultToReservationUpdate(
+        reservation,
+        result.data as GuestResultData,
+        result.data as CheckinResultData
+      );
+      setSavedReservation(updatedReservation);
+      onSuccess(updatedReservation);
+    } catch (err) {
+      lastSentNotesRef.current = null;
+      logger.error('[handleAutoSaveNotes] Exception', err as Error);
+      toast.error('Notes non enregistrées');
+    }
+  }, [reservation, baseline, userId, role, companyId, isCancelled, checkinForm, notesPayload, onSuccess]);
+
+  // Auto-save différé pendant la frappe (couvre la fermeture par balayage,
+  // qui ne déclenche pas de blur sur le champ)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void handleAutoSaveNotes();
+    }, NOTES_AUTOSAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [checkinForm.comment, checkinForm.venueNotes, checkinForm.internalNotes, handleAutoSaveNotes]);
 
   // Ouvre la modale de confirmation d'annulation
   const handleCancelClick = useCallback(() => {
@@ -210,6 +283,8 @@ export function useCheckinDrawer({
     if (reservation) {
       resetGuestForm(reservation);
       resetCheckinForm(reservation);
+      setSavedReservation(reservation);
+      lastSentNotesRef.current = null;
       setDetailsOpen(false);
       setJustReactivated(false);
       setLocalStatus(reservation.status);
@@ -262,6 +337,7 @@ export function useCheckinDrawer({
     handleReactivate,
     handleCancel: handleCancelWithDialog,
     handleAutoSaveStatus,
+    handleAutoSaveNotes,
     isSavingStatus,
 
     // Modale de confirmation d'annulation

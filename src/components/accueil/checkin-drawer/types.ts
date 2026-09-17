@@ -123,6 +123,8 @@ export interface UseCheckinDrawerReturn {
   handleCancel: (notifOptions: NotificationOptions) => Promise<boolean>;
   /** Sauvegarde le statut immédiatement sans fermer le drawer */
   handleAutoSaveStatus: (status: CheckinStatus | null) => Promise<void>;
+  /** Sauvegarde les notes si elles ont changé, sans fermer le drawer */
+  handleAutoSaveNotes: () => Promise<void>;
   /** Vrai pendant l'auto-save du statut — bloque les clics sur les boutons */
   isSavingStatus: boolean;
 

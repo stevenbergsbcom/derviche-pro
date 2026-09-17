@@ -194,6 +194,20 @@ export function hasGuestChanges(
 }
 
 /**
+ * Vérifie si les 3 champs de notes ont changé (hors statut)
+ */
+export function hasNotesChanges(
+  current: CheckinFormState,
+  original: ReservationRowData
+): boolean {
+  return (
+    current.comment !== (original.checkinComment || '') ||
+    current.venueNotes !== (original.checkinVenueNotes || '') ||
+    current.internalNotes !== (original.checkinInternalNotes || '')
+  );
+}
+
+/**
  * Vérifie si les données checkin ont changé
  */
 export function hasCheckinChanges(
@@ -202,8 +216,6 @@ export function hasCheckinChanges(
 ): boolean {
   return (
     current.selectedStatus !== original.checkinStatus ||
-    current.comment !== (original.checkinComment || '') ||
-    current.venueNotes !== (original.checkinVenueNotes || '') ||
-    current.internalNotes !== (original.checkinInternalNotes || '')
+    hasNotesChanges(current, original)
   );
 }
