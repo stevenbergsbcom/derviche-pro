@@ -151,6 +151,22 @@ export function useCheckinDrawer({
   });
 
   // ==========================================
+  // SÉRIALISATION DES AUTO-SAVES
+  // ==========================================
+  // Les auto-saves (notes, statut) peuvent se déclencher à quelques ms
+  // d'intervalle avec des contenus différents ; les envoyer en parallèle
+  // laisserait le serveur libre de les appliquer dans le désordre (une note
+  // plus ancienne écrasant la plus récente). Chaque requête attend la fin de
+  // la précédente : la dernière réponse reflète bien le dernier état écrit.
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve());
+
+  const runSerialized = useCallback(<T,>(task: () => Promise<T>): Promise<T> => {
+    const next = saveChainRef.current.then(task, task);
+    saveChainRef.current = next.catch(() => undefined);
+    return next;
+  }, []);
+
+  // ==========================================
   // HANDLER - Auto-save du statut (sans fermer le drawer)
   // ==========================================
   const isSavingStatusRef = useRef(false);
@@ -165,7 +181,7 @@ export function useCheckinDrawer({
     try {
       // Les notes courantes accompagnent le statut : envoyer `null` ici
       // effaçait en base toute note déjà saisie (bug prod sept. 2026).
-      const result = await updateCheckinStatus({
+      const result = await runSerialized(() => updateCheckinStatus({
         reservationId: reservation.id,
         status,
         ...notesPayload,
@@ -177,7 +193,7 @@ export function useCheckinDrawer({
         guestEmail: guestForm.email.trim() || undefined,
         guestPhone: guestForm.phone.trim() || undefined,
         guestStructure: guestForm.structure.trim() || undefined,
-      });
+      }));
 
       if (!result.success || !result.data) {
         toast.error(result.error || 'Erreur lors de la sauvegarde du statut');
@@ -202,7 +218,7 @@ export function useCheckinDrawer({
       isSavingStatusRef.current = false;
       setIsSavingStatus(false);
     }
-  }, [reservation, baseline, userId, role, companyId, guestForm, notesPayload, setSelectedStatus, onSuccess]);
+  }, [reservation, baseline, userId, role, companyId, guestForm, notesPayload, runSerialized, setSelectedStatus, onSuccess]);
 
   // ==========================================
   // HANDLER - Auto-save des notes (sans fermer le drawer)
@@ -222,13 +238,13 @@ export function useCheckinDrawer({
     lastSentNotesRef.current = payloadKey;
 
     try {
-      const result = await updateCheckinStatus({
+      const result = await runSerialized(() => updateCheckinStatus({
         reservationId: reservation.id,
         ...notesPayload,
         userId,
         role,
         companyId,
-      });
+      }));
 
       if (!result.success || !result.data) {
         lastSentNotesRef.current = null;
@@ -248,7 +264,7 @@ export function useCheckinDrawer({
       logger.error('[handleAutoSaveNotes] Exception', err as Error);
       toast.error('Notes non enregistrées');
     }
-  }, [reservation, baseline, userId, role, companyId, isCancelled, checkinForm, notesPayload, onSuccess]);
+  }, [reservation, baseline, userId, role, companyId, isCancelled, checkinForm, notesPayload, runSerialized, onSuccess]);
 
   // Auto-save différé pendant la frappe (couvre la fermeture par balayage,
   // qui ne déclenche pas de blur sur le champ)
