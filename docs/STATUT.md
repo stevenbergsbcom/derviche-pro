@@ -1,6 +1,6 @@
 # Statut du projet - Derviche Pro
 
-> Dernière mise à jour : Colonne « Emails merci » + fixes accueil (compagnie/externe) + sécurité RLS + perf notifications — 25 juillet 2026
+> Dernière mise à jour : Migration des crons GitHub Actions → Vercel Cron (pérennité hors activité) — 17 septembre 2026
 
 ---
 
@@ -152,9 +152,9 @@
 ### ✅ Rappels automatiques (100%) — S136 — VALIDÉ EN PROD
 | Type | Déclencheur | Fenêtre | Couleur | Statut |
 |------|-------------|---------|---------|--------|
-| J-7 | GitHub Actions 7h UTC | `[J-7 18h, J-6 6h]` | Ambre `#92400e` | ✅ Testé prod |
-| J-2 | GitHub Actions 7h UTC | `[J-2 18h, J-1 6h]` | Orange `#c2410c` | ✅ S136 |
-| H-12 | GitHub Actions toutes les heures | `[H-11h30, H-12h30]` | Bleu DD `#1e3a5f` | ✅ Testé prod |
+| J-7 | Vercel Cron 7h UTC (ex-GitHub Actions, 09-17) | `[J-7 18h, J-6 6h]` | Ambre `#92400e` | ✅ Testé prod |
+| J-2 | Vercel Cron 7h UTC (ex-GitHub Actions, 09-17) | `[J-2 18h, J-1 6h]` | Orange `#c2410c` | ✅ S136 |
+| H-12 | Vercel Cron toutes les heures (ex-GitHub Actions, 09-17) | `[H-11h30, H-12h30]` | Bleu DD `#1e3a5f` | ✅ Testé prod |
 
 ### ✅ Notifications admin (100%) — S137
 - Badge cloche dans le header admin (polling 30s), badge rouge avec compteur
@@ -176,7 +176,19 @@
 
 ---
 
-## Dernier travail (7 → 25 juillet 2026) [MERGÉ MAIN ✅]
+## Dernier travail (Crons → Vercel Cron — 17 septembre 2026) [MERGÉ MAIN ✅]
+
+### Migration des crons GitHub Actions → Vercel Cron
+- **Déclencheur** : mail GitHub « scheduled workflow will be disabled soon » — les workflows planifiés sont coupés après 60 jours sans commit. Post-Avignon, le repo est calme → les 2 workflows (`cron-daily`, `cron-hourly`) allaient mourir.
+- **Effet domino évité** : le daily portait aussi la purge des logs ET le health check du token Google (qui garde le refresh token vivant — Google révoque ~6 mois d'inutilisation). Le hourly générait l'activité Supabase quotidienne (le plan Free pause après 7 jours sans requête).
+- **Solution** : `vercel.json` avec 4 crons (mêmes horaires UTC) — `reminders/daily` 7h00, `purge-logs` 7h15, `google-calendar-health` 7h30, `reminders/hourly` chaque heure. Vercel Cron (plan Pro) envoie automatiquement `Authorization: Bearer ${CRON_SECRET}` → compatible tel quel avec `requireCronAuth` (la env var existait déjà). Zéro changement dans les routes.
+- Workflows GitHub supprimés dans le même commit → aucune fenêtre de double envoi.
+- **Pérennité acquise** : les crons ne dépendent plus ni de l'activité du repo, ni du trafic — rappels, token Google et activité Supabase garantis même à l'arrêt complet hors saison.
+- Doc : glossaire.mdx (workflow rappels) + tableau rappels ci-dessus.
+
+---
+
+## Travail précédent (7 → 25 juillet 2026) [MERGÉ MAIN ✅]
 
 ### Perf — badge notifications admin (07-07)
 - Poste n°1 de conso Fluid CPU Vercel : polling du badge toutes les 30s × ~4 requêtes DB par tick, même onglet caché.

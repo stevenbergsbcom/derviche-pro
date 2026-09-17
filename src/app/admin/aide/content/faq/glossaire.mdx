@@ -79,7 +79,7 @@ Identifiant interne 36 caractères au format `xxxxxxxx-xxxx-...` généré par S
 Une réservation créée **sur place le jour J**, sans réservation préalable. Créée via le bouton flottant gold dans la PWA check-in.
 
 ## Workflow rappels (cron)
-Les emails de rappel (J-7, J-2, H-4) sont envoyés par un **cron job** (GitHub Actions) qui tourne plusieurs fois par jour et déclenche les envois au bon moment selon l'heure configurée.
+Les emails de rappel (J-7, J-2, H-4) sont envoyés par un **cron job** (Vercel Cron, l'hébergeur de la plateforme) qui tourne plusieurs fois par jour et déclenche les envois au bon moment selon l'heure configurée. Il fonctionne en continu, sans dépendre de l'activité de la plateforme.
 
 ## Pour aller plus loin
 
