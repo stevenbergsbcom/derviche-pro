@@ -2,6 +2,8 @@
 
 > Dernière mise à jour : Hotfix PWA — notes de check-in effacées par l'auto-save du statut — 17 septembre 2026
 
+> 📋 **Travaux en cours** : 18 demandes client du 17/09/2026, 14 questions envoyées, réponses attendues. Source de vérité : [`docs/CADRAGE_2026-09_RETOURS_CLIENT.md`](CADRAGE_2026-09_RETOURS_CLIENT.md) (constats, chiffres prod, migrations 131-136, lots 1 à 6, tableau des réponses à remplir).
+
 ---
 
 ## Fonctionnalités par zone
@@ -177,6 +179,8 @@
 ---
 
 ## Dernier travail (Hotfix notes check-in PWA — 17 septembre 2026) [MERGÉ MAIN ✅]
+
+> Ce hotfix est le **lot 0** du cadrage `CADRAGE_2026-09_RETOURS_CLIENT.md` (demande D1). Les lots suivants y sont décrits et attendent les réponses de la cliente.
 
 ### Bug : « le commentaire disparaît à l'envoi du mail merci » (retour client)
 - **Cause réelle** : l'auto-save du statut (`handleAutoSaveStatus`, drawer PWA) envoyait `comment: null, venueNotes: null` → le service écrivait `NULL` en base à chaque clic sur une pastille. Le formulaire gardait le texte à l'écran (la prop `reservation` n'est pas rafraîchie tant que le drawer est ouvert), d'où une perte invisible jusqu'à la réouverture. Le mail n'y était pour rien. Les notes internes n'étaient pas touchées (`undefined`).
